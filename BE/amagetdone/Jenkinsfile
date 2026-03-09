@@ -1,0 +1,87 @@
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+    }
+
+    environment {
+        APP_DIR = 'S14P21D101/BE/amagetdone'
+        REMOTE_HOST = '134.185.105.152'
+        REMOTE_PORT = '22'
+        REMOTE_USER = 'ubuntu'
+        REMOTE_APP_DIR = '/home/ubuntu/project/S14P21D101/BE/amagetdone'
+        REMOTE_DEPLOY_SCRIPT = '/home/ubuntu/deploy/amagetdone/deploy.sh'
+        REMOTE_HEALTH_URL = 'http://127.0.0.1:8080/health'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build & Test') {
+            steps {
+                dir("${APP_DIR}") {
+                    sh '''
+                        set -eux
+                        chmod +x ./gradlew
+                        ./gradlew clean test bootJar
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                branch 'main'
+            }
+            steps {
+                sshagent(credentials: ['oci-prod-ssh']) {
+                    sh '''
+                        set -eux
+                        mkdir -p ~/.ssh
+                        chmod 700 ~/.ssh
+                        ssh-keyscan -p "$REMOTE_PORT" -H "$REMOTE_HOST" >> ~/.ssh/known_hosts
+                    '''
+
+                    dir("${APP_DIR}") {
+                        sh '''
+                            set -eux
+                            rsync -az --delete \
+                              --exclude '.git' \
+                              --exclude '.gradle' \
+                              --exclude 'build' \
+                              -e "ssh -p $REMOTE_PORT" \
+                              ./ "$REMOTE_USER@$REMOTE_HOST:$REMOTE_APP_DIR/"
+                        '''
+                    }
+
+                    sh '''
+                        set -eux
+                        ssh -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" "
+                          sudo -n '$REMOTE_DEPLOY_SCRIPT'
+                          curl -fsS '$REMOTE_HEALTH_URL'
+                        "
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline finished successfully.'
+        }
+        failure {
+            echo 'Pipeline failed.'
+        }
+        always {
+            cleanWs()
+        }
+    }
+}
