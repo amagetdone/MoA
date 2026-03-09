@@ -66,7 +66,7 @@ pipeline {
                         set -eux
                         ssh -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" "
                           set -eux
-                          sudo -n '$REMOTE_DEPLOY_SCRIPT'
+                          sudo -n bash '$REMOTE_DEPLOY_SCRIPT'
                           curl -fsS '$REMOTE_HEALTH_URL'
                         "
                     '''
