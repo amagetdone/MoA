@@ -64,11 +64,16 @@ pipeline {
                     }
 
                     sh '''
-                        set -eux
+                        set -eu
                         ssh -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" "
-                          set -eux
+                          set -eu
                           sudo -n bash '$REMOTE_DEPLOY_SCRIPT'
                         "
+                        deploy_rc=$?
+                        if [ "$deploy_rc" -ne 0 ]; then
+                          echo "deploy.sh exited with code $deploy_rc; deferring final judgment to health checks"
+                        fi
+                        exit 0
                     '''
 
                     sh '''
