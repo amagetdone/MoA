@@ -8,7 +8,7 @@ pipeline {
     }
 
     environment {
-        APP_DIR = 'S14P21D101/BE/amagetdone'
+        APP_DIR = 'BE/amagetdone'
         REMOTE_HOST = '134.185.105.152'
         REMOTE_PORT = '22'
         REMOTE_USER = 'ubuntu'
@@ -44,6 +44,7 @@ pipeline {
                 sshagent(credentials: ['oci-prod-ssh']) {
                     sh '''
                         set -eux
+
                         mkdir -p ~/.ssh
                         chmod 700 ~/.ssh
                         ssh-keyscan -p "$REMOTE_PORT" -H "$REMOTE_HOST" >> ~/.ssh/known_hosts
@@ -64,6 +65,7 @@ pipeline {
                     sh '''
                         set -eux
                         ssh -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" "
+                          set -eux
                           sudo -n '$REMOTE_DEPLOY_SCRIPT'
                           curl -fsS '$REMOTE_HEALTH_URL'
                         "
@@ -79,9 +81,6 @@ pipeline {
         }
         failure {
             echo 'Pipeline failed.'
-        }
-        always {
-            cleanWs()
         }
     }
 }
