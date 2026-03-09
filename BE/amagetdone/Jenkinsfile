@@ -15,6 +15,7 @@ pipeline {
         REMOTE_APP_DIR = '/home/ubuntu/project/S14P21D101/BE/amagetdone'
         REMOTE_DEPLOY_SCRIPT = '/home/ubuntu/deploy/amagetdone/deploy.sh'
         REMOTE_HEALTH_URL = 'http://127.0.0.1:8080/health'
+        EXTERNAL_HEALTH_URL = 'https://jaeboong.shop/api/health'
     }
 
     stages {
@@ -67,8 +68,31 @@ pipeline {
                         ssh -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" "
                           set -eux
                           sudo -n bash '$REMOTE_DEPLOY_SCRIPT'
-                          curl -fsS '$REMOTE_HEALTH_URL'
                         "
+                    '''
+
+                    sh '''
+                        set -eu
+                        for attempt in $(seq 1 40); do
+                          if ssh -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" "curl -fsS '$REMOTE_HEALTH_URL'" >/dev/null; then
+                            exit 0
+                          fi
+                          sleep 3
+                        done
+                        echo "Remote health check failed: $REMOTE_HEALTH_URL" >&2
+                        exit 1
+                    '''
+
+                    sh '''
+                        set -eu
+                        for attempt in $(seq 1 40); do
+                          if curl -kfsS "$EXTERNAL_HEALTH_URL" >/dev/null; then
+                            exit 0
+                          fi
+                          sleep 3
+                        done
+                        echo "External health check failed: $EXTERNAL_HEALTH_URL" >&2
+                        exit 1
                     '''
                 }
             }
