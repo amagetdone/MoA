@@ -1,0 +1,32 @@
+package com.ssafy.amagetdone.config;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+class EnvLoaderTest {
+
+	@TempDir
+	Path tempDir;
+
+	@Test
+	void loadRequiredEnvThrowsWhenDotEnvFileIsMissing() {
+		assertThrows(IllegalStateException.class, () -> EnvLoader.loadRequiredEnv(tempDir));
+	}
+
+	@Test
+	void loadRequiredEnvCopiesValuesIntoSystemProperties() throws IOException {
+		Files.writeString(tempDir.resolve(".env"), "SPRING_PROFILES_ACTIVE=prod\nJWT_SECRET=test-secret\n");
+
+		EnvLoader.loadRequiredEnv(tempDir);
+
+		assertEquals("prod", System.getProperty("spring.profiles.active"));
+		assertEquals("test-secret", System.getProperty("JWT_SECRET"));
+	}
+}
