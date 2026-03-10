@@ -1,6 +1,6 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
+import 'package:more_app/core/utils/app_env.dart';
 import 'package:more_app/data/datasources/local/auth_local_datasource.dart';
 import 'package:more_app/data/datasources/remote/auth_remote_datasource.dart';
 import 'package:more_app/data/models/user_model.dart';
@@ -16,11 +16,16 @@ class AuthRepositoryImpl implements AuthRepository {
     required this.remoteDataSource,
     required this.localDataSource,
     GoogleSignIn? googleSignIn,
-  }) : _googleSignIn = googleSignIn ??
-            GoogleSignIn(serverClientId: dotenv.env['GOOGLE_CLIENT_ID']);
+  }) : _googleSignIn =
+           googleSignIn ??
+           GoogleSignIn(serverClientId: AppEnv.optional('GOOGLE_CLIENT_ID'));
 
   @override
   Future<domain.User> loginWithKakao() async {
+    if (AppEnv.optional('KAKAO_NATIVE_APP_KEY') == null) {
+      throw Exception('KAKAO_NATIVE_APP_KEY가 설정되지 않았습니다.');
+    }
+
     // 카카오톡 앱 설치 여부에 따라 분기
     OAuthToken token;
     if (await isKakaoTalkInstalled()) {
@@ -44,6 +49,10 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<domain.User> loginWithGoogle() async {
+    if (AppEnv.optional('GOOGLE_CLIENT_ID') == null) {
+      throw Exception('GOOGLE_CLIENT_ID가 설정되지 않았습니다.');
+    }
+
     final googleUser = await _googleSignIn.signIn();
     if (googleUser == null) {
       throw Exception('구글 로그인이 취소되었습니다.');
@@ -112,11 +121,7 @@ class AuthRepositoryImpl implements AuthRepository {
       await localDataSource.saveRefreshToken(result.refreshToken);
 
       // fake에서는 하드코딩된 유저 반환
-      return const domain.User(
-        id: '1',
-        name: '테스트유저',
-        email: 'test@more.com',
-      );
+      return const domain.User(id: '1', name: '테스트유저', email: 'test@more.com');
     } catch (_) {
       // 토큰 갱신 실패 시 로그아웃 처리
       await localDataSource.deleteTokens();
