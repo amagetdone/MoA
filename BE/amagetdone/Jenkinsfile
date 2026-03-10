@@ -9,13 +9,8 @@ pipeline {
 
     environment {
         APP_DIR = 'BE/amagetdone'
-        REMOTE_HOST = '134.185.105.152'
-        REMOTE_PORT = '22'
-        REMOTE_USER = 'ubuntu'
-        REMOTE_APP_DIR = '/home/ubuntu/project/S14P21D101/BE/amagetdone'
-        REMOTE_DEPLOY_SCRIPT = '/home/ubuntu/deploy/amagetdone/deploy.sh'
-        REMOTE_HEALTH_URL = 'http://127.0.0.1:8080/health'
-        EXTERNAL_HEALTH_URL = 'https://jaeboong.shop/api/health'
+        JENKINS_APP_ENV = '/var/jenkins_home/secrets/amagetdone.app.env'
+        JENKINS_DEPLOY_ENV = '/var/jenkins_home/secrets/amagetdone.env'
     }
 
     stages {
@@ -30,6 +25,11 @@ pipeline {
                 dir("${APP_DIR}") {
                     sh '''
                         set -eux
+                        if [ ! -f "$JENKINS_APP_ENV" ]; then
+                          echo "Jenkins app env file not found: $JENKINS_APP_ENV" >&2
+                          exit 1
+                        fi
+                        install -m 600 "$JENKINS_APP_ENV" ./.env
                         chmod +x ./gradlew
                         ./gradlew clean test bootJar
                     '''
@@ -44,27 +44,46 @@ pipeline {
             steps {
                 sshagent(credentials: ['oci-prod-ssh']) {
                     sh '''
-                        set -eux
+                        set -eu
+
+                        if [ ! -f "$JENKINS_DEPLOY_ENV" ]; then
+                          echo "Jenkins deploy env file not found: $JENKINS_DEPLOY_ENV" >&2
+                          exit 1
+                        fi
+
+                        set -a
+                        . "$JENKINS_DEPLOY_ENV"
+                        set +a
+
+                        require_value() {
+                          local name="$1"
+                          local value="${!name:-}"
+                          if [ -z "$value" ]; then
+                            echo "Required Jenkins deploy env is missing: $name" >&2
+                            exit 1
+                          fi
+                        }
+
+                        require_value REMOTE_HOST
+                        require_value REMOTE_PORT
+                        require_value REMOTE_USER
+                        require_value REMOTE_APP_DIR
+                        require_value REMOTE_DEPLOY_SCRIPT
+                        require_value REMOTE_HEALTH_URL
+                        require_value EXTERNAL_HEALTH_URL
 
                         mkdir -p ~/.ssh
                         chmod 700 ~/.ssh
                         ssh-keyscan -p "$REMOTE_PORT" -H "$REMOTE_HOST" >> ~/.ssh/known_hosts
-                    '''
 
-                    dir("${APP_DIR}") {
-                        sh '''
-                            set -eux
-                            rsync -az --delete \
-                              --exclude '.git' \
-                              --exclude '.gradle' \
-                              --exclude 'build' \
-                              -e "ssh -p $REMOTE_PORT" \
-                              ./ "$REMOTE_USER@$REMOTE_HOST:$REMOTE_APP_DIR/"
-                        '''
-                    }
+                        cd "$WORKSPACE/$APP_DIR"
+                        rsync -az --delete \
+                          --exclude '.git' \
+                          --exclude '.gradle' \
+                          --exclude 'build' \
+                          -e "ssh -p $REMOTE_PORT" \
+                          ./ "$REMOTE_USER@$REMOTE_HOST:$REMOTE_APP_DIR/"
 
-                    sh '''
-                        set -u
                         deploy_rc=0
                         ssh -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" "
                           set -eu
@@ -73,31 +92,28 @@ pipeline {
                         if [ "$deploy_rc" -ne 0 ]; then
                           echo "deploy.sh exited with code $deploy_rc; deferring final judgment to health checks"
                         fi
-                        exit 0
-                    '''
 
-                    sh '''
-                        set -eu
                         for attempt in $(seq 1 40); do
                           if ssh -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" "curl -fsS '$REMOTE_HEALTH_URL'" >/dev/null; then
-                            exit 0
+                            break
+                          fi
+                          if [ "$attempt" -eq 40 ]; then
+                            echo "Remote health check failed: $REMOTE_HEALTH_URL" >&2
+                            exit 1
                           fi
                           sleep 3
                         done
-                        echo "Remote health check failed: $REMOTE_HEALTH_URL" >&2
-                        exit 1
-                    '''
 
-                    sh '''
-                        set -eu
                         for attempt in $(seq 1 40); do
                           if curl -kfsS "$EXTERNAL_HEALTH_URL" >/dev/null; then
                             exit 0
                           fi
+                          if [ "$attempt" -eq 40 ]; then
+                            echo "External health check failed: $EXTERNAL_HEALTH_URL" >&2
+                            exit 1
+                          fi
                           sleep 3
                         done
-                        echo "External health check failed: $EXTERNAL_HEALTH_URL" >&2
-                        exit 1
                     '''
                 }
             }
