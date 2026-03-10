@@ -8,6 +8,8 @@ android/local.properties
 
 # Claude
 .claude/
+AGENTS.md
+CLAUDE.md
 
 # Miscellaneous
 *.class
