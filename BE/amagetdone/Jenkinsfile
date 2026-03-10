@@ -9,6 +9,7 @@ pipeline {
 
     environment {
         APP_DIR = 'BE/amagetdone'
+        JENKINS_APP_ENV = '/var/jenkins_home/secrets/amagetdone.app.env'
         JENKINS_DEPLOY_ENV = '/var/jenkins_home/secrets/amagetdone.env'
     }
 
@@ -24,6 +25,11 @@ pipeline {
                 dir("${APP_DIR}") {
                     sh '''
                         set -eux
+                        if [ ! -f "$JENKINS_APP_ENV" ]; then
+                          echo "Jenkins app env file not found: $JENKINS_APP_ENV" >&2
+                          exit 1
+                        fi
+                        install -m 600 "$JENKINS_APP_ENV" ./.env
                         chmod +x ./gradlew
                         ./gradlew clean test bootJar
                     '''
