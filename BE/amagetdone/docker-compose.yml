@@ -10,6 +10,7 @@ services:
       - .env
     environment:
       DB_URL: jdbc:postgresql://amagetdone-postgres:5432/${POSTGRES_DB}
+      REDIS_HOST: amagetdone-redis
     volumes:
       - ./.env:/app/.env:ro
     depends_on:
