@@ -32,11 +32,11 @@ public class User extends BaseEntity {
 	@Column(name = "birth_date")
 	private LocalDateTime birthDate;
 
-	@Column(name = "job_status", columnDefinition = "ENUM")
+	@Column(name = "job_status", length = 30)
 	private String jobStatus;
 
 	@ColumnDefault("'ACTIVE'")
-	@Column(name = "status", columnDefinition = "ENUM")
+	@Column(name = "status", nullable = false, length = 20)
 	private String status = "ACTIVE";
 
 	@Column(name = "user_api_key", nullable = false, length = 30)

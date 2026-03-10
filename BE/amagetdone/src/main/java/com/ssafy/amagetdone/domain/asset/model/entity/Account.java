@@ -31,7 +31,7 @@ public class Account extends BaseEntity {
 	@Column(name = "account_type_unique_no", length = 30)
 	private String accountTypeUniqueNo;
 
-	@ColumnDefault("0")
+	@ColumnDefault("FALSE")
 	@Column(name = "is_verified", nullable = false)
 	private boolean verified;
 

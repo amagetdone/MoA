@@ -9,6 +9,7 @@ import java.lang.reflect.Field;
 
 import com.ssafy.amagetdone.domain.asset.model.entity.Account;
 import com.ssafy.amagetdone.domain.asset.model.entity.Card;
+import com.ssafy.amagetdone.domain.budget.model.entity.BudgetAdjustment;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetMonth;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetRollover;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
@@ -16,6 +17,7 @@ import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseMonth;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialWeekAllocation;
 import com.ssafy.amagetdone.domain.member.model.entity.Setting;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
+import com.ssafy.amagetdone.global.entity.BaseEntity;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
 import com.ssafy.amagetdone.domain.transaction.model.entity.CardTransactionOverride;
@@ -35,17 +37,28 @@ class ErdSchemaAlignmentTest {
 	}
 
 	@Test
-	void onlyRealEnumColumnsUseEnumerated() throws Exception {
-		assertColumnDefinitionContains(User.class, "jobStatus", "ENUM");
-		assertColumnDefinitionContains(User.class, "status", "ENUM");
-		assertEnumerated(PlanWeekAllocation.class, "allocationType", false);
-		assertEnumerated(EssentialExpenseMonth.class, "expenseScope", false);
+	void postgresCompatibleMappingsAvoidRawEnumDefinitions() throws Exception {
+		assertNoRawEnumColumnDefinition(User.class, "jobStatus");
+		assertNoRawEnumColumnDefinition(User.class, "status");
+		assertEnumerated(Plan.class, "status", true);
+		assertEnumerated(BudgetMonth.class, "status", true);
+		assertEnumerated(BudgetWeek.class, "status", true);
+		assertEnumerated(BudgetAdjustment.class, "adjustmentType", true);
+		assertEnumerated(BudgetRollover.class, "status", true);
+		assertEnumerated(EssentialExpenseMonth.class, "sourceProvider", true);
+	}
+
+	@Test
+	void booleanColumnsUsePostgresBooleanDefaults() throws Exception {
+		assertColumnDefault(BaseEntity.class, "deleted", "FALSE");
+		assertColumnDefault(Account.class, "verified", "FALSE");
+		assertColumnDefault(Setting.class, "alarm", "FALSE");
 	}
 
 	@Test
 	void erdDefaultsAreDeclaredOnEntityMappings() throws Exception {
-		assertColumnDefault(Account.class, "verified", "0");
-		assertColumnDefault(Setting.class, "alarm", "0");
+		assertColumnDefault(Account.class, "verified", "FALSE");
+		assertColumnDefault(Setting.class, "alarm", "FALSE");
 		assertColumnDefault(User.class, "status", "'ACTIVE'");
 		assertColumnDefault(Plan.class, "savedAmount", "0");
 		assertColumnDefault(Plan.class, "status", "'ACTIVE'");
@@ -81,6 +94,13 @@ class ErdSchemaAlignmentTest {
 		assertEquals(expectedName, column.name());
 	}
 
+	private void assertNoRawEnumColumnDefinition(Class<?> type, String fieldName) throws Exception {
+		Field field = type.getDeclaredField(fieldName);
+		Column column = field.getAnnotation(Column.class);
+		assertNotNull(column, () -> type.getSimpleName() + "." + fieldName + " must declare @Column");
+		assertFalse("ENUM".equalsIgnoreCase(column.columnDefinition().trim()));
+	}
+
 	private void assertEnumerated(Class<?> type, String fieldName, boolean expected) throws Exception {
 		Field field = type.getDeclaredField(fieldName);
 		if (expected) {
@@ -88,13 +108,6 @@ class ErdSchemaAlignmentTest {
 			return;
 		}
 		assertFalse(field.isAnnotationPresent(Enumerated.class));
-	}
-
-	private void assertColumnDefinitionContains(Class<?> type, String fieldName, String expectedFragment) throws Exception {
-		Field field = type.getDeclaredField(fieldName);
-		Column column = field.getAnnotation(Column.class);
-		assertNotNull(column, () -> type.getSimpleName() + "." + fieldName + " must declare @Column");
-		assertTrue(column.columnDefinition().toUpperCase().contains(expectedFragment.toUpperCase()));
 	}
 
 	private void assertColumnDefault(Class<?> type, String fieldName, String expected) throws Exception {

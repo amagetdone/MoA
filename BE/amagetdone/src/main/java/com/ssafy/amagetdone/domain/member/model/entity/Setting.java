@@ -24,7 +24,7 @@ public class Setting extends BaseEntity {
 	@JoinColumn(name = "users_id", nullable = false)
 	private User user;
 
-	@ColumnDefault("0")
+	@ColumnDefault("FALSE")
 	@Column(name = "alarm", nullable = false)
 	private boolean alarm;
 
