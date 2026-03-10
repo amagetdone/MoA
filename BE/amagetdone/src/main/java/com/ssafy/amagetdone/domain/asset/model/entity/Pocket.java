@@ -1,5 +1,7 @@
 package com.ssafy.amagetdone.domain.asset.model.entity;
 
+import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -20,8 +22,9 @@ public class Pocket {
 	@JoinColumn(name = "account_id", nullable = false)
 	private Account account;
 
-	@Column(name = "budget_week_id", nullable = false)
-	private Integer budgetWeekId;
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "budget_week_id", nullable = false)
+	private BudgetWeek budgetWeek;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "category_id", nullable = false)

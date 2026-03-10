@@ -1,7 +1,13 @@
 package com.ssafy.amagetdone.domain.transaction.model.entity;
 
+import com.ssafy.amagetdone.domain.asset.model.entity.Card;
+import com.ssafy.amagetdone.domain.asset.model.entity.Merchant;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrimaryKeyJoinColumn;
 import jakarta.persistence.Table;
 
@@ -13,8 +19,9 @@ public class CardTransactionOverride extends TransactionOverride {
 	@Column(name = "transactionUniqueNo", nullable = false)
 	private Long transactionUniqueNo;
 
-	@Column(name = "merchant_id", nullable = false)
-	private Long merchantId;
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "merchant_id", nullable = false)
+	private Merchant merchant;
 
 	@Column(name = "cardStatus", nullable = false)
 	private boolean cardStatus;
@@ -25,8 +32,9 @@ public class CardTransactionOverride extends TransactionOverride {
 	@Column(name = "billStatementsStatus", nullable = false, length = 20)
 	private String billStatementsStatus;
 
-	@Column(name = "cardUniqueNo", nullable = false)
-	private Long cardUniqueNo;
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "cardUniqueNo", referencedColumnName = "cardUniqueNo", nullable = false)
+	private Card card;
 
 	protected CardTransactionOverride() {
 	}
