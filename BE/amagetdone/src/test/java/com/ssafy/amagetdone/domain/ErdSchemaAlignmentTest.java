@@ -32,13 +32,13 @@ class ErdSchemaAlignmentTest {
 
 	@Test
 	void correctedColumnNamesMatchDirectErd() throws Exception {
-		assertColumnName(User.class, "jobStatus", "job_status");
+		assertColumnName(User.class, "hasFixedIncome", "has_fixed_income");
 		assertColumnName(Card.class, "cardIssuerName", "cardIssuerName");
 	}
 
 	@Test
 	void postgresCompatibleMappingsAvoidRawEnumDefinitions() throws Exception {
-		assertNoRawEnumColumnDefinition(User.class, "jobStatus");
+		assertNoRawEnumColumnDefinition(User.class, "hasFixedIncome");
 		assertNoRawEnumColumnDefinition(User.class, "status");
 		assertEnumerated(Plan.class, "status", true);
 		assertEnumerated(BudgetMonth.class, "status", true);

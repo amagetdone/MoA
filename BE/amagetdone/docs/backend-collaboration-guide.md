@@ -44,6 +44,12 @@ Cross-domain shared code belongs here.
 
 Do not move domain-specific policy or feature logic into `global`.
 
+Exception handling rules:
+
+- Global exception infrastructure belongs under `global/exception`.
+- Shared contracts such as `GlobalExceptionHandler`, `ErrorResponse`, and `ErrorCode` must be defined there.
+- `global` may translate exceptions into HTTP responses, but it must not own domain-specific error codes.
+
 ### `domain`
 
 All business code must live under a dedicated domain package.
@@ -99,6 +105,9 @@ Rules:
 - Controllers should validate input, call the application layer, and return a response.
 - Controllers must not directly call JPA repositories.
 - Controllers must not contain business decision logic.
+- In `api/dto`, each API should own exactly one DTO file.
+- That DTO file should contain the request and response types together as nested types such as `Request` and `Response`.
+- Do not split one API's request and response into separate DTO files unless there is an explicit repository-wide exception.
 
 ### `application`
 
@@ -166,6 +175,32 @@ Rules:
 Small domain-local helpers belong here.
 
 Use `support` only for logic that is local to one domain and does not belong in `global`.
+
+## Exception Handling Structure
+
+Use the following structure for exception handling:
+
+```text
+global/exception/
+  GlobalExceptionHandler.java
+  ErrorResponse.java
+  ErrorCode.java
+
+domain/<domain-name>/exception/
+  <Domain>ErrorCode.java
+  <Domain>Exception.java
+```
+
+Rules:
+
+- Keep exactly one global exception handler in `global/exception`.
+- Keep the common error response format and error code contract in `global/exception`.
+- Define domain-specific error codes in each domain's own exception package.
+- Define domain-specific runtime exceptions in each domain's own exception package.
+- Do not create one giant shared error-code enum across all domains.
+- Do not place one domain's error codes in another domain or in `global`.
+- When multiple developers work in parallel, they should add or edit only their domain's `*ErrorCode` and `*Exception` files whenever possible.
+- Prefer throwing domain exceptions such as `MemberException` or `AssetException` from domain code instead of throwing `ResponseStatusException` directly.
 
 ## Recommended Development Flow
 
@@ -257,7 +292,10 @@ Use standard Java and Spring conventions by default. When repository-specific st
 - use case classes: `<Action><Domain>UseCase`
 - service classes: `<Domain>Service`
 - controller classes: `<Domain>Controller`
-- DTO names: `<Action>Request`, `<Action>Response`, or explicit domain DTO names
+- DTO file names: explicit API names such as `SocialAuthDto`, `ProfileCompletionDto`
+- Nested DTO type names: `Request`, `Response`
+- domain error code enums: `<Domain>ErrorCode`
+- domain exception classes: `<Domain>Exception`
 
 ### Java and Spring style
 

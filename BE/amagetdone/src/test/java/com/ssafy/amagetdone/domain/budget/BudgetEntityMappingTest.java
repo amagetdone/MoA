@@ -14,11 +14,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.test.context.ActiveProfiles;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
 @SpringBootTest
+@ActiveProfiles("test")
 class BudgetEntityMappingTest {
 
 	private static final String ENTITY_PACKAGE = "com.ssafy.amagetdone.domain.budget.model.entity.";
