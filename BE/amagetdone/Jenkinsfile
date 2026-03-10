@@ -56,21 +56,21 @@ pipeline {
                         set +a
 
                         require_value() {
-                          name="$1"
-                          eval "value=\${$name-}"
+                          value="$1"
+                          name="$2"
                           if [ -z "$value" ]; then
                             echo "Required Jenkins deploy env is missing: $name" >&2
                             exit 1
                           fi
                         }
 
-                        require_value REMOTE_HOST
-                        require_value REMOTE_PORT
-                        require_value REMOTE_USER
-                        require_value REMOTE_APP_DIR
-                        require_value REMOTE_DEPLOY_SCRIPT
-                        require_value REMOTE_HEALTH_URL
-                        require_value EXTERNAL_HEALTH_URL
+                        require_value "$REMOTE_HOST" REMOTE_HOST
+                        require_value "$REMOTE_PORT" REMOTE_PORT
+                        require_value "$REMOTE_USER" REMOTE_USER
+                        require_value "$REMOTE_APP_DIR" REMOTE_APP_DIR
+                        require_value "$REMOTE_DEPLOY_SCRIPT" REMOTE_DEPLOY_SCRIPT
+                        require_value "$REMOTE_HEALTH_URL" REMOTE_HEALTH_URL
+                        require_value "$EXTERNAL_HEALTH_URL" EXTERNAL_HEALTH_URL
 
                         mkdir -p ~/.ssh
                         chmod 700 ~/.ssh
