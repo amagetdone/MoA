@@ -25,7 +25,14 @@ class MoreCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: color ?? AppColors.bgSurface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderDefault),
+
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              offset: const Offset(0, 2),
+              blurRadius: 8,
+            ),
+          ],
         ),
         child: child,
       ),
