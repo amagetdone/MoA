@@ -2,6 +2,9 @@ package com.ssafy.amagetdone.domain.budget.model.entity;
 
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetAdjustmentType;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
+import com.ssafy.amagetdone.global.entity.BaseEntity;
+
+import org.hibernate.annotations.ColumnDefault;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,7 +18,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "budget_adjustment")
-public class BudgetAdjustment {
+public class BudgetAdjustment extends BaseEntity {
 
 	@Id
 	@Column(name = "id", nullable = false)
@@ -33,8 +36,9 @@ public class BudgetAdjustment {
 	@Column(name = "adjustment_type", nullable = false)
 	private BudgetAdjustmentType adjustmentType;
 
+	@ColumnDefault("0")
 	@Column(name = "adjustment_amount", nullable = false)
-	private Long adjustmentAmount;
+	private Long adjustmentAmount = 0L;
 
 	@Column(name = "reason", length = 255)
 	private String reason;

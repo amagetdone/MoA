@@ -2,6 +2,8 @@ package com.ssafy.amagetdone.domain.member.model.entity;
 
 import com.ssafy.amagetdone.global.entity.BaseEntity;
 
+import org.hibernate.annotations.ColumnDefault;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -22,6 +24,7 @@ public class Setting extends BaseEntity {
 	@JoinColumn(name = "users_id", nullable = false)
 	private User user;
 
+	@ColumnDefault("0")
 	@Column(name = "alarm", nullable = false)
 	private boolean alarm;
 

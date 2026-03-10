@@ -3,6 +3,9 @@ package com.ssafy.amagetdone.domain.budget.model.entity;
 import java.time.LocalDateTime;
 
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetRolloverStatus;
+import com.ssafy.amagetdone.global.entity.BaseEntity;
+
+import org.hibernate.annotations.ColumnDefault;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -16,7 +19,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "budget_rollover")
-public class BudgetRollover {
+public class BudgetRollover extends BaseEntity {
 
 	@Id
 	@Column(name = "id", nullable = false)
@@ -36,9 +39,10 @@ public class BudgetRollover {
 	@Column(name = "rollover_amount", nullable = false)
 	private Long rolloverAmount;
 
+	@ColumnDefault("'APPLIED'")
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
-	private BudgetRolloverStatus status;
+	private BudgetRolloverStatus status = BudgetRolloverStatus.APPLIED;
 
 	@Column(name = "resolved_at")
 	private LocalDateTime resolvedAt;

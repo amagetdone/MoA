@@ -3,6 +3,8 @@ package com.ssafy.amagetdone.domain.transaction.model.entity;
 import com.ssafy.amagetdone.domain.asset.model.entity.Card;
 import com.ssafy.amagetdone.domain.asset.model.entity.Merchant;
 
+import org.hibernate.annotations.ColumnDefault;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -29,8 +31,9 @@ public class CardTransactionOverride extends TransactionOverride {
 	@Column(name = "billStatementsYn", nullable = false)
 	private boolean billStatementsYn;
 
+	@ColumnDefault("'미결제'")
 	@Column(name = "billStatementsStatus", nullable = false, length = 20)
-	private String billStatementsStatus;
+	private String billStatementsStatus = "미결제";
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "cardUniqueNo", referencedColumnName = "cardUniqueNo", nullable = false)

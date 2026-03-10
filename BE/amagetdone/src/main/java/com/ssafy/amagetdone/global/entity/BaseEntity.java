@@ -2,6 +2,7 @@ package com.ssafy.amagetdone.global.entity;
 
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -19,6 +20,7 @@ public abstract class BaseEntity {
 	@Column(name = "updated_at", nullable = false)
 	private LocalDateTime updatedAt;
 
+	@ColumnDefault("0")
 	@Column(name = "is_deleted", nullable = false)
 	private boolean deleted;
 

@@ -4,6 +4,9 @@ import java.time.LocalDate;
 
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
+import com.ssafy.amagetdone.global.entity.BaseEntity;
+
+import org.hibernate.annotations.ColumnDefault;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -17,7 +20,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "plan")
-public class Plan {
+public class Plan extends BaseEntity {
 
 	@Id
 	@Column(name = "id", nullable = false)
@@ -36,8 +39,9 @@ public class Plan {
 	@Column(name = "target_amount", nullable = false)
 	private Long targetAmount;
 
+	@ColumnDefault("0")
 	@Column(name = "saved_amount", nullable = false)
-	private Long savedAmount;
+	private Long savedAmount = 0L;
 
 	@Column(name = "start_date", nullable = false)
 	private LocalDate startDate;
@@ -48,12 +52,14 @@ public class Plan {
 	@Column(name = "priority", nullable = false)
 	private Integer priority;
 
+	@ColumnDefault("'ACTIVE'")
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
-	private PlanStatus status;
+	private PlanStatus status = PlanStatus.ACTIVE;
 
+	@ColumnDefault("TRUE")
 	@Column(name = "auto_allocate_enabled", nullable = false)
-	private boolean autoAllocateEnabled;
+	private boolean autoAllocateEnabled = true;
 
 	@Column(name = "plan_url", length = 255)
 	private String planUrl;

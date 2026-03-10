@@ -4,6 +4,9 @@ import java.time.LocalDate;
 
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetMonthStatus;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
+import com.ssafy.amagetdone.global.entity.BaseEntity;
+
+import org.hibernate.annotations.ColumnDefault;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -17,7 +20,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "budget_month")
-public class BudgetMonth {
+public class BudgetMonth extends BaseEntity {
 
 	@Id
 	@Column(name = "id", nullable = false)
@@ -30,18 +33,22 @@ public class BudgetMonth {
 	@Column(name = "base_date", nullable = false)
 	private LocalDate baseDate;
 
+	@ColumnDefault("'OPEN'")
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
-	private BudgetMonthStatus status;
+	private BudgetMonthStatus status = BudgetMonthStatus.OPEN;
 
+	@ColumnDefault("0")
 	@Column(name = "total_income_amount", nullable = false)
-	private Long totalIncomeAmount;
+	private Long totalIncomeAmount = 0L;
 
+	@ColumnDefault("0")
 	@Column(name = "total_fixed_essential_amount", nullable = false)
-	private Long totalFixedEssentialAmount;
+	private Long totalFixedEssentialAmount = 0L;
 
+	@ColumnDefault("0")
 	@Column(name = "total_variable_essential_amount", nullable = false)
-	private Long totalVariableEssentialAmount;
+	private Long totalVariableEssentialAmount = 0L;
 
 	@Column(name = "memo", length = 255)
 	private String memo;

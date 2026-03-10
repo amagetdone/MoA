@@ -2,6 +2,9 @@ package com.ssafy.amagetdone.domain.budget.model.entity;
 
 import com.ssafy.amagetdone.domain.asset.model.entity.Category;
 import com.ssafy.amagetdone.domain.budget.model.vo.ExpenseScope;
+import com.ssafy.amagetdone.global.entity.BaseEntity;
+
+import org.hibernate.annotations.ColumnDefault;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,7 +18,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "essential_week_allocation")
-public class EssentialWeekAllocation {
+public class EssentialWeekAllocation extends BaseEntity {
 
 	@Id
 	@Column(name = "essential_week_allocation_id", nullable = false)
@@ -37,11 +40,13 @@ public class EssentialWeekAllocation {
 	@Column(name = "expense_scope", nullable = false)
 	private ExpenseScope expenseScope;
 
+	@ColumnDefault("0")
 	@Column(name = "planned_amount", nullable = false)
-	private Long plannedAmount;
+	private Long plannedAmount = 0L;
 
+	@ColumnDefault("0")
 	@Column(name = "actual_spent_amount", nullable = false)
-	private Long actualSpentAmount;
+	private Long actualSpentAmount = 0L;
 
 	@Column(name = "note", length = 255)
 	private String note;

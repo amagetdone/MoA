@@ -2,6 +2,8 @@ package com.ssafy.amagetdone.domain.asset.model.entity;
 
 import java.time.LocalDateTime;
 
+import com.ssafy.amagetdone.global.entity.BaseEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -12,7 +14,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "card")
-public class Card {
+public class Card extends BaseEntity {
 
 	@Id
 	@Column(name = "cardUniqueNo", nullable = false)

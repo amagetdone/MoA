@@ -1,12 +1,12 @@
 package com.ssafy.amagetdone.domain.plan.model.entity;
 
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
-import com.ssafy.amagetdone.domain.plan.model.vo.PlanAllocationType;
+import com.ssafy.amagetdone.global.entity.BaseEntity;
+
+import org.hibernate.annotations.ColumnDefault;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -15,7 +15,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "plan_week_allocation")
-public class PlanWeekAllocation {
+public class PlanWeekAllocation extends BaseEntity {
 
 	@Id
 	@Column(name = "id", nullable = false)
@@ -29,15 +29,17 @@ public class PlanWeekAllocation {
 	@JoinColumn(name = "plan_id", nullable = false)
 	private Plan plan;
 
-	@Enumerated(EnumType.STRING)
+	@ColumnDefault("'AUTO'")
 	@Column(name = "allocation_type", nullable = false, length = 30)
-	private PlanAllocationType allocationType;
+	private String allocationType = "AUTO";
 
+	@ColumnDefault("0")
 	@Column(name = "planned_amount", nullable = false)
-	private Long plannedAmount;
+	private Long plannedAmount = 0L;
 
+	@ColumnDefault("0")
 	@Column(name = "final_amount", nullable = false)
-	private Long finalAmount;
+	private Long finalAmount = 0L;
 
 	@Column(name = "note", length = 255)
 	private String note;

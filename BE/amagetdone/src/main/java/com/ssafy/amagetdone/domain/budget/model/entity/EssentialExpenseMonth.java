@@ -1,8 +1,10 @@
 package com.ssafy.amagetdone.domain.budget.model.entity;
 
 import com.ssafy.amagetdone.domain.asset.model.entity.Category;
-import com.ssafy.amagetdone.domain.budget.model.vo.ExpenseScope;
 import com.ssafy.amagetdone.domain.budget.model.vo.SourceProvider;
+import com.ssafy.amagetdone.global.entity.BaseEntity;
+
+import org.hibernate.annotations.ColumnDefault;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -16,7 +18,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "essential_expense_month")
-public class EssentialExpenseMonth {
+public class EssentialExpenseMonth extends BaseEntity {
 
 	@Id
 	@Column(name = "id", nullable = false)
@@ -30,16 +32,16 @@ public class EssentialExpenseMonth {
 	@JoinColumn(name = "budget_month_id", nullable = false)
 	private BudgetMonth budgetMonth;
 
-	@Enumerated(EnumType.STRING)
 	@Column(name = "expense_scope", nullable = false, length = 20)
-	private ExpenseScope expenseScope;
+	private String expenseScope;
 
 	@Column(name = "amount", nullable = false)
 	private Long amount;
 
+	@ColumnDefault("'ANALYZER'")
 	@Enumerated(EnumType.STRING)
 	@Column(name = "source_provider", nullable = false)
-	private SourceProvider sourceProvider;
+	private SourceProvider sourceProvider = SourceProvider.ANALYZER;
 
 	protected EssentialExpenseMonth() {
 	}

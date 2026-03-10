@@ -6,6 +6,8 @@ import java.util.List;
 
 import com.ssafy.amagetdone.global.entity.BaseEntity;
 
+import org.hibernate.annotations.ColumnDefault;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -30,11 +32,12 @@ public class User extends BaseEntity {
 	@Column(name = "birth_date")
 	private LocalDateTime birthDate;
 
-	@Column(name = "job_status")
+	@Column(name = "job_status", columnDefinition = "ENUM")
 	private String jobStatus;
 
-	@Column(name = "status")
-	private String status;
+	@ColumnDefault("'ACTIVE'")
+	@Column(name = "status", columnDefinition = "ENUM")
+	private String status = "ACTIVE";
 
 	@Column(name = "user_api_key", nullable = false, length = 30)
 	private String userApiKey;

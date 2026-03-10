@@ -1,6 +1,7 @@
 package com.ssafy.amagetdone.domain.asset.model.entity;
 
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
+import com.ssafy.amagetdone.global.entity.BaseEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,7 +13,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "pocket")
-public class Pocket {
+public class Pocket extends BaseEntity {
 
 	@Id
 	@Column(name = "id", nullable = false, length = 50)

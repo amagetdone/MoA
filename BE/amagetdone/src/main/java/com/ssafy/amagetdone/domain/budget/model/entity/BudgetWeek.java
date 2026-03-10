@@ -4,6 +4,9 @@ import java.time.LocalDate;
 
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetWeekStatus;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
+import com.ssafy.amagetdone.global.entity.BaseEntity;
+
+import org.hibernate.annotations.ColumnDefault;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -17,7 +20,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "budget_week")
-public class BudgetWeek {
+public class BudgetWeek extends BaseEntity {
 
 	@Id
 	@Column(name = "id", nullable = false)
@@ -36,36 +39,46 @@ public class BudgetWeek {
 	@Column(name = "week_end_date", nullable = false)
 	private LocalDate weekEndDate;
 
+	@ColumnDefault("7")
 	@Column(name = "period_days", nullable = false)
-	private Integer periodDays;
+	private Integer periodDays = 7;
 
+	@ColumnDefault("FALSE")
 	@Column(name = "is_partial", nullable = false)
 	private boolean partial;
 
+	@ColumnDefault("'PLANNED'")
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
-	private BudgetWeekStatus status;
+	private BudgetWeekStatus status = BudgetWeekStatus.PLANNED;
 
+	@ColumnDefault("0")
 	@Column(name = "planned_income_amount", nullable = false)
-	private Long plannedIncomeAmount;
+	private Long plannedIncomeAmount = 0L;
 
+	@ColumnDefault("0")
 	@Column(name = "planned_essential_amount", nullable = false)
-	private Long plannedEssentialAmount;
+	private Long plannedEssentialAmount = 0L;
 
+	@ColumnDefault("0")
 	@Column(name = "planned_saving_amount", nullable = false)
-	private Long plannedSavingAmount;
+	private Long plannedSavingAmount = 0L;
 
+	@ColumnDefault("0")
 	@Column(name = "rollover_in_amount", nullable = false)
-	private Long rolloverInAmount;
+	private Long rolloverInAmount = 0L;
 
+	@ColumnDefault("0")
 	@Column(name = "manual_adjustment_amount", nullable = false)
-	private Long manualAdjustmentAmount;
+	private Long manualAdjustmentAmount = 0L;
 
+	@ColumnDefault("0")
 	@Column(name = "final_free_amount", nullable = false)
-	private Long finalFreeAmount;
+	private Long finalFreeAmount = 0L;
 
+	@ColumnDefault("0")
 	@Column(name = "actual_spent_amount", nullable = false)
-	private Long actualSpentAmount;
+	private Long actualSpentAmount = 0L;
 
 	protected BudgetWeek() {
 	}

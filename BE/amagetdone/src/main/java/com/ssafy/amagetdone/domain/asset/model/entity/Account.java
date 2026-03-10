@@ -1,6 +1,9 @@
 package com.ssafy.amagetdone.domain.asset.model.entity;
 
 import com.ssafy.amagetdone.domain.member.model.entity.User;
+import com.ssafy.amagetdone.global.entity.BaseEntity;
+
+import org.hibernate.annotations.ColumnDefault;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,7 +15,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "account")
-public class Account {
+public class Account extends BaseEntity {
 
 	@Id
 	@Column(name = "id", nullable = false, length = 30)
@@ -28,6 +31,7 @@ public class Account {
 	@Column(name = "account_type_unique_no", length = 30)
 	private String accountTypeUniqueNo;
 
+	@ColumnDefault("0")
 	@Column(name = "is_verified", nullable = false)
 	private boolean verified;
 
