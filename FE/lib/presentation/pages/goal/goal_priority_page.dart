@@ -5,6 +5,7 @@ import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:more_app/domain/entities/goal.dart';
+import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/goal_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
@@ -18,21 +19,16 @@ class GoalPriorityPage extends ConsumerStatefulWidget {
 }
 
 class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
-  late List<Goal> _reorderedGoals;
+  List<Goal> _reorderedGoals = [];
   bool _hasChanges = false;
 
   @override
-  void initState() {
-    super.initState();
-    final goalState = ref.read(goalViewModelProvider);
-    _reorderedGoals = goalState.goals
-        .where((g) => g.status == GoalStatus.inProgress)
-        .toList()
-      ..sort((a, b) => a.priority.compareTo(b.priority));
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final goalState = ref.watch(goalViewModelProvider);
+    final displayGoals = _hasChanges
+        ? _reorderedGoals
+        : List<Goal>.from(goalState.inProgressGoals);
+
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: const MoreAppBar(title: '목표 우선순위'),
@@ -48,7 +44,9 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
             ),
           ),
           Expanded(
-            child: _reorderedGoals.isEmpty
+            child: goalState.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : displayGoals.isEmpty
                 ? Center(
                     child: Text(
                       '진행 중인 목표가 없습니다.',
@@ -59,9 +57,12 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
                   )
                 : ReorderableListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _reorderedGoals.length,
+                    itemCount: displayGoals.length,
                     onReorder: (oldIndex, newIndex) {
                       setState(() {
+                        if (!_hasChanges) {
+                          _reorderedGoals = List<Goal>.from(displayGoals);
+                        }
                         if (newIndex > oldIndex) {
                           newIndex -= 1;
                         }
@@ -79,7 +80,7 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
                       );
                     },
                     itemBuilder: (context, index) {
-                      final goal = _reorderedGoals[index];
+                      final goal = displayGoals[index];
                       return Padding(
                         key: ValueKey(goal.id),
                         padding: const EdgeInsets.only(bottom: 12),
@@ -128,7 +129,8 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
                                     const SizedBox(height: 2),
                                     Text(
                                       CurrencyFormatter.formatKRW(
-                                          goal.targetAmount),
+                                        goal.targetAmount,
+                                      ),
                                       style: AppTextStyles.bodySm.copyWith(
                                         color: AppColors.textTertiary,
                                       ),
@@ -148,10 +150,12 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
               padding: const EdgeInsets.all(16),
               child: MoreBottomButton(
                 text: '저장',
-                onPressed: () {
-                  ref
+                onPressed: () async {
+                  await ref
                       .read(goalViewModelProvider.notifier)
-                      .reorderGoals(_reorderedGoals);
+                      .reorderGoals(displayGoals);
+                  await ref.read(homeViewModelProvider.notifier).loadData();
+                  if (!context.mounted) return;
                   context.pop();
                 },
                 enabled: _hasChanges,

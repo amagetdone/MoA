@@ -38,7 +38,8 @@ abstract class AppRoutes {
   static const String onboardingProfile = '/onboarding/profile';
   static const String onboardingAccount = '/onboarding/account';
   static const String onboardingAccountVerify = '/onboarding/account/verify';
-  static const String onboardingAccountComplete = '/onboarding/account/complete';
+  static const String onboardingAccountComplete =
+      '/onboarding/account/complete';
   static const String onboardingGoal = '/onboarding/goal';
   static const String onboardingLoading = '/onboarding/loading';
   static const String onboardingIncome = '/onboarding/income';
@@ -68,6 +69,10 @@ abstract class AppRoutes {
 
   // Settings
   static const String settings = '/settings';
+
+  static String goalDetailLocation(String goalId) => '$goalDetail?id=$goalId';
+  static String assetDetailLocation(String transactionId) =>
+      '$assetDetail?id=$transactionId';
 }
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -101,11 +106,25 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: AppRoutes.onboardingAccountVerify,
-      builder: (context, state) => const AccountVerifyPage(isOnboarding: true),
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>? ?? const {};
+        return AccountVerifyPage(
+          isOnboarding: extra['isOnboarding'] as bool? ?? true,
+          bankName: extra['bankName'] as String? ?? '',
+          accountNumber: extra['accountNumber'] as String? ?? '',
+        );
+      },
     ),
     GoRoute(
       path: AppRoutes.onboardingAccountComplete,
-      builder: (context, state) => const AccountCompletePage(isOnboarding: true),
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>? ?? const {};
+        return AccountCompletePage(
+          isOnboarding: extra['isOnboarding'] as bool? ?? true,
+          bankName: extra['bankName'] as String? ?? '',
+          accountNumber: extra['accountNumber'] as String? ?? '',
+        );
+      },
     ),
     GoRoute(
       path: AppRoutes.onboardingGoal,
@@ -187,11 +206,25 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: AppRoutes.accountVerify,
-      builder: (context, state) => const AccountVerifyPage(isOnboarding: false),
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>? ?? const {};
+        return AccountVerifyPage(
+          isOnboarding: extra['isOnboarding'] as bool? ?? false,
+          bankName: extra['bankName'] as String? ?? '',
+          accountNumber: extra['accountNumber'] as String? ?? '',
+        );
+      },
     ),
     GoRoute(
       path: AppRoutes.accountComplete,
-      builder: (context, state) => const AccountCompletePage(isOnboarding: false),
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>? ?? const {};
+        return AccountCompletePage(
+          isOnboarding: extra['isOnboarding'] as bool? ?? false,
+          bankName: extra['bankName'] as String? ?? '',
+          accountNumber: extra['accountNumber'] as String? ?? '',
+        );
+      },
     ),
     GoRoute(
       path: AppRoutes.goalCreate,

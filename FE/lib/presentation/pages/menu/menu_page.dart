@@ -16,12 +16,30 @@ class MenuPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(menuViewModelProvider);
 
+    if (state.isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.bgPrimary,
+        appBar: MoreAppBar(title: '전체', showBack: false),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (state.errorMessage != null) {
+      return Scaffold(
+        backgroundColor: AppColors.bgPrimary,
+        appBar: const MoreAppBar(title: '전체', showBack: false),
+        body: Center(
+          child: Text(
+            '메뉴 정보를 불러오지 못했습니다.\n${state.errorMessage!}',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: const MoreAppBar(
-        title: '전체',
-        showBack: false,
-      ),
+      appBar: const MoreAppBar(title: '전체', showBack: false),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
@@ -85,15 +103,9 @@ class MenuPage extends ConsumerWidget {
             // Stats row
             Row(
               children: [
-                _StatBox(
-                  label: '진행중 목표',
-                  value: '${state.activeGoalCount}',
-                ),
+                _StatBox(label: '진행중 목표', value: '${state.activeGoalCount}'),
                 const SizedBox(width: 8),
-                _StatBox(
-                  label: '달성한 목표',
-                  value: '${state.achievedGoalCount}',
-                ),
+                _StatBox(label: '달성한 목표', value: '${state.achievedGoalCount}'),
                 const SizedBox(width: 8),
                 _StatBox(
                   label: '누적 저축',
@@ -158,10 +170,7 @@ class _StatBox extends StatelessWidget {
   final String label;
   final String value;
 
-  const _StatBox({
-    required this.label,
-    required this.value,
-  });
+  const _StatBox({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -212,16 +221,10 @@ class _MenuListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(
-        icon,
-        color: AppColors.textSecondary,
-        size: 22,
-      ),
+      leading: Icon(icon, color: AppColors.textSecondary, size: 22),
       title: Text(
         title,
-        style: AppTextStyles.bodyMd.copyWith(
-          color: AppColors.textPrimary,
-        ),
+        style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
       ),
       trailing: const Icon(
         Icons.chevron_right,

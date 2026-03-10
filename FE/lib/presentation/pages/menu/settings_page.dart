@@ -44,7 +44,7 @@ class SettingsPage extends ConsumerWidget {
               onChanged: (value) {
                 menuViewModel.toggleNotification(value);
               },
-              activeColor: AppColors.orange500,
+              activeThumbColor: AppColors.orange500,
             ),
           ),
 
@@ -71,7 +71,7 @@ class SettingsPage extends ConsumerWidget {
               onChanged: (value) {
                 menuViewModel.toggleBiometric(value);
               },
-              activeColor: AppColors.orange500,
+              activeThumbColor: AppColors.orange500,
             ),
           ),
 
@@ -85,9 +85,7 @@ class SettingsPage extends ConsumerWidget {
             child: ListTile(
               title: Text(
                 '로그아웃',
-                style: AppTextStyles.bodyMd.copyWith(
-                  color: AppColors.red500,
-                ),
+                style: AppTextStyles.bodyMd.copyWith(color: AppColors.red500),
               ),
               trailing: const Icon(
                 Icons.chevron_right,
@@ -129,15 +127,11 @@ class SettingsPage extends ConsumerWidget {
       builder: (dialogContext) => AlertDialog(
         title: Text(
           '로그아웃',
-          style: AppTextStyles.headingMd.copyWith(
-            color: AppColors.textPrimary,
-          ),
+          style: AppTextStyles.headingMd.copyWith(color: AppColors.textPrimary),
         ),
         content: Text(
           '정말 로그아웃 하시겠습니까?',
-          style: AppTextStyles.bodyMd.copyWith(
-            color: AppColors.textSecondary,
-          ),
+          style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
@@ -157,9 +151,7 @@ class SettingsPage extends ConsumerWidget {
             },
             child: Text(
               '로그아웃',
-              style: AppTextStyles.bodyMd.copyWith(
-                color: AppColors.red500,
-              ),
+              style: AppTextStyles.bodyMd.copyWith(color: AppColors.red500),
             ),
           ),
         ],
@@ -173,15 +165,11 @@ class SettingsPage extends ConsumerWidget {
       builder: (dialogContext) => AlertDialog(
         title: Text(
           '회원탈퇴',
-          style: AppTextStyles.headingMd.copyWith(
-            color: AppColors.textPrimary,
-          ),
+          style: AppTextStyles.headingMd.copyWith(color: AppColors.textPrimary),
         ),
         content: Text(
           '탈퇴 시 모든 데이터가 삭제됩니다.\n정말 탈퇴하시겠습니까?',
-          style: AppTextStyles.bodyMd.copyWith(
-            color: AppColors.textSecondary,
-          ),
+          style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
@@ -200,9 +188,7 @@ class SettingsPage extends ConsumerWidget {
             },
             child: Text(
               '탈퇴',
-              style: AppTextStyles.bodyMd.copyWith(
-                color: AppColors.red500,
-              ),
+              style: AppTextStyles.bodyMd.copyWith(color: AppColors.red500),
             ),
           ),
         ],

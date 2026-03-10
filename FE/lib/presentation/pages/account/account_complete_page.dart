@@ -1,25 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/viewmodels/account_viewmodel.dart';
+import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
+import 'package:more_app/presentation/widgets/common/bank_icon.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
-import 'package:more_app/presentation/widgets/common/bank_icon.dart';
 
-class AccountCompletePage extends StatelessWidget {
+class AccountCompletePage extends ConsumerWidget {
   final bool isOnboarding;
+  final String bankName;
+  final String accountNumber;
 
   const AccountCompletePage({
     super.key,
     this.isOnboarding = true,
+    required this.bankName,
+    required this.accountNumber,
   });
 
   @override
-  Widget build(BuildContext context) {
-    const bankName = '카카오뱅크';
-    const accountNumber = '3333-01-1234567';
-
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const MoreAppBar(title: '연동 완료', showBack: false),
@@ -32,7 +36,7 @@ class AccountCompletePage extends StatelessWidget {
               Container(
                 width: 96,
                 height: 96,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppColors.orange50,
                   shape: BoxShape.circle,
                 ),
@@ -58,19 +62,23 @@ class AccountCompletePage extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const BankIcon(bankName: bankName, size: 40),
+                    BankIcon(bankName: bankName, size: 40),
                     const SizedBox(width: 16),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           bankName,
-                          style: AppTextStyles.bodyLg.copyWith(fontWeight: FontWeight.w600),
+                          style: AppTextStyles.bodyLg.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           accountNumber,
-                          style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary),
+                          style: AppTextStyles.bodySm.copyWith(
+                            color: AppColors.textTertiary,
+                          ),
                         ),
                       ],
                     ),
@@ -83,7 +91,19 @@ class AccountCompletePage extends StatelessWidget {
       ),
       bottomNavigationBar: MoreBottomButton(
         text: isOnboarding ? '다음' : '확인',
-        onPressed: () {
+        onPressed: () async {
+          await ref
+              .read(accountViewModelProvider.notifier)
+              .addLinkedAccount(
+                bankName: bankName,
+                accountNumber: accountNumber,
+              );
+          await ref.read(homeViewModelProvider.notifier).loadData();
+
+          if (!context.mounted) {
+            return;
+          }
+
           if (isOnboarding) {
             context.go(AppRoutes.onboardingGoal);
           } else {

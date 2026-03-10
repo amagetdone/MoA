@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
+import 'package:more_app/domain/entities/spending.dart';
+import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/spending_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
@@ -21,27 +23,15 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
   late TextEditingController _incomeController;
   late TextEditingController _savingsGoalController;
   late TextEditingController _fixedExpenseController;
-  late List<TextEditingController> _categoryBudgetControllers;
+  List<TextEditingController> _categoryBudgetControllers = [];
+  bool _controllersSynced = false;
 
   @override
   void initState() {
     super.initState();
-    final state = ref.read(spendingViewModelProvider);
-
-    _incomeController = TextEditingController(
-      text: _formatNumber(state.monthlyIncome),
-    );
-    _savingsGoalController = TextEditingController(
-      text: _formatNumber(state.monthlySavingsGoal),
-    );
-    _fixedExpenseController = TextEditingController(
-      text: _formatNumber(state.monthlyFixedExpense),
-    );
-    _categoryBudgetControllers = state.categories.map((category) {
-      return TextEditingController(
-        text: _formatNumber(category.budget),
-      );
-    }).toList();
+    _incomeController = TextEditingController();
+    _savingsGoalController = TextEditingController();
+    _fixedExpenseController = TextEditingController();
   }
 
   @override
@@ -53,6 +43,27 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
       controller.dispose();
     }
     super.dispose();
+  }
+
+  void _syncControllers(SpendingState state) {
+    if (_controllersSynced || state.isLoading) {
+      return;
+    }
+
+    _incomeController.text = _formatNumber(state.monthlyIncome);
+    _savingsGoalController.text = _formatNumber(state.monthlySavingsGoal);
+    _fixedExpenseController.text = _formatNumber(state.monthlyFixedExpense);
+
+    for (final controller in _categoryBudgetControllers) {
+      controller.dispose();
+    }
+    _categoryBudgetControllers = state.categories
+        .map(
+          (category) =>
+              TextEditingController(text: _formatNumber(category.budget)),
+        )
+        .toList();
+    _controllersSynced = true;
   }
 
   String _formatNumber(int value) {
@@ -72,158 +83,186 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
     final savings = _parseNumber(_savingsGoalController.text);
     final fixed = _parseNumber(_fixedExpenseController.text);
     final available = income - savings - fixed;
-    if (available <= 0) return 0;
-    return (available / 4.345).round(); // average weeks per month
+    if (available <= 0) {
+      return 0;
+    }
+    return (available / 4.345).round();
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(spendingViewModelProvider);
+    _syncControllers(state);
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: const MoreAppBar(
-        title: '주간 예산 설정',
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Monthly income
-                  MoreTextField(
-                    label: '월 수입',
-                    hint: '월 수입을 입력하세요',
-                    controller: _incomeController,
-                    keyboardType: TextInputType.number,
-                    suffix: '원',
-                    onChanged: (_) => setState(() {}),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Savings goal
-                  MoreTextField(
-                    label: '저축 목표',
-                    hint: '저축 목표를 입력하세요',
-                    controller: _savingsGoalController,
-                    keyboardType: TextInputType.number,
-                    suffix: '원',
-                    onChanged: (_) => setState(() {}),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Fixed expenses
-                  MoreTextField(
-                    label: '고정 지출',
-                    hint: '고정 지출을 입력하세요',
-                    controller: _fixedExpenseController,
-                    keyboardType: TextInputType.number,
-                    suffix: '원',
-                    onChanged: (_) => setState(() {}),
-                  ),
-                  const SizedBox(height: 20),
-
-                  const Divider(color: AppColors.borderDefault),
-                  const SizedBox(height: 20),
-
-                  // Category budgets section
-                  Text(
-                    '카테고리별 예산',
-                    style: AppTextStyles.headingMd.copyWith(
-                      color: AppColors.textPrimary,
+      appBar: const MoreAppBar(title: '주간 예산 설정'),
+      body: state.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : state.errorMessage != null
+          ? Center(
+              child: Text(
+                '예산 데이터를 불러오지 못했습니다.\n${state.errorMessage!}',
+                textAlign: TextAlign.center,
+              ),
+            )
+          : Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
                     ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Category budget rows
-                  ...List.generate(state.categories.length, (index) {
-                    final category = state.categories[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: category.color.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              category.icon,
-                              size: 18,
-                              color: category.color,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          SizedBox(
-                            width: 60,
-                            child: Text(
-                              category.name,
-                              style: AppTextStyles.bodyMd.copyWith(
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: MoreTextField(
-                              label: '예산',
-                              hint: '0',
-                              controller: index < _categoryBudgetControllers.length
-                                  ? _categoryBudgetControllers[index]
-                                  : TextEditingController(),
-                              keyboardType: TextInputType.number,
-                              suffix: '원',
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                  const SizedBox(height: 16),
-
-                  // Calculated weekly budget
-                  MoreCard(
-                    color: AppColors.orange50,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '계산된 주간 예산',
-                          style: AppTextStyles.bodyLg.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        MoreTextField(
+                          label: '월 수입',
+                          hint: '월 수입을 입력하세요',
+                          controller: _incomeController,
+                          keyboardType: TextInputType.number,
+                          suffix: '원',
+                          onChanged: (_) => setState(() {}),
                         ),
+                        const SizedBox(height: 16),
+                        MoreTextField(
+                          label: '저축 목표',
+                          hint: '저축 목표를 입력하세요',
+                          controller: _savingsGoalController,
+                          keyboardType: TextInputType.number,
+                          suffix: '원',
+                          onChanged: (_) => setState(() {}),
+                        ),
+                        const SizedBox(height: 16),
+                        MoreTextField(
+                          label: '고정 지출',
+                          hint: '고정 지출을 입력하세요',
+                          controller: _fixedExpenseController,
+                          keyboardType: TextInputType.number,
+                          suffix: '원',
+                          onChanged: (_) => setState(() {}),
+                        ),
+                        const SizedBox(height: 20),
+                        const Divider(color: AppColors.borderDefault),
+                        const SizedBox(height: 20),
                         Text(
-                          CurrencyFormatter.formatKRW(_calculatedWeeklyBudget),
+                          '카테고리별 예산',
                           style: AppTextStyles.headingMd.copyWith(
-                            color: AppColors.orange500,
-                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
                           ),
                         ),
+                        const SizedBox(height: 16),
+                        ...List.generate(state.categories.length, (index) {
+                          final category = state.categories[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: category.color.withValues(
+                                      alpha: 0.15,
+                                    ),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    category.icon,
+                                    size: 18,
+                                    color: category.color,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                SizedBox(
+                                  width: 60,
+                                  child: Text(
+                                    category.name,
+                                    style: AppTextStyles.bodyMd.copyWith(
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: MoreTextField(
+                                    label: '예산',
+                                    hint: '0',
+                                    controller:
+                                        _categoryBudgetControllers[index],
+                                    keyboardType: TextInputType.number,
+                                    suffix: '원',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                        const SizedBox(height: 16),
+                        MoreCard(
+                          color: AppColors.orange50,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '계산된 주간 예산',
+                                style: AppTextStyles.bodyLg.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                CurrencyFormatter.formatKRW(
+                                  _calculatedWeeklyBudget,
+                                ),
+                                style: AppTextStyles.headingMd.copyWith(
+                                  color: AppColors.orange500,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            ),
-          ),
+                ),
+                MoreBottomButton(
+                  text: '저장',
+                  onPressed: () async {
+                    final updatedCategories = List<SpendingCategory>.generate(
+                      state.categories.length,
+                      (index) => state.categories[index].copyWith(
+                        budget: _parseNumber(
+                          _categoryBudgetControllers[index].text,
+                        ),
+                      ),
+                    );
 
-          // Bottom save button
-          MoreBottomButton(
-            text: '저장',
-            onPressed: () {
-              context.pop();
-            },
-          ),
-        ],
-      ),
+                    await ref
+                        .read(spendingViewModelProvider.notifier)
+                        .saveBudgetPlan(
+                          monthlyIncome: _parseNumber(_incomeController.text),
+                          monthlySavingsGoal: _parseNumber(
+                            _savingsGoalController.text,
+                          ),
+                          monthlyFixedExpense: _parseNumber(
+                            _fixedExpenseController.text,
+                          ),
+                          categories: updatedCategories,
+                        );
+                    await ref.read(homeViewModelProvider.notifier).loadData();
+
+                    if (!context.mounted) {
+                      return;
+                    }
+                    context.pop();
+                  },
+                ),
+              ],
+            ),
     );
   }
 }

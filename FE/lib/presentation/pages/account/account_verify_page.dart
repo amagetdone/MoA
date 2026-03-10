@@ -3,16 +3,20 @@ import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/widgets/common/bank_icon.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
-import 'package:more_app/presentation/widgets/common/bank_icon.dart';
 
 class AccountVerifyPage extends StatefulWidget {
   final bool isOnboarding;
+  final String bankName;
+  final String accountNumber;
 
   const AccountVerifyPage({
     super.key,
     this.isOnboarding = true,
+    required this.bankName,
+    required this.accountNumber,
   });
 
   @override
@@ -20,12 +24,11 @@ class AccountVerifyPage extends StatefulWidget {
 }
 
 class _AccountVerifyPageState extends State<AccountVerifyPage> {
-  final List<TextEditingController> _digitControllers =
-      List.generate(4, (_) => TextEditingController());
+  final List<TextEditingController> _digitControllers = List.generate(
+    4,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
-
-  String get _bankName => 'カカ오뱅크';
-  String get _accountNumber => '3333-01-1234567';
 
   @override
   void dispose() {
@@ -39,27 +42,35 @@ class _AccountVerifyPageState extends State<AccountVerifyPage> {
   }
 
   String get _maskedAccountNumber {
-    final number = _accountNumber;
-    if (number.length <= 4) return number;
+    final number = widget.accountNumber;
+    if (number.length <= 4) {
+      return number;
+    }
     final visible = number.substring(0, 4);
     final masked = '*' * (number.length - 4);
     return '$visible$masked';
   }
 
-  bool get _isCodeComplete {
-    return _digitControllers.every(
-      (controller) => controller.text.isNotEmpty,
-    );
-  }
+  bool get _isCodeComplete =>
+      _digitControllers.every((controller) => controller.text.isNotEmpty);
 
   void _onVerify() {
-    if (!_isCodeComplete) return;
-
-    if (widget.isOnboarding) {
-      context.go(AppRoutes.onboardingAccountComplete);
-    } else {
-      context.push(AppRoutes.accountComplete);
+    if (!_isCodeComplete) {
+      return;
     }
+
+    final route = widget.isOnboarding
+        ? AppRoutes.onboardingAccountComplete
+        : AppRoutes.accountComplete;
+
+    context.push(
+      route,
+      extra: {
+        'bankName': widget.bankName,
+        'accountNumber': widget.accountNumber,
+        'isOnboarding': widget.isOnboarding,
+      },
+    );
   }
 
   @override
@@ -73,11 +84,13 @@ class _AccountVerifyPageState extends State<AccountVerifyPage> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 24),
-            BankIcon(bankName: _bankName, size: 48),
+            BankIcon(bankName: widget.bankName, size: 48),
             const SizedBox(height: 16),
             Text(
-              _bankName,
-              style: AppTextStyles.headingMd.copyWith(color: AppColors.textPrimary),
+              widget.bankName,
+              style: AppTextStyles.headingMd.copyWith(
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -96,7 +109,9 @@ class _AccountVerifyPageState extends State<AccountVerifyPage> {
               ),
               child: Text(
                 '입금자명에 표시된 숫자 4자리를 입력해주세요',
-                style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary),
+                style: AppTextStyles.bodySm.copyWith(
+                  color: AppColors.textSecondary,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),

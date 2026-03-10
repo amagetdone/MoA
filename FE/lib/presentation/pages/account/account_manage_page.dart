@@ -18,6 +18,27 @@ class AccountManagePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(accountViewModelProvider);
 
+    if (state.isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.bgPrimary,
+        appBar: MoreAppBar(title: '계좌 관리'),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (state.errorMessage != null) {
+      return Scaffold(
+        backgroundColor: AppColors.bgPrimary,
+        appBar: const MoreAppBar(title: '계좌 관리'),
+        body: Center(
+          child: Text(
+            '계좌 목록을 불러오지 못했습니다.\n${state.errorMessage!}',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: const MoreAppBar(title: '계좌 관리'),
@@ -43,11 +64,7 @@ class AccountManagePage extends ConsumerWidget {
             height: 52,
             child: OutlinedButton.icon(
               onPressed: () => context.push(AppRoutes.accountAdd),
-              icon: const Icon(
-                Icons.add,
-                size: 20,
-                color: AppColors.orange500,
-              ),
+              icon: const Icon(Icons.add, size: 20, color: AppColors.orange500),
               label: Text(
                 '새 계좌 연결하기',
                 style: AppTextStyles.bodyMd.copyWith(
@@ -69,25 +86,17 @@ class AccountManagePage extends ConsumerWidget {
     );
   }
 
-  void _showDeleteDialog(
-    BuildContext context,
-    WidgetRef ref,
-    Account account,
-  ) {
+  void _showDeleteDialog(BuildContext context, WidgetRef ref, Account account) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(
           '계좌 삭제',
-          style: AppTextStyles.headingMd.copyWith(
-            color: AppColors.textPrimary,
-          ),
+          style: AppTextStyles.headingMd.copyWith(color: AppColors.textPrimary),
         ),
         content: Text(
           '${account.bankName} ${account.accountNumber}\n계좌를 삭제하시겠습니까?',
-          style: AppTextStyles.bodyMd.copyWith(
-            color: AppColors.textSecondary,
-          ),
+          style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
@@ -108,9 +117,7 @@ class AccountManagePage extends ConsumerWidget {
             },
             child: Text(
               '삭제',
-              style: AppTextStyles.bodyMd.copyWith(
-                color: AppColors.red500,
-              ),
+              style: AppTextStyles.bodyMd.copyWith(color: AppColors.red500),
             ),
           ),
         ],
@@ -123,20 +130,14 @@ class _AccountCard extends StatelessWidget {
   final Account account;
   final VoidCallback onDelete;
 
-  const _AccountCard({
-    required this.account,
-    required this.onDelete,
-  });
+  const _AccountCard({required this.account, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
     return MoreCard(
       child: Row(
         children: [
-          BankIcon(
-            bankName: account.bankName,
-            size: 40,
-          ),
+          BankIcon(bankName: account.bankName, size: 40),
           const SizedBox(width: 14),
           Expanded(
             child: Column(

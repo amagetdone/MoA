@@ -1,50 +1,56 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
-import 'package:more_app/core/utils/mock_data.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/viewmodels/spending_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 
-class OnboardingPlanPage extends StatelessWidget {
+class OnboardingPlanPage extends ConsumerWidget {
   const OnboardingPlanPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final weeklyBudget = MockData.weeklyBudget;
-    final monthlySavingsGoal = MockData.monthlySavingsGoal;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(spendingViewModelProvider);
+    final weeklyBudget = state.weeklyBudget;
+    final monthlySavingsGoal = state.monthlySavingsGoal;
     final weeklySavingsGoal = (monthlySavingsGoal / 4).round();
-    final categories = MockData.spendingCategories;
+    final categories = state.categories;
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: MoreAppBar(
-        title: '목표 계획',
-        showBack: true,
-      ),
+      appBar: const MoreAppBar(title: '목표 계획', showBack: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (state.isLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 48),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (state.errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: Text(
+                  '계획 데이터를 불러오지 못했습니다.\n${state.errorMessage!}',
+                  style: AppTextStyles.bodySm.copyWith(color: AppColors.red500),
+                ),
+              ),
             Text(
               '주간 미션을 확인하세요',
-              style: AppTextStyles.headingLg.copyWith(
-                color: AppColors.gray900,
-              ),
+              style: AppTextStyles.headingLg.copyWith(color: AppColors.gray900),
             ),
             const SizedBox(height: 8),
             Text(
               '분석 결과를 바탕으로 맞춤 계획을 세웠어요',
-              style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.gray500,
-              ),
+              style: AppTextStyles.bodySm.copyWith(color: AppColors.gray500),
             ),
             const SizedBox(height: 24),
-
-            // Weekly free spending budget
             MoreCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,7 +64,7 @@ class OnboardingPlanPage extends StatelessWidget {
                           color: AppColors.orange500.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(
+                        child: const Icon(
                           Icons.account_balance_wallet_outlined,
                           color: AppColors.orange500,
                           size: 20,
@@ -85,8 +91,6 @@ class OnboardingPlanPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Weekly savings goal
             MoreCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,8 +131,6 @@ class OnboardingPlanPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Category budget allocation
             MoreCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -203,9 +205,7 @@ class OnboardingPlanPage extends StatelessWidget {
           padding: const EdgeInsets.all(24),
           child: MoreBottomButton(
             text: '시작하기',
-            onPressed: () {
-              context.go(AppRoutes.home);
-            },
+            onPressed: () => context.go(AppRoutes.home),
             enabled: true,
           ),
         ),
@@ -216,8 +216,8 @@ class OnboardingPlanPage extends StatelessWidget {
   static String _formatAmount(int amount) {
     final str = amount.toString();
     final buffer = StringBuffer();
-    int count = 0;
-    for (int i = str.length - 1; i >= 0; i--) {
+    var count = 0;
+    for (var i = str.length - 1; i >= 0; i--) {
       buffer.write(str[i]);
       count++;
       if (count % 3 == 0 && i > 0) {
