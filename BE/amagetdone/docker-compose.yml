@@ -8,6 +8,8 @@ services:
       - "127.0.0.1:${COMPOSE_HOST_PORT:-8080}:8080"
     env_file:
       - .env
+    environment:
+      DB_URL: jdbc:postgresql://amagetdone-postgres:5432/${POSTGRES_DB}
     volumes:
       - ./.env:/app/.env:ro
     depends_on:
