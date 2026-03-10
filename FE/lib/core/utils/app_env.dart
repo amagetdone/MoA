@@ -6,7 +6,7 @@ class AppEnv {
     'GOOGLE_CLIENT_ID': 'your_google_client_id',
   };
 
-  static Future<void> load() => dotenv.load(fileName: '.env.example');
+  static Future<void> load() => dotenv.load(fileName: '.env');
 
   static String? optional(String key) {
     final value = dotenv.env[key]?.trim();
