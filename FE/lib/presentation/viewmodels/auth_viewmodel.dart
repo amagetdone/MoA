@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:more_app/data/datasources/local/auth_local_datasource_impl.dart';
-import 'package:more_app/data/datasources/remote/fake_auth_remote_datasource.dart';
 import 'package:more_app/data/repositories/auth_repository_impl.dart';
 import 'package:more_app/domain/entities/user.dart';
 import 'package:more_app/domain/repositories/auth_repository.dart';
+import 'package:more_app/presentation/providers/app_data_providers.dart';
 
 part 'auth_viewmodel.freezed.dart';
 
@@ -69,12 +69,13 @@ class AuthViewModel extends StateNotifier<AuthState> {
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepositoryImpl(
-    remoteDataSource: FakeAuthRemoteDataSource(),
+    remoteDataSource: ref.read(authRemoteDataSourceProvider),
     localDataSource: AuthLocalDataSourceImpl(),
   );
 });
 
-final authViewModelProvider =
-    StateNotifierProvider<AuthViewModel, AuthState>((ref) {
+final authViewModelProvider = StateNotifierProvider<AuthViewModel, AuthState>((
+  ref,
+) {
   return AuthViewModel(ref.read(authRepositoryProvider));
 });

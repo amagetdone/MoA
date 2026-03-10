@@ -28,11 +28,44 @@ class HomePage extends ConsumerWidget {
         showBack: false,
         showNotification: true,
       ),
-      body: _buildBody(context, state),
+      body: _buildBody(context, state, ref),
     );
   }
 
-  Widget _buildBody(BuildContext context, HomeState state) {
+  Widget _buildBody(BuildContext context, HomeState state, WidgetRef ref) {
+    if (state.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (state.errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('홈 데이터를 불러오지 못했습니다.', style: AppTextStyles.bodyLg),
+              const SizedBox(height: 8),
+              Text(
+                state.errorMessage!,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodySm.copyWith(
+                  color: AppColors.textTertiary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () {
+                  ref.read(homeViewModelProvider.notifier).loadData();
+                },
+                child: const Text('다시 시도'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     switch (state.status) {
       case HomeStatus.noAccount:
         return _buildNoAccount(context);
@@ -98,13 +131,9 @@ class HomePage extends ConsumerWidget {
             weeklySpent: state.weeklySpent,
           ),
           const SizedBox(height: 16),
-          SavingsCard(
-            weeklySaved: state.weeklySaved,
-          ),
+          SavingsCard(weeklySaved: state.weeklySaved),
           const SizedBox(height: 16),
-          AssetCard(
-            totalAsset: state.totalAsset,
-          ),
+          AssetCard(totalAsset: state.totalAsset),
           const SizedBox(height: 16),
           ...state.activeGoals.map(
             (goal) => Padding(

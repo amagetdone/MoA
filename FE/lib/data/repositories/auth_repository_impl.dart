@@ -96,8 +96,15 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<domain.User?> getCurrentUser() async {
-    // TODO: 백엔드 연동 시 구현
-    return null;
+    final accessToken = await localDataSource.getAccessToken();
+    if (accessToken == null) {
+      return null;
+    }
+
+    final user = await remoteDataSource.getCurrentUser(
+      accessToken: accessToken,
+    );
+    return user.toEntity();
   }
 
   @override
@@ -120,8 +127,10 @@ class AuthRepositoryImpl implements AuthRepository {
       await localDataSource.saveAccessToken(result.accessToken);
       await localDataSource.saveRefreshToken(result.refreshToken);
 
-      // fake에서는 하드코딩된 유저 반환
-      return const domain.User(id: '1', name: '테스트유저', email: 'test@more.com');
+      final user = await remoteDataSource.getCurrentUser(
+        accessToken: result.accessToken,
+      );
+      return user.toEntity();
     } catch (_) {
       // 토큰 갱신 실패 시 로그아웃 처리
       await localDataSource.deleteTokens();

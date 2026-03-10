@@ -20,6 +20,27 @@ class AssetPage extends ConsumerWidget {
     final state = ref.watch(accountViewModelProvider);
     final groupedTransactions = _groupTransactionsByDate(state.transactions);
 
+    if (state.isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.bgPrimary,
+        appBar: MoreAppBar(title: '내 자산'),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (state.errorMessage != null) {
+      return Scaffold(
+        backgroundColor: AppColors.bgPrimary,
+        appBar: const MoreAppBar(title: '내 자산'),
+        body: Center(
+          child: Text(
+            '자산 데이터를 불러오지 못했습니다.\n${state.errorMessage!}',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: const MoreAppBar(title: '내 자산'),
@@ -109,7 +130,9 @@ class AssetPage extends ConsumerWidget {
                             transaction: entry.value[i],
                             onTap: () {
                               context.push(
-                                '${AppRoutes.assetDetail}?id=${entry.value[i].id}',
+                                AppRoutes.assetDetailLocation(
+                                  entry.value[i].id,
+                                ),
                               );
                             },
                           ),

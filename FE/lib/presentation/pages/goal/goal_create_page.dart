@@ -1,26 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
+import 'package:more_app/domain/entities/goal.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/viewmodels/goal_viewmodel.dart';
+import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
-import 'package:more_app/presentation/widgets/common/more_text_field.dart';
 import 'package:more_app/presentation/widgets/common/more_date_field.dart';
+import 'package:more_app/presentation/widgets/common/more_text_field.dart';
 
-class GoalCreatePage extends StatefulWidget {
+class GoalCreatePage extends ConsumerStatefulWidget {
   final bool isOnboarding;
 
-  const GoalCreatePage({
-    super.key,
-    this.isOnboarding = true,
-  });
+  const GoalCreatePage({super.key, this.isOnboarding = true});
 
   @override
-  State<GoalCreatePage> createState() => _GoalCreatePageState();
+  ConsumerState<GoalCreatePage> createState() => _GoalCreatePageState();
 }
 
-class _GoalCreatePageState extends State<GoalCreatePage> {
+class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
@@ -42,8 +43,30 @@ class _GoalCreatePageState extends State<GoalCreatePage> {
         _endDate != null;
   }
 
-  void _onSubmit() {
+  Future<void> _onSubmit() async {
     if (!_isFormValid) return;
+
+    final targetAmount =
+        int.tryParse(_amountController.text.replaceAll(',', '').trim()) ?? 0;
+    final currentGoals = ref.read(goalViewModelProvider).inProgressGoals;
+    final goal = Goal(
+      id: 'goal_${DateTime.now().millisecondsSinceEpoch}',
+      name: _nameController.text.trim(),
+      description: _descriptionController.text.trim().isEmpty
+          ? null
+          : _descriptionController.text.trim(),
+      targetAmount: targetAmount,
+      currentAmount: 0,
+      startDate: _startDate!,
+      endDate: _endDate!,
+      priority: currentGoals.length + 1,
+      status: GoalStatus.inProgress,
+    );
+
+    await ref.read(goalViewModelProvider.notifier).addGoal(goal);
+    await ref.read(homeViewModelProvider.notifier).loadData();
+
+    if (!mounted) return;
 
     if (widget.isOnboarding) {
       context.go(AppRoutes.onboardingLoading);
@@ -125,9 +148,7 @@ class _GoalCreatePageState extends State<GoalCreatePage> {
             TextField(
               controller: _descriptionController,
               maxLines: 4,
-              style: AppTextStyles.bodyMd.copyWith(
-                color: AppColors.gray900,
-              ),
+              style: AppTextStyles.bodyMd.copyWith(color: AppColors.gray900),
               decoration: InputDecoration(
                 hintText: '목표에 대한 설명을 입력해주세요',
                 hintStyle: AppTextStyles.bodyMd.copyWith(

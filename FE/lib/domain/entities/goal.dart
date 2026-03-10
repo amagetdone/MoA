@@ -9,6 +9,7 @@ class Goal {
   final int priority;
   final GoalStatus status;
   final String? iconName;
+  final String? sketchVideoAssetPath;
 
   const Goal({
     required this.id,
@@ -21,12 +22,14 @@ class Goal {
     this.priority = 0,
     this.status = GoalStatus.inProgress,
     this.iconName,
+    this.sketchVideoAssetPath,
   });
 
   double get progressRate =>
       targetAmount > 0 ? (currentAmount / targetAmount).clamp(0.0, 1.0) : 0.0;
 
-  int get remainingAmount => (targetAmount - currentAmount).clamp(0, targetAmount);
+  int get remainingAmount =>
+      (targetAmount - currentAmount).clamp(0, targetAmount);
 
   int get remainingDays {
     final now = DateTime.now();
@@ -44,6 +47,7 @@ class Goal {
     int? priority,
     GoalStatus? status,
     String? iconName,
+    String? sketchVideoAssetPath,
   }) {
     return Goal(
       id: id ?? this.id,
@@ -56,12 +60,9 @@ class Goal {
       priority: priority ?? this.priority,
       status: status ?? this.status,
       iconName: iconName ?? this.iconName,
+      sketchVideoAssetPath: sketchVideoAssetPath ?? this.sketchVideoAssetPath,
     );
   }
 }
 
-enum GoalStatus {
-  inProgress,
-  achieved,
-  failed,
-}
+enum GoalStatus { inProgress, achieved, failed }

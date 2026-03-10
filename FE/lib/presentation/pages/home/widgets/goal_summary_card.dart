@@ -11,10 +11,7 @@ import 'package:more_app/presentation/widgets/common/more_progress_bar.dart';
 class GoalSummaryCard extends StatelessWidget {
   final Goal goal;
 
-  const GoalSummaryCard({
-    super.key,
-    required this.goal,
-  });
+  const GoalSummaryCard({super.key, required this.goal});
 
   IconData _getGoalIcon(String? iconName) {
     switch (iconName) {
@@ -32,6 +29,8 @@ class GoalSummaryCard extends StatelessWidget {
         return Icons.shield;
       case 'shopping':
         return Icons.shopping_bag;
+      case 'laptop':
+        return Icons.laptop_mac;
       case 'gift':
         return Icons.card_giftcard;
       case 'health':
@@ -46,10 +45,12 @@ class GoalSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final remainingDays = goal.remainingDays;
-    final dDayText = remainingDays >= 0 ? 'D-$remainingDays' : 'D+${-remainingDays}';
+    final dDayText = remainingDays >= 0
+        ? 'D-$remainingDays'
+        : 'D+${-remainingDays}';
 
     return MoreCard(
-      onTap: () => context.push('${AppRoutes.goalDetail}?id=${goal.id}'),
+      onTap: () => context.push(AppRoutes.goalDetailLocation(goal.id)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -93,7 +94,8 @@ class GoalSummaryCard extends StatelessWidget {
                       ),
                     ),
                     TextSpan(
-                      text: ' / ${CurrencyFormatter.formatKRW(goal.targetAmount)}',
+                      text:
+                          ' / ${CurrencyFormatter.formatKRW(goal.targetAmount)}',
                       style: AppTextStyles.bodySm.copyWith(
                         color: AppColors.textTertiary,
                       ),
@@ -104,9 +106,7 @@ class GoalSummaryCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          MoreProgressBar(
-            progress: goal.progressRate,
-          ),
+          MoreProgressBar(progress: goal.progressRate),
           const SizedBox(height: 8),
           Align(
             alignment: Alignment.centerRight,

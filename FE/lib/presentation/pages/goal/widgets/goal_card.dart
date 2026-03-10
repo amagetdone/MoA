@@ -4,6 +4,7 @@ import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:more_app/domain/entities/goal.dart';
+import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 import 'package:more_app/presentation/widgets/common/more_progress_bar.dart';
 
@@ -11,11 +12,7 @@ class GoalCard extends StatelessWidget {
   final Goal goal;
   final VoidCallback? onTap;
 
-  const GoalCard({
-    super.key,
-    required this.goal,
-    this.onTap,
-  });
+  const GoalCard({super.key, required this.goal, this.onTap});
 
   IconData _mapIcon(String? iconName) {
     switch (iconName) {
@@ -33,6 +30,8 @@ class GoalCard extends StatelessWidget {
         return Icons.fitness_center;
       case 'shopping':
         return Icons.shopping_bag;
+      case 'laptop':
+        return Icons.laptop_mac;
       case 'emergency':
         return Icons.shield;
       case 'investment':
@@ -47,9 +46,10 @@ class GoalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MoreCard(
-      onTap: onTap ??
+      onTap:
+          onTap ??
           () {
-            context.push('/goal/detail?id=${goal.id}');
+            context.push(AppRoutes.goalDetailLocation(goal.id));
           },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,9 +128,7 @@ class GoalCard extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: Text(
               '${(goal.progressRate * 100).toInt()}% 달성',
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.orange500,
-              ),
+              style: AppTextStyles.caption.copyWith(color: AppColors.orange500),
             ),
           ),
         ],
