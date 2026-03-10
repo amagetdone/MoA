@@ -56,8 +56,8 @@ pipeline {
                         set +a
 
                         require_value() {
-                          local name="$1"
-                          local value="${!name:-}"
+                          name="$1"
+                          eval "value=\${$name-}"
                           if [ -z "$value" ]; then
                             echo "Required Jenkins deploy env is missing: $name" >&2
                             exit 1
