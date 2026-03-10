@@ -16,6 +16,22 @@ class SpendingCategory {
   });
 
   double get usageRate => budget > 0 ? (amount / budget).clamp(0.0, 1.0) : 0.0;
+
+  SpendingCategory copyWith({
+    String? name,
+    int? amount,
+    int? budget,
+    Color? color,
+    IconData? icon,
+  }) {
+    return SpendingCategory(
+      name: name ?? this.name,
+      amount: amount ?? this.amount,
+      budget: budget ?? this.budget,
+      color: color ?? this.color,
+      icon: icon ?? this.icon,
+    );
+  }
 }
 
 class WeeklySpending {

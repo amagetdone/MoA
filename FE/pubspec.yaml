@@ -87,6 +87,8 @@ flutter:
     - assets/images/logo/
     - assets/icons/
     - assets/animations/
+    - assets/seeds/
+    - assets/videos/
 
   fonts:
     - family: Pretendard
