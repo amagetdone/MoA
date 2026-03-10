@@ -1,26 +1,26 @@
-import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
-import 'package:more_app/core/utils/mock_data.dart';
+import 'package:more_app/domain/entities/spending.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 
 class GoalLineChart extends StatelessWidget {
-  const GoalLineChart({super.key});
+  final List<DailySpending> history;
+
+  const GoalLineChart({super.key, required this.history});
 
   @override
   Widget build(BuildContext context) {
-    final history = MockData.savingsHistory;
     if (history.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    // Build cumulative spots
-    final List<FlSpot> spots = [];
-    int cumulative = 0;
-    for (int i = 0; i < history.length; i++) {
-      cumulative += history[i].amount;
-      spots.add(FlSpot(i.toDouble(), cumulative.toDouble()));
+    final spots = <FlSpot>[];
+    var cumulative = 0;
+    for (var index = 0; index < history.length; index++) {
+      cumulative += history[index].amount;
+      spots.add(FlSpot(index.toDouble(), cumulative.toDouble()));
     }
 
     final maxY = cumulative > 0 ? cumulative.toDouble() * 1.2 : 100.0;
@@ -68,7 +68,7 @@ class GoalLineChart extends StatelessWidget {
                         }
                         final display = (value / 10000).toStringAsFixed(0);
                         return Text(
-                          '${display}만',
+                          '$display만',
                           style: AppTextStyles.caption.copyWith(
                             color: AppColors.textTertiary,
                           ),
@@ -80,7 +80,10 @@ class GoalLineChart extends StatelessWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 28,
-                      interval: (history.length / 4).ceilToDouble().clamp(1, double.infinity),
+                      interval: (history.length / 4).ceilToDouble().clamp(
+                        1,
+                        9999,
+                      ),
                       getTitlesWidget: (value, meta) {
                         final index = value.toInt();
                         if (index < 0 || index >= history.length) {
@@ -120,8 +123,8 @@ class GoalLineChart extends StatelessWidget {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          AppColors.orange500.withOpacity(0.3),
-                          AppColors.orange500.withOpacity(0.0),
+                          AppColors.orange500.withValues(alpha: 0.3),
+                          AppColors.orange500.withValues(alpha: 0),
                         ],
                       ),
                     ),
@@ -132,13 +135,9 @@ class GoalLineChart extends StatelessWidget {
                     getTooltipColor: (spot) => AppColors.textPrimary,
                     getTooltipItems: (touchedSpots) {
                       return touchedSpots.map((spot) {
-                        final amount = spot.y.toInt();
-                        final formatted = _formatAmount(amount);
                         return LineTooltipItem(
-                          formatted,
-                          AppTextStyles.caption.copyWith(
-                            color: Colors.white,
-                          ),
+                          _formatAmount(spot.y.toInt()),
+                          AppTextStyles.caption.copyWith(color: Colors.white),
                         );
                       }).toList();
                     },
@@ -156,16 +155,17 @@ class GoalLineChart extends StatelessWidget {
     if (amount >= 10000) {
       return '${(amount / 10000).toStringAsFixed(0)}만원';
     }
-    return '${amount}원';
+    return '$amount원';
   }
 }
 
 class GoalBarChart extends StatelessWidget {
-  const GoalBarChart({super.key});
+  final List<DailySpending> history;
+
+  const GoalBarChart({super.key, required this.history});
 
   @override
   Widget build(BuildContext context) {
-    final history = MockData.savingsHistory;
     if (history.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -221,7 +221,7 @@ class GoalBarChart extends StatelessWidget {
                         }
                         final display = (value / 10000).toStringAsFixed(0);
                         return Text(
-                          '${display}만',
+                          '$display만',
                           style: AppTextStyles.caption.copyWith(
                             color: AppColors.textTertiary,
                           ),
@@ -273,13 +273,9 @@ class GoalBarChart extends StatelessWidget {
                   touchTooltipData: BarTouchTooltipData(
                     getTooltipColor: (group) => AppColors.textPrimary,
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                      final amount = rod.toY.toInt();
-                      final formatted = _formatAmount(amount);
                       return BarTooltipItem(
-                        formatted,
-                        AppTextStyles.caption.copyWith(
-                          color: Colors.white,
-                        ),
+                        _formatAmount(rod.toY.toInt()),
+                        AppTextStyles.caption.copyWith(color: Colors.white),
                       );
                     },
                   ),
@@ -296,6 +292,6 @@ class GoalBarChart extends StatelessWidget {
     if (amount >= 10000) {
       return '${(amount / 10000).toStringAsFixed(0)}만원';
     }
-    return '${amount}원';
+    return '$amount원';
   }
 }
