@@ -10,6 +10,11 @@ android/local.properties
 .claude/
 AGENTS.md
 CLAUDE.md
+ref/
+
+# Local debug artifacts
+tmp-android-app.png
+window_dump*.xml
 
 # Miscellaneous
 *.class
