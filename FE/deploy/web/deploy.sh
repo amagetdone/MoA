@@ -9,6 +9,20 @@ HTTPS_CONF="${SCRIPT_DIR}/nginx/https.conf"
 ACTIVE_CONF="${SCRIPT_DIR}/nginx/default.conf"
 CERT_DIR="${SCRIPT_DIR}/certbot/conf/live/${DOMAIN}"
 
+has_https_certificates() {
+  if command -v sudo >/dev/null 2>&1 && \
+     sudo -n test -f "${CERT_DIR}/fullchain.pem" && \
+     sudo -n test -f "${CERT_DIR}/privkey.pem"; then
+    return 0
+  fi
+
+  if [ -L "${CERT_DIR}/fullchain.pem" ] && [ -L "${CERT_DIR}/privkey.pem" ]; then
+    return 0
+  fi
+
+  [ -f "${CERT_DIR}/fullchain.pem" ] && [ -f "${CERT_DIR}/privkey.pem" ]
+}
+
 cd "${SCRIPT_DIR}"
 
 mkdir -p "${SCRIPT_DIR}/current" "${SCRIPT_DIR}/nginx" \
@@ -44,7 +58,7 @@ if [ ! -f "${SCRIPT_DIR}/current/index.html" ]; then
   exit 1
 fi
 
-if [ -f "${CERT_DIR}/fullchain.pem" ] && [ -f "${CERT_DIR}/privkey.pem" ]; then
+if has_https_certificates; then
   cp "${HTTPS_CONF}" "${ACTIVE_CONF}"
   HEALTH_CHECK_URL="https://127.0.0.1/healthz"
   CURL_EXTRA_ARGS="--insecure"

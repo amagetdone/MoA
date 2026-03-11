@@ -72,7 +72,7 @@ pipeline {
 
                         flutter pub get
                         flutter test
-                        flutter build web --release
+                        flutter build web --release --dart-define-from-file=.env
                         rm -f build/web/assets/.env
                     '''
                 }

@@ -7,6 +7,7 @@ import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'package:more_app/core/theme/app_theme.dart';
 import 'package:more_app/core/utils/app_env.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/widgets/preview/web_preview_shell.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,10 +28,12 @@ Future<void> main() async {
 class MoreApp extends StatelessWidget {
   const MoreApp({super.key});
 
+  static const _designSize = Size(412, 892);
+
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
-      designSize: const Size(412, 892),
+      designSize: _designSize,
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
@@ -39,6 +42,20 @@ class MoreApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
           routerConfig: appRouter,
+          builder: (context, routerChild) {
+            final appContent = routerChild ?? const SizedBox.shrink();
+
+            if (WebPreviewShell.isEnabled) {
+              return WebPreviewShell(
+                designSize: _designSize,
+                minTextAdapt: true,
+                splitScreenMode: true,
+                child: appContent,
+              );
+            }
+
+            return appContent;
+          },
         );
       },
     );
