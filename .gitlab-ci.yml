@@ -2,6 +2,12 @@ stages:
   - build
   - deploy
 
+default:
+  hooks:
+    pre_get_sources_script:
+      - if [ -d "$CI_PROJECT_DIR" ]; then sudo -n chown -R "$(id -u):$(id -g)" "$CI_PROJECT_DIR"; fi
+      - if [ -d "$CI_PROJECT_DIR/AI" ]; then sudo -n find "$CI_PROJECT_DIR/AI" -type d \( -name ".venv" -o -name "__pycache__" -o -name "*.egg-info" \) -prune -exec rm -rf {} +; fi
+
 variables:
   PIP_NO_CACHE_DIR: "1"
   IMAGE_TAG: $CI_COMMIT_SHORT_SHA

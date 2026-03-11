@@ -15,6 +15,9 @@ def test_self_hosted_pipeline_does_not_use_executor_specific_images_or_services(
     config = load_ci_config()
 
     assert config["stages"] == ["build", "deploy"]
+    assert "default" in config
+    assert "hooks" in config["default"]
+    assert "pre_get_sources_script" in config["default"]["hooks"]
 
     for job_name in ("docker-build", "deploy"):
         job = config[job_name]
@@ -25,11 +28,17 @@ def test_self_hosted_pipeline_does_not_use_executor_specific_images_or_services(
 def test_self_hosted_pipeline_builds_and_deploys_locally_without_test_stage() -> None:
     config = load_ci_config()
 
+    pre_get_sources_script = "\n".join(config["default"]["hooks"]["pre_get_sources_script"])
     build_script = "\n".join(config["docker-build"]["script"])
     deploy_script = "\n".join(config["deploy"]["script"])
     deploy_before_script = "\n".join(config["deploy"].get("before_script", []))
 
     assert "test" not in config
+    assert "sudo" in pre_get_sources_script
+    assert "chown -R" in pre_get_sources_script
+    assert "find" in pre_get_sources_script
+    assert "__pycache__" in pre_get_sources_script
+    assert ".venv" in pre_get_sources_script
     assert "docker info >/dev/null" in "\n".join(config["docker-build"]["before_script"])
     assert "docker build --pull" in build_script
     assert "docker push" not in build_script
