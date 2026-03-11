@@ -5,14 +5,16 @@ from app.services.merchant_classifier import MerchantClassifierService
 
 
 def load_sequence_classifier(settings: Settings) -> dict[str, object]:
-    model_source = settings.model_local_dir or settings.model_id
+    model_source = settings.model_source
     tokenizer = AutoTokenizer.from_pretrained(
         model_source,
         revision=settings.model_revision,
+        token=settings.hf_token,
     )
     model = AutoModelForSequenceClassification.from_pretrained(
         model_source,
         revision=settings.model_revision,
+        token=settings.hf_token,
     )
     model = model.to(settings.model_device)
     model.eval()
