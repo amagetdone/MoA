@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -29,9 +30,15 @@ Future<void> main() async {
   } catch (_) {}
   await initializeDateFormatting('ko_KR');
 
-  final kakaoNativeAppKey = AppEnv.optional('KAKAO_NATIVE_APP_KEY');
-  if (kakaoNativeAppKey != null) {
-    KakaoSdk.init(nativeAppKey: kakaoNativeAppKey);
+  if (kIsWeb) {
+    KakaoSdk.init(
+      javaScriptAppKey: '19ba61e6ae279e95967d7a6e100f1dad',
+    );
+  } else {
+    final nativeKey = AppEnv.optional('KAKAO_NATIVE_APP_KEY');
+    if (nativeKey != null) {
+      KakaoSdk.init(nativeAppKey: nativeKey);
+    }
   }
 
   runApp(const ProviderScope(child: MoreApp()));

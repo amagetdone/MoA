@@ -12,21 +12,27 @@ class MainShellPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
       body: navigationShell,
       bottomNavigationBar: Container(
-        height: 58.h,
-        decoration: const BoxDecoration(
+        height: 88.h,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
           color: AppColors.bgSurface,
-          border: Border(top: BorderSide(color: AppColors.borderDefault, width: 0.5)),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(16.r),
+            topRight: Radius.circular(16.r),
+          ),
+          border: const Border(top: BorderSide(color: AppColors.borderDefault, width: 0.5)),
         ),
         child: Column(
           children: [
-            const Spacer(),
+            Spacer(),
             NavigationBar(
               backgroundColor: AppColors.bgSurface,
               indicatorColor: AppColors.orange50,
               elevation: 0,
-              height: 50.h,
+              height: 58.h,
           selectedIndex: navigationShell.currentIndex,
           onDestinationSelected: (index) {
             navigationShell.goBranch(
