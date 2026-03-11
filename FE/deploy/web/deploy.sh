@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NETWORK_NAME="moreadmin_default"
+NETWORK_NAMES=("moreadmin_default" "amagetdone-dev_default")
 DOMAIN="j14d101.p.ssafy.io"
 HTTP_CONF="${SCRIPT_DIR}/nginx/http.conf"
 HTTPS_CONF="${SCRIPT_DIR}/nginx/https.conf"
@@ -33,10 +33,12 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! docker network inspect "${NETWORK_NAME}" >/dev/null 2>&1; then
-  echo "ERROR: docker network '${NETWORK_NAME}' not found."
-  exit 1
-fi
+for network_name in "${NETWORK_NAMES[@]}"; do
+  if ! docker network inspect "${network_name}" >/dev/null 2>&1; then
+    echo "ERROR: docker network '${network_name}' not found."
+    exit 1
+  fi
+done
 
 if [ ! -f "${SCRIPT_DIR}/docker-compose.yml" ]; then
   echo "ERROR: docker-compose.yml not found."
@@ -72,7 +74,8 @@ docker compose up -d --remove-orphans
 
 for attempt in $(seq 1 30); do
   if curl -fsS ${CURL_EXTRA_ARGS} "${HEALTH_CHECK_URL}" >/dev/null && \
-     curl -fsS ${CURL_EXTRA_ARGS} "${HEALTH_CHECK_URL%/healthz}/api/health" >/dev/null; then
+     curl -fsS ${CURL_EXTRA_ARGS} "${HEALTH_CHECK_URL%/healthz}/api/health" >/dev/null && \
+     curl -fsS ${CURL_EXTRA_ARGS} "${HEALTH_CHECK_URL%/healthz}/admin/login" >/dev/null; then
     echo "Frontend deploy succeeded."
     exit 0
   fi
