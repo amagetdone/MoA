@@ -1,16 +1,35 @@
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
+from transformers import (
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+    PreTrainedTokenizerFast,
+)
 
 from app.core.config import Settings
 from app.services.merchant_classifier import MerchantClassifierService
 
 
+def _load_tokenizer(model_source: str, settings: Settings):
+    load_kwargs = {
+        "revision": settings.model_revision,
+        "token": settings.hf_token,
+    }
+    try:
+        return AutoTokenizer.from_pretrained(
+            model_source,
+            **load_kwargs,
+        )
+    except ValueError as error:
+        if "Tokenizer class TokenizersBackend does not exist" not in str(error):
+            raise
+        return PreTrainedTokenizerFast.from_pretrained(
+            model_source,
+            **load_kwargs,
+        )
+
+
 def load_sequence_classifier(settings: Settings) -> dict[str, object]:
     model_source = settings.model_source
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_source,
-        revision=settings.model_revision,
-        token=settings.hf_token,
-    )
+    tokenizer = _load_tokenizer(model_source, settings)
     model = AutoModelForSequenceClassification.from_pretrained(
         model_source,
         revision=settings.model_revision,
