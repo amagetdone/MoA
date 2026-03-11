@@ -89,7 +89,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     if (!_isFormValid) return;
 
     if (widget.isOnboarding) {
-      context.go(AppRoutes.onboardingAccount);
+      context.push(AppRoutes.onboardingAccount);
     } else {
       context.pop();
     }
@@ -119,7 +119,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         showBack: true,
         skipText: widget.isOnboarding ? '건너뛰기' : null,
         onSkip: widget.isOnboarding
-            ? () => context.go(AppRoutes.onboardingAccount)
+            ? () => context.push(AppRoutes.onboardingAccount)
             : null,
       ),
       body: SingleChildScrollView(
@@ -323,15 +323,10 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(24.w),
-          child: MoreBottomButton(
-            text: widget.isOnboarding ? '다음' : '저장',
-            onPressed: _onSubmit,
-            enabled: _isFormValid,
-          ),
-        ),
+      bottomNavigationBar: MoreBottomButton(
+        text: widget.isOnboarding ? '다음' : '저장',
+        onPressed: _onSubmit,
+        enabled: _isFormValid,
       ),
     );
   }

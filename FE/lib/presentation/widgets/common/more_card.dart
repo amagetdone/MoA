@@ -22,7 +22,7 @@ class MoreCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: padding ?? EdgeInsets.all(20.w),
+        padding: padding ?? EdgeInsets.all(16.w),
         decoration: BoxDecoration(
           color: color ?? AppColors.bgSurface,
           borderRadius: BorderRadius.circular(16.r),

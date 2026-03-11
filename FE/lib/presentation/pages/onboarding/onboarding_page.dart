@@ -52,7 +52,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   void _onComplete() {
-    context.go(AppRoutes.onboardingProfile);
+    context.push(AppRoutes.onboardingProfile);
   }
 
   @override

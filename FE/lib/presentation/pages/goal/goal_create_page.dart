@@ -174,15 +174,10 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(24.w),
-          child: MoreBottomButton(
-            text: widget.isOnboarding ? '다음' : '생성하기',
-            onPressed: _onSubmit,
-            enabled: _isFormValid,
-          ),
-        ),
+      bottomNavigationBar: MoreBottomButton(
+        text: widget.isOnboarding ? '다음' : '생성하기',
+        onPressed: _onSubmit,
+        enabled: _isFormValid,
       ),
     );
   }

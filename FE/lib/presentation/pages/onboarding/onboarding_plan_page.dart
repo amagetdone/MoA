@@ -150,15 +150,9 @@ class OnboardingPlanPage extends ConsumerWidget {
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(24.w),
-          child: MoreBottomButton(
-            text: '다음',
-            onPressed: () => context.go(AppRoutes.home),
-            enabled: true,
-          ),
-        ),
+      bottomNavigationBar: MoreBottomButton(
+        text: '다음',
+        onPressed: () => context.go(AppRoutes.home),
       ),
     );
   }
