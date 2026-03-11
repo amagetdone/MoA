@@ -5,6 +5,7 @@ pipeline {
         timestamps()
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '20'))
+        skipDefaultCheckout()
     }
 
     environment {
@@ -13,28 +14,45 @@ pipeline {
         PROD_JENKINS_DEPLOY_ENV = '/var/jenkins_home/secrets/amagetdone.env'
         DEV_JENKINS_APP_ENV = '/var/jenkins_home/secrets/amagetdone-dev.app.env'
         DEV_JENKINS_DEPLOY_ENV = '/var/jenkins_home/secrets/amagetdone-dev.env'
-        DEV_DEPLOY_SCRIPT = '/home/ubuntu/deploy/amagetdone-dev/deploy.sh'
     }
 
     stages {
         stage('Checkout') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'develop'
+                    branch 'dev/backend'
+                }
+            }
             steps {
                 checkout scm
             }
         }
 
         stage('Build & Test') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'develop'
+                    branch 'dev/backend'
+                }
+            }
             steps {
                 dir("${APP_DIR}") {
                     sh '''
                         set -eux
 
                         case "$BRANCH_NAME" in
+                          "main"|"develop")
+                            app_env="$PROD_JENKINS_APP_ENV"
+                            ;;
                           "dev/backend")
                             app_env="$DEV_JENKINS_APP_ENV"
                             ;;
                           *)
-                            app_env="$PROD_JENKINS_APP_ENV"
+                            echo "Unsupported branch for build/test: $BRANCH_NAME" >&2
+                            exit 0
                             ;;
                         esac
 
@@ -187,8 +205,13 @@ pipeline {
 
                     bash "$DEV_DEPLOY_SCRIPT"
 
+                    run_host_health_check() {
+                      url="$1"
+                      docker run --rm --network host curlimages/curl:8.12.1 -fsS "$url" >/dev/null
+                    }
+
                     for attempt in $(seq 1 40); do
-                      if curl -fsS "$LOCAL_HEALTH_URL" >/dev/null; then
+                      if run_host_health_check "$LOCAL_HEALTH_URL"; then
                         break
                       fi
                       if [ "$attempt" -eq 40 ]; then
@@ -199,7 +222,7 @@ pipeline {
                     done
 
                     for attempt in $(seq 1 40); do
-                      if curl -fsS "$EXTERNAL_HEALTH_URL" >/dev/null; then
+                      if run_host_health_check "$EXTERNAL_HEALTH_URL"; then
                         exit 0
                       fi
                       if [ "$attempt" -eq 40 ]; then
