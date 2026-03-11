@@ -29,7 +29,10 @@ def test_self_hosted_pipeline_runs_tests_in_ephemeral_container_and_deploys_loca
     deploy_before_script = "\n".join(config["deploy"].get("before_script", []))
 
     assert "docker run --rm" in test_script
+    assert '--user "$(id -u):$(id -g)"' in test_script
     assert "python:3.12.7-slim" in test_script
+    assert "pip install --no-cache-dir --user uv" in test_script
+    assert ".local/bin:$PATH" in test_script
     assert "uv sync --frozen --extra dev" in test_script
     assert ".venv/bin/python -m pytest -q" in test_script
     assert "docker build --pull" in build_script

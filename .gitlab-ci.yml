@@ -17,10 +17,14 @@ test:
   script:
     - >
       docker run --rm
+      --user "$(id -u):$(id -g)"
+      -e HOME=/tmp/runner-home
       -v "$CI_PROJECT_DIR:/workspace"
       -w /workspace/AI
       python:3.12.7-slim
-      sh -lc "python -m pip install --no-cache-dir uv &&
+      sh -lc "mkdir -p \"$HOME\" &&
+      python -m pip install --no-cache-dir --user uv &&
+      export PATH=\"$HOME/.local/bin:$PATH\" &&
       uv sync --frozen --extra dev &&
       .venv/bin/python -m pytest -q"
   rules:
