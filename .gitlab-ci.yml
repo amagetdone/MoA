@@ -19,10 +19,12 @@ test:
       docker run --rm
       --user "$(id -u):$(id -g)"
       -e HOME=/tmp/runner-home
-      -v "$CI_PROJECT_DIR:/workspace"
-      -w /workspace/AI
+      -v "$CI_PROJECT_DIR:/workspace:ro"
+      -w /tmp
       python:3.12.7-slim
-      sh -lc "mkdir -p \"$HOME\" &&
+      sh -lc "mkdir -p \"$HOME\" /tmp/project &&
+      cp -R /workspace/AI /tmp/project/AI &&
+      cd /tmp/project/AI &&
       python -m pip install --no-cache-dir --user uv &&
       export PATH=\"$HOME/.local/bin:$PATH\" &&
       uv sync --frozen --extra dev &&
