@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A new Flutter project.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="more_app">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>more_app</title>
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Kakao SDK (웹용) -->
+  <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js" integrity="sha384-DKYJZ8NLiK8MN4/C5P2dtSmLQ4KwPaoqAfyA/DfmEc1VDxu4kyMhuh/elWXUCrA" crossorigin="anonymous"></script>
+
+  <!-- Google Sign-In (웹용) -->
+  <meta name="google-signin-client_id" content="26025204114-h0lsehum6766elgasajahjtdo79bsrej.apps.googleusercontent.com">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    (function () {
+      var pathname = window.location.pathname;
+      var search = window.location.search || '';
+      var hash = window.location.hash || '';
+
+      if (hash || pathname === '/' || pathname === '') {
+        return;
+      }
+
+      var passthroughBases = ['/admin', '/api', '/assets', '/icons', '/canvaskit'];
+      var passthroughFiles = [
+        '/favicon.png',
+        '/manifest.json',
+        '/flutter_bootstrap.js',
+        '/flutter.js',
+        '/version.json'
+      ];
+
+      for (var i = 0; i < passthroughBases.length; i += 1) {
+        if (pathname === passthroughBases[i] || pathname.indexOf(passthroughBases[i] + '/') === 0) {
+          return;
+        }
+      }
+
+      for (var j = 0; j < passthroughFiles.length; j += 1) {
+        if (pathname === passthroughFiles[j]) {
+          return;
+        }
+      }
+
+      var basePath = '';
+      var routePath = pathname;
+
+      if (pathname === '/preview') {
+        window.location.replace(window.location.origin + '/preview/' + search);
+        return;
+      }
+
+      if (pathname.indexOf('/preview/') === 0) {
+        basePath = '/preview';
+        routePath = pathname.slice('/preview'.length);
+      } else if (pathname === '/app') {
+        window.location.replace(window.location.origin + '/app/' + search);
+        return;
+      } else if (pathname.indexOf('/app/') === 0) {
+        basePath = '/app';
+        routePath = pathname.slice('/app'.length);
+      }
+
+      if (!routePath) {
+        routePath = '/';
+      }
+
+      var normalizedBase = basePath ? basePath + '/' : '/';
+      window.location.replace(
+        window.location.origin + normalizedBase + search + '#' + routePath
+      );
+    })();
+  </script>
+</head>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+import 'dart:typed_data';
+
+import 'package:more_app/domain/entities/goal.dart';
+import 'package:more_app/domain/entities/spending.dart';
+
+abstract class GoalRepository {
+  Future<List<Goal>> fetchGoals();
+  Future<Goal?> findGoalById(String id);
+  Future<Map<String, List<DailySpending>>> fetchGoalSavingsHistoryByGoalId();
+  Future<Uint8List?> getGoalSketchVideo(String goalId);
+  Future<Goal> createGoal(Goal goal);
+  Future<Goal> updateGoal(Goal goal);
+  Future<List<Goal>> saveGoalPriority(List<Goal> goals);
+}

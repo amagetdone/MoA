@@ -1,0 +1,381 @@
+{
+  "user": {
+    "id": "1",
+    "name": "테스트유저",
+    "email": "test@more.com",
+    "profileImageUrl": null
+  },
+  "menuPreferences": {
+    "notificationEnabled": true,
+    "biometricEnabled": false
+  },
+  "bankNames": [
+    "카카오뱅크",
+    "토스뱅크",
+    "신한은행",
+    "국민은행",
+    "NH농협은행",
+    "우리은행",
+    "하나은행",
+    "기업은행",
+    "SC제일은행",
+    "씨티은행"
+  ],
+  "accounts": [
+    {
+      "id": "acc1",
+      "bankName": "카카오뱅크",
+      "accountNumber": "3333-01-1234567",
+      "accountName": "생활비 통장",
+      "balance": 1250000,
+      "isPrimary": true
+    },
+    {
+      "id": "acc2",
+      "bankName": "신한은행",
+      "accountNumber": "110-123-456789",
+      "accountName": "월급 통장",
+      "balance": 3500000,
+      "isPrimary": false
+    },
+    {
+      "id": "acc3",
+      "bankName": "토스뱅크",
+      "accountNumber": "1000-1234-5678",
+      "accountName": "저축 통장",
+      "balance": 5000000,
+      "isPrimary": false
+    }
+  ],
+  "goals": [
+    {
+      "id": "goal1",
+      "name": "제주도 여행",
+      "description": "친구들과 제주도 여행 자금 모으기",
+      "targetAmount": 500000,
+      "currentAmount": 350000,
+      "startDate": "2026-01-01T00:00:00.000",
+      "endDate": "2026-04-30T00:00:00.000",
+      "priority": 1,
+      "status": "inProgress",
+      "iconName": "travel",
+      "sketchVideoAssetPath": "assets/videos/goal_sketch_jeju.webm"
+    },
+    {
+      "id": "goal2",
+      "name": "맥북 프로",
+      "description": "새 맥북 프로 구매 자금",
+      "targetAmount": 3000000,
+      "currentAmount": 1200000,
+      "startDate": "2026-01-01T00:00:00.000",
+      "endDate": "2026-12-31T00:00:00.000",
+      "priority": 2,
+      "status": "inProgress",
+      "iconName": "laptop",
+      "sketchVideoAssetPath": null
+    },
+    {
+      "id": "goal3",
+      "name": "비상금",
+      "description": "만일의 사태를 대비한 비상금",
+      "targetAmount": 1000000,
+      "currentAmount": 1000000,
+      "startDate": "2025-06-01T00:00:00.000",
+      "endDate": "2025-12-31T00:00:00.000",
+      "priority": 3,
+      "status": "achieved",
+      "iconName": "emergency",
+      "sketchVideoAssetPath": null
+    }
+  ],
+  "transactions": [
+    {
+      "id": "tx1",
+      "title": "스타벅스",
+      "amount": 5500,
+      "type": "expense",
+      "category": "식비",
+      "dateTime": "2026-03-10T08:30:00.000",
+      "balanceAfter": 1244500,
+      "memo": null,
+      "accountId": "acc1"
+    },
+    {
+      "id": "tx2",
+      "title": "급여",
+      "amount": 3500000,
+      "type": "income",
+      "category": "급여",
+      "dateTime": "2026-03-10T09:00:00.000",
+      "balanceAfter": 4744500,
+      "memo": null,
+      "accountId": "acc2"
+    },
+    {
+      "id": "tx3",
+      "title": "네이버페이 결제",
+      "amount": 32000,
+      "type": "expense",
+      "category": "쇼핑",
+      "dateTime": "2026-03-09T14:20:00.000",
+      "balanceAfter": 1218500,
+      "memo": null,
+      "accountId": "acc1"
+    },
+    {
+      "id": "tx4",
+      "title": "교통카드 충전",
+      "amount": 50000,
+      "type": "expense",
+      "category": "교통",
+      "dateTime": "2026-03-09T07:45:00.000",
+      "balanceAfter": 1250500,
+      "memo": null,
+      "accountId": "acc1"
+    },
+    {
+      "id": "tx5",
+      "title": "CU 편의점",
+      "amount": 3200,
+      "type": "expense",
+      "category": "식비",
+      "dateTime": "2026-03-08T22:10:00.000",
+      "balanceAfter": 1300500,
+      "memo": null,
+      "accountId": "acc1"
+    },
+    {
+      "id": "tx6",
+      "title": "넷플릭스",
+      "amount": 17000,
+      "type": "expense",
+      "category": "구독",
+      "dateTime": "2026-03-08T00:00:00.000",
+      "balanceAfter": 1303700,
+      "memo": null,
+      "accountId": "acc1"
+    },
+    {
+      "id": "tx7",
+      "title": "배달의민족",
+      "amount": 28500,
+      "type": "expense",
+      "category": "식비",
+      "dateTime": "2026-03-07T19:30:00.000",
+      "balanceAfter": 1320700,
+      "memo": null,
+      "accountId": "acc1"
+    },
+    {
+      "id": "tx8",
+      "title": "목표 저축",
+      "amount": 100000,
+      "type": "transfer",
+      "category": "저축",
+      "dateTime": "2026-03-07T10:00:00.000",
+      "balanceAfter": 1349200,
+      "memo": null,
+      "accountId": "acc1"
+    },
+    {
+      "id": "tx9",
+      "title": "올리브영",
+      "amount": 45000,
+      "type": "expense",
+      "category": "쇼핑",
+      "dateTime": "2026-03-06T16:00:00.000",
+      "balanceAfter": 1449200,
+      "memo": null,
+      "accountId": "acc1"
+    },
+    {
+      "id": "tx10",
+      "title": "주차비",
+      "amount": 5000,
+      "type": "expense",
+      "category": "교통",
+      "dateTime": "2026-03-06T12:00:00.000",
+      "balanceAfter": 1494200,
+      "memo": null,
+      "accountId": "acc1"
+    }
+  ],
+  "spending": {
+    "weeklyBudget": 730000,
+    "monthlyIncome": 3500000,
+    "monthlySavingsGoal": 500000,
+    "monthlyFixedExpense": 850000,
+    "categories": [
+      {
+        "name": "식비",
+        "amount": 185000,
+        "budget": 300000,
+        "color": "#FFFF6B00",
+        "icon": "restaurant"
+      },
+      {
+        "name": "교통",
+        "amount": 55000,
+        "budget": 100000,
+        "color": "#FF4CAF50",
+        "icon": "directions_bus"
+      },
+      {
+        "name": "쇼핑",
+        "amount": 77000,
+        "budget": 150000,
+        "color": "#FF2196F3",
+        "icon": "shopping_bag"
+      },
+      {
+        "name": "구독",
+        "amount": 17000,
+        "budget": 30000,
+        "color": "#FF9C27B0",
+        "icon": "subscriptions"
+      },
+      {
+        "name": "여가",
+        "amount": 45000,
+        "budget": 100000,
+        "color": "#FFFF9800",
+        "icon": "sports_esports"
+      },
+      {
+        "name": "기타",
+        "amount": 21000,
+        "budget": 50000,
+        "color": "#FF607D8B",
+        "icon": "more_horiz"
+      }
+    ],
+    "dailySpendings": [
+      {
+        "date": "2026-03-04T00:00:00.000",
+        "amount": 45000
+      },
+      {
+        "date": "2026-03-05T00:00:00.000",
+        "amount": 32000
+      },
+      {
+        "date": "2026-03-06T00:00:00.000",
+        "amount": 50000
+      },
+      {
+        "date": "2026-03-07T00:00:00.000",
+        "amount": 128500
+      },
+      {
+        "date": "2026-03-08T00:00:00.000",
+        "amount": 20200
+      },
+      {
+        "date": "2026-03-09T00:00:00.000",
+        "amount": 82000
+      },
+      {
+        "date": "2026-03-10T00:00:00.000",
+        "amount": 5500
+      }
+    ],
+    "monthlySpendings": [
+      {
+        "date": "2025-10-01T00:00:00.000",
+        "amount": 1850000
+      },
+      {
+        "date": "2025-11-01T00:00:00.000",
+        "amount": 1620000
+      },
+      {
+        "date": "2025-12-01T00:00:00.000",
+        "amount": 2100000
+      },
+      {
+        "date": "2026-01-01T00:00:00.000",
+        "amount": 1780000
+      },
+      {
+        "date": "2026-02-01T00:00:00.000",
+        "amount": 1950000
+      },
+      {
+        "date": "2026-03-01T00:00:00.000",
+        "amount": 400000
+      }
+    ]
+  },
+  "goalSavingsHistoryByGoalId": {
+    "goal1": [
+      {
+        "date": "2026-01-07T00:00:00.000",
+        "amount": 50000
+      },
+      {
+        "date": "2026-01-14T00:00:00.000",
+        "amount": 50000
+      },
+      {
+        "date": "2026-01-21T00:00:00.000",
+        "amount": 50000
+      },
+      {
+        "date": "2026-01-28T00:00:00.000",
+        "amount": 50000
+      },
+      {
+        "date": "2026-02-04T00:00:00.000",
+        "amount": 50000
+      },
+      {
+        "date": "2026-02-11T00:00:00.000",
+        "amount": 50000
+      },
+      {
+        "date": "2026-02-18T00:00:00.000",
+        "amount": 50000
+      },
+      {
+        "date": "2026-02-25T00:00:00.000",
+        "amount": 50000
+      },
+      {
+        "date": "2026-03-04T00:00:00.000",
+        "amount": 50000
+      },
+      {
+        "date": "2026-03-10T00:00:00.000",
+        "amount": 50000
+      }
+    ],
+    "goal2": [
+      {
+        "date": "2026-01-05T00:00:00.000",
+        "amount": 200000
+      },
+      {
+        "date": "2026-02-05T00:00:00.000",
+        "amount": 300000
+      },
+      {
+        "date": "2026-03-05T00:00:00.000",
+        "amount": 700000
+      }
+    ],
+    "goal3": [
+      {
+        "date": "2025-08-01T00:00:00.000",
+        "amount": 400000
+      },
+      {
+        "date": "2025-10-01T00:00:00.000",
+        "amount": 300000
+      },
+      {
+        "date": "2025-12-01T00:00:00.000",
+        "amount": 300000
+      }
+    ]
+  }
+}

@@ -1,0 +1,298 @@
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:more_app/core/theme/app_colors.dart';
+import 'package:more_app/core/theme/app_text_styles.dart';
+import 'package:more_app/domain/entities/spending.dart';
+import 'package:more_app/presentation/widgets/common/more_card.dart';
+
+class GoalLineChart extends StatelessWidget {
+  final List<DailySpending> history;
+
+  const GoalLineChart({super.key, required this.history});
+
+  @override
+  Widget build(BuildContext context) {
+    if (history.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final spots = <FlSpot>[];
+    var cumulative = 0;
+    for (var index = 0; index < history.length; index++) {
+      cumulative += history[index].amount;
+      spots.add(FlSpot(index.toDouble(), cumulative.toDouble()));
+    }
+
+    final maxY = cumulative > 0 ? cumulative.toDouble() * 1.2 : 100.0;
+
+    return MoreCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '달성 현황',
+            style: AppTextStyles.headingMd.copyWith(
+              color: AppColors.textPrimary,
+            ),
+          ),
+          SizedBox(height: 16.h),
+          SizedBox(
+            height: 200.h,
+            child: LineChart(
+              LineChartData(
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: maxY / 4,
+                  getDrawingHorizontalLine: (value) {
+                    return FlLine(
+                      color: AppColors.borderDefault,
+                      strokeWidth: 1,
+                    );
+                  },
+                ),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 50.w,
+                      getTitlesWidget: (value, meta) {
+                        if (value == meta.max || value == meta.min) {
+                          return const SizedBox.shrink();
+                        }
+                        final display = (value / 10000).toStringAsFixed(0);
+                        return Text(
+                          '$display만',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textTertiary,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28.h,
+                      interval: (history.length / 4).ceilToDouble().clamp(
+                        1,
+                        9999,
+                      ),
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index < 0 || index >= history.length) {
+                          return const SizedBox.shrink();
+                        }
+                        final date = history[index].date;
+                        return Padding(
+                          padding: EdgeInsets.only(top: 4.h),
+                          child: Text(
+                            '${date.month}/${date.day}',
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                minX: 0,
+                maxX: (history.length - 1).toDouble(),
+                minY: 0,
+                maxY: maxY,
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    curveSmoothness: 0.3,
+                    color: AppColors.orange500,
+                    barWidth: 3,
+                    isStrokeCapRound: true,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppColors.orange500.withValues(alpha: 0.3),
+                          AppColors.orange500.withValues(alpha: 0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (spot) => AppColors.textPrimary,
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        return LineTooltipItem(
+                          _formatAmount(spot.y.toInt()),
+                          AppTextStyles.caption.copyWith(color: Colors.white),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatAmount(int amount) {
+    if (amount >= 10000) {
+      return '${(amount / 10000).toStringAsFixed(0)}만원';
+    }
+    return '$amount원';
+  }
+}
+
+class GoalBarChart extends StatelessWidget {
+  final List<DailySpending> history;
+
+  const GoalBarChart({super.key, required this.history});
+
+  @override
+  Widget build(BuildContext context) {
+    if (history.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final maxAmount = history.fold<int>(
+      0,
+      (prev, item) => item.amount > prev ? item.amount : prev,
+    );
+    final maxY = maxAmount > 0 ? maxAmount.toDouble() * 1.2 : 100.0;
+
+    return MoreCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '저축 이력',
+            style: AppTextStyles.headingMd.copyWith(
+              color: AppColors.textPrimary,
+            ),
+          ),
+          SizedBox(height: 16.h),
+          SizedBox(
+            height: 200.h,
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: maxY,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: maxY / 4,
+                  getDrawingHorizontalLine: (value) {
+                    return FlLine(
+                      color: AppColors.borderDefault,
+                      strokeWidth: 1,
+                    );
+                  },
+                ),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 50.w,
+                      getTitlesWidget: (value, meta) {
+                        if (value == meta.max || value == meta.min) {
+                          return const SizedBox.shrink();
+                        }
+                        final display = (value / 10000).toStringAsFixed(0);
+                        return Text(
+                          '$display만',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textTertiary,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28.h,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index < 0 || index >= history.length) {
+                          return const SizedBox.shrink();
+                        }
+                        final date = history[index].date;
+                        return Padding(
+                          padding: EdgeInsets.only(top: 4.h),
+                          child: Text(
+                            '${date.month}/${date.day}',
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: List.generate(history.length, (index) {
+                  return BarChartGroupData(
+                    x: index,
+                    barRods: [
+                      BarChartRodData(
+                        toY: history[index].amount.toDouble(),
+                        color: AppColors.orange500,
+                        width: history.length > 10 ? 8.w : 16.w,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(4.r),
+                          topRight: Radius.circular(4.r),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+                barTouchData: BarTouchData(
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipColor: (group) => AppColors.textPrimary,
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      return BarTooltipItem(
+                        _formatAmount(rod.toY.toInt()),
+                        AppTextStyles.caption.copyWith(color: Colors.white),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatAmount(int amount) {
+    if (amount >= 10000) {
+      return '${(amount / 10000).toStringAsFixed(0)}만원';
+    }
+    return '$amount원';
+  }
+}
