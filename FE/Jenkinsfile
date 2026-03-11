@@ -95,13 +95,22 @@ pipeline {
 
                     ssh -i "${DEPLOY_KEY_PATH}" -p "${REMOTE_PORT}" "${REMOTE_USER}@${REMOTE_HOST}" "
                       set -eu
-                      mkdir -p '${REMOTE_APP_DIR}/current' '${REMOTE_APP_DIR}/nginx'
+                      mkdir -p '${REMOTE_APP_DIR}/current' '${REMOTE_APP_DIR}/nginx' '${REMOTE_APP_DIR}/certbot/www'
                     "
+
+                    rsync -az \
+                      -e "ssh -i ${DEPLOY_KEY_PATH} -p ${REMOTE_PORT}" \
+                      "${APP_DIR}/deploy/web/docker-compose.yml" \
+                      "${APP_DIR}/deploy/web/deploy.sh" \
+                      "${APP_DIR}/deploy/web/enable_https.sh" \
+                      "${APP_DIR}/deploy/web/renew_https.sh" \
+                      "${APP_DIR}/deploy/web/README.md" \
+                      "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_APP_DIR}/"
 
                     rsync -az --delete \
                       -e "ssh -i ${DEPLOY_KEY_PATH} -p ${REMOTE_PORT}" \
-                      "${APP_DIR}/deploy/web/" \
-                      "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_APP_DIR}/"
+                      "${APP_DIR}/deploy/web/nginx/" \
+                      "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_APP_DIR}/nginx/"
 
                     rsync -az --delete \
                       -e "ssh -i ${DEPLOY_KEY_PATH} -p ${REMOTE_PORT}" \
