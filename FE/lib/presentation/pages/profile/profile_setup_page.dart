@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -47,7 +48,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     _birthDateController = TextEditingController(
       text: widget.initialData?['birthDate'] ?? '',
     );
-    _selectedIncome = widget.initialData?['income'];
+    _selectedIncome = widget.initialData?['income'] ?? '있어요';
   }
 
   @override
@@ -89,37 +90,150 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     if (!_isFormValid) return;
 
     if (widget.isOnboarding) {
-      context.push(AppRoutes.onboardingAccount);
+      context.go(AppRoutes.onboarding);
     } else {
       context.pop();
     }
   }
 
   Future<void> _pickBirthDate() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: DateTime(2000, 1, 1),
-      firstDate: DateTime(1950),
-      lastDate: DateTime.now(),
-    );
-    if (date != null) {
-      setState(() {
-        _birthDateController.text =
-            '${date.year}.${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}';
-      });
+    final now = DateTime.now();
+    int selectedYear = 2000;
+    int selectedMonth = 1;
+    int selectedDay = 17;
+
+    // 기존 값이 있으면 파싱
+    if (_birthDateController.text.isNotEmpty) {
+      final parts = _birthDateController.text.split('.');
+      if (parts.length == 3) {
+        selectedYear = int.tryParse(parts[0]) ?? 2000;
+        selectedMonth = int.tryParse(parts[1]) ?? 1;
+        selectedDay = int.tryParse(parts[2]) ?? 1;
+      }
     }
+
+    const months = [
+      '1월', '2월', '3월', '4월', '5월', '6월',
+      '7월', '8월', '9월', '10월', '11월', '12월',
+    ];
+    final years = List.generate(now.year - 1950 + 1, (i) => 1950 + i);
+
+    int monthIndex = selectedMonth - 1;
+    int dayIndex = selectedDay - 1;
+    int yearIndex = years.indexOf(selectedYear);
+    if (yearIndex < 0) yearIndex = years.indexOf(2000);
+
+    final monthController = FixedExtentScrollController(initialItem: monthIndex);
+    final dayController = FixedExtentScrollController(initialItem: dayIndex);
+    final yearController = FixedExtentScrollController(initialItem: yearIndex);
+
+    int daysInMonth(int year, int month) => DateUtils.getDaysInMonth(year, month);
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final maxDay = daysInMonth(years[yearIndex], monthIndex + 1);
+            if (dayIndex >= maxDay) {
+              dayIndex = maxDay - 1;
+            }
+            return Container(
+              height: 320.h,
+              decoration: BoxDecoration(
+                color: AppColors.bgSurface,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+              ),
+              child: Column(
+                children: [
+                  // 상단 바
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.pop(ctx),
+                          child: Text('취소', style: AppTextStyles.bodyMd.copyWith(color: AppColors.textTertiary)),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            final day = (dayIndex + 1).clamp(1, maxDay);
+                            setState(() {
+                              _birthDateController.text =
+                                  '${years[yearIndex]}.${(monthIndex + 1).toString().padLeft(2, '0')}.${day.toString().padLeft(2, '0')}';
+                            });
+                            Navigator.pop(ctx);
+                          },
+                          child: Text('확인', style: AppTextStyles.bodyMd.copyWith(color: AppColors.orange500, fontWeight: FontWeight.w600)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(height: 1, color: AppColors.borderDefault),
+                  // 피커
+                  Expanded(
+                    child: Row(
+                      children: [
+                        // 년
+                        Expanded(
+                          child: CupertinoPicker(
+                            scrollController: yearController,
+                            itemExtent: 44.h,
+                            selectionOverlay: const CupertinoPickerDefaultSelectionOverlay(background: Colors.transparent),
+                            onSelectedItemChanged: (i) => setModalState(() => yearIndex = i),
+                            children: years.map((y) => Center(
+                              child: Text('$y', style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.w500)),
+                            )).toList(),
+                          ),
+                        ),
+                        // 월
+                        Expanded(
+                          child: CupertinoPicker(
+                            scrollController: monthController,
+                            itemExtent: 44.h,
+                            selectionOverlay: const CupertinoPickerDefaultSelectionOverlay(background: Colors.transparent),
+                            onSelectedItemChanged: (i) => setModalState(() => monthIndex = i),
+                            children: months.map((m) => Center(
+                              child: Text(m, style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.w500)),
+                            )).toList(),
+                          ),
+                        ),
+                        // 일
+                        Expanded(
+                          child: CupertinoPicker(
+                            scrollController: dayController,
+                            itemExtent: 44.h,
+                            selectionOverlay: const CupertinoPickerDefaultSelectionOverlay(background: Colors.transparent),
+                            onSelectedItemChanged: (i) => setModalState(() => dayIndex = i),
+                            children: List.generate(maxDay, (i) => Center(
+                              child: Text('${i + 1}', style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.w500)),
+                            )),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.bgPrimary,
       appBar: MoreAppBar(
         title: widget.isOnboarding ? '프로필 설정' : '내 정보 수정',
         showBack: true,
         skipText: widget.isOnboarding ? '건너뛰기' : null,
         onSkip: widget.isOnboarding
-            ? () => context.push(AppRoutes.onboardingAccount)
+            ? () => context.go(AppRoutes.onboarding)
             : null,
       ),
       body: SingleChildScrollView(
@@ -138,7 +252,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                   height: 88.w,
                   decoration: BoxDecoration(
                     color: AppColors.gray100,
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(16.r)
                   ),
                   child: Icon(
                     Icons.camera_alt_outlined,
@@ -148,7 +262,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 ),
               ),
             ),
-            SizedBox(height: 32.h),
+            SizedBox(height: 24.h),
 
             // Nickname
             MoreTextField(
@@ -174,42 +288,49 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
               Text(
                 '생년월일',
                 style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.gray700,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13.sp,
+                  color: AppColors.textSecondary,
                 ),
               ),
               SizedBox(height: 8.h),
               GestureDetector(
                 onTap: _pickBirthDate,
-                child: AbsorbPointer(
-                  child: TextField(
-                    controller: _birthDateController,
-                    decoration: InputDecoration(
-                      hintText: 'YYYY.MM.DD',
-                      hintStyle: AppTextStyles.bodyMd.copyWith(
-                        color: AppColors.gray500,
-                        fontSize: 15.sp,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.bgSurface,
+                    borderRadius: BorderRadius.circular(16.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        offset: Offset(0, 2.h),
+                        blurRadius: 8.r,
                       ),
-                      suffixIcon: Icon(
-                        Icons.calendar_today_outlined,
-                        size: 20.w,
-                        color: AppColors.gray500,
+                    ],
+                  ),
+                  child: AbsorbPointer(
+                    child: TextField(
+                      controller: _birthDateController,
+                      style: AppTextStyles.bodyMd,
+                      decoration: InputDecoration(
+                        hintText: 'YYYY.MM.DD',
+                        hintStyle: AppTextStyles.bodyMd.copyWith(
+                          color: AppColors.textTertiary,
+                        ),
+                        suffixIcon: Icon(
+                          Icons.calendar_today_outlined,
+                          size: 20.w,
+                          color: AppColors.textTertiary,
+                        ),
+                        filled: true,
+                        fillColor: Colors.transparent,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16.r),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16.w,
+                          vertical: 12.h,
+                        ),
                       ),
-                      filled: true,
-                      fillColor: AppColors.gray50,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16.w,
-                        vertical: 16.h,
-                      ),
-                    ),
-                    style: AppTextStyles.bodyMd.copyWith(
-                      color: AppColors.gray900,
-                      fontSize: 15.sp,
                     ),
                   ),
                 ),
@@ -220,53 +341,42 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
               Text(
                 '고정 수입 여부',
                 style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.gray700,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13.sp,
+                  color: AppColors.textSecondary,
                 ),
               ),
               SizedBox(height: 8.h),
-              Row(
-                children: [
-                  MoreChip(
-                    label: '네',
-                    selected: _selectedIncome == '네',
-                    onTap: () {
-                      setState(() {
-                        _selectedIncome = '네';
-                      });
-                    },
-                  ),
-                  SizedBox(width: 12.w),
-                  MoreChip(
-                    label: '아니요',
-                    selected: _selectedIncome == '아니요',
-                    onTap: () {
-                      setState(() {
-                        _selectedIncome = '아니요';
-                      });
-                    },
-                  ),
-                  SizedBox(width: 12.w),
-                  MoreChip(
-                    label: '모르겠요',
-                    selected: _selectedIncome == '모르겠요',
-                    onTap: () {
-                      setState(() {
-                        _selectedIncome = '모르겠요';
-                      });
-                    },
-                  ),
-                ],
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.gray100,
+                  borderRadius: BorderRadius.circular(16.r),
+                  border: Border.all(color: AppColors.borderDefault),
+                ),
+                child: Row(
+                  children: [
+                    _ToggleOption(
+                      label: '있어요',
+                      selected: _selectedIncome == '있어요',
+                      onTap: () => setState(() => _selectedIncome = '있어요'),
+                      isFirst: true,
+                    ),
+                    _ToggleOption(
+                      label: '없어요',
+                      selected: _selectedIncome == '없어요',
+                      onTap: () => setState(() => _selectedIncome = '없어요'),
+                      isFirst: false,
+                    ),
+                  ],
+                ),
               ),
 
               // Agreement section
-              SizedBox(height: 40.h),
+              SizedBox(height: 24.h),
               Container(
                 padding: EdgeInsets.all(16.w),
                 decoration: BoxDecoration(
-                  color: AppColors.gray50,
-                  borderRadius: BorderRadius.circular(12.r),
+                  color: AppColors.bgSurface,
+                  borderRadius: BorderRadius.circular(16.r),
+                  border: Border.all(color: AppColors.borderDefault),
                 ),
                 child: Column(
                   children: [
@@ -324,9 +434,10 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         ),
       ),
       bottomNavigationBar: MoreBottomButton(
-        text: widget.isOnboarding ? '다음' : '저장',
+        text: widget.isOnboarding ? '프로필 설정 완료' : '저장',
         onPressed: _onSubmit,
         enabled: _isFormValid,
+        progress: null,
       ),
     );
   }
@@ -387,6 +498,47 @@ class _AgreementCheckbox extends StatelessWidget {
               color: AppColors.gray500,
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _ToggleOption extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final bool isFirst;
+
+  const _ToggleOption({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    required this.isFirst,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.all(4.w),
+          child: Container(
+            padding: EdgeInsets.symmetric(vertical: 10.h),
+            decoration: BoxDecoration(
+              color: selected ? AppColors.bgSurface : Colors.transparent,
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              style: AppTextStyles.bodyMd.copyWith(
+                color: selected ? AppColors.gray900 : AppColors.textTertiary,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -37,28 +37,48 @@ class MoreTextField extends StatelessWidget {
       children: [
         Text(label, style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary)),
         SizedBox(height: 8.h),
-        TextField(
-          controller: controller,
-          readOnly: readOnly,
-          keyboardType: keyboardType,
-          inputFormatters: inputFormatters,
-          onChanged: onChanged,
-          onTap: onTap,
-          maxLines: maxLines,
-          style: AppTextStyles.bodyMd,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.textTertiary),
-            suffixText: suffix,
-            suffixStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary),
-            filled: false,
-            enabledBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: AppColors.borderDefault),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.bgSurface,
+            borderRadius: BorderRadius.circular(16.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                offset: Offset(0, 2.h),
+                blurRadius: 8.r,
+              ),
+            ],
+          ),
+          child: TextField(
+            controller: controller,
+            readOnly: readOnly,
+            keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
+            onChanged: onChanged,
+            onTap: onTap,
+            maxLines: maxLines,
+            style: AppTextStyles.bodyMd,
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.textTertiary),
+              suffixText: suffix,
+              suffixStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary),
+              filled: true,
+              fillColor: Colors.transparent,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16.r),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16.r),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16.r),
+                borderSide: const BorderSide(color: AppColors.buttonPrimary, width: 2),
+              ),
+              contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
             ),
-            focusedBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: AppColors.buttonPrimary, width: 2),
-            ),
-            contentPadding: EdgeInsets.symmetric(vertical: 12.h),
           ),
         ),
       ],

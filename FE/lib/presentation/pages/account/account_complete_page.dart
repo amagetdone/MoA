@@ -26,7 +26,7 @@ class AccountCompletePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.bgPrimary,
       appBar: MoreAppBar(title: '연동완료', showBack: false),
       body: Center(
         child: Padding(
@@ -57,35 +57,45 @@ class AccountCompletePage extends ConsumerWidget {
               ),
               SizedBox(height: 24.h),
               Container(
+                width: double.infinity,
                 padding: EdgeInsets.all(20.w),
                 decoration: BoxDecoration(
-                  color: AppColors.gray50,
+                  color: AppColors.bgSurface,
                   borderRadius: BorderRadius.circular(16.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      offset: Offset(0, 2.h),
+                      blurRadius: 8.r,
+                    ),
+                  ],
                 ),
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
                     BankIcon(bankName: bankName, size: 40.w),
                     SizedBox(width: 16.w),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          bankName,
-                          style: AppTextStyles.bodyLg.copyWith(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16.sp,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            bankName,
+                            style: AppTextStyles.bodyLg.copyWith(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16.sp,
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 4.h),
-                        Text(
-                          accountNumber,
-                          style: AppTextStyles.bodySm.copyWith(
-                            color: AppColors.textTertiary,
-                            fontSize: 13.sp,
+                          SizedBox(height: 4.h),
+                          Text(
+                            accountNumber,
+                            style: AppTextStyles.bodySm.copyWith(
+                              color: AppColors.textTertiary,
+                              fontSize: 13.sp,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -110,9 +120,9 @@ class AccountCompletePage extends ConsumerWidget {
           }
 
           if (isOnboarding) {
-            context.go(AppRoutes.onboardingGoal);
+            context.go(AppRoutes.onboardingAccount);
           } else {
-            context.pop();
+            context.go(AppRoutes.accountAdd);
           }
         },
       ),

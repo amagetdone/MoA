@@ -7,143 +7,175 @@ import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
+import 'package:more_app/presentation/widgets/common/more_card.dart';
 
 class OnboardingAnalysisPage extends StatelessWidget {
   const OnboardingAnalysisPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: MoreAppBar(
-        title: '분석 결과',
-        showBack: true,
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(24.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '3개월 간 소비패턴을 분석했어요.',
-              style: AppTextStyles.headingMd.copyWith(
-                color: AppColors.gray900,
-                fontSize: 18.sp,
-              ),
-            ),
-            SizedBox(height: 24.h),
-
-            // Stats row
-            Container(
-              padding: EdgeInsets.all(16.w),
-              decoration: BoxDecoration(
-                color: AppColors.gray50,
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-              child: Column(
-                children: [
-                  _StatRow(label: '평균 수입', value: '3,000,000원'),
-                  SizedBox(height: 8.h),
-                  _StatRow(label: '평균 지출', value: '1,900,000원', valueColor: AppColors.gray700),
-                  Divider(height: 24.h),
-                  _StatRow(
-                    label: '남은 금액',
-                    value: '1,100,000원',
-                    isBold: true,
-                    valueColor: AppColors.orange500,
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 32.h),
-
-            // Donut chart
-            Center(
-              child: SizedBox(
-                width: 200.w,
-                height: 200.w,
-                child: CustomPaint(
-                  painter: _DonutChartPainter(),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '1,900,000원',
-                          style: AppTextStyles.headingMd.copyWith(
-                            color: AppColors.gray900,
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        SizedBox(height: 2.h),
-                        Text(
-                          '평균 지출',
-                          style: AppTextStyles.bodySm.copyWith(
-                            color: AppColors.gray500,
-                            fontSize: 12.sp,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        backgroundColor: AppColors.bgPrimary,
+        appBar: MoreAppBar(
+          title: '분석 결과',
+          showBack: false,
+        ),
+        body: SingleChildScrollView(
+          padding: EdgeInsets.all(24.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '3개월 간 소비패턴을 분석했어요.',
+                style: AppTextStyles.bodyMd.copyWith(
+                  color: AppColors.gray500,
+                  fontSize: 14.sp,
                 ),
               ),
-            ),
-            SizedBox(height: 16.h),
+              SizedBox(height: 20.h),
 
-            // Legend
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _LegendDot(color: AppColors.orange500, label: '고정비 65%'),
-                SizedBox(width: 24.w),
-                _LegendDot(color: const Color(0xFF4CAF50), label: '변동비 35%'),
-              ],
-            ),
-            SizedBox(height: 24.h),
-
-            // Yellow banner
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF8E1),
-                borderRadius: BorderRadius.circular(8.r),
+              // Stats card
+              MoreCard(
+                child: Column(
+                  children: [
+                    _StatRow(label: '평균 수입', value: '3,000,000원'),
+                    SizedBox(height: 8.h),
+                    _StatRow(
+                      label: '평균 지출',
+                      value: '1,900,000원',
+                      valueColor: AppColors.orange500,
+                    ),
+                    Divider(height: 24.h),
+                    _StatRow(
+                      label: '남은 금액',
+                      value: '1,100,000원',
+                      isBold: true,
+                      valueColor: const Color(0xFF4CAF50),
+                    ),
+                  ],
+                ),
               ),
-              child: Row(
-                children: [
-                  Icon(Icons.lightbulb_outline, size: 20.w, color: const Color(0xFFFFA000)),
-                  SizedBox(width: 8.w),
-                  Expanded(
-                    child: Text(
-                      '식비 절약이 필요해보여요.',
-                      style: AppTextStyles.bodySm.copyWith(
-                        color: const Color(0xFFF57C00),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13.sp,
+              SizedBox(height: 16.h),
+
+              // Donut chart card
+              MoreCard(
+                child: Column(
+                  children: [
+                    // Donut chart
+                    Center(
+                      child: SizedBox(
+                        width: 200.w,
+                        height: 200.w,
+                        child: CustomPaint(
+                          painter: _DonutChartPainter(),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '1,900,000원',
+                                  style: AppTextStyles.headingMd.copyWith(
+                                    color: AppColors.gray900,
+                                    fontSize: 16.sp,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                SizedBox(height: 2.h),
+                                Text(
+                                  '평균 지출',
+                                  style: AppTextStyles.bodySm.copyWith(
+                                    color: AppColors.gray500,
+                                    fontSize: 12.sp,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 24.h),
+                    SizedBox(height: 16.h),
 
-            // Category bars
-            _CategoryBar(name: '식비', amount: '750,000원', ratio: 0.75),
-            SizedBox(height: 12.h),
-            _CategoryBar(name: '여가비', amount: '550,000원', ratio: 0.55),
-            SizedBox(height: 12.h),
-            _CategoryBar(name: '교통비', amount: '150,000원', ratio: 0.15),
-          ],
+                    // Legend
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _LegendDot(
+                            color: AppColors.orange500, label: '고정비 65%'),
+                        SizedBox(width: 24.w),
+                        _LegendDot(
+                            color: const Color(0xFF4CAF50), label: '변동비 35%'),
+                      ],
+                    ),
+                    SizedBox(height: 16.h),
+
+                    // Yellow banner
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 16.w, vertical: 12.h),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF8E1),
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.lightbulb_outline,
+                              size: 20.w, color: const Color(0xFFFFA000)),
+                          SizedBox(width: 8.w),
+                          Expanded(
+                            child: Text(
+                              '식비 절약이 필요해보여요.',
+                              style: AppTextStyles.bodySm.copyWith(
+                                color: const Color(0xFFF57C00),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13.sp,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 20.h),
+
+                    // Category header
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '카테고리별 지출',
+                        style: AppTextStyles.bodyMd.copyWith(
+                          color: AppColors.gray900,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14.sp,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+
+                    // Category bars
+                    _CategoryBar(
+                        name: '식비', amount: '750,000원', ratio: 0.75),
+                    SizedBox(height: 12.h),
+                    _CategoryBar(
+                        name: '여가비', amount: '550,000원', ratio: 0.55),
+                    SizedBox(height: 12.h),
+                    _CategoryBar(
+                        name: '교통비', amount: '150,000원', ratio: 0.15),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-      bottomNavigationBar: MoreBottomButton(
-        text: '다음',
-        onPressed: () {
-          context.push(AppRoutes.onboardingPlan);
-        },
+        bottomNavigationBar: MoreBottomButton(
+          text: '다음',
+          progress: 5 / 6,
+          onPressed: () {
+            context.push(AppRoutes.onboardingPlan);
+          },
+        ),
       ),
     );
   }
@@ -177,7 +209,8 @@ class _StatRow extends StatelessWidget {
         ),
         Text(
           value,
-          style: (isBold ? AppTextStyles.bodyLg : AppTextStyles.bodySm).copyWith(
+          style:
+              (isBold ? AppTextStyles.bodyLg : AppTextStyles.bodySm).copyWith(
             color: valueColor ?? AppColors.gray900,
             fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
             fontSize: isBold ? 16.sp : 13.sp,
@@ -261,7 +294,8 @@ class _CategoryBar extends StatelessWidget {
             child: LinearProgressIndicator(
               value: ratio,
               backgroundColor: AppColors.gray100,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.orange500),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.orange500),
             ),
           ),
         ),
@@ -276,16 +310,15 @@ class _DonutChartPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
     const strokeWidth = 28.0;
-    final rect = Rect.fromCircle(center: center, radius: radius - strokeWidth / 2);
+    final rect =
+        Rect.fromCircle(center: center, radius: radius - strokeWidth / 2);
 
-    // Fixed cost 65%
     final fixedPaint = Paint()
       ..color = AppColors.orange500
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.butt;
 
-    // Variable cost 35%
     final variablePaint = Paint()
       ..color = const Color(0xFF4CAF50)
       ..style = PaintingStyle.stroke
@@ -297,7 +330,8 @@ class _DonutChartPainter extends CustomPainter {
     const variableSweep = 2 * math.pi * 0.35;
 
     canvas.drawArc(rect, startAngle, fixedSweep, false, fixedPaint);
-    canvas.drawArc(rect, startAngle + fixedSweep, variableSweep, false, variablePaint);
+    canvas.drawArc(
+        rect, startAngle + fixedSweep, variableSweep, false, variablePaint);
   }
 
   @override

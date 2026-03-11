@@ -14,7 +14,7 @@ class LoginPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.listen<AuthState>(authViewModelProvider, (prev, next) {
       if (next is AuthAuthenticated) {
-        context.go(AppRoutes.onboarding);
+        context.go(AppRoutes.onboardingProfile);
       } else if (next is AuthError) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(next.message)),

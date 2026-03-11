@@ -26,7 +26,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  DateTime? _startDate;
+  DateTime? _startDate = DateTime.now();
   DateTime? _endDate;
 
   @override
@@ -79,10 +79,13 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.bgPrimary,
       appBar: MoreAppBar(
         title: widget.isOnboarding ? '첫 번째 목표 설정' : '새 목표 만들기',
         showBack: true,
+        onBack: widget.isOnboarding
+            ? () => context.go(AppRoutes.onboardingAccount)
+            : null,
         skipText: widget.isOnboarding ? '건너뛰기' : null,
         onSkip: widget.isOnboarding
             ? () => context.go(AppRoutes.onboardingLoading)
@@ -100,6 +103,62 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
               controller: _nameController,
               onChanged: (_) => setState(() {}),
             ),
+            SizedBox(height: 16.h),
+
+            // Description (optional, auto-expanding)
+            Text(
+              '목표 설명 (선택)',
+              style: AppTextStyles.bodySm.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.bgSurface,
+                borderRadius: BorderRadius.circular(16.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    offset: Offset(0, 2.h),
+                    blurRadius: 8.r,
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: _descriptionController,
+                minLines: 1,
+                maxLines: null,
+                style: AppTextStyles.bodyMd.copyWith(color: AppColors.gray900),
+                decoration: InputDecoration(
+                  hintText: '목표에 대한 설명을 입력해주세요',
+                  hintStyle: AppTextStyles.bodyMd.copyWith(
+                    color: AppColors.textTertiary,
+                  ),
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16.r),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16.r),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16.r),
+                    borderSide: const BorderSide(
+                      color: AppColors.buttonPrimary,
+                      width: 2,
+                    ),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 12.h,
+                  ),
+                ),
+              ),
+            ),
             SizedBox(height: 24.h),
 
             // Target amount
@@ -113,63 +172,33 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
             ),
             SizedBox(height: 24.h),
 
-            // Start date
-            MoreDateField(
-              label: '시작일',
-              value: _startDate,
-              onChanged: (date) {
-                setState(() {
-                  _startDate = date;
-                });
-              },
-            ),
-            SizedBox(height: 24.h),
-
-            // End date
-            MoreDateField(
-              label: '종료일',
-              value: _endDate,
-              onChanged: (date) {
-                setState(() {
-                  _endDate = date;
-                });
-              },
-            ),
-            SizedBox(height: 24.h),
-
-            // Description (optional)
-            Text(
-              '설명 (선택)',
-              style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.gray700,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            SizedBox(height: 8.h),
-            TextField(
-              controller: _descriptionController,
-              maxLines: 4,
-              style: AppTextStyles.bodyMd.copyWith(color: AppColors.gray900),
-              decoration: InputDecoration(
-                hintText: '목표에 대한 설명을 입력해주세요',
-                hintStyle: AppTextStyles.bodyMd.copyWith(
-                  color: AppColors.gray100,
-                ),
-                filled: true,
-                fillColor: AppColors.gray50,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                  borderSide: BorderSide(
-                    color: AppColors.orange500,
-                    width: 1.5,
+            // Start date & End date in one row
+            Row(
+              children: [
+                Expanded(
+                  child: MoreDateField(
+                    label: '시작일',
+                    value: _startDate,
+                    onChanged: (date) {
+                      setState(() {
+                        _startDate = date;
+                      });
+                    },
                   ),
                 ),
-                contentPadding: EdgeInsets.all(16.w),
-              ),
+                SizedBox(width: 16.w),
+                Expanded(
+                  child: MoreDateField(
+                    label: '종료일',
+                    value: _endDate,
+                    onChanged: (date) {
+                      setState(() {
+                        _endDate = date;
+                      });
+                    },
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -178,6 +207,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
         text: widget.isOnboarding ? '다음' : '생성하기',
         onPressed: _onSubmit,
         enabled: _isFormValid,
+        progress: widget.isOnboarding ? 3 / 6 : null,
       ),
     );
   }

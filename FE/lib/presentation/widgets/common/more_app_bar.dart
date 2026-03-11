@@ -10,6 +10,7 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showNotification;
   final String? skipText;
   final VoidCallback? onSkip;
+  final VoidCallback? onBack;
   final List<Widget>? actions;
 
   const MoreAppBar({
@@ -19,6 +20,7 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.showNotification = false,
     this.skipText,
     this.onSkip,
+    this.onBack,
     this.actions,
   });
 
@@ -53,7 +55,7 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
       leading: showBack
           ? IconButton(
               icon: Icon(Icons.arrow_back_ios, size: 20.w, color: AppColors.textPrimary),
-              onPressed: () {
+              onPressed: onBack ?? () {
                 if (context.canPop()) {
                   context.pop();
                 }
