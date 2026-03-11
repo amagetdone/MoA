@@ -35,6 +35,66 @@
   <!-- Google Sign-In (웹용) -->
   <meta name="google-signin-client_id" content="26025204114-h0lsehum6766elgasajahjtdo79bsrej.apps.googleusercontent.com">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    (function () {
+      var pathname = window.location.pathname;
+      var search = window.location.search || '';
+      var hash = window.location.hash || '';
+
+      if (hash || pathname === '/' || pathname === '') {
+        return;
+      }
+
+      var passthroughBases = ['/admin', '/api', '/assets', '/icons', '/canvaskit'];
+      var passthroughFiles = [
+        '/favicon.png',
+        '/manifest.json',
+        '/flutter_bootstrap.js',
+        '/flutter.js',
+        '/version.json'
+      ];
+
+      for (var i = 0; i < passthroughBases.length; i += 1) {
+        if (pathname === passthroughBases[i] || pathname.indexOf(passthroughBases[i] + '/') === 0) {
+          return;
+        }
+      }
+
+      for (var j = 0; j < passthroughFiles.length; j += 1) {
+        if (pathname === passthroughFiles[j]) {
+          return;
+        }
+      }
+
+      var basePath = '';
+      var routePath = pathname;
+
+      if (pathname === '/preview') {
+        window.location.replace(window.location.origin + '/preview/' + search);
+        return;
+      }
+
+      if (pathname.indexOf('/preview/') === 0) {
+        basePath = '/preview';
+        routePath = pathname.slice('/preview'.length);
+      } else if (pathname === '/app') {
+        window.location.replace(window.location.origin + '/app/' + search);
+        return;
+      } else if (pathname.indexOf('/app/') === 0) {
+        basePath = '/app';
+        routePath = pathname.slice('/app'.length);
+      }
+
+      if (!routePath) {
+        routePath = '/';
+      }
+
+      var normalizedBase = basePath ? basePath + '/' : '/';
+      window.location.replace(
+        window.location.origin + normalizedBase + search + '#' + routePath
+      );
+    })();
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
