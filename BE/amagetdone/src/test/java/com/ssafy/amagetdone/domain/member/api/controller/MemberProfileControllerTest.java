@@ -50,10 +50,12 @@ class MemberProfileControllerTest {
 					}
 					"""))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.userId").value(1))
-			.andExpect(jsonPath("$.profileCompleted").value(true))
-			.andExpect(jsonPath("$.status").value("ACTIVE"))
-			.andExpect(jsonPath("$.nextAction").value("GO_HOME"));
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("프로필 입력이 완료되었습니다."))
+			.andExpect(jsonPath("$.data.userId").value(1))
+			.andExpect(jsonPath("$.data.profileCompleted").value(true))
+			.andExpect(jsonPath("$.data.status").value("ACTIVE"))
+			.andExpect(jsonPath("$.data.nextAction").value("GO_HOME"));
 	}
 
 	@Test
@@ -72,8 +74,8 @@ class MemberProfileControllerTest {
 					}
 					"""))
 			.andExpect(status().isUnauthorized())
-			.andExpect(jsonPath("$.status").value(401))
-			.andExpect(jsonPath("$.code").value(MemberErrorCode.AUTHORIZATION_HEADER_REQUIRED.code()))
+			.andExpect(jsonPath("$.status").value("error"))
+			.andExpect(jsonPath("$.errorCode").value(MemberErrorCode.AUTHORIZATION_HEADER_REQUIRED.code()))
 			.andExpect(jsonPath("$.message").value(MemberErrorCode.AUTHORIZATION_HEADER_REQUIRED.message()));
 	}
 }

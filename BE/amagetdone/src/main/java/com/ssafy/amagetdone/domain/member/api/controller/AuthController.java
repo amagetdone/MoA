@@ -8,6 +8,7 @@ import com.ssafy.amagetdone.domain.member.application.service.MemberTokenService
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
 import com.ssafy.amagetdone.domain.member.model.vo.SocialProvider;
+import com.ssafy.amagetdone.global.response.ApiResponse;
 
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,7 +29,7 @@ public class AuthController {
 	}
 
 	@PostMapping("/social/{provider}")
-	public SocialAuthDto.Response socialAuth(
+	public ApiResponse<SocialAuthDto.Response> socialAuth(
 		@PathVariable String provider,
 		@RequestBody SocialAuthDto.Request request
 	) {
@@ -41,20 +42,20 @@ public class AuthController {
 		if (!socialProvider.isSupportedForSocialAuth()) {
 			throw new MemberException(MemberErrorCode.UNSUPPORTED_SOCIAL_PROVIDER);
 		}
-		return memberAuthService.authenticate(socialProvider, request);
+		return ApiResponse.ok("소셜 로그인에 성공했습니다.", memberAuthService.authenticate(socialProvider, request));
 	}
 
 	@PostMapping("/refresh")
-	public RefreshTokenDto.Response refresh(
+	public ApiResponse<RefreshTokenDto.Response> refresh(
 		@RequestBody RefreshTokenDto.Request request
 	) {
-		return memberTokenService.reissue(request.refreshToken());
+		return ApiResponse.ok("토큰 재발급에 성공했습니다.", memberTokenService.reissue(request.refreshToken()));
 	}
 
 	@PostMapping("/logout")
-	public LogoutDto.Response logout(
+	public ApiResponse<LogoutDto.Response> logout(
 		@RequestBody LogoutDto.Request request
 	) {
-		return memberTokenService.logout(request.refreshToken());
+		return ApiResponse.ok("로그아웃에 성공했습니다.", memberTokenService.logout(request.refreshToken()));
 	}
 }
