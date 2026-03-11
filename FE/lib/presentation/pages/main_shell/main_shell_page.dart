@@ -14,14 +14,19 @@ class MainShellPage extends StatelessWidget {
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: Container(
+        height: 58.h,
         decoration: const BoxDecoration(
+          color: AppColors.bgSurface,
           border: Border(top: BorderSide(color: AppColors.borderDefault, width: 0.5)),
         ),
-        child: NavigationBar(
-          backgroundColor: AppColors.bgSurface,
-          indicatorColor: AppColors.orange50,
-          elevation: 0,
-          height: 56.h,
+        child: Column(
+          children: [
+            const Spacer(),
+            NavigationBar(
+              backgroundColor: AppColors.bgSurface,
+              indicatorColor: AppColors.orange50,
+              elevation: 0,
+              height: 50.h,
           selectedIndex: navigationShell.currentIndex,
           onDestinationSelected: (index) {
             navigationShell.goBranch(
@@ -51,6 +56,8 @@ class MainShellPage extends StatelessWidget {
               selectedIcon: Icon(Icons.person, color: AppColors.orange500, size: 24.r),
               label: '내 정보',
             ),
+          ],
+        ),
           ],
         ),
       ),

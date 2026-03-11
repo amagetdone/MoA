@@ -19,10 +19,14 @@ class AuthRepositoryImpl implements AuthRepository {
     GoogleSignIn? googleSignIn,
   }) : _googleSignIn = googleSignIn;
 
+  static const String _webGoogleClientId =
+      '26025204114-h0lsehum6766elgasajahjtdo79bsrej.apps.googleusercontent.com';
+
   GoogleSignIn _resolveGoogleSignIn() {
     return _googleSignIn ??= GoogleSignIn(
-      clientId: kIsWeb ? AppEnv.optional('GOOGLE_CLIENT_ID') : null,
+      clientId: kIsWeb ? _webGoogleClientId : null,
       serverClientId: kIsWeb ? null : AppEnv.optional('GOOGLE_CLIENT_ID'),
+      scopes: ['email', 'openid', 'profile'],
     );
   }
 
@@ -55,7 +59,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<domain.User> loginWithGoogle() async {
-    if (AppEnv.optional('GOOGLE_CLIENT_ID') == null) {
+    if (!kIsWeb && AppEnv.optional('GOOGLE_CLIENT_ID') == null) {
       throw Exception('GOOGLE_CLIENT_ID가 설정되지 않았습니다.');
     }
 
@@ -65,15 +69,15 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     final googleAuth = await googleUser.authentication;
-    final idToken = googleAuth.idToken;
-    if (idToken == null) {
+    final token = googleAuth.idToken ?? googleAuth.accessToken;
+    if (token == null) {
       throw Exception('구글 인증 토큰을 가져올 수 없습니다.');
     }
 
     // 소셜 토큰을 백엔드에 전달하여 JWT 발급
     final result = await remoteDataSource.loginWithSocialToken(
       provider: 'google',
-      socialToken: idToken,
+      socialToken: token,
     );
 
     await localDataSource.saveAccessToken(result.accessToken);
