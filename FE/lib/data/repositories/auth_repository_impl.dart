@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'package:more_app/core/utils/app_env.dart';
@@ -10,15 +11,20 @@ import 'package:more_app/domain/repositories/auth_repository.dart';
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
   final AuthLocalDataSource localDataSource;
-  final GoogleSignIn _googleSignIn;
+  GoogleSignIn? _googleSignIn;
 
   AuthRepositoryImpl({
     required this.remoteDataSource,
     required this.localDataSource,
     GoogleSignIn? googleSignIn,
-  }) : _googleSignIn =
-           googleSignIn ??
-           GoogleSignIn(serverClientId: AppEnv.optional('GOOGLE_CLIENT_ID'));
+  }) : _googleSignIn = googleSignIn;
+
+  GoogleSignIn _resolveGoogleSignIn() {
+    return _googleSignIn ??= GoogleSignIn(
+      clientId: kIsWeb ? AppEnv.optional('GOOGLE_CLIENT_ID') : null,
+      serverClientId: kIsWeb ? null : AppEnv.optional('GOOGLE_CLIENT_ID'),
+    );
+  }
 
   @override
   Future<domain.User> loginWithKakao() async {
@@ -53,7 +59,7 @@ class AuthRepositoryImpl implements AuthRepository {
       throw Exception('GOOGLE_CLIENT_ID가 설정되지 않았습니다.');
     }
 
-    final googleUser = await _googleSignIn.signIn();
+    final googleUser = await _resolveGoogleSignIn().signIn();
     if (googleUser == null) {
       throw Exception('구글 로그인이 취소되었습니다.');
     }
@@ -88,7 +94,10 @@ class AuthRepositoryImpl implements AuthRepository {
       await UserApi.instance.logout();
     } catch (_) {}
     try {
-      await _googleSignIn.signOut();
+      final googleSignIn = _googleSignIn;
+      if (googleSignIn != null) {
+        await googleSignIn.signOut();
+      }
     } catch (_) {}
 
     await localDataSource.deleteTokens();
