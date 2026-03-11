@@ -1,0 +1,16 @@
+services:
+  nginx:
+    image: nginx:stable-alpine
+    container_name: more-frontend-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./current:/usr/share/nginx/html:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - moreadmin_default
+
+networks:
+  moreadmin_default:
+    external: true
