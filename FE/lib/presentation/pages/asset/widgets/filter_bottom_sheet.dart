@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/domain/entities/account.dart';
@@ -11,23 +12,27 @@ class TransactionFilter {
   final String period;
   final TransactionType? transactionType;
   final String? accountId;
+  final String creditCardFilter;
 
   const TransactionFilter({
     this.period = '1개월',
     this.transactionType,
     this.accountId,
+    this.creditCardFilter = '미포함',
   });
 
   TransactionFilter copyWith({
     String? period,
     TransactionType? Function()? transactionType,
     String? Function()? accountId,
+    String? creditCardFilter,
   }) {
     return TransactionFilter(
       period: period ?? this.period,
       transactionType:
           transactionType != null ? transactionType() : this.transactionType,
       accountId: accountId != null ? accountId() : this.accountId,
+      creditCardFilter: creditCardFilter ?? this.creditCardFilter,
     );
   }
 }
@@ -64,8 +69,9 @@ class FilterBottomSheet extends StatefulWidget {
 class _FilterBottomSheetState extends State<FilterBottomSheet> {
   late TransactionFilter _filter;
 
-  static const _periods = ['1주일', '1개월', '3개월', '직접설정'];
-  static const _transactionTypes = ['전체', '입금', '출금', '이체'];
+  static const _periods = ['1개월', '3개월', '6개월', '기간설정'];
+  static const _transactionTypes = ['전체', '입금형', '출금형'];
+  static const _creditCardOptions = ['미포함', '포함', '신용카드만'];
 
   @override
   void initState() {
@@ -75,18 +81,17 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
   TransactionType? _typeFromLabel(String label) {
     return switch (label) {
-      '입금' => TransactionType.income,
-      '출금' => TransactionType.expense,
-      '이체' => TransactionType.transfer,
+      '입금형' => TransactionType.income,
+      '출금형' => TransactionType.expense,
       _ => null,
     };
   }
 
   String _typeToLabel(TransactionType? type) {
     return switch (type) {
-      TransactionType.income => '입금',
-      TransactionType.expense => '출금',
-      TransactionType.transfer => '이체',
+      TransactionType.income => '입금형',
+      TransactionType.expense => '출금형',
+      TransactionType.transfer => '전체',
       null => '전체',
     };
   }
@@ -99,10 +104,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       children: [
         // Period section
         _SectionTitle(title: '조회 기간'),
-        const SizedBox(height: 8),
+        SizedBox(height: 8.h),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 8.w,
+          runSpacing: 8.h,
           children: _periods.map((period) {
             return MoreChip(
               label: period,
@@ -115,14 +120,14 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             );
           }).toList(),
         ),
-        const SizedBox(height: 20),
+        SizedBox(height: 20.h),
 
         // Transaction type section
         _SectionTitle(title: '거래 유형'),
-        const SizedBox(height: 8),
+        SizedBox(height: 8.h),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 8.w,
+          runSpacing: 8.h,
           children: _transactionTypes.map((typeLabel) {
             final type = _typeFromLabel(typeLabel);
             final isSelected = _typeToLabel(_filter.transactionType) == typeLabel;
@@ -139,14 +144,34 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             );
           }).toList(),
         ),
-        const SizedBox(height: 20),
+        SizedBox(height: 20.h),
+
+        // Credit card section
+        _SectionTitle(title: '신용카드 거래내역 포함 여부'),
+        SizedBox(height: 8.h),
+        Wrap(
+          spacing: 8.w,
+          runSpacing: 8.h,
+          children: _creditCardOptions.map((option) {
+            return MoreChip(
+              label: option,
+              selected: _filter.creditCardFilter == option,
+              onTap: () {
+                setState(() {
+                  _filter = _filter.copyWith(creditCardFilter: option);
+                });
+              },
+            );
+          }).toList(),
+        ),
+        SizedBox(height: 20.h),
 
         // Account section
-        _SectionTitle(title: '계좌'),
-        const SizedBox(height: 8),
+        _SectionTitle(title: '거래 계좌'),
+        SizedBox(height: 8.h),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 8.w,
+          runSpacing: 8.h,
           children: [
             MoreChip(
               label: '전체',
@@ -174,16 +199,16 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             }),
           ],
         ),
-        const SizedBox(height: 24),
+        SizedBox(height: 24.h),
 
         // Apply button
         MoreBottomButton(
-          text: '적용',
+          text: '완료',
           onPressed: () {
             Navigator.of(context).pop(_filter);
           },
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 16.h),
       ],
     );
   }
@@ -201,6 +226,7 @@ class _SectionTitle extends StatelessWidget {
       style: AppTextStyles.bodySm.copyWith(
         color: AppColors.textSecondary,
         fontWeight: FontWeight.w600,
+        fontSize: 13.sp,
       ),
     );
   }

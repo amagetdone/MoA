@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
@@ -32,21 +33,21 @@ class SavingsCard extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12.h),
           Text(
             CurrencyFormatter.formatKRW(weeklySaved),
             style: AppTextStyles.headingLg.copyWith(
               color: AppColors.statusSuccess,
             ),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4.h),
           Text(
             '목표 대비 $percentText%',
             style: AppTextStyles.bodySm.copyWith(
               color: AppColors.textTertiary,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
           MoreProgressBar(
             progress: progressRatio,
             color: AppColors.statusSuccess,

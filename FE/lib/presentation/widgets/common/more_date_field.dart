@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
@@ -21,11 +22,11 @@ class MoreDateField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary)),
-        const SizedBox(height: 8),
+        SizedBox(height: 8.h),
         GestureDetector(
           onTap: () => _pickDate(context),
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            padding: EdgeInsets.symmetric(vertical: 12.h),
             decoration: const BoxDecoration(
               border: Border(bottom: BorderSide(color: AppColors.borderDefault)),
             ),
@@ -41,7 +42,7 @@ class MoreDateField extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Icon(Icons.calendar_today, size: 20, color: AppColors.textTertiary),
+                Icon(Icons.calendar_today, size: 20.w, color: AppColors.textTertiary),
               ],
             ),
           ),

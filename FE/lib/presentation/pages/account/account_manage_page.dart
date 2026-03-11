@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
@@ -19,17 +20,17 @@ class AccountManagePage extends ConsumerWidget {
     final state = ref.watch(accountViewModelProvider);
 
     if (state.isLoading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppColors.bgPrimary,
         appBar: MoreAppBar(title: '계좌 관리'),
-        body: Center(child: CircularProgressIndicator()),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (state.errorMessage != null) {
       return Scaffold(
         backgroundColor: AppColors.bgPrimary,
-        appBar: const MoreAppBar(title: '계좌 관리'),
+        appBar: MoreAppBar(title: '계좌 관리'),
         body: Center(
           child: Text(
             '계좌 목록을 불러오지 못했습니다.\n${state.errorMessage!}',
@@ -41,14 +42,14 @@ class AccountManagePage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: const MoreAppBar(title: '계좌 관리'),
+      appBar: MoreAppBar(title: '계좌 관리'),
       body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
         children: [
           // Account list
           ...state.accounts.map((account) {
             return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: EdgeInsets.only(bottom: 12.h),
               child: _AccountCard(
                 account: account,
                 onDelete: () => _showDeleteDialog(context, ref, account),
@@ -56,31 +57,36 @@ class AccountManagePage extends ConsumerWidget {
             );
           }),
 
-          const SizedBox(height: 8),
+          SizedBox(height: 8.h),
 
           // Add account button
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: OutlinedButton.icon(
-              onPressed: () => context.push(AppRoutes.accountAdd),
-              icon: const Icon(Icons.add, size: 20, color: AppColors.orange500),
-              label: Text(
-                '새 계좌 연결하기',
-                style: AppTextStyles.bodyMd.copyWith(
-                  color: AppColors.orange500,
-                  fontWeight: FontWeight.w600,
-                ),
+          GestureDetector(
+            onTap: () => context.push(AppRoutes.accountAdd),
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(vertical: 20.h),
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.borderDefault),
+                borderRadius: BorderRadius.circular(12.r),
               ),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.orange500),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.add_circle_outline, size: 24.w, color: AppColors.orange500),
+                  SizedBox(width: 8.w),
+                  Text(
+                    '새로운 계좌 연결하기',
+                    style: AppTextStyles.bodyMd.copyWith(
+                      color: AppColors.orange500,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15.sp,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24.h),
         ],
       ),
     );
@@ -137,8 +143,8 @@ class _AccountCard extends StatelessWidget {
     return MoreCard(
       child: Row(
         children: [
-          BankIcon(bankName: account.bankName, size: 40),
-          const SizedBox(width: 14),
+          BankIcon(bankName: account.bankName, size: 40.w),
+          SizedBox(width: 14.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,43 +156,47 @@ class _AccountCard extends StatelessWidget {
                       style: AppTextStyles.bodyMd.copyWith(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w600,
+                        fontSize: 14.sp,
                       ),
                     ),
                     if (account.isPrimary) ...[
-                      const SizedBox(width: 6),
+                      SizedBox(width: 6.w),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6.w,
+                          vertical: 2.h,
                         ),
                         decoration: BoxDecoration(
                           color: AppColors.orange50,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(4.r),
                         ),
                         child: Text(
                           '주계좌',
                           style: AppTextStyles.caption.copyWith(
                             color: AppColors.orange500,
                             fontWeight: FontWeight.w600,
+                            fontSize: 10.sp,
                           ),
                         ),
                       ),
                     ],
                   ],
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2.h),
                 Text(
                   account.accountNumber,
                   style: AppTextStyles.bodySm.copyWith(
                     color: AppColors.textTertiary,
+                    fontSize: 12.sp,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4.h),
                 Text(
                   CurrencyFormatter.formatKRW(account.balance),
                   style: AppTextStyles.bodyMd.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600,
+                    fontSize: 14.sp,
                   ),
                 ),
               ],
@@ -194,12 +204,12 @@ class _AccountCard extends StatelessWidget {
           ),
           IconButton(
             onPressed: onDelete,
-            icon: const Icon(
+            icon: Icon(
               Icons.delete_outline,
               color: AppColors.textTertiary,
-              size: 22,
+              size: 22.w,
             ),
-            splashRadius: 20,
+            splashRadius: 20.r,
           ),
         ],
       ),

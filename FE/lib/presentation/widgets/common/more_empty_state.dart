@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 
@@ -22,29 +23,29 @@ class MoreEmptyState extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+        padding: EdgeInsets.symmetric(vertical: 40.h, horizontal: 24.w),
         decoration: BoxDecoration(
           color: AppColors.bgSurface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(16.r),
           border: Border.all(color: AppColors.borderDefault),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48, color: AppColors.textTertiary),
-            const SizedBox(height: 12),
+            Icon(icon, size: 48.w, color: AppColors.textTertiary),
+            SizedBox(height: 12.h),
             Text(
               message,
               style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary),
               textAlign: TextAlign.center,
             ),
             if (buttonText != null) ...[
-              const SizedBox(height: 16),
+              SizedBox(height: 16.h),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
                 decoration: BoxDecoration(
                   color: AppColors.orange50,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(8.r),
                 ),
                 child: Text(
                   buttonText!,

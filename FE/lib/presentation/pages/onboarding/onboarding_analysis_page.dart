@@ -1,4 +1,6 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
@@ -9,21 +11,8 @@ import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 class OnboardingAnalysisPage extends StatelessWidget {
   const OnboardingAnalysisPage({super.key});
 
-  static const List<_CategoryData> _categories = [
-    _CategoryData(name: '식비', percentage: 38, color: Color(0xFFFF6B00)),
-    _CategoryData(name: '교통', percentage: 11, color: Color(0xFF4CAF50)),
-    _CategoryData(name: '쇼핑', percentage: 16, color: Color(0xFF2196F3)),
-    _CategoryData(name: '구독', percentage: 3, color: Color(0xFF9C27B0)),
-    _CategoryData(name: '여가', percentage: 9, color: Color(0xFFFF9800)),
-    _CategoryData(name: '기타', percentage: 4, color: Color(0xFF607D8B)),
-    _CategoryData(name: '저축가능', percentage: 19, color: Color(0xFF00BCD4)),
-  ];
-
   @override
   Widget build(BuildContext context) {
-    // Based on available amount of 2,650,000
-    const int availableAmount = 2650000;
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: MoreAppBar(
@@ -31,132 +20,128 @@ class OnboardingAnalysisPage extends StatelessWidget {
         showBack: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(24.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '소비 패턴을 분석했어요',
-              style: AppTextStyles.headingLg.copyWith(
+              '3개월 간 소비패턴을 분석했어요.',
+              style: AppTextStyles.headingMd.copyWith(
                 color: AppColors.gray900,
+                fontSize: 18.sp,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              '가용 금액 기준으로 분석한 결과입니다',
-              style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.gray500,
-              ),
-            ),
-            const SizedBox(height: 32),
+            SizedBox(height: 24.h),
 
-            // Simple bar chart representation
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+            // Stats row
+            Container(
+              padding: EdgeInsets.all(16.w),
+              decoration: BoxDecoration(
+                color: AppColors.gray50,
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              child: Column(
+                children: [
+                  _StatRow(label: '평균 수입', value: '3,000,000원'),
+                  SizedBox(height: 8.h),
+                  _StatRow(label: '평균 지출', value: '1,900,000원', valueColor: AppColors.gray700),
+                  Divider(height: 24.h),
+                  _StatRow(
+                    label: '남은 금액',
+                    value: '1,100,000원',
+                    isBold: true,
+                    valueColor: AppColors.orange500,
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 32.h),
+
+            // Donut chart
+            Center(
               child: SizedBox(
-                height: 32,
-                child: Row(
-                  children: _categories.map((category) {
-                    return Expanded(
-                      flex: category.percentage,
-                      child: Container(
-                        color: category.color,
-                      ),
-                    );
-                  }).toList(),
+                width: 200.w,
+                height: 200.w,
+                child: CustomPaint(
+                  painter: _DonutChartPainter(),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '1,900,000원',
+                          style: AppTextStyles.headingMd.copyWith(
+                            color: AppColors.gray900,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          '평균 지출',
+                          style: AppTextStyles.bodySm.copyWith(
+                            color: AppColors.gray500,
+                            fontSize: 12.sp,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 16.h),
 
-            // Category list
-            ..._categories.map((category) {
-              final amount =
-                  (availableAmount * category.percentage / 100).round();
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Row(
-                  children: [
-                    // Color dot
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: category.color,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Category name
-                    Expanded(
-                      child: Text(
-                        category.name,
-                        style: AppTextStyles.bodyLg.copyWith(
-                          color: AppColors.gray900,
-                        ),
-                      ),
-                    ),
-                    // Percentage
-                    SizedBox(
-                      width: 48,
-                      child: Text(
-                        '${category.percentage}%',
-                        style: AppTextStyles.bodySm.copyWith(
-                          color: AppColors.gray500,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        textAlign: TextAlign.right,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    // Amount
-                    SizedBox(
-                      width: 100,
-                      child: Text(
-                        _formatAmount(amount),
-                        style: AppTextStyles.bodySm.copyWith(
-                          color: AppColors.gray700,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        textAlign: TextAlign.right,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 16),
-
-            // Total
+            // Legend
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Expanded(
-                  child: Text(
-                    '가용 금액 합계',
-                    style: AppTextStyles.bodyLg.copyWith(
-                      color: AppColors.gray900,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                Text(
-                  _formatAmount(availableAmount),
-                  style: AppTextStyles.bodyLg.copyWith(
-                    color: AppColors.orange500,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                _LegendDot(color: AppColors.orange500, label: '고정비 65%'),
+                SizedBox(width: 24.w),
+                _LegendDot(color: const Color(0xFF4CAF50), label: '변동비 35%'),
               ],
             ),
+            SizedBox(height: 24.h),
+
+            // Yellow banner
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF8E1),
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.lightbulb_outline, size: 20.w, color: const Color(0xFFFFA000)),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Text(
+                      '식비 절약이 필요해보여요.',
+                      style: AppTextStyles.bodySm.copyWith(
+                        color: const Color(0xFFF57C00),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13.sp,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 24.h),
+
+            // Category bars
+            _CategoryBar(name: '식비', amount: '750,000원', ratio: 0.75),
+            SizedBox(height: 12.h),
+            _CategoryBar(name: '여가비', amount: '550,000원', ratio: 0.55),
+            SizedBox(height: 12.h),
+            _CategoryBar(name: '교통비', amount: '150,000원', ratio: 0.15),
           ],
         ),
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24.w),
           child: MoreBottomButton(
             text: '다음',
             onPressed: () {
@@ -168,30 +153,159 @@ class OnboardingAnalysisPage extends StatelessWidget {
       ),
     );
   }
+}
 
-  static String _formatAmount(int amount) {
-    final str = amount.toString();
-    final buffer = StringBuffer();
-    int count = 0;
-    for (int i = str.length - 1; i >= 0; i--) {
-      buffer.write(str[i]);
-      count++;
-      if (count % 3 == 0 && i > 0) {
-        buffer.write(',');
-      }
-    }
-    return '${buffer.toString().split('').reversed.join()}원';
+class _StatRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool isBold;
+  final Color? valueColor;
+
+  const _StatRow({
+    required this.label,
+    required this.value,
+    this.isBold = false,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.bodySm.copyWith(
+            color: AppColors.gray500,
+            fontWeight: isBold ? FontWeight.w600 : FontWeight.w400,
+            fontSize: 13.sp,
+          ),
+        ),
+        Text(
+          value,
+          style: (isBold ? AppTextStyles.bodyLg : AppTextStyles.bodySm).copyWith(
+            color: valueColor ?? AppColors.gray900,
+            fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+            fontSize: isBold ? 16.sp : 13.sp,
+          ),
+        ),
+      ],
+    );
   }
 }
 
-class _CategoryData {
-  final String name;
-  final int percentage;
+class _LegendDot extends StatelessWidget {
   final Color color;
+  final String label;
 
-  const _CategoryData({
+  const _LegendDot({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10.w,
+          height: 10.w,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        SizedBox(width: 6.w),
+        Text(
+          label,
+          style: AppTextStyles.bodySm.copyWith(
+            color: AppColors.gray700,
+            fontSize: 13.sp,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CategoryBar extends StatelessWidget {
+  final String name;
+  final String amount;
+  final double ratio;
+
+  const _CategoryBar({
     required this.name,
-    required this.percentage,
-    required this.color,
+    required this.amount,
+    required this.ratio,
   });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              name,
+              style: AppTextStyles.bodySm.copyWith(
+                color: AppColors.gray700,
+                fontSize: 13.sp,
+              ),
+            ),
+            Text(
+              amount,
+              style: AppTextStyles.bodySm.copyWith(
+                color: AppColors.gray900,
+                fontWeight: FontWeight.w600,
+                fontSize: 13.sp,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 6.h),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4.r),
+          child: SizedBox(
+            height: 8.h,
+            child: LinearProgressIndicator(
+              value: ratio,
+              backgroundColor: AppColors.gray100,
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.orange500),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DonutChartPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    const strokeWidth = 28.0;
+    final rect = Rect.fromCircle(center: center, radius: radius - strokeWidth / 2);
+
+    // Fixed cost 65%
+    final fixedPaint = Paint()
+      ..color = AppColors.orange500
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+
+    // Variable cost 35%
+    final variablePaint = Paint()
+      ..color = const Color(0xFF4CAF50)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+
+    const startAngle = -math.pi / 2;
+    const fixedSweep = 2 * math.pi * 0.65;
+    const variableSweep = 2 * math.pi * 0.35;
+
+    canvas.drawArc(rect, startAngle, fixedSweep, false, fixedPaint);
+    canvas.drawArc(rect, startAngle + fixedSweep, variableSweep, false, variablePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
-import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/viewmodels/auth_viewmodel.dart';
 
@@ -40,15 +40,12 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgSurface,
+      backgroundColor: AppColors.bgPrimary,
       body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset('assets/images/logo/applogo.png', width: 120, height: 120),
-            const SizedBox(height: 16),
-            Text('모아', style: AppTextStyles.headingXl),
-          ],
+        child: Image.asset(
+          'assets/images/logo/applogo.png',
+          width: 120.w,
+          height: 120.w,
         ),
       ),
     );

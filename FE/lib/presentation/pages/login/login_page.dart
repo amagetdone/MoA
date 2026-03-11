@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
@@ -25,10 +26,10 @@ class LoginPage extends ConsumerWidget {
     final isLoading = authState is AuthLoading;
 
     return Scaffold(
-      backgroundColor: AppColors.bgSurface,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: EdgeInsets.symmetric(horizontal: 24.w),
           child: Column(
             children: [
               const Spacer(flex: 3),
@@ -36,16 +37,17 @@ class LoginPage extends ConsumerWidget {
               // 로고
               Image.asset(
                 'assets/images/logo/applogo.png',
-                width: 100,
-                height: 100,
+                width: 100.w,
+                height: 100.w,
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 16.h),
 
-              // 문구
+              // 앱 이름
               Text(
-                '당신의 저축 여정을 시작하세요',
-                style: AppTextStyles.headingMd,
-                textAlign: TextAlign.center,
+                '모아',
+                style: AppTextStyles.headingXl.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
 
               const Spacer(flex: 4),
@@ -64,7 +66,7 @@ class LoginPage extends ConsumerWidget {
                 text: '카카오로 시작하기',
                 iconPath: 'assets/images/logo/kakaologo.png',
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12.h),
 
               // 구글 로그인 버튼
               _SocialLoginButton(
@@ -75,14 +77,14 @@ class LoginPage extends ConsumerWidget {
                             ref
                                 .read(authViewModelProvider.notifier)
                                 .loginWithGoogle(),
-                backgroundColor: AppColors.bgSurface,
+                backgroundColor: Colors.white,
                 textColor: AppColors.textPrimary,
                 text: '구글로 시작하기',
                 iconPath: 'assets/images/logo/googlelogo.png',
                 borderColor: AppColors.borderDefault,
               ),
 
-              const SizedBox(height: 40),
+              SizedBox(height: 40.h),
             ],
           ),
         ),
@@ -112,7 +114,7 @@ class _SocialLoginButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 52,
+      height: 52.h,
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
@@ -121,19 +123,20 @@ class _SocialLoginButton extends StatelessWidget {
             color: borderColor ?? backgroundColor,
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(12.r),
           ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(iconPath, width: 24, height: 24),
-            const SizedBox(width: 8),
+            Image.asset(iconPath, width: 24.w, height: 24.w),
+            SizedBox(width: 8.w),
             Text(
               text,
               style: AppTextStyles.bodyMd.copyWith(
                 color: textColor,
                 fontWeight: FontWeight.w600,
+                fontSize: 15.sp,
               ),
             ),
           ],

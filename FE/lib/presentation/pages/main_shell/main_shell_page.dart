@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 
@@ -20,7 +21,7 @@ class MainShellPage extends StatelessWidget {
           backgroundColor: AppColors.bgSurface,
           indicatorColor: AppColors.orange50,
           elevation: 0,
-          height: 64,
+          height: 64.h,
           selectedIndex: navigationShell.currentIndex,
           onDestinationSelected: (index) {
             navigationShell.goBranch(
@@ -29,26 +30,26 @@ class MainShellPage extends StatelessWidget {
             );
           },
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          destinations: const [
+          destinations: [
             NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home, color: AppColors.orange500),
+              icon: Icon(Icons.home_outlined, size: 24.r),
+              selectedIcon: Icon(Icons.home, color: AppColors.orange500, size: 24.r),
               label: '홈',
             ),
             NavigationDestination(
-              icon: Icon(Icons.flag_outlined),
-              selectedIcon: Icon(Icons.flag, color: AppColors.orange500),
+              icon: Icon(Icons.bar_chart_outlined, size: 24.r),
+              selectedIcon: Icon(Icons.bar_chart, color: AppColors.orange500, size: 24.r),
+              label: '분석',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.flag_outlined, size: 24.r),
+              selectedIcon: Icon(Icons.flag, color: AppColors.orange500, size: 24.r),
               label: '목표',
             ),
             NavigationDestination(
-              icon: Icon(Icons.pie_chart_outline),
-              selectedIcon: Icon(Icons.pie_chart, color: AppColors.orange500),
-              label: '소비',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.menu),
-              selectedIcon: Icon(Icons.menu, color: AppColors.orange500),
-              label: '전체',
+              icon: Icon(Icons.person_outline, size: 24.r),
+              selectedIcon: Icon(Icons.person, color: AppColors.orange500, size: 24.r),
+              label: '내 정보',
             ),
           ],
         ),

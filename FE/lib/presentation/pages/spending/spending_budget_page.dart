@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
@@ -110,58 +111,67 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
               children: [
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 12.h,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Text(
+                          '주간 예산을 조정할 수 있어요. 조절된 주간 예산에 따라 소비 분석과 계획 수립을 다시 진행해요.',
+                          style: AppTextStyles.bodySm.copyWith(
+                            color: AppColors.textTertiary,
+                            fontSize: 13.sp,
+                          ),
+                        ),
+                        SizedBox(height: 16.h),
                         MoreTextField(
-                          label: '월 수입',
+                          label: '총 예산(수입)',
                           hint: '월 수입을 입력하세요',
                           controller: _incomeController,
                           keyboardType: TextInputType.number,
                           suffix: '원',
                           onChanged: (_) => setState(() {}),
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16.h),
                         MoreTextField(
-                          label: '저축 목표',
+                          label: '저축비',
                           hint: '저축 목표를 입력하세요',
                           controller: _savingsGoalController,
                           keyboardType: TextInputType.number,
                           suffix: '원',
                           onChanged: (_) => setState(() {}),
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16.h),
                         MoreTextField(
-                          label: '고정 지출',
+                          label: '고정비',
                           hint: '고정 지출을 입력하세요',
                           controller: _fixedExpenseController,
                           keyboardType: TextInputType.number,
                           suffix: '원',
                           onChanged: (_) => setState(() {}),
                         ),
-                        const SizedBox(height: 20),
-                        const Divider(color: AppColors.borderDefault),
-                        const SizedBox(height: 20),
+                        SizedBox(height: 20.h),
+                        Divider(color: AppColors.borderDefault),
+                        SizedBox(height: 20.h),
                         Text(
                           '카테고리별 예산',
                           style: AppTextStyles.headingMd.copyWith(
                             color: AppColors.textPrimary,
+                            fontSize: 16.sp,
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16.h),
                         ...List.generate(state.categories.length, (index) {
                           final category = state.categories[index];
                           return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
+                            padding: EdgeInsets.only(bottom: 12.h),
                             child: Row(
                               children: [
                                 Container(
-                                  width: 36,
-                                  height: 36,
+                                  width: 36.w,
+                                  height: 36.w,
                                   decoration: BoxDecoration(
                                     color: category.color.withValues(
                                       alpha: 0.15,
@@ -170,21 +180,22 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                                   ),
                                   child: Icon(
                                     category.icon,
-                                    size: 18,
+                                    size: 18.w,
                                     color: category.color,
                                   ),
                                 ),
-                                const SizedBox(width: 12),
+                                SizedBox(width: 12.w),
                                 SizedBox(
-                                  width: 60,
+                                  width: 60.w,
                                   child: Text(
                                     category.name,
                                     style: AppTextStyles.bodyMd.copyWith(
                                       color: AppColors.textPrimary,
+                                      fontSize: 14.sp,
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
+                                SizedBox(width: 12.w),
                                 Expanded(
                                   child: MoreTextField(
                                     label: '예산',
@@ -199,17 +210,18 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                             ),
                           );
                         }),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16.h),
                         MoreCard(
                           color: AppColors.orange50,
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                '계산된 주간 예산',
+                                '자유롭게 쓸 수 있는 돈',
                                 style: AppTextStyles.bodyLg.copyWith(
                                   color: AppColors.textPrimary,
                                   fontWeight: FontWeight.w600,
+                                  fontSize: 15.sp,
                                 ),
                               ),
                               Text(
@@ -219,18 +231,19 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                                 style: AppTextStyles.headingMd.copyWith(
                                   color: AppColors.orange500,
                                   fontWeight: FontWeight.bold,
+                                  fontSize: 18.sp,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        SizedBox(height: 24.h),
                       ],
                     ),
                   ),
                 ),
                 MoreBottomButton(
-                  text: '저장',
+                  text: '저장하기',
                   onPressed: () async {
                     final updatedCategories = List<SpendingCategory>.generate(
                       state.categories.length,

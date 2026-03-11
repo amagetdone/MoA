@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
@@ -18,18 +19,18 @@ class _OnboardingPageState extends State<OnboardingPage> {
   final List<_OnboardingData> _pages = const [
     _OnboardingData(
       image: 'assets/images/onboarding1.png',
-      title: '더 나은 소비 습관',
-      description: '모아와 함께 똑똑한 소비 습관을 만들어보세요',
+      title: '큰 목표를 작은 계획으로',
+      description: '막연한 저축 목표를 주 단위로 쪼개서 달성하기 쉽게',
     ),
     _OnboardingData(
       image: 'assets/images/onboarding2.png',
-      title: '목표 기반 저축',
-      description: '원하는 목표를 설정하고 자동으로 저축해보세요',
+      title: '소비를 알아야 모을 수 있다',
+      description: '소비패턴 분석으로 현실적인 저축계획 수립',
     ),
     _OnboardingData(
       image: 'assets/images/onboarding3.png',
-      title: '소비 패턴 분석',
-      description: '나의 소비를 한눈에 파악하고 관리하세요',
+      title: '매주 확인, 매주 성장',
+      description: '주/월 단위로 진행상황 체크',
     ),
   ];
 
@@ -65,13 +66,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
             Align(
               alignment: Alignment.centerRight,
               child: Padding(
-                padding: const EdgeInsets.only(top: 16, right: 16),
+                padding: EdgeInsets.only(top: 16.h, right: 16.w),
                 child: GestureDetector(
                   onTap: _onComplete,
                   child: Text(
                     '건너뛰기',
                     style: AppTextStyles.bodySm.copyWith(
                       color: AppColors.gray500,
+                      fontSize: 14.sp,
                     ),
                   ),
                 ),
@@ -90,43 +92,45 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 itemBuilder: (context, index) {
                   final page = _pages[index];
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    padding: EdgeInsets.symmetric(horizontal: 32.w),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Image.asset(
                           page.image,
-                          height: 280,
+                          height: 280.h,
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
-                              height: 280,
-                              width: 280,
+                              height: 280.h,
+                              width: 280.w,
                               decoration: BoxDecoration(
                                 color: AppColors.gray50,
-                                borderRadius: BorderRadius.circular(24),
+                                borderRadius: BorderRadius.circular(24.r),
                               ),
                               child: Icon(
                                 Icons.image_outlined,
-                                size: 64,
+                                size: 64.w,
                                 color: AppColors.gray100,
                               ),
                             );
                           },
                         ),
-                        const SizedBox(height: 48),
+                        SizedBox(height: 48.h),
                         Text(
                           page.title,
                           style: AppTextStyles.headingLg.copyWith(
                             color: AppColors.gray900,
+                            fontSize: 22.sp,
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12.h),
                         Text(
                           page.description,
                           style: AppTextStyles.bodyMd.copyWith(
                             color: AppColors.gray500,
+                            fontSize: 15.sp,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -138,21 +142,21 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ),
             // Dot indicators
             Padding(
-              padding: const EdgeInsets.only(bottom: 32),
+              padding: EdgeInsets.only(bottom: 32.h),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(
                   _pages.length,
                   (index) => AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    height: 8,
-                    width: _currentPage == index ? 24 : 8,
+                    margin: EdgeInsets.symmetric(horizontal: 4.w),
+                    height: 8.h,
+                    width: _currentPage == index ? 24.w : 8.w,
                     decoration: BoxDecoration(
                       color: _currentPage == index
                           ? AppColors.orange500
                           : AppColors.gray100,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(4.r),
                     ),
                   ),
                 ),
@@ -160,25 +164,26 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ),
             // Bottom button
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+              padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.h),
               child: SizedBox(
                 width: double.infinity,
-                height: 56,
+                height: 56.h,
                 child: ElevatedButton(
                   onPressed: _onNext,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.orange500,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(16.r),
                     ),
                     elevation: 0,
                   ),
                   child: Text(
-                    _currentPage == _pages.length - 1 ? '시작하기' : '다음',
+                    '다음',
                     style: AppTextStyles.bodyMd.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
+                      fontSize: 16.sp,
                     ),
                   ),
                 ),

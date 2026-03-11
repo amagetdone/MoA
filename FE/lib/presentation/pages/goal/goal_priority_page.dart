@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
@@ -35,7 +36,7 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
             child: Text(
               '드래그하여 우선순위를 변경하세요',
               style: AppTextStyles.bodySm.copyWith(
@@ -56,7 +57,7 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
                     ),
                   )
                 : ReorderableListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
                     itemCount: displayGoals.length,
                     onReorder: (oldIndex, newIndex) {
                       setState(() {
@@ -74,7 +75,7 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
                     proxyDecorator: (child, index, animation) {
                       return Material(
                         elevation: 4,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(12.r),
                         shadowColor: Colors.black26,
                         child: child,
                       );
@@ -83,26 +84,27 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
                       final goal = displayGoals[index];
                       return Padding(
                         key: ValueKey(goal.id),
-                        padding: const EdgeInsets.only(bottom: 12),
+                        padding: EdgeInsets.only(bottom: 12.h),
                         child: MoreCard(
                           child: Row(
                             children: [
                               ReorderableDragStartListener(
                                 index: index,
                                 child: Padding(
-                                  padding: const EdgeInsets.only(right: 12),
+                                  padding: EdgeInsets.only(right: 12.w),
                                   child: Icon(
                                     Icons.drag_handle,
                                     color: AppColors.textTertiary,
+                                    size: 24.w,
                                   ),
                                 ),
                               ),
                               Container(
-                                width: 28,
-                                height: 28,
+                                width: 28.w,
+                                height: 28.w,
                                 decoration: BoxDecoration(
                                   color: AppColors.orange500,
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(8.r),
                                 ),
                                 child: Center(
                                   child: Text(
@@ -114,7 +116,7 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              SizedBox(width: 12.w),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,7 +128,7 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
                                         color: AppColors.textPrimary,
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
+                                    SizedBox(height: 2.h),
                                     Text(
                                       CurrencyFormatter.formatKRW(
                                         goal.targetAmount,
@@ -147,7 +149,7 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16.w),
               child: MoreBottomButton(
                 text: '저장',
                 onPressed: () async {

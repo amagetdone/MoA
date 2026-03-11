@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
@@ -72,7 +73,7 @@ class GoalDetailPage extends ConsumerWidget {
       backgroundColor: AppColors.bgPrimary,
       appBar: MoreAppBar(title: goal.name),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -80,13 +81,13 @@ class GoalDetailPage extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 6.h,
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.orange50,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(20.r),
                   ),
                   child: Text(
                     '우선순위 ${goal.priority}',
@@ -96,17 +97,17 @@ class GoalDetailPage extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12.w),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 6.h,
                   ),
                   decoration: BoxDecoration(
                     color: goal.remainingDays > 0
                         ? AppColors.orange50
                         : const Color(0xFFFFEBEE),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(20.r),
                   ),
                   child: Text(
                     goal.remainingDays > 0
@@ -122,21 +123,21 @@ class GoalDetailPage extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
             Container(
-              width: 80,
-              height: 80,
+              width: 80.w,
+              height: 80.w,
               decoration: BoxDecoration(
                 color: AppColors.orange50,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(24.r),
               ),
               child: Icon(
                 _mapIcon(goal.iconName),
                 color: AppColors.orange500,
-                size: 40,
+                size: 40.w,
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
             Text(
               CurrencyFormatter.formatKRW(goal.currentAmount),
               style: AppTextStyles.headingXl.copyWith(
@@ -144,14 +145,14 @@ class GoalDetailPage extends ConsumerWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8.h),
             Text(
               '목표 ${CurrencyFormatter.formatKRW(goal.targetAmount)}',
               style: AppTextStyles.bodyMd.copyWith(
                 color: AppColors.textTertiary,
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
             MoreCard(
               child: Column(
                 children: [
@@ -161,7 +162,7 @@ class GoalDetailPage extends ConsumerWidget {
                     backgroundColor: AppColors.gray50,
                     height: 12,
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12.h),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -183,7 +184,7 @@ class GoalDetailPage extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16.h),
             if (goal.description != null && goal.description!.isNotEmpty) ...[
               MoreCard(
                 child: Column(
@@ -196,7 +197,7 @@ class GoalDetailPage extends ConsumerWidget {
                         color: AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8.h),
                     Text(
                       goal.description!,
                       style: AppTextStyles.bodyMd.copyWith(
@@ -206,7 +207,7 @@ class GoalDetailPage extends ConsumerWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16.h),
             ],
             if (goal.sketchVideoAssetPath != null) ...[
               MoreCard(
@@ -215,11 +216,12 @@ class GoalDetailPage extends ConsumerWidget {
                   children: [
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.play_circle_outline,
                           color: AppColors.orange500,
+                          size: 24.w,
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8.w),
                         Text(
                           '스케치 영상',
                           style: AppTextStyles.bodyMd.copyWith(
@@ -229,14 +231,14 @@ class GoalDetailPage extends ConsumerWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8.h),
                     Text(
                       'goalId 기준으로 로컬 저장소에 매핑된 영상을 사용합니다.',
                       style: AppTextStyles.bodySm.copyWith(
                         color: AppColors.textTertiary,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8.h),
                     sketchVideoAsync.when(
                       data: (bytes) {
                         final message = bytes == null
@@ -262,12 +264,12 @@ class GoalDetailPage extends ConsumerWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16.h),
             ],
             GoalLineChart(history: history),
-            const SizedBox(height: 16),
+            SizedBox(height: 16.h),
             GoalBarChart(history: history),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
           ],
         ),
       ),

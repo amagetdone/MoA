@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:more_app/core/theme/app_colors.dart';
@@ -21,10 +22,20 @@ class AssetPage extends ConsumerWidget {
     final groupedTransactions = _groupTransactionsByDate(state.transactions);
 
     if (state.isLoading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppColors.bgPrimary,
-        appBar: MoreAppBar(title: '내 자산'),
-        body: Center(child: CircularProgressIndicator()),
+        appBar: MoreAppBar(
+          title: '내 자산',
+          actions: [
+            IconButton(
+              icon: Icon(Icons.search, size: 24.w),
+              onPressed: () {
+                // TODO: search
+              },
+            ),
+          ],
+        ),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -43,9 +54,25 @@ class AssetPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: const MoreAppBar(title: '내 자산'),
+      appBar: MoreAppBar(
+        title: '내 자산',
+        actions: [
+          IconButton(
+            icon: Icon(Icons.settings, size: 24.w),
+            onPressed: () {
+              // TODO: filter settings
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.search, size: 24.w),
+            onPressed: () {
+              // TODO: search
+            },
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -61,22 +88,23 @@ class AssetPage extends ConsumerWidget {
                       style: AppTextStyles.bodyMd.copyWith(
                         color: AppColors.orange500,
                         fontWeight: FontWeight.w600,
+                        fontSize: 14.sp,
                       ),
                     ),
                   ),
-                  const Icon(
+                  Icon(
                     Icons.chevron_right,
                     color: AppColors.orange500,
-                    size: 20,
+                    size: 20.w,
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20.h),
 
             // Total asset display
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+              padding: EdgeInsets.symmetric(horizontal: 4.w),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -84,19 +112,21 @@ class AssetPage extends ConsumerWidget {
                     '총 자산',
                     style: AppTextStyles.bodySm.copyWith(
                       color: AppColors.textTertiary,
+                      fontSize: 13.sp,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4.h),
                   Text(
                     CurrencyFormatter.formatKRW(state.totalAsset),
                     style: AppTextStyles.headingLg.copyWith(
                       color: AppColors.textPrimary,
+                      fontSize: 24.sp,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
 
             // Date-grouped transaction list
             ...groupedTransactions.entries.map((entry) {
@@ -104,15 +134,16 @@ class AssetPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 8,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 4.w,
+                      vertical: 8.h,
                     ),
                     child: Text(
                       entry.key,
                       style: AppTextStyles.bodySm.copyWith(
                         color: AppColors.textTertiary,
                         fontWeight: FontWeight.w600,
+                        fontSize: 12.sp,
                       ),
                     ),
                   ),
@@ -122,7 +153,7 @@ class AssetPage extends ConsumerWidget {
                       children: [
                         for (int i = 0; i < entry.value.length; i++) ...[
                           if (i > 0)
-                            const Divider(
+                            Divider(
                               height: 1,
                               color: AppColors.borderDefault,
                             ),
@@ -140,11 +171,11 @@ class AssetPage extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12.h),
                 ],
               );
             }),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
           ],
         ),
       ),

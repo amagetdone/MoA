@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
@@ -34,24 +35,24 @@ class TransactionTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
         child: Row(
           children: [
             // Category icon
             Container(
-              width: 40,
-              height: 40,
+              width: 40.w,
+              height: 40.w,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _getCategoryColor().withOpacity(0.15),
+                color: _getCategoryColor().withValues(alpha: 0.15),
               ),
               child: Icon(
                 _getCategoryIcon(),
-                size: 20,
+                size: 20.w,
                 color: _getCategoryColor(),
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12.w),
 
             // Title and time
             Expanded(
@@ -62,21 +63,23 @@ class TransactionTile extends StatelessWidget {
                     transaction.title,
                     style: AppTextStyles.bodyMd.copyWith(
                       color: AppColors.textPrimary,
+                      fontSize: 14.sp,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
+                  SizedBox(height: 2.h),
                   Text(
                     timeFormat.format(transaction.dateTime),
                     style: AppTextStyles.caption.copyWith(
                       color: AppColors.textTertiary,
+                      fontSize: 11.sp,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8.w),
 
             // Amount
             Text(
@@ -84,6 +87,7 @@ class TransactionTile extends StatelessWidget {
               style: AppTextStyles.bodyMd.copyWith(
                 color: amountColor,
                 fontWeight: FontWeight.w600,
+                fontSize: 14.sp,
               ),
             ),
           ],

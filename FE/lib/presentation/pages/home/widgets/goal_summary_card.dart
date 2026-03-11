@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
@@ -57,19 +58,19 @@ class GoalSummaryCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 36.w,
+                height: 36.w,
                 decoration: BoxDecoration(
                   color: AppColors.orange50,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(10.r),
                 ),
                 child: Icon(
                   _getGoalIcon(goal.iconName),
-                  size: 20,
+                  size: 20.w,
                   color: AppColors.orange500,
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10.w),
               Expanded(
                 child: Text(
                   goal.name,
@@ -80,7 +81,7 @@ class GoalSummaryCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -105,9 +106,9 @@ class GoalSummaryCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12.h),
           MoreProgressBar(progress: goal.progressRate),
-          const SizedBox(height: 8),
+          SizedBox(height: 8.h),
           Align(
             alignment: Alignment.centerRight,
             child: Text(
