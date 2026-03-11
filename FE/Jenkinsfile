@@ -14,6 +14,7 @@ pipeline {
         REMOTE_USER = 'ubuntu'
         REMOTE_APP_DIR = '/home/ubuntu/front'
         REMOTE_DEPLOY_SCRIPT = '/home/ubuntu/front/deploy.sh'
+        DEPLOY_KEY_PATH = '/var/jenkins_home/.ssh/id_ed25519_front_deploy'
     }
 
     stages {
@@ -28,6 +29,8 @@ pipeline {
                 dir("${APP_DIR}") {
                     sh '''
                         set -eux
+
+                        test -f "${DEPLOY_KEY_PATH}"
 
                         FLUTTER_HOME="${JENKINS_HOME}/tools/flutter-stable"
                         if [ ! -d "${FLUTTER_HOME}/.git" ]; then
@@ -56,8 +59,14 @@ pipeline {
 
                         FLUTTER_HOME="${JENKINS_HOME}/tools/flutter-stable"
                         export PATH="${FLUTTER_HOME}/bin:${PATH}"
+                        mkdir -p ~/.ssh
+                        chmod 700 ~/.ssh
+                        ssh-keyscan -p "${REMOTE_PORT}" -H "${REMOTE_HOST}" >> ~/.ssh/known_hosts
 
-                        if [ ! -f .env ]; then
+                        if ssh -i "${DEPLOY_KEY_PATH}" -p "${REMOTE_PORT}" "${REMOTE_USER}@${REMOTE_HOST}" "test -f '${REMOTE_APP_DIR}/.env'"; then
+                          scp -i "${DEPLOY_KEY_PATH}" -P "${REMOTE_PORT}" \
+                            "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_APP_DIR}/.env" .env
+                        elif [ ! -f .env ]; then
                           cp .env.example .env
                         fi
 
@@ -76,35 +85,33 @@ pipeline {
                 }
             }
             steps {
-                sshagent(credentials: ['j14d101-ssh']) {
-                    sh '''
-                        set -eux
+                sh '''
+                    set -eux
 
-                        mkdir -p ~/.ssh
-                        chmod 700 ~/.ssh
-                        ssh-keyscan -p "${REMOTE_PORT}" -H "${REMOTE_HOST}" >> ~/.ssh/known_hosts
+                    mkdir -p ~/.ssh
+                    chmod 700 ~/.ssh
+                    ssh-keyscan -p "${REMOTE_PORT}" -H "${REMOTE_HOST}" >> ~/.ssh/known_hosts
 
-                        ssh -p "${REMOTE_PORT}" "${REMOTE_USER}@${REMOTE_HOST}" "
-                          set -eu
-                          mkdir -p '${REMOTE_APP_DIR}/current' '${REMOTE_APP_DIR}/nginx'
-                        "
+                    ssh -i "${DEPLOY_KEY_PATH}" -p "${REMOTE_PORT}" "${REMOTE_USER}@${REMOTE_HOST}" "
+                      set -eu
+                      mkdir -p '${REMOTE_APP_DIR}/current' '${REMOTE_APP_DIR}/nginx'
+                    "
 
-                        rsync -az --delete \
-                          -e "ssh -p ${REMOTE_PORT}" \
-                          "${APP_DIR}/deploy/web/" \
-                          "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_APP_DIR}/"
+                    rsync -az --delete \
+                      -e "ssh -i ${DEPLOY_KEY_PATH} -p ${REMOTE_PORT}" \
+                      "${APP_DIR}/deploy/web/" \
+                      "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_APP_DIR}/"
 
-                        rsync -az --delete \
-                          -e "ssh -p ${REMOTE_PORT}" \
-                          "${APP_DIR}/build/web/" \
-                          "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_APP_DIR}/current/"
+                    rsync -az --delete \
+                      -e "ssh -i ${DEPLOY_KEY_PATH} -p ${REMOTE_PORT}" \
+                      "${APP_DIR}/build/web/" \
+                      "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_APP_DIR}/current/"
 
-                        ssh -p "${REMOTE_PORT}" "${REMOTE_USER}@${REMOTE_HOST}" "
-                          set -eu
-                          bash '${REMOTE_DEPLOY_SCRIPT}'
-                        "
-                    '''
-                }
+                    ssh -i "${DEPLOY_KEY_PATH}" -p "${REMOTE_PORT}" "${REMOTE_USER}@${REMOTE_HOST}" "
+                      set -eu
+                      bash '${REMOTE_DEPLOY_SCRIPT}'
+                    "
+                '''
             }
         }
     }

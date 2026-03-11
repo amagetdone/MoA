@@ -7,10 +7,9 @@
 - 수동 배포 대상 브랜치: `dev/frontend`
 
 ## Jenkins credentials
-- ID: `j14d101-ssh`
-- 타입: SSH Username with private key
-- Username: `ubuntu`
-- Private Key: `J14D101T.pem`
+- 별도 Jenkins credential 없이 서버 내부 전용 SSH 키를 사용한다.
+- Jenkins 컨테이너 경로: `/var/jenkins_home/.ssh/id_ed25519_front_deploy`
+- 대상 계정: `ubuntu`
 
 ## 원격 서버 경로
 - `/home/ubuntu/front`
@@ -30,3 +29,4 @@
 ## 참고
 - 기존 백엔드 네트워크 `moreadmin_default` 에 FE Nginx가 외부 네트워크로 참여한다.
 - `/api/...` 요청은 `moreadmin-app-1:8080/...` 으로 프록시된다.
+- Jenkins는 원격 `/home/ubuntu/front/.env` 를 먼저 받아와서 FE web build에 사용한다.
