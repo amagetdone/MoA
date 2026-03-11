@@ -23,13 +23,26 @@ class WebPreviewShell extends StatefulWidget {
       return false;
     }
 
-    final preview = Uri.base.queryParameters['preview'];
-    if (preview == null) {
+    final uri = Uri.base;
+    final pathSegments = uri.pathSegments;
+    final preview = uri.queryParameters['preview'];
+
+    if (pathSegments.isNotEmpty && pathSegments.first == 'app') {
       return false;
     }
 
-    final normalized = preview.toLowerCase();
-    return normalized != '0' && normalized != 'false' && normalized != 'off';
+    if (pathSegments.isNotEmpty && pathSegments.first == 'preview') {
+      return true;
+    }
+
+    if (preview != null) {
+      final normalized = preview.toLowerCase();
+      return normalized != '0' &&
+          normalized != 'false' &&
+          normalized != 'off';
+    }
+
+    return uri.host == 'j14d101.p.ssafy.io';
   }
 
   @override
