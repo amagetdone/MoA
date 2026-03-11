@@ -32,13 +32,15 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<domain.User> loginWithKakao() async {
-    if (AppEnv.optional('KAKAO_NATIVE_APP_KEY') == null) {
+    if (!kIsWeb && AppEnv.optional('KAKAO_NATIVE_APP_KEY') == null) {
       throw Exception('KAKAO_NATIVE_APP_KEY가 설정되지 않았습니다.');
     }
 
-    // 카카오톡 앱 설치 여부에 따라 분기
+    // 웹에서는 카카오 계정 로그인, 앱에서는 카카오톡 설치 여부에 따라 분기
     OAuthToken token;
-    if (await isKakaoTalkInstalled()) {
+    if (kIsWeb) {
+      token = await UserApi.instance.loginWithKakaoAccount();
+    } else if (await isKakaoTalkInstalled()) {
       token = await UserApi.instance.loginWithKakaoTalk();
     } else {
       token = await UserApi.instance.loginWithKakaoAccount();
