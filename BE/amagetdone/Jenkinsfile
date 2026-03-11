@@ -205,9 +205,23 @@ pipeline {
 
                     bash "$DEV_DEPLOY_SCRIPT"
 
+                    if ! command -v docker-compose >/dev/null 2>&1; then
+                      echo "docker-compose is required for Jenkins host health checks" >&2
+                      exit 1
+                    fi
+
+                    HEALTHCHECK_COMPOSE_FILE="$(mktemp)"
+                    cat > "$HEALTHCHECK_COMPOSE_FILE" <<'EOF'
+services:
+  curl:
+    image: curlimages/curl:8.12.1
+    network_mode: host
+EOF
+                    trap 'rm -f "$HEALTHCHECK_COMPOSE_FILE"' EXIT
+
                     run_host_health_check() {
                       url="$1"
-                      docker run --rm --network host curlimages/curl:8.12.1 -fsS "$url" >/dev/null
+                      docker-compose -f "$HEALTHCHECK_COMPOSE_FILE" run --rm curl -fsS "$url" >/dev/null
                     }
 
                     for attempt in $(seq 1 40); do
