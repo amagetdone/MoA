@@ -11,6 +11,8 @@ pipeline {
         APP_DIR = 'BE/amagetdone'
         JENKINS_APP_ENV = '/var/jenkins_home/secrets/amagetdone.app.env'
         JENKINS_DEPLOY_ENV = '/var/jenkins_home/secrets/amagetdone.env'
+        JENKINS_DEV_APP_ENV = '/var/jenkins_home/secrets/amagetdone-dev.app.env'
+        JENKINS_DEV_DEPLOY_ENV = '/var/jenkins_home/secrets/amagetdone-dev.env'
     }
 
     stages {
@@ -25,11 +27,16 @@ pipeline {
                 dir("${APP_DIR}") {
                     sh '''
                         set -eux
-                        if [ ! -f "$JENKINS_APP_ENV" ]; then
-                          echo "Jenkins app env file not found: $JENKINS_APP_ENV" >&2
+                        APP_ENV_FILE="$JENKINS_APP_ENV"
+                        if [ "$BRANCH_NAME" = "dev/backend" ]; then
+                          APP_ENV_FILE="$JENKINS_DEV_APP_ENV"
+                        fi
+
+                        if [ ! -f "$APP_ENV_FILE" ]; then
+                          echo "Jenkins app env file not found: $APP_ENV_FILE" >&2
                           exit 1
                         fi
-                        install -m 600 "$JENKINS_APP_ENV" ./.env
+                        install -m 600 "$APP_ENV_FILE" ./.env
                         chmod +x ./gradlew
                         ./gradlew clean test bootJar
                     '''
@@ -37,7 +44,7 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy Production') {
             when {
                 branch 'main'
             }
@@ -116,6 +123,96 @@ pipeline {
                         done
                     '''
                 }
+            }
+        }
+
+        stage('Deploy Dev Backend') {
+            when {
+                branch 'dev/backend'
+            }
+            steps {
+                sh '''
+                    set -eu
+
+                    if [ ! -f "$JENKINS_DEV_DEPLOY_ENV" ]; then
+                      echo "Jenkins dev deploy env file not found: $JENKINS_DEV_DEPLOY_ENV" >&2
+                      exit 1
+                    fi
+
+                    if [ ! -f "$JENKINS_DEV_APP_ENV" ]; then
+                      echo "Jenkins dev app env file not found: $JENKINS_DEV_APP_ENV" >&2
+                      exit 1
+                    fi
+
+                    set -a
+                    . "$JENKINS_DEV_DEPLOY_ENV"
+                    set +a
+
+                    require_value() {
+                      value="$1"
+                      name="$2"
+                      if [ -z "$value" ]; then
+                        echo "Required Jenkins dev deploy env is missing: $name" >&2
+                        exit 1
+                      fi
+                    }
+
+                    require_value "${LOCAL_REPO_DIR:-}" LOCAL_REPO_DIR
+                    require_value "${LOCAL_APP_DIR:-}" LOCAL_APP_DIR
+                    require_value "${LOCAL_HEALTH_URL:-}" LOCAL_HEALTH_URL
+                    require_value "${EXTERNAL_HEALTH_URL:-}" EXTERNAL_HEALTH_URL
+
+                    docker run --rm \
+                      -v "$LOCAL_REPO_DIR:/repo" \
+                      -w /repo \
+                      alpine/git:2.47.2 \
+                      sh -lc "
+                        set -eu
+                        git fetch origin
+                        git checkout dev/backend
+                        git reset --hard '$GIT_COMMIT'
+                      "
+
+                    docker run --rm -i \
+                      -v "$LOCAL_APP_DIR:/dest" \
+                      alpine:3.20 \
+                      sh -lc 'cat > /dest/.env && chmod 600 /dest/.env' \
+                      < "$JENKINS_DEV_APP_ENV"
+
+                    docker run --rm \
+                      -v /var/run/docker.sock:/var/run/docker.sock \
+                      -v "$LOCAL_APP_DIR:/app" \
+                      -w /app \
+                      docker:27-cli \
+                      sh -lc '
+                        set -eu
+                        docker compose version
+                        sh ./scripts/deploy-dev.sh
+                      '
+
+                    for attempt in $(seq 1 40); do
+                      if docker run --rm --network host curlimages/curl:8.12.1 \
+                        -fsS "$LOCAL_HEALTH_URL" >/dev/null; then
+                        break
+                      fi
+                      if [ "$attempt" -eq 40 ]; then
+                        echo "Local dev health check failed: $LOCAL_HEALTH_URL" >&2
+                        exit 1
+                      fi
+                      sleep 3
+                    done
+
+                    for attempt in $(seq 1 40); do
+                      if curl -fsS "$EXTERNAL_HEALTH_URL" >/dev/null; then
+                        exit 0
+                      fi
+                      if [ "$attempt" -eq 40 ]; then
+                        echo "External dev health check failed: $EXTERNAL_HEALTH_URL" >&2
+                        exit 1
+                      fi
+                      sleep 3
+                    done
+                '''
             }
         }
     }
