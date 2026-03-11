@@ -28,7 +28,7 @@ public class MemberProfileService {
 		return new ProfileCompletionDto.Response(
 			user.getId(),
 			profileCompleted,
-			user.getStatus(),
+			user.getStatus().name(),
 			profileCompleted ? "GO_HOME" : "COMPLETE_PROFILE"
 		);
 	}

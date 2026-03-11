@@ -12,6 +12,7 @@ import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.ssafy.amagetdone.domain.asset.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
 import com.ssafy.amagetdone.domain.member.application.usecase.FindOrCreateSocialUserUseCase;
 import com.ssafy.amagetdone.domain.member.application.usecase.IssueMemberTokensUseCase;
@@ -20,6 +21,7 @@ import com.ssafy.amagetdone.domain.member.infra.client.SocialUserIdentity;
 import com.ssafy.amagetdone.domain.member.model.entity.SocialAccount;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.vo.SocialProvider;
+import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.member.support.util.MemberTokenPair;
 
 import org.junit.jupiter.api.Test;
@@ -42,12 +44,20 @@ class MemberAuthServiceTest {
 	@Mock
 	private IssueMemberTokensUseCase issueMemberTokensUseCase;
 
+	@Mock
+	private AccountRepository accountRepository;
+
+	@Mock
+	private PlanRepository planRepository;
+
 	@Test
-	void authenticateCreatesNewMemberWhenProviderAccountDoesNotExist() {
+	void authenticateReturnsTempStatusWhenOnboardingFlagsAreIncomplete() {
 		MemberAuthService memberAuthService = new MemberAuthService(
 			List.of(kakaoSocialAuthClient, googleSocialAuthClient),
 			findOrCreateSocialUserUseCase,
-			issueMemberTokensUseCase
+			issueMemberTokensUseCase,
+			accountRepository,
+			planRepository
 		);
 		SocialAuthDto.Request request = new SocialAuthDto.Request("provider-access-token", null);
 		SocialUserIdentity identity = new SocialUserIdentity(SocialProvider.KAKAO, "kakao-user-1");
@@ -60,25 +70,28 @@ class MemberAuthServiceTest {
 		given(kakaoSocialAuthClient.fetchIdentity(request)).willReturn(identity);
 		given(findOrCreateSocialUserUseCase.execute(identity)).willReturn(new FindOrCreateSocialUserUseCase.Result(user, socialAccount, true));
 		given(issueMemberTokensUseCase.execute(user, SocialProvider.KAKAO)).willReturn(tokenPair);
+		given(accountRepository.existsByUserId(1)).willReturn(false);
+		given(planRepository.existsByUserId(1)).willReturn(false);
 
 		SocialAuthDto.Response response = memberAuthService.authenticate(SocialProvider.KAKAO, request);
 
-		assertEquals(1, response.userId());
-		assertEquals("kakao", response.provider());
-		assertTrue(response.isNewUser());
-		assertFalse(response.profileCompleted());
-		assertEquals("COMPLETE_PROFILE", response.nextAction());
+		assertEquals("TEMP", response.status());
+		assertFalse(response.profile());
+		assertFalse(response.account());
+		assertFalse(response.plan());
 		assertEquals("access-token", response.accessToken());
 		assertEquals("refresh-token", response.refreshToken());
 		verify(findOrCreateSocialUserUseCase).execute(identity);
 	}
 
 	@Test
-	void authenticateReturnsGoHomeForCompletedExistingMember() {
+	void authenticateReturnsIndependentFlagsForActiveMember() {
 		MemberAuthService memberAuthService = new MemberAuthService(
 			List.of(kakaoSocialAuthClient, googleSocialAuthClient),
 			findOrCreateSocialUserUseCase,
-			issueMemberTokensUseCase
+			issueMemberTokensUseCase,
+			accountRepository,
+			planRepository
 		);
 		SocialAuthDto.Request request = new SocialAuthDto.Request(null, "google-id-token");
 		SocialUserIdentity identity = new SocialUserIdentity(SocialProvider.GOOGLE, "google-user-1");
@@ -92,14 +105,15 @@ class MemberAuthServiceTest {
 		given(googleSocialAuthClient.fetchIdentity(request)).willReturn(identity);
 		given(findOrCreateSocialUserUseCase.execute(identity)).willReturn(new FindOrCreateSocialUserUseCase.Result(user, socialAccount, false));
 		given(issueMemberTokensUseCase.execute(user, SocialProvider.GOOGLE)).willReturn(tokenPair);
+		given(accountRepository.existsByUserId(2)).willReturn(false);
+		given(planRepository.existsByUserId(2)).willReturn(true);
 
 		SocialAuthDto.Response response = memberAuthService.authenticate(SocialProvider.GOOGLE, request);
 
-		assertEquals(2, response.userId());
-		assertEquals("google", response.provider());
-		assertFalse(response.isNewUser());
-		assertTrue(response.profileCompleted());
-		assertEquals("GO_HOME", response.nextAction());
+		assertEquals("ACTIVE", response.status());
+		assertTrue(response.profile());
+		assertFalse(response.account());
+		assertTrue(response.plan());
 		assertEquals("access-token", response.accessToken());
 		assertEquals("refresh-token", response.refreshToken());
 		verify(findOrCreateSocialUserUseCase).execute(identity);

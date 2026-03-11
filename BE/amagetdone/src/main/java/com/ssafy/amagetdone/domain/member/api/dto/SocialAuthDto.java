@@ -12,11 +12,10 @@ public final class SocialAuthDto {
 	}
 
 	public record Response(
-		Integer userId,
-		String provider,
-		boolean isNewUser,
-		boolean profileCompleted,
-		String nextAction,
+		String status,
+		boolean profile,
+		boolean account,
+		boolean plan,
 		String accessToken,
 		String refreshToken
 	) {
