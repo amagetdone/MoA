@@ -39,3 +39,4 @@ out/
 .env
 .venv/
 docs/plans/
+AGENTS.md
