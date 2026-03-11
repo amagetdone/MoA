@@ -73,6 +73,7 @@ pipeline {
                         flutter pub get
                         flutter test
                         flutter build web --release
+                        rm -f build/web/assets/.env
                     '''
                 }
             }

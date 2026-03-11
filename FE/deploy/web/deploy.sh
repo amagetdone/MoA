@@ -3,10 +3,16 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NETWORK_NAME="moreadmin_default"
+DOMAIN="j14d101.p.ssafy.io"
+HTTP_CONF="${SCRIPT_DIR}/nginx/http.conf"
+HTTPS_CONF="${SCRIPT_DIR}/nginx/https.conf"
+ACTIVE_CONF="${SCRIPT_DIR}/nginx/default.conf"
+CERT_DIR="${SCRIPT_DIR}/certbot/conf/live/${DOMAIN}"
 
 cd "${SCRIPT_DIR}"
 
-mkdir -p "${SCRIPT_DIR}/current" "${SCRIPT_DIR}/nginx"
+mkdir -p "${SCRIPT_DIR}/current" "${SCRIPT_DIR}/nginx" \
+  "${SCRIPT_DIR}/certbot/www" "${SCRIPT_DIR}/certbot/conf"
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "ERROR: docker command not found."
@@ -23,8 +29,13 @@ if [ ! -f "${SCRIPT_DIR}/docker-compose.yml" ]; then
   exit 1
 fi
 
-if [ ! -f "${SCRIPT_DIR}/nginx/default.conf" ]; then
-  echo "ERROR: nginx/default.conf not found."
+if [ ! -f "${HTTP_CONF}" ]; then
+  echo "ERROR: nginx/http.conf not found."
+  exit 1
+fi
+
+if [ ! -f "${HTTPS_CONF}" ]; then
+  echo "ERROR: nginx/https.conf not found."
   exit 1
 fi
 
@@ -33,11 +44,21 @@ if [ ! -f "${SCRIPT_DIR}/current/index.html" ]; then
   exit 1
 fi
 
+if [ -f "${CERT_DIR}/fullchain.pem" ] && [ -f "${CERT_DIR}/privkey.pem" ]; then
+  cp "${HTTPS_CONF}" "${ACTIVE_CONF}"
+  HEALTH_CHECK_URL="https://127.0.0.1/healthz"
+  CURL_EXTRA_ARGS="--insecure"
+else
+  cp "${HTTP_CONF}" "${ACTIVE_CONF}"
+  HEALTH_CHECK_URL="http://127.0.0.1/healthz"
+  CURL_EXTRA_ARGS=""
+fi
+
 docker compose up -d --remove-orphans
 
 for attempt in $(seq 1 30); do
-  if curl -fsS "http://127.0.0.1/" >/dev/null && \
-     curl -fsS "http://127.0.0.1/api/health" >/dev/null; then
+  if curl -fsS ${CURL_EXTRA_ARGS} "${HEALTH_CHECK_URL}" >/dev/null && \
+     curl -fsS ${CURL_EXTRA_ARGS} "${HEALTH_CHECK_URL%/healthz}/api/health" >/dev/null; then
     echo "Frontend deploy succeeded."
     exit 0
   fi
