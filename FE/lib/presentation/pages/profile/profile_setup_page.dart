@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
@@ -24,8 +25,9 @@ class ProfileSetupPage extends StatefulWidget {
 
 class _ProfileSetupPageState extends State<ProfileSetupPage> {
   late final TextEditingController _nicknameController;
+  late final TextEditingController _emailController;
   late final TextEditingController _birthDateController;
-  String? _selectedGender;
+  String? _selectedIncome;
 
   // Agreement checkboxes
   bool _agreeAll = false;
@@ -39,28 +41,33 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     _nicknameController = TextEditingController(
       text: widget.initialData?['nickname'] ?? '',
     );
+    _emailController = TextEditingController(
+      text: widget.initialData?['email'] ?? '',
+    );
     _birthDateController = TextEditingController(
       text: widget.initialData?['birthDate'] ?? '',
     );
-    _selectedGender = widget.initialData?['gender'];
+    _selectedIncome = widget.initialData?['income'];
   }
 
   @override
   void dispose() {
     _nicknameController.dispose();
+    _emailController.dispose();
     _birthDateController.dispose();
     super.dispose();
   }
 
   bool get _isFormValid {
     final hasBasicInfo = _nicknameController.text.isNotEmpty &&
+        _emailController.text.isNotEmpty &&
         _birthDateController.text.isNotEmpty &&
-        _selectedGender != null;
+        _selectedIncome != null;
 
     if (widget.isOnboarding) {
       return hasBasicInfo && _agreeTerms && _agreePrivacy;
     }
-    return hasBasicInfo;
+    return _nicknameController.text.isNotEmpty && _emailController.text.isNotEmpty;
   }
 
   void _onAgreeAllChanged(bool? value) {
@@ -88,6 +95,21 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     }
   }
 
+  Future<void> _pickBirthDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime(2000, 1, 1),
+      firstDate: DateTime(1950),
+      lastDate: DateTime.now(),
+    );
+    if (date != null) {
+      setState(() {
+        _birthDateController.text =
+            '${date.year}.${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,10 +123,33 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
             : null,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(24.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Profile photo
+            Center(
+              child: GestureDetector(
+                onTap: () {
+                  // TODO: pick profile image
+                },
+                child: Container(
+                  width: 88.w,
+                  height: 88.w,
+                  decoration: BoxDecoration(
+                    color: AppColors.gray100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.camera_alt_outlined,
+                    size: 32.w,
+                    color: AppColors.gray500,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 32.h),
+
             // Nickname
             MoreTextField(
               label: '닉네임',
@@ -112,73 +157,130 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
               controller: _nicknameController,
               onChanged: (_) => setState(() {}),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
 
-            // Birth date
+            // Email
             MoreTextField(
-              label: '생년월일',
-              hint: 'YYYY.MM.DD',
-              controller: _birthDateController,
-              keyboardType: TextInputType.datetime,
+              label: '이메일',
+              hint: '이메일을 입력해주세요',
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
               onChanged: (_) => setState(() {}),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
 
-            // Gender
-            Text(
-              '성별',
-              style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.gray700,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                MoreChip(
-                  label: '남',
-                  selected: _selectedGender == '남',
-                  onTap: () {
-                    setState(() {
-                      _selectedGender = '남';
-                    });
-                  },
-                ),
-                const SizedBox(width: 12),
-                MoreChip(
-                  label: '여',
-                  selected: _selectedGender == '여',
-                  onTap: () {
-                    setState(() {
-                      _selectedGender = '여';
-                    });
-                  },
-                ),
-              ],
-            ),
-
-            // Agreement section (only for onboarding)
             if (widget.isOnboarding) ...[
-              const SizedBox(height: 40),
+              // Birth date with calendar icon
+              Text(
+                '생년월일',
+                style: AppTextStyles.bodySm.copyWith(
+                  color: AppColors.gray700,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13.sp,
+                ),
+              ),
+              SizedBox(height: 8.h),
+              GestureDetector(
+                onTap: _pickBirthDate,
+                child: AbsorbPointer(
+                  child: TextField(
+                    controller: _birthDateController,
+                    decoration: InputDecoration(
+                      hintText: 'YYYY.MM.DD',
+                      hintStyle: AppTextStyles.bodyMd.copyWith(
+                        color: AppColors.gray500,
+                        fontSize: 15.sp,
+                      ),
+                      suffixIcon: Icon(
+                        Icons.calendar_today_outlined,
+                        size: 20.w,
+                        color: AppColors.gray500,
+                      ),
+                      filled: true,
+                      fillColor: AppColors.gray50,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16.w,
+                        vertical: 16.h,
+                      ),
+                    ),
+                    style: AppTextStyles.bodyMd.copyWith(
+                      color: AppColors.gray900,
+                      fontSize: 15.sp,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 24.h),
+
+              // 고정 수입 여부
+              Text(
+                '고정 수입 여부',
+                style: AppTextStyles.bodySm.copyWith(
+                  color: AppColors.gray700,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13.sp,
+                ),
+              ),
+              SizedBox(height: 8.h),
+              Row(
+                children: [
+                  MoreChip(
+                    label: '네',
+                    selected: _selectedIncome == '네',
+                    onTap: () {
+                      setState(() {
+                        _selectedIncome = '네';
+                      });
+                    },
+                  ),
+                  SizedBox(width: 12.w),
+                  MoreChip(
+                    label: '아니요',
+                    selected: _selectedIncome == '아니요',
+                    onTap: () {
+                      setState(() {
+                        _selectedIncome = '아니요';
+                      });
+                    },
+                  ),
+                  SizedBox(width: 12.w),
+                  MoreChip(
+                    label: '모르겠요',
+                    selected: _selectedIncome == '모르겠요',
+                    onTap: () {
+                      setState(() {
+                        _selectedIncome = '모르겠요';
+                      });
+                    },
+                  ),
+                ],
+              ),
+
+              // Agreement section
+              SizedBox(height: 40.h),
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16.w),
                 decoration: BoxDecoration(
                   color: AppColors.gray50,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Column(
                   children: [
                     // Agree all
                     _AgreementCheckbox(
-                      text: '전체 동의',
+                      text: '전체동의',
                       value: _agreeAll,
                       onChanged: _onAgreeAllChanged,
                       isBold: true,
                     ),
-                    const Divider(height: 24),
+                    Divider(height: 24.h),
                     // Terms of service
                     _AgreementCheckbox(
-                      text: '서비스 이용약관 (필수)',
+                      text: '[필수] 서비스 이용약관',
                       value: _agreeTerms,
                       onChanged: (value) {
                         setState(() {
@@ -186,11 +288,12 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                         });
                         _updateAgreeAll();
                       },
+                      showArrow: true,
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8.h),
                     // Privacy policy
                     _AgreementCheckbox(
-                      text: '개인정보 처리방침 (필수)',
+                      text: '[필수] 개인정보 처리 방침',
                       value: _agreePrivacy,
                       onChanged: (value) {
                         setState(() {
@@ -198,11 +301,12 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                         });
                         _updateAgreeAll();
                       },
+                      showArrow: true,
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8.h),
                     // Marketing
                     _AgreementCheckbox(
-                      text: '마케팅 정보 수신 (선택)',
+                      text: '[선택] 마케팅 정보 수신 동의',
                       value: _agreeMarketing,
                       onChanged: (value) {
                         setState(() {
@@ -210,6 +314,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                         });
                         _updateAgreeAll();
                       },
+                      showArrow: true,
                     ),
                   ],
                 ),
@@ -220,7 +325,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24.w),
           child: MoreBottomButton(
             text: widget.isOnboarding ? '다음' : '저장',
             onPressed: _onSubmit,
@@ -237,12 +342,14 @@ class _AgreementCheckbox extends StatelessWidget {
   final bool value;
   final ValueChanged<bool?> onChanged;
   final bool isBold;
+  final bool showArrow;
 
   const _AgreementCheckbox({
     required this.text,
     required this.value,
     required this.onChanged,
     this.isBold = false,
+    this.showArrow = false,
   });
 
   @override
@@ -252,14 +359,14 @@ class _AgreementCheckbox extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 24,
-            height: 24,
+            width: 24.w,
+            height: 24.w,
             child: Checkbox(
               value: value,
               onChanged: onChanged,
               activeColor: AppColors.orange500,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(4.r),
               ),
               side: BorderSide(
                 color: value ? AppColors.orange500 : AppColors.gray100,
@@ -267,16 +374,23 @@ class _AgreementCheckbox extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12.w),
           Expanded(
             child: Text(
               text,
               style: AppTextStyles.bodySm.copyWith(
                 color: AppColors.gray900,
                 fontWeight: isBold ? FontWeight.w700 : FontWeight.w400,
+                fontSize: 13.sp,
               ),
             ),
           ),
+          if (showArrow)
+            Icon(
+              Icons.chevron_right,
+              size: 20.w,
+              color: AppColors.gray500,
+            ),
         ],
       ),
     );

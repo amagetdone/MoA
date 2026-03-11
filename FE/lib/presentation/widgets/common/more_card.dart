@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 
 class MoreCard extends StatelessWidget {
@@ -21,16 +22,16 @@ class MoreCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: padding ?? const EdgeInsets.all(20),
+        padding: padding ?? EdgeInsets.all(20.w),
         decoration: BoxDecoration(
           color: color ?? AppColors.bgSurface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(16.r),
 
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              offset: const Offset(0, 2),
-              blurRadius: 8,
+              color: Colors.black.withValues(alpha: 0.06),
+              offset: Offset(0, 2.h),
+              blurRadius: 8.r,
             ),
           ],
         ),

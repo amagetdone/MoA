@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
@@ -57,19 +58,19 @@ class GoalCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 44.w,
+                height: 44.w,
                 decoration: BoxDecoration(
                   color: AppColors.orange50,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Icon(
                   _mapIcon(goal.iconName),
                   color: AppColors.orange500,
-                  size: 24,
+                  size: 24.w,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,7 +82,7 @@ class GoalCard extends StatelessWidget {
                         color: AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 2.h),
                     Text(
                       goal.remainingDays > 0
                           ? 'D-${goal.remainingDays}'
@@ -97,7 +98,7 @@ class GoalCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -116,14 +117,14 @@ class GoalCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8.h),
           MoreProgressBar(
             progress: goal.progressRate,
             color: AppColors.orange500,
             backgroundColor: AppColors.gray50,
             height: 8,
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6.h),
           Align(
             alignment: Alignment.centerRight,
             child: Text(

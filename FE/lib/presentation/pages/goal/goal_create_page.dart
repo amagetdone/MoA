@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
@@ -88,7 +89,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
             : null,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(24.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -99,7 +100,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
               controller: _nameController,
               onChanged: (_) => setState(() {}),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
 
             // Target amount
             MoreTextField(
@@ -110,7 +111,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
               suffix: '원',
               onChanged: (_) => setState(() {}),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
 
             // Start date
             MoreDateField(
@@ -122,7 +123,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
                 });
               },
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
 
             // End date
             MoreDateField(
@@ -134,7 +135,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
                 });
               },
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
 
             // Description (optional)
             Text(
@@ -144,7 +145,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8.h),
             TextField(
               controller: _descriptionController,
               maxLines: 4,
@@ -157,17 +158,17 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
                 filled: true,
                 fillColor: AppColors.gray50,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12.r),
                   borderSide: BorderSide.none,
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12.r),
                   borderSide: BorderSide(
                     color: AppColors.orange500,
                     width: 1.5,
                   ),
                 ),
-                contentPadding: const EdgeInsets.all(16),
+                contentPadding: EdgeInsets.all(16.w),
               ),
             ),
           ],
@@ -175,7 +176,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24.w),
           child: MoreBottomButton(
             text: widget.isOnboarding ? '다음' : '생성하기',
             onPressed: _onSubmit,

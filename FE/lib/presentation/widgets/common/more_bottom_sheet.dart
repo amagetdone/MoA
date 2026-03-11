@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 
@@ -21,8 +22,8 @@ class MoreBottomSheet extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.bgSurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
       ),
       builder: (_) => MoreBottomSheet(title: title, child: child),
     );
@@ -37,22 +38,22 @@ class MoreBottomSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 12),
+          SizedBox(height: 12.h),
           Container(
-            width: 40,
-            height: 4,
+            width: 40.w,
+            height: 4.h,
             decoration: BoxDecoration(
               color: AppColors.gray100,
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(2.r),
             ),
           ),
           if (title != null) ...[
-            const SizedBox(height: 20),
+            SizedBox(height: 20.h),
             Text(title!, style: AppTextStyles.headingMd),
           ],
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
           child,
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
         ],
       ),
     );

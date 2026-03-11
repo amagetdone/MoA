@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
@@ -21,19 +22,48 @@ class SpendingLineChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            isWeekly ? '주간 지출 추이' : '월간 지출 추이',
-            style: AppTextStyles.headingMd,
+          Row(
+            children: [
+              Text(
+                '지출 그래프',
+                style: AppTextStyles.headingMd.copyWith(fontSize: 16.sp),
+              ),
+              SizedBox(width: 8.w),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                decoration: BoxDecoration(
+                  color: AppColors.red500.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Text(
+                  '10% 증가',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.red500,
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 4.h),
+          Text(
+            '총 지출',
+            style: AppTextStyles.bodySm.copyWith(
+              color: AppColors.textTertiary,
+              fontSize: 12.sp,
+            ),
+          ),
+          SizedBox(height: 16.h),
           SizedBox(
-            height: 200,
+            height: 200.h,
             child: data.isEmpty
                 ? Center(
                     child: Text(
                       '데이터가 없습니다',
                       style: AppTextStyles.bodyMd.copyWith(
                         color: AppColors.textTertiary,
+                        fontSize: 14.sp,
                       ),
                     ),
                   )
@@ -83,19 +113,19 @@ class SpendingLineChart extends StatelessWidget {
         leftTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
-            reservedSize: 50,
+            reservedSize: 50.w,
             getTitlesWidget: (value, meta) {
               if (value == meta.max || value == meta.min) {
                 return const SizedBox.shrink();
               }
               final display = (value / 10000).toStringAsFixed(0);
               return Padding(
-                padding: const EdgeInsets.only(right: 4),
+                padding: EdgeInsets.only(right: 4.w),
                 child: Text(
                   '${display}만',
                   style: AppTextStyles.caption.copyWith(
                     color: AppColors.textTertiary,
-                    fontSize: 10,
+                    fontSize: 10.sp,
                   ),
                 ),
               );
@@ -105,7 +135,7 @@ class SpendingLineChart extends StatelessWidget {
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
-            reservedSize: 28,
+            reservedSize: 28.h,
             interval: 1,
             getTitlesWidget: (value, meta) {
               final index = value.toInt();
@@ -127,12 +157,12 @@ class SpendingLineChart extends StatelessWidget {
                   : '${date.day}일';
 
               return Padding(
-                padding: const EdgeInsets.only(top: 8),
+                padding: EdgeInsets.only(top: 8.h),
                 child: Text(
                   label,
                   style: AppTextStyles.caption.copyWith(
                     color: AppColors.textTertiary,
-                    fontSize: 10,
+                    fontSize: 10.sp,
                   ),
                 ),
               );
@@ -157,7 +187,7 @@ class SpendingLineChart extends StatelessWidget {
             show: data.length <= 7,
             getDotPainter: (spot, percent, barData, index) {
               return FlDotCirclePainter(
-                radius: 3,
+                radius: 3.r,
                 color: Colors.white,
                 strokeWidth: 2,
                 strokeColor: AppColors.orange500,
@@ -188,6 +218,7 @@ class SpendingLineChart extends StatelessWidget {
                 AppTextStyles.caption.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
+                  fontSize: 11.sp,
                 ),
               );
             }).toList();

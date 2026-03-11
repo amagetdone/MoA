@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 
@@ -21,7 +22,7 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => Size.fromHeight(56.h);
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +37,7 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       if (showNotification)
         IconButton(
-          icon: const Icon(Icons.notifications_none, color: AppColors.textPrimary),
+          icon: Icon(Icons.notifications_none, size: 24.w, color: AppColors.textPrimary),
           onPressed: () {},
         ),
       ...?actions,
@@ -50,7 +51,7 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
       automaticallyImplyLeading: false,
       leading: showBack
           ? IconButton(
-              icon: const Icon(Icons.arrow_back_ios, size: 20, color: AppColors.textPrimary),
+              icon: Icon(Icons.arrow_back_ios, size: 20.w, color: AppColors.textPrimary),
               onPressed: () {
                 if (Navigator.of(context).canPop()) {
                   Navigator.of(context).pop();

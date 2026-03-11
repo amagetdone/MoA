@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/domain/entities/spending.dart';
@@ -35,9 +36,9 @@ class GoalLineChart extends StatelessWidget {
               color: AppColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
           SizedBox(
-            height: 200,
+            height: 200.h,
             child: LineChart(
               LineChartData(
                 gridData: FlGridData(
@@ -61,7 +62,7 @@ class GoalLineChart extends StatelessWidget {
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 50,
+                      reservedSize: 50.w,
                       getTitlesWidget: (value, meta) {
                         if (value == meta.max || value == meta.min) {
                           return const SizedBox.shrink();
@@ -79,7 +80,7 @@ class GoalLineChart extends StatelessWidget {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 28,
+                      reservedSize: 28.h,
                       interval: (history.length / 4).ceilToDouble().clamp(
                         1,
                         9999,
@@ -91,7 +92,7 @@ class GoalLineChart extends StatelessWidget {
                         }
                         final date = history[index].date;
                         return Padding(
-                          padding: const EdgeInsets.only(top: 4),
+                          padding: EdgeInsets.only(top: 4.h),
                           child: Text(
                             '${date.month}/${date.day}',
                             style: AppTextStyles.caption.copyWith(
@@ -186,9 +187,9 @@ class GoalBarChart extends StatelessWidget {
               color: AppColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
           SizedBox(
-            height: 200,
+            height: 200.h,
             child: BarChart(
               BarChartData(
                 alignment: BarChartAlignment.spaceAround,
@@ -214,7 +215,7 @@ class GoalBarChart extends StatelessWidget {
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 50,
+                      reservedSize: 50.w,
                       getTitlesWidget: (value, meta) {
                         if (value == meta.max || value == meta.min) {
                           return const SizedBox.shrink();
@@ -232,7 +233,7 @@ class GoalBarChart extends StatelessWidget {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 28,
+                      reservedSize: 28.h,
                       getTitlesWidget: (value, meta) {
                         final index = value.toInt();
                         if (index < 0 || index >= history.length) {
@@ -240,7 +241,7 @@ class GoalBarChart extends StatelessWidget {
                         }
                         final date = history[index].date;
                         return Padding(
-                          padding: const EdgeInsets.only(top: 4),
+                          padding: EdgeInsets.only(top: 4.h),
                           child: Text(
                             '${date.month}/${date.day}',
                             style: AppTextStyles.caption.copyWith(
@@ -260,10 +261,10 @@ class GoalBarChart extends StatelessWidget {
                       BarChartRodData(
                         toY: history[index].amount.toDouble(),
                         color: AppColors.orange500,
-                        width: history.length > 10 ? 8 : 16,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(4),
-                          topRight: Radius.circular(4),
+                        width: history.length > 10 ? 8.w : 16.w,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(4.r),
+                          topRight: Radius.circular(4.r),
                         ),
                       ),
                     ],

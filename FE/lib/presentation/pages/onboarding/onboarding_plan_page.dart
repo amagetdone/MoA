@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
@@ -7,7 +8,6 @@ import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/viewmodels/spending_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
-import 'package:more_app/presentation/widgets/common/more_card.dart';
 
 class OnboardingPlanPage extends ConsumerWidget {
   const OnboardingPlanPage({super.key});
@@ -15,196 +15,146 @@ class OnboardingPlanPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(spendingViewModelProvider);
-    final weeklyBudget = state.weeklyBudget;
-    final monthlySavingsGoal = state.monthlySavingsGoal;
-    final weeklySavingsGoal = (monthlySavingsGoal / 4).round();
-    final categories = state.categories;
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const MoreAppBar(title: '목표 계획', showBack: true),
+      appBar: MoreAppBar(title: '목표 계획 수립', showBack: true),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(24.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (state.isLoading)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 48),
-                child: Center(child: CircularProgressIndicator()),
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: 48.h),
+                child: const Center(child: CircularProgressIndicator()),
               )
             else if (state.errorMessage != null)
               Padding(
-                padding: const EdgeInsets.only(bottom: 24),
+                padding: EdgeInsets.only(bottom: 24.h),
                 child: Text(
                   '계획 데이터를 불러오지 못했습니다.\n${state.errorMessage!}',
                   style: AppTextStyles.bodySm.copyWith(color: AppColors.red500),
                 ),
               ),
+
             Text(
-              '주간 미션을 확인하세요',
-              style: AppTextStyles.headingLg.copyWith(color: AppColors.gray900),
+              '소비패턴 결과를 반영하여\n유럽여행 목표 계획을 수립합니다.',
+              style: AppTextStyles.headingMd.copyWith(
+                color: AppColors.gray900,
+                fontSize: 18.sp,
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              '분석 결과를 바탕으로 맞춤 계획을 세웠어요',
-              style: AppTextStyles.bodySm.copyWith(color: AppColors.gray500),
-            ),
-            const SizedBox(height: 24),
-            MoreCard(
+            SizedBox(height: 24.h),
+
+            // 주간 미션 card (orange)
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(20.w),
+              decoration: BoxDecoration(
+                color: AppColors.orange500,
+                borderRadius: BorderRadius.circular(16.r),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: AppColors.orange500.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.account_balance_wallet_outlined,
-                          color: AppColors.orange500,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        '주간 자유소비 예산',
-                        style: AppTextStyles.bodyLg.copyWith(
-                          color: AppColors.gray700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
                   Text(
-                    _formatAmount(weeklyBudget.round()),
-                    style: AppTextStyles.headingLg.copyWith(
-                      color: AppColors.orange500,
+                    '주간 미션',
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 13.sp,
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    '매주 300,000원만 저축하면\n24주 후 유럽여행 갈 수 있어요!',
+                    style: AppTextStyles.headingMd.copyWith(
+                      color: Colors.white,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            MoreCard(
+            SizedBox(height: 24.h),
+
+            // 하루 생활비 한도
+            Text(
+              '하루 생활비 한도',
+              style: AppTextStyles.bodySm.copyWith(
+                color: AppColors.gray500,
+                fontSize: 13.sp,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              '20,000원',
+              style: AppTextStyles.headingXl.copyWith(
+                color: AppColors.gray900,
+                fontSize: 28.sp,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              '자유소비 140,000원 ÷ 7일',
+              style: AppTextStyles.bodySm.copyWith(
+                color: AppColors.gray500,
+                fontSize: 12.sp,
+              ),
+            ),
+            SizedBox(height: 32.h),
+
+            // 주간 예산 section
+            Text(
+              '주간 예산',
+              style: AppTextStyles.headingMd.copyWith(
+                color: AppColors.gray900,
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            SizedBox(height: 16.h),
+
+            _BudgetRow(label: '총 예산(수입)', value: '1,500,000원', isHeader: true),
+            SizedBox(height: 12.h),
+            _BudgetRow(label: '→ 저축비', value: '300,000원', color: AppColors.orange500),
+            SizedBox(height: 12.h),
+            _BudgetRow(label: '→ 고정비', value: '700,000원'),
+            // Sub-categories
+            Padding(
+              padding: EdgeInsets.only(left: 24.w),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00BCD4).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.savings_outlined,
-                          color: Color(0xFF00BCD4),
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        '주간 저축 목표',
-                        style: AppTextStyles.bodyLg.copyWith(
-                          color: AppColors.gray700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    _formatAmount(weeklySavingsGoal),
-                    style: AppTextStyles.headingLg.copyWith(
-                      color: const Color(0xFF00BCD4),
-                    ),
-                  ),
+                  SizedBox(height: 8.h),
+                  _BudgetRow(label: '식비', value: '350,000원', isSubItem: true),
+                  SizedBox(height: 6.h),
+                  _BudgetRow(label: '교통비', value: '200,000원', isSubItem: true),
+                  SizedBox(height: 6.h),
+                  _BudgetRow(label: '여가비', value: '150,000원', isSubItem: true),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            MoreCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.pie_chart_outline,
-                          color: Color(0xFF4CAF50),
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        '카테고리별 예산 배분',
-                        style: AppTextStyles.bodyLg.copyWith(
-                          color: AppColors.gray700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  ...categories.map((category) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: category.color,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              category.name,
-                              style: AppTextStyles.bodySm.copyWith(
-                                color: AppColors.gray700,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            _formatAmount(category.budget.round()),
-                            style: AppTextStyles.bodySm.copyWith(
-                              color: AppColors.gray900,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-              ),
+            SizedBox(height: 12.h),
+            _BudgetRow(label: '→ 변동비', value: '360,000원'),
+            SizedBox(height: 12.h),
+            Divider(height: 1.h, color: AppColors.gray100),
+            SizedBox(height: 12.h),
+            _BudgetRow(
+              label: '= 자유 사용 금액',
+              value: '200,000원',
+              isHeader: true,
+              color: AppColors.orange500,
             ),
           ],
         ),
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24.w),
           child: MoreBottomButton(
-            text: '시작하기',
+            text: '다음',
             onPressed: () => context.go(AppRoutes.home),
             enabled: true,
           ),
@@ -212,18 +162,45 @@ class OnboardingPlanPage extends ConsumerWidget {
       ),
     );
   }
+}
 
-  static String _formatAmount(int amount) {
-    final str = amount.toString();
-    final buffer = StringBuffer();
-    var count = 0;
-    for (var i = str.length - 1; i >= 0; i--) {
-      buffer.write(str[i]);
-      count++;
-      if (count % 3 == 0 && i > 0) {
-        buffer.write(',');
-      }
-    }
-    return '${buffer.toString().split('').reversed.join()}원';
+class _BudgetRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool isHeader;
+  final bool isSubItem;
+  final Color? color;
+
+  const _BudgetRow({
+    required this.label,
+    required this.value,
+    this.isHeader = false,
+    this.isSubItem = false,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.bodySm.copyWith(
+            color: isSubItem ? AppColors.gray500 : AppColors.gray700,
+            fontWeight: isHeader ? FontWeight.w700 : FontWeight.w400,
+            fontSize: isSubItem ? 12.sp : 14.sp,
+          ),
+        ),
+        Text(
+          value,
+          style: AppTextStyles.bodySm.copyWith(
+            color: color ?? (isSubItem ? AppColors.gray500 : AppColors.gray900),
+            fontWeight: isHeader ? FontWeight.w700 : FontWeight.w500,
+            fontSize: isSubItem ? 12.sp : 14.sp,
+          ),
+        ),
+      ],
+    );
   }
 }

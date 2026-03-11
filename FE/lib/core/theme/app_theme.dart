@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 
 abstract class AppTheme {
@@ -20,7 +21,7 @@ abstract class AppTheme {
       color: AppColors.bgSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16.r),
         side: const BorderSide(color: AppColors.borderDefault),
       ),
     ),
@@ -28,9 +29,9 @@ abstract class AppTheme {
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.buttonPrimary,
         foregroundColor: AppColors.white,
-        minimumSize: const Size(double.infinity, 52),
+        minimumSize: Size(double.infinity, 52.h),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(12.r),
         ),
       ),
     ),
@@ -38,18 +39,18 @@ abstract class AppTheme {
       filled: true,
       fillColor: AppColors.bgSurface,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r),
         borderSide: const BorderSide(color: AppColors.borderDefault),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r),
         borderSide: const BorderSide(color: AppColors.borderDefault),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r),
         borderSide: const BorderSide(color: AppColors.buttonPrimary, width: 2),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
     ),
   );
 }

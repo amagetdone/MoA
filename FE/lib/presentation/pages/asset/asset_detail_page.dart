@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
@@ -52,42 +53,57 @@ class AssetDetailPage extends ConsumerWidget {
       TransactionType.transfer => '이체',
     };
 
-    final dateFormat = DateFormat('yyyy년 M월 d일 (E) HH:mm', 'ko_KR');
+    final dateFormat = DateFormat('yyyy.MM.dd HH:mm', 'ko_KR');
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: const MoreAppBar(title: '결제 상세'),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const SizedBox(height: 16),
+            SizedBox(height: 16.h),
+
+            // Name with verified badge
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  transaction.title,
+                  style: AppTextStyles.headingMd.copyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: 18.sp,
+                  ),
+                ),
+                SizedBox(width: 4.w),
+                Icon(
+                  Icons.verified,
+                  color: AppColors.orange500,
+                  size: 20.w,
+                ),
+              ],
+            ),
+            SizedBox(height: 8.h),
 
             // Large amount display
             Text(
               CurrencyFormatter.formatWithSign(
                 isExpense ? -transaction.amount : transaction.amount,
               ),
-              style: AppTextStyles.headingXl.copyWith(color: amountColor),
-            ),
-            const SizedBox(height: 8),
-
-            // Transaction title
-            Text(
-              transaction.title,
-              style: AppTextStyles.headingMd.copyWith(
-                color: AppColors.textPrimary,
+              style: AppTextStyles.headingXl.copyWith(
+                color: amountColor,
+                fontSize: 28.sp,
               ),
             ),
-            const SizedBox(height: 32),
+            SizedBox(height: 32.h),
 
             // Info rows
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(20.w),
               decoration: BoxDecoration(
                 color: AppColors.bgSurface,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(12.r),
                 border: Border.all(color: AppColors.borderDefault),
               ),
               child: Column(
@@ -96,23 +112,35 @@ class AssetDetailPage extends ConsumerWidget {
                     label: '거래 시간',
                     value: dateFormat.format(transaction.dateTime),
                   ),
-                  const Divider(height: 24, color: AppColors.borderDefault),
-                  _InfoRow(label: '구분', value: typeLabel),
-                  const Divider(height: 24, color: AppColors.borderDefault),
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    child: Divider(height: 1, color: AppColors.borderDefault),
+                  ),
+                  _InfoRow(label: '거래 구분', value: '#$typeLabel'),
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    child: Divider(height: 1, color: AppColors.borderDefault),
+                  ),
                   _InfoRow(
-                    label: '금액',
+                    label: '거래 금액',
                     value: CurrencyFormatter.formatKRW(transaction.amount),
                   ),
-                  const Divider(height: 24, color: AppColors.borderDefault),
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    child: Divider(height: 1, color: AppColors.borderDefault),
+                  ),
                   _InfoRow(
-                    label: '잔액',
+                    label: '거래 후 잔액',
                     value: CurrencyFormatter.formatKRW(
                       transaction.balanceAfter,
                     ),
                   ),
                   if (transaction.memo != null &&
                       transaction.memo!.isNotEmpty) ...[
-                    const Divider(height: 24, color: AppColors.borderDefault),
+                    Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                      child: Divider(height: 1, color: AppColors.borderDefault),
+                    ),
                     _InfoRow(label: '메모', value: transaction.memo!),
                   ],
                 ],
@@ -137,17 +165,23 @@ class _InfoRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 80,
+          width: 80.w,
           child: Text(
             label,
-            style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary),
+            style: AppTextStyles.bodySm.copyWith(
+              color: AppColors.textTertiary,
+              fontSize: 13.sp,
+            ),
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12.w),
         Expanded(
           child: Text(
             value,
-            style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
+            style: AppTextStyles.bodyMd.copyWith(
+              color: AppColors.textPrimary,
+              fontSize: 14.sp,
+            ),
             textAlign: TextAlign.end,
           ),
         ),

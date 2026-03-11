@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 
@@ -18,10 +19,10 @@ class MoreBottomButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+        padding: EdgeInsets.fromLTRB(24.w, 8.h, 24.w, 16.h),
         child: SizedBox(
           width: double.infinity,
-          height: 52,
+          height: 52.h,
           child: ElevatedButton(
             onPressed: enabled ? onPressed : null,
             style: ElevatedButton.styleFrom(
@@ -31,7 +32,7 @@ class MoreBottomButton extends StatelessWidget {
                   enabled ? AppColors.white : AppColors.textTertiary,
               elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(12.r),
               ),
             ),
             child: Text(

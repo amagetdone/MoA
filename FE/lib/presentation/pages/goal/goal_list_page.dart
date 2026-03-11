@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
@@ -37,12 +38,12 @@ class GoalListPage extends ConsumerWidget {
           : goalState.errorMessage != null
           ? Center(
               child: Padding(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(24.w),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text('목표 목록을 불러오지 못했습니다.', style: AppTextStyles.bodyLg),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8.h),
                     Text(
                       goalState.errorMessage!,
                       textAlign: TextAlign.center,
@@ -50,7 +51,7 @@ class GoalListPage extends ConsumerWidget {
                         color: AppColors.textTertiary,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16.h),
                     FilledButton(
                       onPressed: viewModel.loadGoals,
                       child: const Text('다시 시도'),
@@ -62,9 +63,9 @@ class GoalListPage extends ConsumerWidget {
           : Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 12.h,
                   ),
                   child: Row(
                     children: [
@@ -75,7 +76,7 @@ class GoalListPage extends ConsumerWidget {
                           viewModel.toggleFilter(false);
                         },
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8.w),
                       MoreChip(
                         label: '달성한',
                         selected: goalState.showAchieved,
@@ -94,12 +95,12 @@ class GoalListPage extends ConsumerWidget {
                             children: [
                               Icon(
                                 Icons.flag_outlined,
-                                size: 64,
+                                size: 64.w,
                                 color: AppColors.textTertiary.withValues(
                                   alpha: 0.5,
                                 ),
                               ),
-                              const SizedBox(height: 16),
+                              SizedBox(height: 16.h),
                               Text(
                                 goalState.showAchieved
                                     ? '아직 달성한 목표가 없어요'
@@ -108,7 +109,7 @@ class GoalListPage extends ConsumerWidget {
                                   color: AppColors.textTertiary,
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              SizedBox(height: 8.h),
                               Text(
                                 '새로운 목표를 추가해보세요!',
                                 style: AppTextStyles.bodySm.copyWith(
@@ -119,13 +120,13 @@ class GoalListPage extends ConsumerWidget {
                           ),
                         )
                       : ListView.separated(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16.w,
+                            vertical: 8.h,
                           ),
                           itemCount: filteredGoals.length,
                           separatorBuilder: (context, index) =>
-                              const SizedBox(height: 12),
+                              SizedBox(height: 12.h),
                           itemBuilder: (context, index) {
                             final goal = filteredGoals[index];
                             return GoalCard(goal: goal);

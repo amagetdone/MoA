@@ -152,7 +152,7 @@ final appRouter = GoRouter(
       builder: (context, state, navigationShell) =>
           MainShellPage(navigationShell: navigationShell),
       branches: [
-        // Home tab
+        // Home tab (홈)
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -161,16 +161,7 @@ final appRouter = GoRouter(
             ),
           ],
         ),
-        // Goal tab
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: AppRoutes.goalTab,
-              builder: (context, state) => const GoalListPage(),
-            ),
-          ],
-        ),
-        // Spending tab
+        // Spending tab (분석)
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -179,7 +170,16 @@ final appRouter = GoRouter(
             ),
           ],
         ),
-        // Menu tab
+        // Goal tab (목표)
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: AppRoutes.goalTab,
+              builder: (context, state) => const GoalListPage(),
+            ),
+          ],
+        ),
+        // Menu tab (내 정보)
         StatefulShellBranch(
           routes: [
             GoRoute(

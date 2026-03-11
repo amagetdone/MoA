@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
@@ -30,18 +31,18 @@ class SpendingDonutChart extends StatelessWidget {
         children: [
           Text(
             '소비 패턴',
-            style: AppTextStyles.headingMd,
+            style: AppTextStyles.headingMd.copyWith(fontSize: 16.sp),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
           SizedBox(
-            height: 200,
+            height: 200.h,
             child: Stack(
               alignment: Alignment.center,
               children: [
                 PieChart(
                   PieChartData(
                     sections: _buildSections(),
-                    centerSpaceRadius: 60,
+                    centerSpaceRadius: 60.r,
                     sectionsSpace: 2,
                     borderData: FlBorderData(show: false),
                   ),
@@ -50,17 +51,19 @@ class SpendingDonutChart extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '총 지출',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textTertiary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
                       CurrencyFormatter.formatKRW(_totalAmount),
                       style: AppTextStyles.bodyMd.copyWith(
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
+                        fontSize: 14.sp,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      '총 지출',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textTertiary,
+                        fontSize: 11.sp,
                       ),
                     ),
                   ],
@@ -68,33 +71,96 @@ class SpendingDonutChart extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            children: categories.map((category) {
-              return Row(
-                mainAxisSize: MainAxisSize.min,
+          SizedBox(height: 12.h),
+          GestureDetector(
+            onTap: () {
+              // TODO: navigate to category detail
+            },
+            child: Text(
+              '이 카테고리가 궁금한가요?',
+              style: AppTextStyles.bodySm.copyWith(
+                color: AppColors.orange500,
+                fontSize: 12.sp,
+              ),
+            ),
+          ),
+          SizedBox(height: 12.h),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+            decoration: BoxDecoration(
+              color: AppColors.orange50,
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            child: Text(
+              '식비 절약이 필요해요.',
+              style: AppTextStyles.bodySm.copyWith(
+                color: AppColors.orange500,
+                fontWeight: FontWeight.w600,
+                fontSize: 13.sp,
+              ),
+            ),
+          ),
+          SizedBox(height: 16.h),
+          Text(
+            '카테고리별 지출 100% 기준',
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textTertiary,
+              fontSize: 11.sp,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          ...categories.map((category) {
+            final percentage = _totalAmount > 0
+                ? (category.amount / _totalAmount * 100).round()
+                : 0;
+            return Padding(
+              padding: EdgeInsets.only(bottom: 8.h),
+              child: Row(
                 children: [
                   Container(
-                    width: 10,
-                    height: 10,
+                    width: 10.w,
+                    height: 10.w,
                     decoration: BoxDecoration(
                       color: category.color,
                       shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  SizedBox(width: 8.w),
+                  SizedBox(
+                    width: 50.w,
+                    child: Text(
+                      category.name,
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: 12.sp,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(3.r),
+                      child: LinearProgressIndicator(
+                        value: percentage / 100,
+                        backgroundColor: AppColors.borderDefault,
+                        valueColor: AlwaysStoppedAnimation(category.color),
+                        minHeight: 6.h,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
                   Text(
-                    category.name,
+                    '$percentage%',
                     style: AppTextStyles.caption.copyWith(
                       color: AppColors.textSecondary,
+                      fontSize: 12.sp,
                     ),
                   ),
                 ],
-              );
-            }).toList(),
-          ),
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -106,7 +172,7 @@ class SpendingDonutChart extends StatelessWidget {
         PieChartSectionData(
           value: 1,
           color: AppColors.borderDefault,
-          radius: 30,
+          radius: 30.r,
           showTitle: false,
         ),
       ];
@@ -116,7 +182,7 @@ class SpendingDonutChart extends StatelessWidget {
       return PieChartSectionData(
         value: category.amount.toDouble(),
         color: category.color,
-        radius: 30,
+        radius: 30.r,
         showTitle: false,
       );
     }).toList();

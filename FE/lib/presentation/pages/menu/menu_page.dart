@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
@@ -19,7 +20,7 @@ class MenuPage extends ConsumerWidget {
     if (state.isLoading) {
       return const Scaffold(
         backgroundColor: AppColors.bgPrimary,
-        appBar: MoreAppBar(title: '전체', showBack: false),
+        appBar: MoreAppBar(title: '내 정보', showBack: false),
         body: Center(child: CircularProgressIndicator()),
       );
     }
@@ -27,7 +28,7 @@ class MenuPage extends ConsumerWidget {
     if (state.errorMessage != null) {
       return Scaffold(
         backgroundColor: AppColors.bgPrimary,
-        appBar: const MoreAppBar(title: '전체', showBack: false),
+        appBar: const MoreAppBar(title: '내 정보', showBack: false),
         body: Center(
           child: Text(
             '메뉴 정보를 불러오지 못했습니다.\n${state.errorMessage!}',
@@ -39,9 +40,9 @@ class MenuPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: const MoreAppBar(title: '전체', showBack: false),
+      appBar: const MoreAppBar(title: '내 정보', showBack: false),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -51,7 +52,7 @@ class MenuPage extends ConsumerWidget {
               child: Row(
                 children: [
                   CircleAvatar(
-                    radius: 24,
+                    radius: 24.r,
                     backgroundColor: AppColors.orange500,
                     child: Text(
                       state.userName.isNotEmpty
@@ -59,10 +60,11 @@ class MenuPage extends ConsumerWidget {
                           : '?',
                       style: AppTextStyles.headingMd.copyWith(
                         color: AppColors.white,
+                        fontSize: 18.sp,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  SizedBox(width: 14.w),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,49 +73,65 @@ class MenuPage extends ConsumerWidget {
                           state.userName,
                           style: AppTextStyles.headingMd.copyWith(
                             color: AppColors.textPrimary,
+                            fontSize: 16.sp,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        SizedBox(height: 2.h),
                         Text(
-                          state.userEmail,
+                          '내 정보 수정하기',
                           style: AppTextStyles.bodySm.copyWith(
                             color: AppColors.textTertiary,
+                            fontSize: 12.sp,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  Text(
-                    '내 정보 수정',
-                    style: AppTextStyles.bodySm.copyWith(
-                      color: AppColors.textTertiary,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(
+                  Icon(
                     Icons.chevron_right,
-                    size: 20,
+                    size: 20.w,
                     color: AppColors.textTertiary,
+                  ),
+                  SizedBox(width: 4.w),
+                  GestureDetector(
+                    onTap: () => context.push(AppRoutes.settings),
+                    child: Icon(
+                      Icons.settings,
+                      size: 22.w,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16.h),
 
             // Stats row
             Row(
               children: [
-                _StatBox(label: '진행중 목표', value: '${state.activeGoalCount}'),
-                const SizedBox(width: 8),
-                _StatBox(label: '달성한 목표', value: '${state.achievedGoalCount}'),
-                const SizedBox(width: 8),
+                _StatBox(label: '진행중 목표', value: '${state.activeGoalCount}개'),
+                SizedBox(width: 8.w),
+                _StatBox(label: '달성한 목표', value: '${state.achievedGoalCount}개'),
+                SizedBox(width: 8.w),
                 _StatBox(
-                  label: '누적 저축',
+                  label: '누적 저축액',
                   value: CurrencyFormatter.formatKRW(state.totalSaved),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
+
+            // Menu section header
+            Padding(
+              padding: EdgeInsets.only(left: 4.w, bottom: 12.h),
+              child: Text(
+                '전체 메뉴',
+                style: AppTextStyles.headingMd.copyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: 16.sp,
+                ),
+              ),
+            ),
 
             // Menu list
             MoreCard(
@@ -123,42 +141,41 @@ class MenuPage extends ConsumerWidget {
                   _MenuListTile(
                     icon: Icons.account_balance_wallet,
                     title: '내 자산',
+                    subtitle: '자산 현황을 확인해보세요',
                     onTap: () => context.push(AppRoutes.asset),
                   ),
-                  const Divider(height: 1, color: AppColors.borderDefault),
+                  Divider(height: 1, color: AppColors.borderDefault),
                   _MenuListTile(
                     icon: Icons.credit_card,
                     title: '계좌 관리',
+                    subtitle: '연결된 계좌를 관리합니다',
                     onTap: () => context.push(AppRoutes.accountManage),
                   ),
-                  const Divider(height: 1, color: AppColors.borderDefault),
+                  Divider(height: 1, color: AppColors.borderDefault),
                   _MenuListTile(
                     icon: Icons.pie_chart,
-                    title: '소비 패턴 분석',
+                    title: '소비패턴 분석',
+                    subtitle: '소비 습관을 분석해보세요',
                     onTap: () => context.push(AppRoutes.spendingTab),
                   ),
-                  const Divider(height: 1, color: AppColors.borderDefault),
+                  Divider(height: 1, color: AppColors.borderDefault),
                   _MenuListTile(
                     icon: Icons.tune,
-                    title: '주간 예산 설정',
+                    title: '주간 예산',
+                    subtitle: '주간 예산을 설정합니다',
                     onTap: () => context.push(AppRoutes.spendingBudget),
                   ),
-                  const Divider(height: 1, color: AppColors.borderDefault),
+                  Divider(height: 1, color: AppColors.borderDefault),
                   _MenuListTile(
                     icon: Icons.sort,
                     title: '목표 우선순위',
+                    subtitle: '목표의 우선순위를 조정합니다',
                     onTap: () => context.push(AppRoutes.goalPriority),
-                  ),
-                  const Divider(height: 1, color: AppColors.borderDefault),
-                  _MenuListTile(
-                    icon: Icons.settings,
-                    title: '설정',
-                    onTap: () => context.push(AppRoutes.settings),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
           ],
         ),
       ),
@@ -176,10 +193,10 @@ class _StatBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+        padding: EdgeInsets.symmetric(vertical: 14.h, horizontal: 10.w),
         decoration: BoxDecoration(
           color: AppColors.bgSurface,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(12.r),
           border: Border.all(color: AppColors.borderDefault),
         ),
         child: Column(
@@ -188,14 +205,16 @@ class _StatBox extends StatelessWidget {
               label,
               style: AppTextStyles.caption.copyWith(
                 color: AppColors.textTertiary,
+                fontSize: 11.sp,
               ),
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: 4.h),
             Text(
               value,
               style: AppTextStyles.bodyMd.copyWith(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
+                fontSize: 14.sp,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -210,29 +229,43 @@ class _StatBox extends StatelessWidget {
 class _MenuListTile extends StatelessWidget {
   final IconData icon;
   final String title;
+  final String subtitle;
   final VoidCallback onTap;
 
   const _MenuListTile({
     required this.icon,
     required this.title,
     required this.onTap,
+    this.subtitle = '',
   });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: AppColors.textSecondary, size: 22),
+      leading: Icon(icon, color: AppColors.textSecondary, size: 22.w),
       title: Text(
         title,
-        style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
+        style: AppTextStyles.bodyMd.copyWith(
+          color: AppColors.textPrimary,
+          fontSize: 14.sp,
+        ),
       ),
-      trailing: const Icon(
+      subtitle: subtitle.isNotEmpty
+          ? Text(
+              subtitle,
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.textTertiary,
+                fontSize: 11.sp,
+              ),
+            )
+          : null,
+      trailing: Icon(
         Icons.chevron_right,
         color: AppColors.textTertiary,
-        size: 20,
+        size: 20.w,
       ),
       onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 2.h),
     );
   }
 }
