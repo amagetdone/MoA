@@ -170,19 +170,18 @@ pipeline {
                     require_value "$EXTERNAL_HEALTH_URL" EXTERNAL_HEALTH_URL
                     require_value "$DEV_DEPLOY_SCRIPT" DEV_DEPLOY_SCRIPT
 
-                    if [ ! -d "$LOCAL_REPO_DIR/.git" ]; then
-                      echo "Local repo dir is not a git repository: $LOCAL_REPO_DIR" >&2
-                      exit 1
-                    fi
-
                     if [ ! -d "$LOCAL_APP_DIR" ]; then
                       echo "Local app dir not found: $LOCAL_APP_DIR" >&2
                       exit 1
                     fi
 
-                    git -C "$LOCAL_REPO_DIR" fetch --all --prune
-                    git -C "$LOCAL_REPO_DIR" checkout dev/backend
-                    git -C "$LOCAL_REPO_DIR" reset --hard origin/dev/backend
+                    mkdir -p "$LOCAL_REPO_DIR"
+
+                    rsync -az --delete \
+                      --exclude '.git' \
+                      --exclude '.gradle' \
+                      --exclude 'build' \
+                      "$WORKSPACE/$APP_DIR/" "$LOCAL_APP_DIR/"
 
                     install -m 600 "$DEV_JENKINS_APP_ENV" "$LOCAL_APP_DIR/.env"
 
