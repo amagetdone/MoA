@@ -1,0 +1,127 @@
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+    }
+
+    environment {
+        APP_DIR = 'FE'
+        REMOTE_HOST = 'j14d101.p.ssafy.io'
+        REMOTE_PORT = '22'
+        REMOTE_USER = 'ubuntu'
+        REMOTE_APP_DIR = '/home/ubuntu/front'
+        REMOTE_DEPLOY_SCRIPT = '/home/ubuntu/front/deploy.sh'
+        DEPLOY_KEY_PATH = '/var/jenkins_home/.ssh/id_ed25519_front_deploy'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Bootstrap Flutter') {
+            steps {
+                dir("${APP_DIR}") {
+                    sh '''
+                        set -eux
+
+                        test -f "${DEPLOY_KEY_PATH}"
+
+                        FLUTTER_HOME="${JENKINS_HOME}/tools/flutter-stable"
+                        if [ ! -d "${FLUTTER_HOME}/.git" ]; then
+                          mkdir -p "$(dirname "${FLUTTER_HOME}")"
+                          git clone --depth 1 -b stable https://github.com/flutter/flutter.git "${FLUTTER_HOME}"
+                        else
+                          git -C "${FLUTTER_HOME}" fetch --depth 1 origin stable
+                          git -C "${FLUTTER_HOME}" checkout -f stable
+                          git -C "${FLUTTER_HOME}" reset --hard FETCH_HEAD
+                        fi
+
+                        export PATH="${FLUTTER_HOME}/bin:${PATH}"
+                        flutter config --no-analytics
+                        flutter --version
+                        flutter precache --web
+                    '''
+                }
+            }
+        }
+
+        stage('Build & Test') {
+            steps {
+                dir("${APP_DIR}") {
+                    sh '''
+                        set -eux
+
+                        FLUTTER_HOME="${JENKINS_HOME}/tools/flutter-stable"
+                        export PATH="${FLUTTER_HOME}/bin:${PATH}"
+                        mkdir -p ~/.ssh
+                        chmod 700 ~/.ssh
+                        ssh-keyscan -p "${REMOTE_PORT}" -H "${REMOTE_HOST}" >> ~/.ssh/known_hosts
+
+                        if ssh -i "${DEPLOY_KEY_PATH}" -p "${REMOTE_PORT}" "${REMOTE_USER}@${REMOTE_HOST}" "test -f '${REMOTE_APP_DIR}/.env'"; then
+                          scp -i "${DEPLOY_KEY_PATH}" -P "${REMOTE_PORT}" \
+                            "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_APP_DIR}/.env" .env
+                        elif [ ! -f .env ]; then
+                          cp .env.example .env
+                        fi
+
+                        flutter pub get
+                        flutter test
+                        flutter build web --release
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                expression {
+                    return env.BRANCH_NAME == 'dev/frontend'
+                }
+            }
+            steps {
+                sh '''
+                    set -eux
+
+                    mkdir -p ~/.ssh
+                    chmod 700 ~/.ssh
+                    ssh-keyscan -p "${REMOTE_PORT}" -H "${REMOTE_HOST}" >> ~/.ssh/known_hosts
+
+                    ssh -i "${DEPLOY_KEY_PATH}" -p "${REMOTE_PORT}" "${REMOTE_USER}@${REMOTE_HOST}" "
+                      set -eu
+                      mkdir -p '${REMOTE_APP_DIR}/current' '${REMOTE_APP_DIR}/nginx'
+                    "
+
+                    rsync -az --delete \
+                      -e "ssh -i ${DEPLOY_KEY_PATH} -p ${REMOTE_PORT}" \
+                      "${APP_DIR}/deploy/web/" \
+                      "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_APP_DIR}/"
+
+                    rsync -az --delete \
+                      -e "ssh -i ${DEPLOY_KEY_PATH} -p ${REMOTE_PORT}" \
+                      "${APP_DIR}/build/web/" \
+                      "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_APP_DIR}/current/"
+
+                    ssh -i "${DEPLOY_KEY_PATH}" -p "${REMOTE_PORT}" "${REMOTE_USER}@${REMOTE_HOST}" "
+                      set -eu
+                      bash '${REMOTE_DEPLOY_SCRIPT}'
+                    "
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'FE pipeline finished successfully.'
+        }
+        failure {
+            echo 'FE pipeline failed.'
+        }
+    }
+}
