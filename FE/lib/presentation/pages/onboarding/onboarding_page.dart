@@ -52,12 +52,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   void _onComplete() {
-    context.push(AppRoutes.onboardingProfile);
+    context.go(AppRoutes.onboardingAccount);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
@@ -162,9 +164,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 ),
               ),
             ),
-            // Bottom button
+            // Bottom button with progress
             Padding(
-              padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.h),
+              padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 12.h),
               child: SizedBox(
                 width: double.infinity,
                 height: 56.h,
@@ -189,9 +191,45 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 ),
               ),
             ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 16.h),
+              child: SizedBox(
+                height: 6.h,
+                width: double.infinity,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4.r),
+                  child: Stack(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.gray100,
+                          borderRadius: BorderRadius.circular(4.r),
+                        ),
+                      ),
+                      FractionallySizedBox(
+                        widthFactor: 1 / 6,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(4.r),
+                            gradient: const LinearGradient(
+                              colors: [
+                                AppColors.white,
+                                AppColors.orange500,
+                              ],
+                              stops: [0.0, 0.7],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
+    ),
     );
   }
 }

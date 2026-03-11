@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/presentation/pages/account/account_add_page.dart';
+import 'package:more_app/presentation/pages/account/account_select_page.dart';
 import 'package:more_app/presentation/pages/account/account_complete_page.dart';
 import 'package:more_app/presentation/pages/account/account_manage_page.dart';
 import 'package:more_app/presentation/pages/account/account_verify_page.dart';
@@ -37,6 +38,7 @@ abstract class AppRoutes {
   static const String onboarding = '/onboarding';
   static const String onboardingProfile = '/onboarding/profile';
   static const String onboardingAccount = '/onboarding/account';
+  static const String onboardingAccountSelect = '/onboarding/account/select';
   static const String onboardingAccountVerify = '/onboarding/account/verify';
   static const String onboardingAccountComplete =
       '/onboarding/account/complete';
@@ -52,6 +54,7 @@ abstract class AppRoutes {
   // Account
   static const String accountManage = '/account/manage';
   static const String accountAdd = '/account/add';
+  static const String accountSelect = '/account/select';
   static const String accountVerify = '/account/verify';
   static const String accountComplete = '/account/complete';
 
@@ -103,6 +106,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.onboardingAccount,
       builder: (context, state) => const AccountAddPage(isOnboarding: true),
+    ),
+    GoRoute(
+      path: AppRoutes.onboardingAccountSelect,
+      builder: (context, state) => const AccountSelectPage(isOnboarding: true),
     ),
     GoRoute(
       path: AppRoutes.onboardingAccountVerify,
@@ -203,6 +210,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.accountAdd,
       builder: (context, state) => const AccountAddPage(isOnboarding: false),
+    ),
+    GoRoute(
+      path: AppRoutes.accountSelect,
+      builder: (context, state) => const AccountSelectPage(isOnboarding: false),
     ),
     GoRoute(
       path: AppRoutes.accountVerify,
