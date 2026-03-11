@@ -30,5 +30,6 @@ def build_merchant_classifier(settings: Settings) -> MerchantClassifierService:
         model=artifacts["model"],
         fallback_label=settings.fallback_label,
         fallback_threshold=settings.fallback_threshold,
+        inference_batch_size=settings.inference_batch_size,
         device=settings.model_device,
     )

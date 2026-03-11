@@ -7,7 +7,8 @@ class Settings(BaseSettings):
     fallback_label: str = "기타서비스"
     fallback_threshold: float = 0.70
     top_k: int = 3
-    max_batch_size: int = 128
+    max_batch_size: int = 1000
+    inference_batch_size: int = 128
     model_revision: str | None = None
     model_local_dir: str | None = None
 

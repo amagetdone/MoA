@@ -1,11 +1,9 @@
-# GitLab CI/CD Variables example
+# GitLab CI/CD Variables example for a self-hosted runner that
+# builds and deploys on the same machine.
 # Register these in GitLab:
 # Settings > CI/CD > Variables
 
-DEPLOY_HOST=your.server.example.com
-DEPLOY_PORT=22
-DEPLOY_USER=ubuntu
-DEPLOY_SSH_PRIVATE_KEY=-----BEGIN_OPENSSH_PRIVATE_KEY-----your-private-key-----END_OPENSSH_PRIVATE_KEY-----
+LOCAL_IMAGE_NAME=merchant-inference-service
 DEPLOY_ENV_FILE=/home/ubuntu/inference/.env
 DEPLOY_CONTAINER_NAME=merchant-inference-service
 DEPLOY_PORT_MAP=8000:8000
