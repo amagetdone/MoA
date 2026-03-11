@@ -14,30 +14,23 @@ def load_ci_config() -> dict:
 def test_self_hosted_pipeline_does_not_use_executor_specific_images_or_services() -> None:
     config = load_ci_config()
 
-    for job_name in ("test", "docker-build", "deploy"):
+    assert config["stages"] == ["build", "deploy"]
+
+    for job_name in ("docker-build", "deploy"):
         job = config[job_name]
         assert "image" not in job
         assert "services" not in job
 
 
-def test_self_hosted_pipeline_runs_tests_in_ephemeral_container_and_deploys_locally() -> None:
+def test_self_hosted_pipeline_builds_and_deploys_locally_without_test_stage() -> None:
     config = load_ci_config()
 
-    test_script = "\n".join(config["test"]["script"])
     build_script = "\n".join(config["docker-build"]["script"])
     deploy_script = "\n".join(config["deploy"]["script"])
     deploy_before_script = "\n".join(config["deploy"].get("before_script", []))
 
-    assert "docker run --rm" in test_script
-    assert '--user "$(id -u):$(id -g)"' in test_script
-    assert '-v "$CI_PROJECT_DIR:/workspace:ro"' in test_script
-    assert "python:3.12.7-slim" in test_script
-    assert "pip install --no-cache-dir --user uv" in test_script
-    assert ".local/bin:$PATH" in test_script
-    assert "cp -R /workspace/AI /tmp/project/AI" in test_script
-    assert "cd /tmp/project/AI" in test_script
-    assert "uv sync --frozen --extra dev" in test_script
-    assert ".venv/bin/python -m pytest -q" in test_script
+    assert "test" not in config
+    assert "docker info >/dev/null" in "\n".join(config["docker-build"]["before_script"])
     assert "docker build --pull" in build_script
     assert "docker push" not in build_script
     assert "docker run -d" in deploy_script
@@ -59,3 +52,4 @@ def test_self_hosted_pipeline_does_not_set_registry_or_dind_variables() -> None:
             "\n".join(config["deploy"]["script"]),
         ]
     )
+    assert "test" not in config
