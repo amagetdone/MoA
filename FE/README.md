@@ -356,7 +356,6 @@ class LoginPage extends ConsumerWidget {
 | 라이브러리 | 용도 |
 |-----------|------|
 | `mockito` | Mock 객체 생성 (단위 테스트) |
-| `build_verify` | 코드 생성 결과 검증 |
 
 ---
 
