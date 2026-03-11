@@ -1,40 +1,45 @@
-from transformers import (
-    AutoModelForSequenceClassification,
-    AutoTokenizer,
-    PreTrainedTokenizerFast,
-)
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from app.core.config import Settings
 from app.services.merchant_classifier import MerchantClassifierService
 
+EXPECTED_MODEL_TYPE = "electra"
+EXPECTED_MODEL_ARCHITECTURE = "ElectraForSequenceClassification"
 
-def _load_tokenizer(model_source: str, settings: Settings):
-    load_kwargs = {
-        "revision": settings.model_revision,
-        "token": settings.hf_token,
-    }
-    try:
-        return AutoTokenizer.from_pretrained(
-            model_source,
-            **load_kwargs,
+
+def _validate_loaded_sequence_classifier(model, model_source: str) -> None:
+    config = getattr(model, "config", None)
+    model_type = getattr(config, "model_type", None)
+    architectures = list(getattr(config, "architectures", []) or [])
+
+    if model_type != EXPECTED_MODEL_TYPE:
+        raise ValueError(
+            f"Model '{model_source}' resolved to model_type='{model_type}', "
+            f"architectures={architectures}, expected model_type="
+            f"'{EXPECTED_MODEL_TYPE}' and architecture "
+            f"'{EXPECTED_MODEL_ARCHITECTURE}'."
         )
-    except ValueError as error:
-        if "Tokenizer class TokenizersBackend does not exist" not in str(error):
-            raise
-        return PreTrainedTokenizerFast.from_pretrained(
-            model_source,
-            **load_kwargs,
+
+    if architectures and EXPECTED_MODEL_ARCHITECTURE not in architectures:
+        raise ValueError(
+            f"Model '{model_source}' resolved to architectures={architectures}, "
+            f"expected '{EXPECTED_MODEL_ARCHITECTURE}'."
         )
 
 
 def load_sequence_classifier(settings: Settings) -> dict[str, object]:
     model_source = settings.model_source
-    tokenizer = _load_tokenizer(model_source, settings)
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_source,
+        revision=settings.model_revision,
+        token=settings.hf_token,
+    )
     model = AutoModelForSequenceClassification.from_pretrained(
         model_source,
         revision=settings.model_revision,
         token=settings.hf_token,
     )
+    _validate_loaded_sequence_classifier(model, model_source)
     model = model.to(settings.model_device)
     model.eval()
 
