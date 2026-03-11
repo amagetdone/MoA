@@ -156,7 +156,7 @@ class MenuPage extends ConsumerWidget {
                     icon: Icons.pie_chart,
                     title: '소비패턴 분석',
                     subtitle: '소비 습관을 분석해보세요',
-                    onTap: () => context.push(AppRoutes.spendingTab),
+                    onTap: () => context.go(AppRoutes.spendingTab),
                   ),
                   Divider(height: 1, color: AppColors.borderDefault),
                   _MenuListTile(

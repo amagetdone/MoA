@@ -139,17 +139,11 @@ class OnboardingAnalysisPage extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(24.w),
-          child: MoreBottomButton(
-            text: '다음',
-            onPressed: () {
-              context.go(AppRoutes.onboardingPlan);
-            },
-            enabled: true,
-          ),
-        ),
+      bottomNavigationBar: MoreBottomButton(
+        text: '다음',
+        onPressed: () {
+          context.push(AppRoutes.onboardingPlan);
+        },
       ),
     );
   }

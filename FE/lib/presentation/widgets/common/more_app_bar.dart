@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 
@@ -22,7 +23,7 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => Size.fromHeight(56.h);
+  Size get preferredSize => Size.fromHeight(50.h);
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +45,7 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
     ];
 
     return AppBar(
-      backgroundColor: AppColors.bgSurface,
+      backgroundColor: AppColors.bgPrimary,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: true,
@@ -53,8 +54,8 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
           ? IconButton(
               icon: Icon(Icons.arrow_back_ios, size: 20.w, color: AppColors.textPrimary),
               onPressed: () {
-                if (Navigator.of(context).canPop()) {
-                  Navigator.of(context).pop();
+                if (context.canPop()) {
+                  context.pop();
                 }
               },
             )

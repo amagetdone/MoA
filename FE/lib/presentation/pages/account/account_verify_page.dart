@@ -192,15 +192,10 @@ class _AccountVerifyPageState extends State<AccountVerifyPage> {
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(24.w),
-          child: MoreBottomButton(
-            text: '인증하기',
-            onPressed: _onVerify,
-            enabled: _isCodeComplete,
-          ),
-        ),
+      bottomNavigationBar: MoreBottomButton(
+        text: '인증하기',
+        onPressed: _onVerify,
+        enabled: _isCodeComplete,
       ),
     );
   }

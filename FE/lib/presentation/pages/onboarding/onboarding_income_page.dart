@@ -128,7 +128,7 @@ class _OnboardingIncomePageState extends State<OnboardingIncomePage> {
                       if (_isEditing) {
                         setState(() => _isEditing = false);
                       } else {
-                        context.go(AppRoutes.onboardingAnalysis);
+                        context.push(AppRoutes.onboardingAnalysis);
                       }
                     },
                     style: OutlinedButton.styleFrom(
@@ -156,7 +156,7 @@ class _OnboardingIncomePageState extends State<OnboardingIncomePage> {
                     onPressed: () {
                       if (_isEditing) {
                         setState(() => _isEditing = false);
-                        context.go(AppRoutes.onboardingAnalysis);
+                        context.push(AppRoutes.onboardingAnalysis);
                       } else {
                         setState(() => _isEditing = true);
                       }

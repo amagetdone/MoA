@@ -21,7 +21,7 @@ class MainShellPage extends StatelessWidget {
           backgroundColor: AppColors.bgSurface,
           indicatorColor: AppColors.orange50,
           elevation: 0,
-          height: 64.h,
+          height: 56.h,
           selectedIndex: navigationShell.currentIndex,
           onDestinationSelected: (index) {
             navigationShell.goBranch(

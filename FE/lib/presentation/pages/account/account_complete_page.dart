@@ -94,32 +94,27 @@ class AccountCompletePage extends ConsumerWidget {
           ),
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(24.w),
-          child: MoreBottomButton(
-            text: '다음',
-            onPressed: () async {
-              await ref
-                  .read(accountViewModelProvider.notifier)
-                  .addLinkedAccount(
-                    bankName: bankName,
-                    accountNumber: accountNumber,
-                  );
-              await ref.read(homeViewModelProvider.notifier).loadData();
+      bottomNavigationBar: MoreBottomButton(
+        text: '다음',
+        onPressed: () async {
+          await ref
+              .read(accountViewModelProvider.notifier)
+              .addLinkedAccount(
+                bankName: bankName,
+                accountNumber: accountNumber,
+              );
+          await ref.read(homeViewModelProvider.notifier).loadData();
 
-              if (!context.mounted) {
-                return;
-              }
+          if (!context.mounted) {
+            return;
+          }
 
-              if (isOnboarding) {
-                context.go(AppRoutes.onboardingGoal);
-              } else {
-                context.pop();
-              }
-            },
-          ),
-        ),
+          if (isOnboarding) {
+            context.go(AppRoutes.onboardingGoal);
+          } else {
+            context.pop();
+          }
+        },
       ),
     );
   }

@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -7,6 +9,16 @@ import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'package:more_app/core/theme/app_theme.dart';
 import 'package:more_app/core/utils/app_env.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+
+class AppScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.trackpad,
+      };
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +50,7 @@ class MoreApp extends StatelessWidget {
           title: 'MORE',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
+          scrollBehavior: AppScrollBehavior(),
           routerConfig: appRouter,
         );
       },

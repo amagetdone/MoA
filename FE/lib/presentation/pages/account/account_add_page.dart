@@ -238,15 +238,10 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(24.w),
-          child: MoreBottomButton(
-            text: '다음',
-            onPressed: _onNext,
-            enabled: _isFormValid,
-          ),
-        ),
+      bottomNavigationBar: MoreBottomButton(
+        text: '다음',
+        onPressed: _onNext,
+        enabled: _isFormValid,
       ),
     );
   }
