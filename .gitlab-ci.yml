@@ -16,6 +16,7 @@ test:
   before_script:
     - python -m pip install --no-cache-dir uv
   script:
+    - cd AI
     - uv sync --frozen --extra dev
     - .venv/bin/python -m pytest -q
   rules:
@@ -33,7 +34,7 @@ docker-build:
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
   script:
-    - docker build --pull -t "$IMAGE_NAME:$IMAGE_TAG" -t "$IMAGE_NAME:latest" .
+    - docker build --pull -f AI/Dockerfile -t "$IMAGE_NAME:$IMAGE_TAG" -t "$IMAGE_NAME:latest" AI
     - docker push "$IMAGE_NAME:$IMAGE_TAG"
     - docker push "$IMAGE_NAME:latest"
   rules:
