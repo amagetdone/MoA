@@ -13,6 +13,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -23,6 +25,7 @@ import jakarta.persistence.Table;
 public class Plan extends BaseEntity {
 
 	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "id", nullable = false)
 	private Integer id;
 
@@ -61,8 +64,11 @@ public class Plan extends BaseEntity {
 	@Column(name = "auto_allocate_enabled", nullable = false)
 	private boolean autoAllocateEnabled = true;
 
-	@Column(name = "plan_url", length = 255)
+	@Column(name = "plan_img_url", length = 255)
 	private String planUrl;
+
+	@Column(name = "plan_video_url", length = 255)
+	private String videoUrl;
 
 	@Column(name = "end_date", nullable = false)
 	private LocalDate endDate;
