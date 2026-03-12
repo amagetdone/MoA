@@ -8,6 +8,7 @@ import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
 import com.ssafy.amagetdone.domain.member.application.usecase.FindOrCreateSocialUserUseCase;
 import com.ssafy.amagetdone.domain.member.application.usecase.IssueMemberTokensUseCase;
+import com.ssafy.amagetdone.domain.member.application.usecase.ResetTestSocialUserUseCase;
 import com.ssafy.amagetdone.domain.member.infra.client.SocialAuthClient;
 import com.ssafy.amagetdone.domain.member.infra.client.SocialUserIdentity;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
@@ -28,6 +29,7 @@ public class MemberAuthService {
 	private final List<SocialAuthClient> socialAuthClients;
 	private final FindOrCreateSocialUserUseCase findOrCreateSocialUserUseCase;
 	private final IssueMemberTokensUseCase issueMemberTokensUseCase;
+	private final ResetTestSocialUserUseCase resetTestSocialUserUseCase;
 	private final AccountRepository accountRepository;
 	private final PlanRepository planRepository;
 
@@ -35,17 +37,42 @@ public class MemberAuthService {
 		List<SocialAuthClient> socialAuthClients,
 		FindOrCreateSocialUserUseCase findOrCreateSocialUserUseCase,
 		IssueMemberTokensUseCase issueMemberTokensUseCase,
+		ResetTestSocialUserUseCase resetTestSocialUserUseCase,
 		AccountRepository accountRepository,
 		PlanRepository planRepository
 	) {
 		this.socialAuthClients = socialAuthClients;
 		this.findOrCreateSocialUserUseCase = findOrCreateSocialUserUseCase;
 		this.issueMemberTokensUseCase = issueMemberTokensUseCase;
+		this.resetTestSocialUserUseCase = resetTestSocialUserUseCase;
 		this.accountRepository = accountRepository;
 		this.planRepository = planRepository;
 	}
 
 	public SocialAuthDto.Response authenticate(SocialProvider provider, SocialAuthDto.Request request) {
+		return authenticateInternal(provider, request);
+	}
+
+	public SocialAuthDto.Response authenticateTest() {
+		return authenticateInternal(SocialProvider.TEST, new SocialAuthDto.Request(null, null));
+	}
+
+	public void resetTestUser() {
+		String requestId = MemberLogHelper.requestId();
+		try {
+			resetTestSocialUserUseCase.execute();
+			log.info("event=TEST_SOCIAL_RESET_SUCCESS requestId={}", requestId);
+		} catch (RuntimeException exception) {
+			log.warn(
+				"event=TEST_SOCIAL_RESET_FAILURE requestId={} errorType={}",
+				requestId,
+				exception.getClass().getSimpleName()
+			);
+			throw exception;
+		}
+	}
+
+	private SocialAuthDto.Response authenticateInternal(SocialProvider provider, SocialAuthDto.Request request) {
 		String requestId = MemberLogHelper.requestId();
 		boolean socialAuthSucceeded = false;
 		try {

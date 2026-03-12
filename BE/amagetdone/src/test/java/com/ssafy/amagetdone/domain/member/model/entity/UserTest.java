@@ -31,4 +31,22 @@ class UserTest {
 
 		assertEquals("ACTIVE", user.getStatus().name());
 	}
+
+	@Test
+	void resetToPendingClearsProfileAndFinancialLinkage() {
+		User user = User.createPendingSocialUser();
+		user.markProfileEntered("moa", "moa@example.com", LocalDate.of(1997, 3, 1), true);
+		user.updateUserKey("user-key");
+		user.activate();
+
+		user.resetToPending();
+
+		assertEquals("TEMP", user.getStatus().name());
+		assertNull(user.getUserKey());
+		assertNull(user.getEmail());
+		assertNull(user.getNickname());
+		assertNull(user.getBirthDate());
+		assertNull(user.getHasFixedIncome());
+		assertNull(user.getProfileUrl());
+	}
 }

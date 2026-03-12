@@ -3,6 +3,7 @@ package com.ssafy.amagetdone.domain.member.api.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willDoNothing;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -61,6 +62,39 @@ class AuthControllerTest {
 			.andExpect(jsonPath("$.data.plan").value(false))
 			.andExpect(jsonPath("$.data.accessToken").value("access-token"))
 			.andExpect(jsonPath("$.data.refreshToken").value("refresh-token"));
+	}
+
+	@Test
+	void socialTestAuthReturnsJwtPayload() throws Exception {
+		given(memberAuthService.authenticateTest())
+			.willReturn(new SocialAuthDto.Response(
+				"TEMP",
+				false,
+				false,
+				"access-token",
+				"refresh-token"
+			));
+
+		mockMvc.perform(post("/api/v1/auth/social/test"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("테스트 소셜 로그인에 성공했습니다."))
+			.andExpect(jsonPath("$.data.status").value("TEMP"))
+			.andExpect(jsonPath("$.data.account").value(false))
+			.andExpect(jsonPath("$.data.plan").value(false))
+			.andExpect(jsonPath("$.data.accessToken").value("access-token"))
+			.andExpect(jsonPath("$.data.refreshToken").value("refresh-token"));
+	}
+
+	@Test
+	void socialTestResetReturnsSuccess() throws Exception {
+		willDoNothing().given(memberAuthService).resetTestUser();
+
+		mockMvc.perform(post("/api/v1/auth/social/test/reset"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("테스트 소셜 사용자를 초기화했습니다."))
+			.andExpect(jsonPath("$.data.success").value(true));
 	}
 
 	@Test
