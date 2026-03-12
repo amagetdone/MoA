@@ -17,6 +17,10 @@ class LoginPage extends ConsumerWidget {
         final result = next.authResult;
         if (result.status == 'TEMP') {
           context.go(AppRoutes.onboardingProfile);
+        } else if (!result.account) {
+          context.go(AppRoutes.onboardingAccount);
+        } else if (!result.plan) {
+          context.go(AppRoutes.onboardingGoal);
         } else {
           context.go(AppRoutes.home);
         }

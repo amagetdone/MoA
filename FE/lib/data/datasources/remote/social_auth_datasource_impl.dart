@@ -3,6 +3,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'package:more_app/core/utils/app_env.dart';
 import 'package:more_app/data/datasources/remote/social_auth_datasource.dart';
+import 'package:more_app/data/datasources/remote/google_id_token_stub.dart'
+    if (dart.library.js_interop) 'package:more_app/data/datasources/remote/google_id_token_web.dart';
 
 class SocialAuthDataSourceImpl implements SocialAuthDataSource {
   GoogleSignIn? _googleSignIn;
@@ -38,7 +40,13 @@ class SocialAuthDataSourceImpl implements SocialAuthDataSource {
 
   @override
   Future<String> getGoogleToken() async {
-    if (!kIsWeb && AppEnv.optional('GOOGLE_CLIENT_ID') == null) {
+    // 웹: GIS One Tap으로 idToken 직접 획득
+    if (kIsWeb) {
+      return getGoogleIdToken(_webGoogleClientId);
+    }
+
+    // 모바일: google_sign_in 패키지 사용
+    if (AppEnv.optional('GOOGLE_CLIENT_ID') == null) {
       throw Exception('GOOGLE_CLIENT_ID가 설정되지 않았습니다.');
     }
 
