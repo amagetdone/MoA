@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 @WebMvcTest(MemberProfileController.class)
 class MemberProfileControllerTest {
 
@@ -38,7 +39,7 @@ class MemberProfileControllerTest {
 		given(memberProfileService.completeProfile(eq(1), any(ProfileCompletionDto.Request.class)))
 			.willReturn(new ProfileCompletionDto.Response("ACTIVE"));
 
-		mockMvc.perform(patch("/api/v1/members/me/profile")
+		mockMvc.perform(apiPatch("/v1/members/me/profile")
 				.header(AUTHORIZATION, "Bearer access-token")
 				.contentType(APPLICATION_JSON)
 				.content("""
@@ -63,7 +64,7 @@ class MemberProfileControllerTest {
 		given(jwtAccessTokenReader.readUserId(null))
 			.willThrow(new MemberException(MemberErrorCode.AUTHORIZATION_HEADER_REQUIRED));
 
-		mockMvc.perform(patch("/api/v1/members/me/profile")
+		mockMvc.perform(apiPatch("/v1/members/me/profile")
 				.contentType(APPLICATION_JSON)
 				.content("""
 					{
@@ -77,5 +78,9 @@ class MemberProfileControllerTest {
 			.andExpect(jsonPath("$.status").value("error"))
 			.andExpect(jsonPath("$.errorCode").value(MemberErrorCode.AUTHORIZATION_HEADER_REQUIRED.code()))
 			.andExpect(jsonPath("$.message").value(MemberErrorCode.AUTHORIZATION_HEADER_REQUIRED.message()));
+	}
+
+	private MockHttpServletRequestBuilder apiPatch(String path) {
+		return patch("/api" + path).contextPath("/api");
 	}
 }
