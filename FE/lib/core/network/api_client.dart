@@ -6,7 +6,7 @@ import 'package:more_app/core/network/auth_interceptor.dart';
 class ApiClient {
   late final Dio dio;
 
-  ApiClient() {
+  ApiClient({void Function()? onForceLogout}) {
     dio = Dio(
       BaseOptions(
         baseUrl: AppConstants.baseUrl,
@@ -15,7 +15,7 @@ class ApiClient {
         headers: {'Content-Type': 'application/json'},
       ),
     );
-    dio.interceptors.add(AuthInterceptor());
+    dio.interceptors.add(AuthInterceptor(onForceLogout: onForceLogout));
     dio.interceptors.add(ApiResponseInterceptor());
     dio.interceptors.add(
       LogInterceptor(requestBody: true, responseBody: true),

@@ -6,6 +6,7 @@ import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:more_app/domain/entities/spending.dart';
+import 'package:more_app/presentation/utils/spending_ui_mapper.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/spending_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
@@ -173,15 +174,15 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                                   width: 36.w,
                                   height: 36.w,
                                   decoration: BoxDecoration(
-                                    color: category.color.withValues(
+                                    color: SpendingUiMapper.colorFrom(category.colorValue).withValues(
                                       alpha: 0.15,
                                     ),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
-                                    category.icon,
+                                    SpendingUiMapper.iconFrom(category.iconKey),
                                     size: 18.w,
-                                    color: category.color,
+                                    color: SpendingUiMapper.colorFrom(category.colorValue),
                                   ),
                                 ),
                                 SizedBox(width: 12.w),

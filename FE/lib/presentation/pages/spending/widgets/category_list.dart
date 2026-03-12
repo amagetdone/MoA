@@ -4,6 +4,7 @@ import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:more_app/domain/entities/spending.dart';
+import 'package:more_app/presentation/utils/spending_ui_mapper.dart';
 import 'package:more_app/presentation/widgets/common/more_progress_bar.dart';
 
 class CategoryList extends StatelessWidget {
@@ -46,13 +47,13 @@ class _CategoryRow extends StatelessWidget {
               width: 36.w,
               height: 36.w,
               decoration: BoxDecoration(
-                color: category.color.withValues(alpha: 0.15),
+                color: SpendingUiMapper.colorFrom(category.colorValue).withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                category.icon,
+                SpendingUiMapper.iconFrom(category.iconKey),
                 size: 18.w,
-                color: category.color,
+                color: SpendingUiMapper.colorFrom(category.colorValue),
               ),
             ),
             SizedBox(width: 12.w),
@@ -97,7 +98,7 @@ class _CategoryRow extends StatelessWidget {
         SizedBox(height: 8.h),
         MoreProgressBar(
           progress: category.usageRate.clamp(0.0, 1.0),
-          color: category.usageRate > 1.0 ? AppColors.red500 : category.color,
+          color: category.usageRate > 1.0 ? AppColors.red500 : SpendingUiMapper.colorFrom(category.colorValue),
           backgroundColor: AppColors.borderDefault,
           height: 6.h,
         ),

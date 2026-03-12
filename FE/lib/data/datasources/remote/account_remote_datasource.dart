@@ -1,0 +1,10 @@
+import 'package:more_app/domain/entities/account.dart';
+import 'package:more_app/domain/entities/account_dashboard.dart';
+import 'package:more_app/domain/entities/transaction.dart';
+
+abstract class AccountRemoteDataSource {
+  Future<AccountDashboard> fetchAccountDashboard();
+  Future<Account> addAccount(Account account);
+  Future<void> removeAccount(String id);
+  Future<Transaction?> findTransactionById(String id);
+}

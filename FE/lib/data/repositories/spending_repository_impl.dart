@@ -1,26 +1,29 @@
-import 'dart:async';
-
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
-import 'package:more_app/data/datasources/remote/app_remote_datasource.dart';
-import 'package:more_app/data/models/app_snapshot.dart';
+import 'package:more_app/data/datasources/remote/spending_remote_datasource.dart';
+import 'package:more_app/data/models/app_snapshot_dto.dart';
 import 'package:more_app/domain/entities/spending.dart';
 import 'package:more_app/domain/entities/spending_overview.dart';
 import 'package:more_app/domain/repositories/spending_repository.dart';
 
 class SpendingRepositoryImpl implements SpendingRepository {
   SpendingRepositoryImpl({
-    required AppRemoteDataSource remoteDataSource,
+    required SpendingRemoteDataSource remoteDataSource,
     required AppLocalDataSource localDataSource,
   }) : _remoteDataSource = remoteDataSource,
        _localDataSource = localDataSource;
 
-  final AppRemoteDataSource _remoteDataSource;
+  final SpendingRemoteDataSource _remoteDataSource;
   final AppLocalDataSource _localDataSource;
 
   @override
   Future<SpendingOverview> fetchSpendingOverview() async {
-    final snapshot = await _loadSnapshot();
-    return _toOverview(snapshot.spending);
+    try {
+      final snapshot = await _remoteDataSource.fetchSpendingSnapshotDto();
+      return _toOverview(snapshot);
+    } catch (_) {
+      final snapshot = await _localDataSource.getSpendingSnapshotDto();
+      return _toOverview(snapshot);
+    }
   }
 
   @override
@@ -30,11 +33,11 @@ class SpendingRepositoryImpl implements SpendingRepository {
     required int monthlyFixedExpense,
     required List<SpendingCategory> categories,
   }) async {
-    final current = (await _loadSnapshot()).spending;
+    final current = await _fetchCurrentSpending();
     final available = monthlyIncome - monthlySavingsGoal - monthlyFixedExpense;
     final weeklyBudget = available <= 0 ? 0 : (available / 4.345).round();
 
-    final updated = SpendingSnapshot(
+    final updated = SpendingSnapshotDto(
       categories: categories,
       dailySpendings: current.dailySpendings,
       monthlySpendings: current.monthlySpendings,
@@ -45,26 +48,23 @@ class SpendingRepositoryImpl implements SpendingRepository {
     );
 
     try {
-      final snapshot = await _remoteDataSource.updateSpendingSnapshot(updated);
-      unawaited(_localDataSource.saveCachedSnapshot(snapshot));
-      return _toOverview(snapshot.spending);
+      final saved = await _remoteDataSource.updateSpendingSnapshotDto(updated);
+      return _toOverview(saved);
     } catch (_) {
-      final saved = await _localDataSource.updateSpendingSnapshot(updated);
+      final saved = await _localDataSource.updateSpendingSnapshotDto(updated);
       return _toOverview(saved);
     }
   }
 
-  Future<AppSnapshot> _loadSnapshot() async {
+  Future<SpendingSnapshotDto> _fetchCurrentSpending() async {
     try {
-      final snapshot = await _remoteDataSource.fetchSnapshot();
-      unawaited(_localDataSource.saveCachedSnapshot(snapshot));
-      return snapshot;
+      return await _remoteDataSource.fetchSpendingSnapshotDto();
     } catch (_) {
-      return _localDataSource.getCachedSnapshot();
+      return _localDataSource.getSpendingSnapshotDto();
     }
   }
 
-  SpendingOverview _toOverview(SpendingSnapshot snapshot) {
+  SpendingOverview _toOverview(SpendingSnapshotDto snapshot) {
     return SpendingOverview(
       categories: snapshot.categories,
       dailySpendings: snapshot.dailySpendings,

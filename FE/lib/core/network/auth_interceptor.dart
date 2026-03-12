@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:more_app/core/constants/app_constants.dart';
-import 'package:more_app/presentation/navigation/app_router.dart';
 
 class AuthInterceptor extends Interceptor {
+  AuthInterceptor({this.onForceLogout});
+
+  final void Function()? onForceLogout;
   final _storage = const FlutterSecureStorage();
   bool _isRefreshing = false;
 
@@ -95,11 +97,6 @@ class AuthInterceptor extends Interceptor {
   Future<void> _forceLogout() async {
     await _storage.delete(key: 'access_token');
     await _storage.delete(key: 'refresh_token');
-
-    // 로그인 화면으로 이동
-    final context = rootNavigatorKey.currentContext;
-    if (context != null) {
-      appRouter.go(AppRoutes.login);
-    }
+    onForceLogout?.call();
   }
 }

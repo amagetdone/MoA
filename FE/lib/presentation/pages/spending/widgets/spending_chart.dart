@@ -5,6 +5,7 @@ import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:more_app/domain/entities/spending.dart';
+import 'package:more_app/presentation/utils/spending_ui_mapper.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 
 class SpendingDonutChart extends StatelessWidget {
@@ -122,7 +123,7 @@ class SpendingDonutChart extends StatelessWidget {
                     width: 10.w,
                     height: 10.w,
                     decoration: BoxDecoration(
-                      color: category.color,
+                      color: SpendingUiMapper.colorFrom(category.colorValue),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -144,7 +145,7 @@ class SpendingDonutChart extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: percentage / 100,
                         backgroundColor: AppColors.borderDefault,
-                        valueColor: AlwaysStoppedAnimation(category.color),
+                        valueColor: AlwaysStoppedAnimation(SpendingUiMapper.colorFrom(category.colorValue)),
                         minHeight: 6.h,
                       ),
                     ),
@@ -181,7 +182,7 @@ class SpendingDonutChart extends StatelessWidget {
     return categories.map((category) {
       return PieChartSectionData(
         value: category.amount.toDouble(),
-        color: category.color,
+        color: SpendingUiMapper.colorFrom(category.colorValue),
         radius: 30.r,
         showTitle: false,
       );
