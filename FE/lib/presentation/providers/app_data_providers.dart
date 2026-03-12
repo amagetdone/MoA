@@ -3,8 +3,10 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:more_app/core/network/api_client.dart';
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
+import 'package:more_app/data/datasources/remote/app_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/auth_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/real_auth_remote_datasource.dart';
+import 'package:more_app/data/datasources/remote/seed_app_remote_datasource.dart';
 import 'package:more_app/data/repositories/account_repository_impl.dart';
 import 'package:more_app/data/repositories/goal_repository_impl.dart';
 import 'package:more_app/data/repositories/home_repository_impl.dart';
@@ -45,32 +47,41 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   );
 });
 
+final appRemoteDataSourceProvider = Provider<AppRemoteDataSource>((ref) {
+  return SeedAppRemoteDataSource();
+});
+
 final goalRepositoryProvider = Provider<GoalRepository>((ref) {
   return GoalRepositoryImpl(
+    remoteDataSource: ref.read(appRemoteDataSourceProvider),
     localDataSource: ref.read(appLocalDataSourceProvider),
   );
 });
 
 final homeRepositoryProvider = Provider<HomeRepository>((ref) {
   return HomeRepositoryImpl(
+    remoteDataSource: ref.read(appRemoteDataSourceProvider),
     localDataSource: ref.read(appLocalDataSourceProvider),
   );
 });
 
 final accountRepositoryProvider = Provider<AccountRepository>((ref) {
   return AccountRepositoryImpl(
+    remoteDataSource: ref.read(appRemoteDataSourceProvider),
     localDataSource: ref.read(appLocalDataSourceProvider),
   );
 });
 
 final spendingRepositoryProvider = Provider<SpendingRepository>((ref) {
   return SpendingRepositoryImpl(
+    remoteDataSource: ref.read(appRemoteDataSourceProvider),
     localDataSource: ref.read(appLocalDataSourceProvider),
   );
 });
 
 final menuRepositoryProvider = Provider<MenuRepository>((ref) {
   return MenuRepositoryImpl(
+    remoteDataSource: ref.read(appRemoteDataSourceProvider),
     localDataSource: ref.read(appLocalDataSourceProvider),
   );
 });

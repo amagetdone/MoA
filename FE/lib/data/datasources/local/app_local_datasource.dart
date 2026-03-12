@@ -10,6 +10,8 @@ import 'package:more_app/domain/entities/transaction.dart';
 import 'package:more_app/domain/entities/user.dart';
 
 abstract class AppLocalDataSource {
+  Future<AppSnapshot> getCachedSnapshot();
+  Future<void> saveCachedSnapshot(AppSnapshot snapshot);
   Future<List<String>> getBankNames();
   Future<User> getUser();
   Future<MenuPreferencesSnapshot> getMenuPreferences();
@@ -110,6 +112,13 @@ class AppLocalDataSourceImpl implements AppLocalDataSource {
       _memorySnapshotJson = jsonString;
     }
   }
+
+  @override
+  Future<AppSnapshot> getCachedSnapshot() => _loadSnapshot();
+
+  @override
+  Future<void> saveCachedSnapshot(AppSnapshot snapshot) =>
+      _persistSnapshot(snapshot);
 
   Future<void> _seedGoalSketchVideos(AppSnapshot snapshot) async {
     for (final goal in snapshot.goals) {
