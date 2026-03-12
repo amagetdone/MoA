@@ -41,7 +41,6 @@ class AuthControllerTest {
 				"TEMP",
 				false,
 				false,
-				false,
 				"access-token",
 				"refresh-token"
 			));
@@ -57,7 +56,7 @@ class AuthControllerTest {
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.message").value("소셜 로그인에 성공했습니다."))
 			.andExpect(jsonPath("$.data.status").value("TEMP"))
-			.andExpect(jsonPath("$.data.profile").value(false))
+			.andExpect(jsonPath("$.data.profile").doesNotExist())
 			.andExpect(jsonPath("$.data.account").value(false))
 			.andExpect(jsonPath("$.data.plan").value(false))
 			.andExpect(jsonPath("$.data.accessToken").value("access-token"))

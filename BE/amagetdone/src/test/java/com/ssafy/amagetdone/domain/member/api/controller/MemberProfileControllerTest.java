@@ -36,7 +36,7 @@ class MemberProfileControllerTest {
 	void completeProfileReturnsCompletedPayloadForAccessToken() throws Exception {
 		given(jwtAccessTokenReader.readUserId("Bearer access-token")).willReturn(1);
 		given(memberProfileService.completeProfile(eq(1), any(ProfileCompletionDto.Request.class)))
-			.willReturn(new ProfileCompletionDto.Response(1, true, "ACTIVE", "GO_HOME"));
+			.willReturn(new ProfileCompletionDto.Response("ACTIVE"));
 
 		mockMvc.perform(patch("/api/v1/members/me/profile")
 				.header(AUTHORIZATION, "Bearer access-token")
@@ -52,10 +52,10 @@ class MemberProfileControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.message").value("프로필 입력이 완료되었습니다."))
-			.andExpect(jsonPath("$.data.userId").value(1))
-			.andExpect(jsonPath("$.data.profileCompleted").value(true))
 			.andExpect(jsonPath("$.data.status").value("ACTIVE"))
-			.andExpect(jsonPath("$.data.nextAction").value("GO_HOME"));
+			.andExpect(jsonPath("$.data.userId").doesNotExist())
+			.andExpect(jsonPath("$.data.profileCompleted").doesNotExist())
+			.andExpect(jsonPath("$.data.nextAction").doesNotExist());
 	}
 
 	@Test

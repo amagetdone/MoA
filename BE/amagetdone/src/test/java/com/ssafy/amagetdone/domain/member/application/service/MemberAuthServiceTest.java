@@ -3,6 +3,7 @@ package com.ssafy.amagetdone.domain.member.application.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -14,6 +15,7 @@ import java.util.List;
 
 import com.ssafy.amagetdone.domain.asset.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
+import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.application.usecase.FindOrCreateSocialUserUseCase;
 import com.ssafy.amagetdone.domain.member.application.usecase.IssueMemberTokensUseCase;
 import com.ssafy.amagetdone.domain.member.infra.client.SocialAuthClient;
@@ -24,10 +26,15 @@ import com.ssafy.amagetdone.domain.member.model.vo.SocialProvider;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.member.support.util.MemberTokenPair;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 
 @ExtendWith(MockitoExtension.class)
 class MemberAuthServiceTest {
@@ -52,6 +59,7 @@ class MemberAuthServiceTest {
 
 	@Test
 	void authenticateReturnsTempStatusWhenOnboardingFlagsAreIncomplete() {
+		ListAppender<ILoggingEvent> appender = attachAppender();
 		MemberAuthService memberAuthService = new MemberAuthService(
 			List.of(kakaoSocialAuthClient, googleSocialAuthClient),
 			findOrCreateSocialUserUseCase,
@@ -61,7 +69,7 @@ class MemberAuthServiceTest {
 		);
 		SocialAuthDto.Request request = new SocialAuthDto.Request("provider-access-token", null);
 		SocialUserIdentity identity = new SocialUserIdentity(SocialProvider.KAKAO, "kakao-user-1");
-		User user = User.createPendingSocialUser("USER-001");
+		User user = User.createPendingSocialUser();
 		setUserId(user, 1);
 		SocialAccount socialAccount = SocialAccount.create(user, SocialProvider.KAKAO, "kakao-user-1");
 		MemberTokenPair tokenPair = new MemberTokenPair("access-token", "refresh-token");
@@ -76,16 +84,18 @@ class MemberAuthServiceTest {
 		SocialAuthDto.Response response = memberAuthService.authenticate(SocialProvider.KAKAO, request);
 
 		assertEquals("TEMP", response.status());
-		assertFalse(response.profile());
 		assertFalse(response.account());
 		assertFalse(response.plan());
 		assertEquals("access-token", response.accessToken());
 		assertEquals("refresh-token", response.refreshToken());
+		assertTrue(containsLog(appender, "event=SOCIAL_AUTH_SUCCESS"));
+		assertTrue(containsLog(appender, "event=MEMBER_LOGIN_SUCCESS"));
 		verify(findOrCreateSocialUserUseCase).execute(identity);
 	}
 
 	@Test
 	void authenticateReturnsIndependentFlagsForActiveMember() {
+		ListAppender<ILoggingEvent> appender = attachAppender();
 		MemberAuthService memberAuthService = new MemberAuthService(
 			List.of(kakaoSocialAuthClient, googleSocialAuthClient),
 			findOrCreateSocialUserUseCase,
@@ -95,9 +105,10 @@ class MemberAuthServiceTest {
 		);
 		SocialAuthDto.Request request = new SocialAuthDto.Request(null, "google-id-token");
 		SocialUserIdentity identity = new SocialUserIdentity(SocialProvider.GOOGLE, "google-user-1");
-		User user = User.createPendingSocialUser("USER-002");
+		User user = User.createPendingSocialUser();
 		setUserId(user, 2);
-		user.completeProfile("moa", "moa@example.com", LocalDate.of(1997, 3, 1), true);
+		user.markProfileEntered("moa", "moa@example.com", LocalDate.of(1997, 3, 1), true);
+		user.activate();
 		SocialAccount socialAccount = SocialAccount.create(user, SocialProvider.GOOGLE, "google-user-1");
 		MemberTokenPair tokenPair = new MemberTokenPair("access-token", "refresh-token");
 
@@ -111,12 +122,46 @@ class MemberAuthServiceTest {
 		SocialAuthDto.Response response = memberAuthService.authenticate(SocialProvider.GOOGLE, request);
 
 		assertEquals("ACTIVE", response.status());
-		assertTrue(response.profile());
 		assertFalse(response.account());
 		assertTrue(response.plan());
 		assertEquals("access-token", response.accessToken());
 		assertEquals("refresh-token", response.refreshToken());
+		assertTrue(containsLog(appender, "event=SOCIAL_AUTH_SUCCESS"));
+		assertTrue(containsLog(appender, "event=MEMBER_LOGIN_SUCCESS"));
 		verify(findOrCreateSocialUserUseCase).execute(identity);
+	}
+
+	@Test
+	void socialAuthResponseUsesStatusInsteadOfProfileFlag() {
+		assertThrows(
+			NoSuchMethodException.class,
+			() -> SocialAuthDto.Response.class.getMethod("profile")
+		);
+	}
+
+	@Test
+	void authenticateLogsFailureWhenSocialAuthFails() {
+		ListAppender<ILoggingEvent> appender = attachAppender();
+		MemberAuthService memberAuthService = new MemberAuthService(
+			List.of(kakaoSocialAuthClient, googleSocialAuthClient),
+			findOrCreateSocialUserUseCase,
+			issueMemberTokensUseCase,
+			accountRepository,
+			planRepository
+		);
+		SocialAuthDto.Request request = new SocialAuthDto.Request("provider-access-token", null);
+
+		given(kakaoSocialAuthClient.supports(SocialProvider.KAKAO)).willReturn(true);
+		given(kakaoSocialAuthClient.fetchIdentity(request))
+			.willThrow(new com.ssafy.amagetdone.domain.member.exception.MemberException(MemberErrorCode.INVALID_KAKAO_ACCESS_TOKEN));
+
+		assertThrows(
+			com.ssafy.amagetdone.domain.member.exception.MemberException.class,
+			() -> memberAuthService.authenticate(SocialProvider.KAKAO, request)
+		);
+
+		assertTrue(containsLog(appender, "event=SOCIAL_AUTH_FAILURE"));
+		assertTrue(containsLog(appender, "event=MEMBER_LOGIN_FAILURE"));
 	}
 
 	private void setUserId(User user, int id) {
@@ -127,5 +172,18 @@ class MemberAuthServiceTest {
 		} catch (ReflectiveOperationException exception) {
 			throw new IllegalStateException(exception);
 		}
+	}
+
+	private ListAppender<ILoggingEvent> attachAppender() {
+		Logger logger = (Logger) LoggerFactory.getLogger(MemberAuthService.class);
+		ListAppender<ILoggingEvent> appender = new ListAppender<>();
+		appender.start();
+		logger.addAppender(appender);
+		return appender;
+	}
+
+	private boolean containsLog(ListAppender<ILoggingEvent> appender, String text) {
+		return appender.list.stream()
+			.anyMatch(event -> event.getFormattedMessage().contains(text));
 	}
 }

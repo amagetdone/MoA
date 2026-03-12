@@ -13,7 +13,6 @@ public final class SocialAuthDto {
 
 	public record Response(
 		String status,
-		boolean profile,
 		boolean account,
 		boolean plan,
 		String accessToken,
