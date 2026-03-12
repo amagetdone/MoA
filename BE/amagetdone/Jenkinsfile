@@ -104,6 +104,24 @@ pipeline {
                         require_value "$REMOTE_HEALTH_URL" REMOTE_HEALTH_URL
                         require_value "$EXTERNAL_HEALTH_URL" EXTERNAL_HEALTH_URL
 
+                        normalize_health_url() {
+                          url="$1"
+                          case "$url" in
+                            */api/health)
+                              printf '%s\n' "$url"
+                              ;;
+                            */health)
+                              printf '%s/api/health\n' "${url%/health}"
+                              ;;
+                            *)
+                              printf '%s\n' "$url"
+                              ;;
+                          esac
+                        }
+
+                        REMOTE_HEALTH_URL="$(normalize_health_url "$REMOTE_HEALTH_URL")"
+                        EXTERNAL_HEALTH_URL="$(normalize_health_url "$EXTERNAL_HEALTH_URL")"
+
                         mkdir -p ~/.ssh
                         chmod 700 ~/.ssh
                         ssh-keyscan -p "$REMOTE_PORT" -H "$REMOTE_HOST" >> ~/.ssh/known_hosts
@@ -187,6 +205,24 @@ pipeline {
                     require_value "$LOCAL_HEALTH_URL" LOCAL_HEALTH_URL
                     require_value "$EXTERNAL_HEALTH_URL" EXTERNAL_HEALTH_URL
                     require_value "$DEV_DEPLOY_SCRIPT" DEV_DEPLOY_SCRIPT
+
+                    normalize_health_url() {
+                      url="$1"
+                      case "$url" in
+                        */api/health)
+                          printf '%s\n' "$url"
+                          ;;
+                        */health)
+                          printf '%s/api/health\n' "${url%/health}"
+                          ;;
+                        *)
+                          printf '%s\n' "$url"
+                          ;;
+                      esac
+                    }
+
+                    LOCAL_HEALTH_URL="$(normalize_health_url "$LOCAL_HEALTH_URL")"
+                    EXTERNAL_HEALTH_URL="$(normalize_health_url "$EXTERNAL_HEALTH_URL")"
 
                     if [ ! -d "$LOCAL_APP_DIR" ]; then
                       echo "Local app dir not found: $LOCAL_APP_DIR" >&2

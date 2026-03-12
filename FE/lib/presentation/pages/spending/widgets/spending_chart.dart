@@ -46,6 +46,7 @@ class SpendingDonutChart extends StatelessWidget {
                     centerSpaceRadius: 60.r,
                     sectionsSpace: 2,
                     borderData: FlBorderData(show: false),
+                    pieTouchData: PieTouchData(enabled: false),
                   ),
                 ),
                 Column(

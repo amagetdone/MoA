@@ -7,7 +7,7 @@ import 'package:more_app/domain/entities/spending.dart';
 import 'package:more_app/presentation/utils/spending_ui_mapper.dart';
 import 'package:more_app/presentation/widgets/common/more_progress_bar.dart';
 
-class CategoryList extends StatelessWidget {
+class CategoryList extends StatefulWidget {
   final List<SpendingCategory> categories;
 
   const CategoryList({
@@ -16,92 +16,88 @@ class CategoryList extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: categories.length,
-      separatorBuilder: (context, index) => SizedBox(height: 12.h),
-      itemBuilder: (context, index) {
-        final category = categories[index];
-        return _CategoryRow(category: category);
-      },
-    );
-  }
+  State<CategoryList> createState() => _CategoryListState();
 }
 
-class _CategoryRow extends StatelessWidget {
-  final SpendingCategory category;
-
-  const _CategoryRow({
-    required this.category,
-  });
+class _CategoryListState extends State<CategoryList> {
+  bool _isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
+    // 금액 순 정렬
+    final sortedCategories = [...widget.categories]
+      ..sort((a, b) => b.amount.compareTo(a.amount));
+    
+    final displayItems = _isExpanded ? sortedCategories : sortedCategories.take(3).toList();
+
     return Column(
       children: [
-        Row(
-          children: [
-            Container(
-              width: 36.w,
-              height: 36.w,
-              decoration: BoxDecoration(
-                color: SpendingUiMapper.colorFrom(category.colorValue).withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                SpendingUiMapper.iconFrom(category.iconKey),
-                size: 18.w,
-                color: SpendingUiMapper.colorFrom(category.colorValue),
-              ),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    category.name,
-                    style: AppTextStyles.bodyMd.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w500,
-                      fontSize: 14.sp,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Column(
+        ...displayItems.map((category) {
+          final ratio = category.budget > 0
+              ? (category.amount / category.budget).clamp(0.0, 1.0)
+              : 0.0;
+
+          return Padding(
+            padding: EdgeInsets.only(bottom: 24.h),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  CurrencyFormatter.formatKRW(category.amount),
-                  style: AppTextStyles.bodyMd.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14.sp,
+                // 1. 카테고리명 (좌측 하단)
+                SizedBox(
+                  width: 55.w,
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: 4.h),
+                    child: Text(
+                      category.name,
+                      style: AppTextStyles.bodyMd.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14.sp,
+                      ),
+                    ),
                   ),
                 ),
-                SizedBox(height: 2.h),
-                Text(
-                  '/ ${CurrencyFormatter.formatKRW(category.budget)}',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textTertiary,
-                    fontSize: 11.sp,
+                SizedBox(width: 8.w),
+                // 2. 우측 예산 금액 및 바 그래프
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      // 할당된 예산 (우측 상단)
+                      Text(
+                        CurrencyFormatter.formatKRW(category.budget),
+                        style: AppTextStyles.caption.copyWith(
+                          color: const Color(0xFFC0C0C0),
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      SizedBox(height: 6.h),
+                      // 진행 바 (회색 바탕에 주황색 채움)
+                      MoreProgressBar(
+                        progress: ratio,
+                        color: AppColors.orange500,
+                        backgroundColor: const Color(0xFFF0F0F0),
+                        height: 14.h,
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ],
-        ),
-        SizedBox(height: 8.h),
-        MoreProgressBar(
-          progress: category.usageRate.clamp(0.0, 1.0),
-          color: category.usageRate > 1.0 ? AppColors.red500 : SpendingUiMapper.colorFrom(category.colorValue),
-          backgroundColor: AppColors.borderDefault,
-          height: 6.h,
-        ),
+          );
+        }).toList(),
+
+        // 확장/축소 화살표
+        if (widget.categories.length > 3)
+          GestureDetector(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            child: Icon(
+              _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+              color: AppColors.gray900,
+              size: 28.w,
+            ),
+          ),
       ],
     );
   }
