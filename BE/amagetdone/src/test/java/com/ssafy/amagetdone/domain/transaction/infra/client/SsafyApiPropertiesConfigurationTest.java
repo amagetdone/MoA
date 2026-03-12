@@ -14,6 +14,8 @@ class SsafyApiPropertiesConfigurationTest {
 	void applicationPropertiesContainsSsafyInfraKeys() throws IOException {
 		String applicationProperties = Files.readString(Path.of("src/main/resources/application.properties"));
 
+		assertTrue(applicationProperties.contains("ssafy.fin-api.base-url="));
+		assertTrue(applicationProperties.contains("ssafy.fin-api.api-key=${SSAFY_FIN_API_KEY:}"));
 		assertTrue(applicationProperties.contains("asset.ssafy.base-url="));
 		assertTrue(applicationProperties.contains("asset.ssafy.institution-code="));
 		assertTrue(applicationProperties.contains("asset.ssafy.fintech-app-no="));
