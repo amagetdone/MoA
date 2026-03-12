@@ -5,31 +5,63 @@ pipeline {
         timestamps()
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '20'))
+        skipDefaultCheckout()
     }
 
     environment {
         APP_DIR = 'BE/amagetdone'
-        JENKINS_APP_ENV = '/var/jenkins_home/secrets/amagetdone.app.env'
-        JENKINS_DEPLOY_ENV = '/var/jenkins_home/secrets/amagetdone.env'
+        PROD_JENKINS_APP_ENV = '/var/jenkins_home/secrets/amagetdone.app.env'
+        PROD_JENKINS_DEPLOY_ENV = '/var/jenkins_home/secrets/amagetdone.env'
+        DEV_JENKINS_APP_ENV = '/var/jenkins_home/secrets/amagetdone-dev.app.env'
+        DEV_JENKINS_DEPLOY_ENV = '/var/jenkins_home/secrets/amagetdone-dev.env'
     }
 
     stages {
         stage('Checkout') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'develop'
+                    branch 'dev/backend'
+                }
+            }
             steps {
                 checkout scm
             }
         }
 
         stage('Build & Test') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'develop'
+                    branch 'dev/backend'
+                }
+            }
             steps {
                 dir("${APP_DIR}") {
                     sh '''
                         set -eux
-                        if [ ! -f "$JENKINS_APP_ENV" ]; then
-                          echo "Jenkins app env file not found: $JENKINS_APP_ENV" >&2
+
+                        case "$BRANCH_NAME" in
+                          "main"|"develop")
+                            app_env="$PROD_JENKINS_APP_ENV"
+                            ;;
+                          "dev/backend")
+                            app_env="$DEV_JENKINS_APP_ENV"
+                            ;;
+                          *)
+                            echo "Unsupported branch for build/test: $BRANCH_NAME" >&2
+                            exit 0
+                            ;;
+                        esac
+
+                        if [ ! -f "$app_env" ]; then
+                          echo "Jenkins app env file not found: $app_env" >&2
                           exit 1
                         fi
-                        install -m 600 "$JENKINS_APP_ENV" ./.env
+
+                        install -m 600 "$app_env" ./.env
                         chmod +x ./gradlew
                         ./gradlew clean test bootJar
                     '''
@@ -37,7 +69,7 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy Main') {
             when {
                 branch 'main'
             }
@@ -46,13 +78,13 @@ pipeline {
                     sh '''
                         set -eu
 
-                        if [ ! -f "$JENKINS_DEPLOY_ENV" ]; then
-                          echo "Jenkins deploy env file not found: $JENKINS_DEPLOY_ENV" >&2
+                        if [ ! -f "$PROD_JENKINS_DEPLOY_ENV" ]; then
+                          echo "Jenkins deploy env file not found: $PROD_JENKINS_DEPLOY_ENV" >&2
                           exit 1
                         fi
 
                         set -a
-                        . "$JENKINS_DEPLOY_ENV"
+                        . "$PROD_JENKINS_DEPLOY_ENV"
                         set +a
 
                         require_value() {
@@ -71,6 +103,24 @@ pipeline {
                         require_value "$REMOTE_DEPLOY_SCRIPT" REMOTE_DEPLOY_SCRIPT
                         require_value "$REMOTE_HEALTH_URL" REMOTE_HEALTH_URL
                         require_value "$EXTERNAL_HEALTH_URL" EXTERNAL_HEALTH_URL
+
+                        normalize_health_url() {
+                          url="$1"
+                          case "$url" in
+                            */api/health)
+                              printf '%s\n' "$url"
+                              ;;
+                            */health)
+                              printf '%s/api/health\n' "${url%/health}"
+                              ;;
+                            *)
+                              printf '%s\n' "$url"
+                              ;;
+                          esac
+                        }
+
+                        REMOTE_HEALTH_URL="$(normalize_health_url "$REMOTE_HEALTH_URL")"
+                        EXTERNAL_HEALTH_URL="$(normalize_health_url "$EXTERNAL_HEALTH_URL")"
 
                         mkdir -p ~/.ssh
                         chmod 700 ~/.ssh
@@ -116,6 +166,122 @@ pipeline {
                         done
                     '''
                 }
+            }
+        }
+
+        stage('Deploy Dev Backend') {
+            when {
+                branch 'dev/backend'
+            }
+            steps {
+                sh '''
+                    set -eu
+
+                    if [ ! -f "$DEV_JENKINS_DEPLOY_ENV" ]; then
+                      echo "Jenkins deploy env file not found: $DEV_JENKINS_DEPLOY_ENV" >&2
+                      exit 1
+                    fi
+
+                    if [ ! -f "$DEV_JENKINS_APP_ENV" ]; then
+                      echo "Jenkins app env file not found: $DEV_JENKINS_APP_ENV" >&2
+                      exit 1
+                    fi
+
+                    set -a
+                    . "$DEV_JENKINS_DEPLOY_ENV"
+                    set +a
+
+                    require_value() {
+                      value="$1"
+                      name="$2"
+                      if [ -z "$value" ]; then
+                        echo "Required Jenkins dev deploy env is missing: $name" >&2
+                        exit 1
+                      fi
+                    }
+
+                    require_value "$LOCAL_REPO_DIR" LOCAL_REPO_DIR
+                    require_value "$LOCAL_APP_DIR" LOCAL_APP_DIR
+                    require_value "$LOCAL_HEALTH_URL" LOCAL_HEALTH_URL
+                    require_value "$EXTERNAL_HEALTH_URL" EXTERNAL_HEALTH_URL
+                    require_value "$DEV_DEPLOY_SCRIPT" DEV_DEPLOY_SCRIPT
+
+                    normalize_health_url() {
+                      url="$1"
+                      case "$url" in
+                        */api/health)
+                          printf '%s\n' "$url"
+                          ;;
+                        */health)
+                          printf '%s/api/health\n' "${url%/health}"
+                          ;;
+                        *)
+                          printf '%s\n' "$url"
+                          ;;
+                      esac
+                    }
+
+                    LOCAL_HEALTH_URL="$(normalize_health_url "$LOCAL_HEALTH_URL")"
+                    EXTERNAL_HEALTH_URL="$(normalize_health_url "$EXTERNAL_HEALTH_URL")"
+
+                    if [ ! -d "$LOCAL_APP_DIR" ]; then
+                      echo "Local app dir not found: $LOCAL_APP_DIR" >&2
+                      exit 1
+                    fi
+
+                    mkdir -p "$LOCAL_REPO_DIR"
+
+                    rsync -az --delete \
+                      --exclude '.git' \
+                      --exclude '.gradle' \
+                      --exclude 'build' \
+                      "$WORKSPACE/$APP_DIR/" "$LOCAL_APP_DIR/"
+
+                    install -m 600 "$DEV_JENKINS_APP_ENV" "$LOCAL_APP_DIR/.env"
+
+                    bash "$DEV_DEPLOY_SCRIPT"
+
+                    if ! command -v docker-compose >/dev/null 2>&1; then
+                      echo "docker-compose is required for Jenkins host health checks" >&2
+                      exit 1
+                    fi
+
+                    HEALTHCHECK_COMPOSE_FILE="$(mktemp)"
+                    cat > "$HEALTHCHECK_COMPOSE_FILE" <<'EOF'
+services:
+  curl:
+    image: curlimages/curl:8.12.1
+    network_mode: host
+EOF
+                    trap 'rm -f "$HEALTHCHECK_COMPOSE_FILE"' EXIT
+
+                    run_host_health_check() {
+                      url="$1"
+                      docker-compose -f "$HEALTHCHECK_COMPOSE_FILE" run --rm curl -fsS "$url" >/dev/null
+                    }
+
+                    for attempt in $(seq 1 40); do
+                      if run_host_health_check "$LOCAL_HEALTH_URL"; then
+                        break
+                      fi
+                      if [ "$attempt" -eq 40 ]; then
+                        echo "Local health check failed: $LOCAL_HEALTH_URL" >&2
+                        exit 1
+                      fi
+                      sleep 3
+                    done
+
+                    for attempt in $(seq 1 40); do
+                      if run_host_health_check "$EXTERNAL_HEALTH_URL"; then
+                        exit 0
+                      fi
+                      if [ "$attempt" -eq 40 ]; then
+                        echo "External health check failed: $EXTERNAL_HEALTH_URL" >&2
+                        exit 1
+                      fi
+                      sleep 3
+                    done
+                '''
             }
         }
     }
