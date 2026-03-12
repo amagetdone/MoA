@@ -18,6 +18,7 @@ import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.application.usecase.FindOrCreateSocialUserUseCase;
 import com.ssafy.amagetdone.domain.member.application.usecase.IssueMemberTokensUseCase;
+import com.ssafy.amagetdone.domain.member.application.usecase.ResetTestSocialUserUseCase;
 import com.ssafy.amagetdone.domain.member.infra.client.SocialAuthClient;
 import com.ssafy.amagetdone.domain.member.infra.client.SocialUserIdentity;
 import com.ssafy.amagetdone.domain.member.model.entity.SocialAccount;
@@ -46,10 +47,16 @@ class MemberAuthServiceTest {
 	private SocialAuthClient googleSocialAuthClient;
 
 	@Mock
+	private SocialAuthClient testSocialAuthClient;
+
+	@Mock
 	private FindOrCreateSocialUserUseCase findOrCreateSocialUserUseCase;
 
 	@Mock
 	private IssueMemberTokensUseCase issueMemberTokensUseCase;
+
+	@Mock
+	private ResetTestSocialUserUseCase resetTestSocialUserUseCase;
 
 	@Mock
 	private AccountRepository accountRepository;
@@ -61,9 +68,10 @@ class MemberAuthServiceTest {
 	void authenticateReturnsTempStatusWhenOnboardingFlagsAreIncomplete() {
 		ListAppender<ILoggingEvent> appender = attachAppender();
 		MemberAuthService memberAuthService = new MemberAuthService(
-			List.of(kakaoSocialAuthClient, googleSocialAuthClient),
+			List.of(kakaoSocialAuthClient, googleSocialAuthClient, testSocialAuthClient),
 			findOrCreateSocialUserUseCase,
 			issueMemberTokensUseCase,
+			resetTestSocialUserUseCase,
 			accountRepository,
 			planRepository
 		);
@@ -97,9 +105,10 @@ class MemberAuthServiceTest {
 	void authenticateReturnsIndependentFlagsForActiveMember() {
 		ListAppender<ILoggingEvent> appender = attachAppender();
 		MemberAuthService memberAuthService = new MemberAuthService(
-			List.of(kakaoSocialAuthClient, googleSocialAuthClient),
+			List.of(kakaoSocialAuthClient, googleSocialAuthClient, testSocialAuthClient),
 			findOrCreateSocialUserUseCase,
 			issueMemberTokensUseCase,
+			resetTestSocialUserUseCase,
 			accountRepository,
 			planRepository
 		);
@@ -140,12 +149,46 @@ class MemberAuthServiceTest {
 	}
 
 	@Test
+	void authenticateTestUsesFixedTestIdentity() {
+		ListAppender<ILoggingEvent> appender = attachAppender();
+		MemberAuthService memberAuthService = new MemberAuthService(
+			List.of(kakaoSocialAuthClient, googleSocialAuthClient, testSocialAuthClient),
+			findOrCreateSocialUserUseCase,
+			issueMemberTokensUseCase,
+			resetTestSocialUserUseCase,
+			accountRepository,
+			planRepository
+		);
+		SocialUserIdentity identity = new SocialUserIdentity(SocialProvider.TEST, "test-social-user-001");
+		User user = User.createPendingSocialUser();
+		setUserId(user, 10);
+		SocialAccount socialAccount = SocialAccount.create(user, SocialProvider.TEST, "test-social-user-001");
+		MemberTokenPair tokenPair = new MemberTokenPair("access-token", "refresh-token");
+
+		given(testSocialAuthClient.supports(SocialProvider.TEST)).willReturn(true);
+		given(testSocialAuthClient.fetchIdentity(any())).willReturn(identity);
+		given(findOrCreateSocialUserUseCase.execute(identity))
+			.willReturn(new FindOrCreateSocialUserUseCase.Result(user, socialAccount, true));
+		given(issueMemberTokensUseCase.execute(user, SocialProvider.TEST)).willReturn(tokenPair);
+		given(accountRepository.existsByUserId(10)).willReturn(false);
+		given(planRepository.existsByUserId(10)).willReturn(false);
+
+		SocialAuthDto.Response response = memberAuthService.authenticateTest();
+
+		assertEquals("TEMP", response.status());
+		assertEquals("access-token", response.accessToken());
+		assertTrue(containsLog(appender, "provider=TEST"));
+		verify(findOrCreateSocialUserUseCase).execute(identity);
+	}
+
+	@Test
 	void authenticateLogsFailureWhenSocialAuthFails() {
 		ListAppender<ILoggingEvent> appender = attachAppender();
 		MemberAuthService memberAuthService = new MemberAuthService(
-			List.of(kakaoSocialAuthClient, googleSocialAuthClient),
+			List.of(kakaoSocialAuthClient, googleSocialAuthClient, testSocialAuthClient),
 			findOrCreateSocialUserUseCase,
 			issueMemberTokensUseCase,
+			resetTestSocialUserUseCase,
 			accountRepository,
 			planRepository
 		);
