@@ -4,12 +4,15 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.ssafy.amagetdone.domain.member.model.vo.UserStatus;
 import com.ssafy.amagetdone.global.entity.BaseEntity;
 
 import org.hibernate.annotations.ColumnDefault;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -39,11 +42,12 @@ public class User extends BaseEntity {
 	private Boolean hasFixedIncome;
 
 	@ColumnDefault("'ACTIVE'")
+	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false, length = 20)
-	private String status = "ACTIVE";
+	private UserStatus status = UserStatus.ACTIVE;
 
-	@Column(name = "user_api_key", nullable = false, length = 30)
-	private String userApiKey;
+	@Column(name = "user_key", length = 60)
+	private String userKey;
 
 	@Column(name = "profile_url")
 	private String profileUrl;
@@ -60,19 +64,25 @@ public class User extends BaseEntity {
 	protected User() {
 	}
 
-	public static User createPendingSocialUser(String userApiKey) {
+	public static User createPendingSocialUser() {
 		User user = new User();
-		user.userApiKey = userApiKey;
-		user.status = "PROFILE_PENDING";
+		user.status = UserStatus.TEMP;
 		return user;
 	}
 
-	public void completeProfile(String nickname, String email, LocalDate birthDate, Boolean hasFixedIncome) {
+	public void markProfileEntered(String nickname, String email, LocalDate birthDate, Boolean hasFixedIncome) {
 		this.nickname = nickname;
 		this.email = email;
 		this.birthDate = birthDate;
 		this.hasFixedIncome = hasFixedIncome;
-		this.status = isProfileCompleted() ? "ACTIVE" : "PROFILE_PENDING";
+	}
+
+	public void activate() {
+		this.status = UserStatus.ACTIVE;
+	}
+
+	public void updateUserKey(String userKey) {
+		this.userKey = userKey;
 	}
 
 	public boolean isProfileCompleted() {
@@ -86,12 +96,12 @@ public class User extends BaseEntity {
 		return id;
 	}
 
-	public String getStatus() {
+	public UserStatus getStatus() {
 		return status;
 	}
 
-	public String getUserApiKey() {
-		return userApiKey;
+	public String getUserKey() {
+		return userKey;
 	}
 
 	void linkSocialAccount(SocialAccount socialAccount) {

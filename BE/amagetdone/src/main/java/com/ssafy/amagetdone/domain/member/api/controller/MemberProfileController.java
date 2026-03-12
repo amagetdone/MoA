@@ -3,6 +3,7 @@ package com.ssafy.amagetdone.domain.member.api.controller;
 import com.ssafy.amagetdone.domain.member.api.dto.ProfileCompletionDto;
 import com.ssafy.amagetdone.domain.member.application.service.MemberProfileService;
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
+import com.ssafy.amagetdone.global.response.ApiResponse;
 
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,11 +27,11 @@ public class MemberProfileController {
 	}
 
 	@PatchMapping("/me/profile")
-	public ProfileCompletionDto.Response completeProfile(
+	public ApiResponse<ProfileCompletionDto.Response> completeProfile(
 		@RequestHeader(name = "Authorization", required = false) String authorization,
 		@RequestBody ProfileCompletionDto.Request request
 	) {
 		int userId = jwtAccessTokenReader.readUserId(authorization);
-		return memberProfileService.completeProfile(userId, request);
+		return ApiResponse.ok("프로필 입력이 완료되었습니다.", memberProfileService.completeProfile(userId, request));
 	}
 }
