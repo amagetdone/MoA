@@ -38,11 +38,9 @@ class AuthControllerTest {
 	void socialAuthReturnsJwtPayloadForKakao() throws Exception {
 		given(memberAuthService.authenticate(eq(SocialProvider.KAKAO), any()))
 			.willReturn(new SocialAuthDto.Response(
-				1,
-				"kakao",
-				true,
+				"TEMP",
 				false,
-				"COMPLETE_PROFILE",
+				false,
 				"access-token",
 				"refresh-token"
 			));
@@ -55,13 +53,14 @@ class AuthControllerTest {
 					}
 					"""))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.userId").value(1))
-			.andExpect(jsonPath("$.provider").value("kakao"))
-			.andExpect(jsonPath("$.isNewUser").value(true))
-			.andExpect(jsonPath("$.profileCompleted").value(false))
-			.andExpect(jsonPath("$.nextAction").value("COMPLETE_PROFILE"))
-			.andExpect(jsonPath("$.accessToken").value("access-token"))
-			.andExpect(jsonPath("$.refreshToken").value("refresh-token"));
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("소셜 로그인에 성공했습니다."))
+			.andExpect(jsonPath("$.data.status").value("TEMP"))
+			.andExpect(jsonPath("$.data.profile").doesNotExist())
+			.andExpect(jsonPath("$.data.account").value(false))
+			.andExpect(jsonPath("$.data.plan").value(false))
+			.andExpect(jsonPath("$.data.accessToken").value("access-token"))
+			.andExpect(jsonPath("$.data.refreshToken").value("refresh-token"));
 	}
 
 	@Test
@@ -74,8 +73,8 @@ class AuthControllerTest {
 					}
 					"""))
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.status").value(400))
-			.andExpect(jsonPath("$.code").value(MemberErrorCode.UNSUPPORTED_SOCIAL_PROVIDER.code()))
+			.andExpect(jsonPath("$.status").value("error"))
+			.andExpect(jsonPath("$.errorCode").value(MemberErrorCode.UNSUPPORTED_SOCIAL_PROVIDER.code()))
 			.andExpect(jsonPath("$.message").value(MemberErrorCode.UNSUPPORTED_SOCIAL_PROVIDER.message()));
 	}
 
@@ -92,8 +91,10 @@ class AuthControllerTest {
 					}
 					"""))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.accessToken").value("new-access-token"))
-			.andExpect(jsonPath("$.refreshToken").value("new-refresh-token"));
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("토큰 재발급에 성공했습니다."))
+			.andExpect(jsonPath("$.data.accessToken").value("new-access-token"))
+			.andExpect(jsonPath("$.data.refreshToken").value("new-refresh-token"));
 	}
 
 	@Test
@@ -109,6 +110,8 @@ class AuthControllerTest {
 					}
 					"""))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.success").value(true));
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("로그아웃에 성공했습니다."))
+			.andExpect(jsonPath("$.data.success").value(true));
 	}
 }

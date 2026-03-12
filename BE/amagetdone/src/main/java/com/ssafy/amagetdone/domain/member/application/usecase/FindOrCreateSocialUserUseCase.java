@@ -1,7 +1,5 @@
 package com.ssafy.amagetdone.domain.member.application.usecase;
 
-import java.util.UUID;
-
 import com.ssafy.amagetdone.domain.member.infra.client.SocialUserIdentity;
 import com.ssafy.amagetdone.domain.member.model.entity.SocialAccount;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
@@ -33,15 +31,11 @@ public class FindOrCreateSocialUserUseCase {
 	}
 
 	private Result create(SocialUserIdentity identity) {
-		User user = userRepository.save(User.createPendingSocialUser(generateUserApiKey()));
+		User user = userRepository.save(User.createPendingSocialUser());
 		SocialAccount socialAccount = socialAccountRepository.save(
 			SocialAccount.create(user, identity.provider(), identity.providerUid())
 		);
 		return new Result(user, socialAccount, true);
-	}
-
-	private String generateUserApiKey() {
-		return UUID.randomUUID().toString().replace("-", "").substring(0, 30).toUpperCase();
 	}
 
 	public record Result(

@@ -2,6 +2,7 @@ package com.ssafy.amagetdone.global.exception;
 
 import com.ssafy.amagetdone.domain.asset.exception.AssetException;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
+import com.ssafy.amagetdone.global.response.ErrorResponse;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -29,22 +30,18 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ErrorResponse> handleResponseStatusException(ResponseStatusException exception) {
 		HttpStatusCode statusCode = exception.getStatusCode();
 		return ResponseEntity.status(statusCode)
-			.body(ErrorResponse.of(statusCode.value(), "RESPONSE_STATUS_ERROR", exception.getReason()));
+			.body(ErrorResponse.of(exception.getReason(), "RESPONSE_STATUS_ERROR"));
 	}
 
 	@ExceptionHandler(IllegalArgumentException.class)
 	public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException exception) {
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-			.body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), "INVALID_REQUEST", exception.getMessage()));
+			.body(ErrorResponse.of(exception.getMessage(), "INVALID_REQUEST"));
 	}
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ErrorResponse> handleException(Exception exception) {
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-			.body(ErrorResponse.of(
-				HttpStatus.INTERNAL_SERVER_ERROR.value(),
-				"INTERNAL_SERVER_ERROR",
-				"Internal server error"
-			));
+			.body(ErrorResponse.of("Internal server error", "INTERNAL_SERVER_ERROR"));
 	}
 }
