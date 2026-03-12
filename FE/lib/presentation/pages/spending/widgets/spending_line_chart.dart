@@ -4,7 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/domain/entities/spending.dart';
-import 'package:more_app/presentation/widgets/common/more_card.dart';
+import 'package:more_app/core/utils/currency_formatter.dart';
 
 class SpendingLineChart extends StatelessWidget {
   final List<DailySpending> data;
@@ -18,225 +18,134 @@ class SpendingLineChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MoreCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                '지출 그래프',
-                style: AppTextStyles.headingMd.copyWith(fontSize: 16.sp),
-              ),
-              SizedBox(width: 8.w),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
-                decoration: BoxDecoration(
-                  color: AppColors.red500.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10.r),
-                ),
-                child: Text(
-                  '10% 증가',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.red500,
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
+    if (data.isEmpty) return const Center(child: Text('데이터가 없습니다'));
+
+    final totalSpent = data.fold(0, (sum, item) => sum + item.amount);
+    
+    final maxVal = data.map((e) => e.amount).reduce((a, b) => a > b ? a : b);
+    final interval = maxVal > 0 ? (maxVal / 4).roundToDouble() : 50000.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '총 지출',
+          style: AppTextStyles.bodySm.copyWith(
+            color: AppColors.textTertiary,
+            fontSize: 12.sp,
           ),
-          SizedBox(height: 4.h),
-          Text(
-            '총 지출',
-            style: AppTextStyles.bodySm.copyWith(
-              color: AppColors.textTertiary,
-              fontSize: 12.sp,
-            ),
+        ),
+        SizedBox(height: 2.h),
+        Text(
+          CurrencyFormatter.formatKRW(totalSpent),
+          style: AppTextStyles.headingMd.copyWith(
+            fontSize: 22.sp,
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.bold,
           ),
-          SizedBox(height: 16.h),
-          SizedBox(
-            height: 200.h,
-            child: data.isEmpty
-                ? Center(
-                    child: Text(
-                      '데이터가 없습니다',
-                      style: AppTextStyles.bodyMd.copyWith(
-                        color: AppColors.textTertiary,
-                        fontSize: 14.sp,
-                      ),
+        ),
+        SizedBox(height: 32.h),
+        
+        Expanded(
+          child: LineChart(
+            LineChartData(
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                horizontalInterval: interval > 0 ? interval : 50000,
+                getDrawingHorizontalLine: (value) => FlLine(
+                  color: AppColors.gray100.withValues(alpha: 0.5),
+                  strokeWidth: 1,
+                ),
+              ),
+              titlesData: const FlTitlesData(show: false),
+              borderData: FlBorderData(show: false),
+              lineBarsData: [
+                LineChartBarData(
+                  spots: data.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.amount.toDouble())).toList(),
+                  isCurved: false,
+                  color: AppColors.gray900,
+                  barWidth: isWeekly ? 2.5 : 2.0,
+                  isStrokeCapRound: true,
+                  dotData: const FlDotData(show: false),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppColors.gray900.withValues(alpha: 0.08),
+                        Colors.transparent,
+                      ],
                     ),
-                  )
-                : LineChart(
-                    _buildChartData(),
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  LineChartData _buildChartData() {
-    final spots = <FlSpot>[];
-    for (int i = 0; i < data.length; i++) {
-      spots.add(FlSpot(i.toDouble(), data[i].amount.toDouble()));
-    }
-
-    double maxY = 0;
-    for (final spending in data) {
-      if (spending.amount > maxY) {
-        maxY = spending.amount.toDouble();
-      }
-    }
-    if (maxY == 0) maxY = 100000;
-    maxY = maxY * 1.2;
-
-    return LineChartData(
-      gridData: FlGridData(
-        show: true,
-        drawVerticalLine: false,
-        horizontalInterval: maxY / 4,
-        getDrawingHorizontalLine: (value) {
-          return FlLine(
-            color: AppColors.borderDefault,
-            strokeWidth: 1,
-          );
-        },
-      ),
-      titlesData: FlTitlesData(
-        topTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
-        ),
-        rightTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
-        ),
-        leftTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            reservedSize: 50.w,
-            getTitlesWidget: (value, meta) {
-              if (value == meta.max || value == meta.min) {
-                return const SizedBox.shrink();
-              }
-              final display = (value / 10000).toStringAsFixed(0);
-              return Padding(
-                padding: EdgeInsets.only(right: 4.w),
-                child: Text(
-                  '${display}만',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textTertiary,
-                    fontSize: 10.sp,
                   ),
                 ),
-              );
-            },
-          ),
-        ),
-        bottomTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            reservedSize: 28.h,
-            interval: 1,
-            getTitlesWidget: (value, meta) {
-              final index = value.toInt();
-              if (index < 0 || index >= data.length) {
-                return const SizedBox.shrink();
-              }
-
-              final showLabel = data.length <= 7 ||
-                  index % (data.length ~/ 5).clamp(1, data.length) == 0 ||
-                  index == data.length - 1;
-
-              if (!showLabel) {
-                return const SizedBox.shrink();
-              }
-
-              final date = data[index].date;
-              final label = isWeekly
-                  ? '${date.month}/${date.day}'
-                  : '${date.day}일';
-
-              return Padding(
-                padding: EdgeInsets.only(top: 8.h),
-                child: Text(
-                  label,
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textTertiary,
-                    fontSize: 10.sp,
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-      borderData: FlBorderData(show: false),
-      minX: 0,
-      maxX: (data.length - 1).toDouble().clamp(0, double.infinity),
-      minY: 0,
-      maxY: maxY,
-      lineBarsData: [
-        LineChartBarData(
-          spots: spots,
-          isCurved: true,
-          curveSmoothness: 0.3,
-          color: AppColors.orange500,
-          barWidth: 2.5,
-          isStrokeCapRound: true,
-          dotData: FlDotData(
-            show: data.length <= 7,
-            getDotPainter: (spot, percent, barData, index) {
-              return FlDotCirclePainter(
-                radius: 3.r,
-                color: Colors.white,
-                strokeWidth: 2,
-                strokeColor: AppColors.orange500,
-              );
-            },
-          ),
-          belowBarData: BarAreaData(
-            show: true,
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                AppColors.orange500.withValues(alpha: 0.3),
-                AppColors.orange500.withValues(alpha: 0.0),
               ],
+              lineTouchData: LineTouchData(
+                enabled: true,
+                handleBuiltInTouches: true,
+                touchTooltipData: LineTouchTooltipData(
+                  getTooltipColor: (spot) => AppColors.gray900.withValues(alpha: 0.9),
+                  tooltipRoundedRadius: 8.r,
+                  tooltipPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                  getTooltipItems: (touchedSpots) {
+                    return touchedSpots.map((spot) {
+                      String trendText = "";
+                      if (spot.spotIndex > 0) {
+                        final prevY = data[spot.spotIndex - 1].amount;
+                        if (prevY > 0) {
+                          final diff = ((spot.y - prevY) / prevY * 100).toInt();
+                          trendText = diff >= 0 ? "+$diff%" : "$diff%";
+                        }
+                      }
+
+                      final date = data[spot.spotIndex].date;
+                      final dateLabel = isWeekly ? "" : "${date.month}/${date.day}\n";
+
+                      return LineTooltipItem(
+                        '$dateLabel${CurrencyFormatter.formatKRW(spot.y.toInt())}\n',
+                        AppTextStyles.bodySm.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        children: [
+                          if (trendText.isNotEmpty)
+                            TextSpan(
+                              text: '이전대비 $trendText',
+                              style: AppTextStyles.caption.copyWith(
+                                color: trendText.startsWith('+') ? AppColors.orange300 : Colors.greenAccent,
+                                fontSize: 10.sp,
+                              ),
+                            ),
+                        ],
+                      );
+                    }).toList();
+                  },
+                ),
+                getTouchedSpotIndicator: (LineChartBarData barData, List<int> spotIndexes) {
+                  return spotIndexes.map((index) {
+                    return TouchedSpotIndicatorData(
+                      FlLine(color: AppColors.gray500.withValues(alpha: 0.3), strokeWidth: 1.5, dashArray: [4, 4]),
+                      FlDotData(
+                        getDotPainter: (spot, percent, barData, index) {
+                          return FlDotCirclePainter(
+                            radius: 5.r,
+                            color: AppColors.orange500,
+                            strokeWidth: 2,
+                            strokeColor: Colors.white,
+                          );
+                        },
+                      ),
+                    );
+                  }).toList();
+                },
+              ),
+              minY: 0,
+              maxY: maxVal > 0 ? (maxVal * 1.3) : 100000,
             ),
           ),
         ),
       ],
-      lineTouchData: LineTouchData(
-        touchTooltipData: LineTouchTooltipData(
-          getTooltipItems: (touchedSpots) {
-            return touchedSpots.map((spot) {
-              final amount = spot.y.toInt();
-              final formatted = _formatAmount(amount);
-              return LineTooltipItem(
-                formatted,
-                AppTextStyles.caption.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 11.sp,
-                ),
-              );
-            }).toList();
-          },
-        ),
-      ),
     );
-  }
-
-  String _formatAmount(int amount) {
-    if (amount >= 10000) {
-      final man = amount ~/ 10000;
-      final remainder = amount % 10000;
-      if (remainder == 0) {
-        return '${man}만원';
-      }
-      return '${man}만${remainder}원';
-    }
-    return '${amount}원';
   }
 }
