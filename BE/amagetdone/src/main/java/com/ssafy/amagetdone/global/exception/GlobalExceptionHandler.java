@@ -2,6 +2,7 @@ package com.ssafy.amagetdone.global.exception;
 
 import com.ssafy.amagetdone.domain.asset.exception.AssetException;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
+import com.ssafy.amagetdone.domain.transaction.exception.TransactionException;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -21,6 +22,12 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(AssetException.class)
 	public ResponseEntity<ErrorResponse> handleAssetException(AssetException exception) {
+		return ResponseEntity.status(exception.getErrorCode().httpStatus())
+			.body(ErrorResponse.from(exception.getErrorCode()));
+	}
+
+	@ExceptionHandler(TransactionException.class)
+	public ResponseEntity<ErrorResponse> handleTransactionException(TransactionException exception) {
 		return ResponseEntity.status(exception.getErrorCode().httpStatus())
 			.body(ErrorResponse.from(exception.getErrorCode()));
 	}
