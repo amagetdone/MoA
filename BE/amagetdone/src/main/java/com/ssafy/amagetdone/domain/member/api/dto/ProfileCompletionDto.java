@@ -16,10 +16,7 @@ public final class ProfileCompletionDto {
 	}
 
 	public record Response(
-		Integer userId,
-		boolean profileCompleted,
-		String status,
-		String nextAction
+		String status
 	) {
 	}
 }

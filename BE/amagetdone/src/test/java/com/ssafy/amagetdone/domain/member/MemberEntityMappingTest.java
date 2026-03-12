@@ -3,6 +3,7 @@ package com.ssafy.amagetdone.domain.member;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -97,6 +98,10 @@ class MemberEntityMappingTest {
 		Enumerated enumerated = providerField.getAnnotation(Enumerated.class);
 		assertNotNull(enumerated);
 		assertSame(EnumType.STRING, enumerated.value());
+
+		Field userKeyField = User.class.getDeclaredField("userKey");
+		assertSame(String.class, userKeyField.getType());
+		assertEquals("user_key", userKeyField.getAnnotation(jakarta.persistence.Column.class).name());
 	}
 
 	@Test
