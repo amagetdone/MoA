@@ -1,10 +1,11 @@
+import 'package:more_app/domain/entities/auth_result.dart';
 import 'package:more_app/domain/entities/user.dart';
 
 abstract class AuthRepository {
-  Future<User> loginWithKakao();
-  Future<User> loginWithGoogle();
+  Future<AuthResult> loginWithKakao();
+  Future<AuthResult> loginWithGoogle();
   Future<void> logout();
   Future<User?> getCurrentUser();
   Future<bool> isLoggedIn();
-  Future<User?> autoLogin();
+  Future<bool> autoLogin();
 }

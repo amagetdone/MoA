@@ -9,7 +9,6 @@ import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
-import 'package:more_app/presentation/widgets/common/more_empty_state.dart';
 import 'package:more_app/presentation/pages/home/widgets/spending_card.dart';
 import 'package:more_app/presentation/pages/home/widgets/savings_card.dart';
 import 'package:more_app/presentation/pages/home/widgets/asset_card.dart';
@@ -78,46 +77,121 @@ class HomePage extends ConsumerWidget {
   }
 
   Widget _buildNoAccount(BuildContext context) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(24.w),
-      child: MoreEmptyState(
-        message: '계좌를 연결해주세요\n모아 서비스를 시작하려면\n계좌 연동이 필요해요',
-        buttonText: '계좌 연결하기',
-        onTap: () => context.push(AppRoutes.onboardingAccount),
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 24.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '계좌를 연결해주세요.',
+              style: AppTextStyles.headingLg.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            SizedBox(height: 12.h),
+            Text(
+              '계좌를 연결하면 소비 분석을 통해\n똑똑한 저축 계획을 세울게요!',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodyMd.copyWith(
+                color: AppColors.textTertiary,
+              ),
+            ),
+            SizedBox(height: 32.h),
+            GestureDetector(
+              onTap: () => context.push(AppRoutes.onboardingAccount),
+              child: MoreCard(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 48.w,
+                      height: 48.w,
+                      decoration: BoxDecoration(
+                        color: AppColors.orange500,
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Icon(Icons.add, color: Colors.white, size: 28.w),
+                    ),
+                    SizedBox(height: 12.h),
+                    Text(
+                      '새로운 계좌 연결하기',
+                      style: AppTextStyles.bodyMd.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      '계좌를 추가하고 자산을 관리하세요!',
+                      style: AppTextStyles.bodySm.copyWith(
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildNoGoal(BuildContext context, HomeState state) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(24.w),
-      child: Column(
-        children: [
-          MoreCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '총 자산',
-                  style: AppTextStyles.bodySm.copyWith(
-                    color: AppColors.textTertiary,
-                  ),
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  CurrencyFormatter.formatKRW(state.totalAsset),
-                  style: AppTextStyles.headingLg,
-                ),
-              ],
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 24.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '첫 번째 저축 목표를 세워보세요.',
+              style: AppTextStyles.headingLg.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
-          ),
-          SizedBox(height: 16.h),
-          MoreEmptyState(
-            message: '첫 번째 저축 목표를 세워보세요',
-            buttonText: '목표 만들기',
-            onTap: () => context.push(AppRoutes.goalCreate),
-          ),
-        ],
+            SizedBox(height: 12.h),
+            Text(
+              '목표에 도달할 수 있게 제가 도와드릴게요!',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodyMd.copyWith(
+                color: AppColors.textTertiary,
+              ),
+            ),
+            SizedBox(height: 32.h),
+            GestureDetector(
+              onTap: () => context.push(AppRoutes.goalCreate),
+              child: MoreCard(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 48.w,
+                      height: 48.w,
+                      decoration: BoxDecoration(
+                        color: AppColors.orange500,
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Icon(Icons.add, color: Colors.white, size: 28.w),
+                    ),
+                    SizedBox(height: 12.h),
+                    Text(
+                      '첫 목표 세우러 가기',
+                      style: AppTextStyles.bodyMd.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      '목표를 세우고, 돈을 모아봐요!',
+                      style: AppTextStyles.bodySm.copyWith(
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

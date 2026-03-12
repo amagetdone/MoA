@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:more_app/core/constants/app_constants.dart';
+import 'package:more_app/core/network/api_response_interceptor.dart';
 import 'package:more_app/core/network/auth_interceptor.dart';
 
 class ApiClient {
@@ -15,6 +16,7 @@ class ApiClient {
       ),
     );
     dio.interceptors.add(AuthInterceptor());
+    dio.interceptors.add(ApiResponseInterceptor());
     dio.interceptors.add(
       LogInterceptor(requestBody: true, responseBody: true),
     );
