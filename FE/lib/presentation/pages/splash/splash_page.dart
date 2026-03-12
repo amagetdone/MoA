@@ -30,7 +30,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     if (!mounted) return;
 
     final state = ref.read(authViewModelProvider);
-    if (state is AuthAuthenticated) {
+    if (state is AuthAutoLoginSuccess) {
       context.go(AppRoutes.home);
     } else {
       context.go(AppRoutes.login);

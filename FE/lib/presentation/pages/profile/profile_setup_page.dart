@@ -1,16 +1,18 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/providers/app_data_providers.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 import 'package:more_app/presentation/widgets/common/more_text_field.dart';
-import 'package:more_app/presentation/widgets/common/more_chip.dart';
 
-class ProfileSetupPage extends StatefulWidget {
+class ProfileSetupPage extends ConsumerStatefulWidget {
   final bool isOnboarding;
   final Map<String, String>? initialData;
 
@@ -21,14 +23,15 @@ class ProfileSetupPage extends StatefulWidget {
   });
 
   @override
-  State<ProfileSetupPage> createState() => _ProfileSetupPageState();
+  ConsumerState<ProfileSetupPage> createState() => _ProfileSetupPageState();
 }
 
-class _ProfileSetupPageState extends State<ProfileSetupPage> {
+class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
   late final TextEditingController _nicknameController;
   late final TextEditingController _emailController;
   late final TextEditingController _birthDateController;
   String? _selectedIncome;
+  bool _isSubmitting = false;
 
   // Agreement checkboxes
   bool _agreeAll = false;
@@ -86,11 +89,36 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     });
   }
 
-  void _onSubmit() {
-    if (!_isFormValid) return;
+  Future<void> _onSubmit() async {
+    if (!_isFormValid || _isSubmitting) return;
 
     if (widget.isOnboarding) {
-      context.go(AppRoutes.onboarding);
+      setState(() => _isSubmitting = true);
+      try {
+        // birthDate: "2000.01.17" → "2000-01-17"
+        final birthDate = _birthDateController.text.replaceAll('.', '-');
+        final dio = ref.read(apiClientProvider).dio;
+
+        await dio.patch(
+          'v1/members/me/profile',
+          data: {
+            'nickname': _nicknameController.text,
+            'email': _emailController.text,
+            'birthDate': birthDate,
+            'hasFixedIncome': _selectedIncome == '있어요',
+          },
+        );
+
+        if (!mounted) return;
+        context.go(AppRoutes.onboarding);
+      } on DioException catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message ?? '프로필 저장에 실패했습니다.')),
+        );
+      } finally {
+        if (mounted) setState(() => _isSubmitting = false);
+      }
     } else {
       context.pop();
     }
@@ -230,11 +258,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       backgroundColor: AppColors.bgPrimary,
       appBar: MoreAppBar(
         title: widget.isOnboarding ? '프로필 설정' : '내 정보 수정',
-        showBack: true,
-        skipText: widget.isOnboarding ? '건너뛰기' : null,
-        onSkip: widget.isOnboarding
-            ? () => context.go(AppRoutes.onboarding)
-            : null,
+        showBack: !widget.isOnboarding,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(24.w),
@@ -434,9 +458,9 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         ),
       ),
       bottomNavigationBar: MoreBottomButton(
-        text: widget.isOnboarding ? '프로필 설정 완료' : '저장',
+        text: _isSubmitting ? '저장 중...' : (widget.isOnboarding ? '프로필 설정 완료' : '저장'),
         onPressed: _onSubmit,
-        enabled: _isFormValid,
+        enabled: _isFormValid && !_isSubmitting,
         progress: null,
       ),
     );

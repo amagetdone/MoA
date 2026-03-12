@@ -5,6 +5,7 @@ import 'package:more_app/core/utils/app_env.dart';
 import 'package:more_app/data/datasources/local/auth_local_datasource.dart';
 import 'package:more_app/data/datasources/remote/auth_remote_datasource.dart';
 import 'package:more_app/data/models/user_model.dart';
+import 'package:more_app/domain/entities/auth_result.dart';
 import 'package:more_app/domain/entities/user.dart' as domain;
 import 'package:more_app/domain/repositories/auth_repository.dart';
 
@@ -30,8 +31,22 @@ class AuthRepositoryImpl implements AuthRepository {
     );
   }
 
+  AuthResult _toAuthResult(SocialLoginResponse response) {
+    return AuthResult(
+      status: response.status,
+      account: response.account,
+      plan: response.plan,
+    );
+  }
+
+  Future<AuthResult> _saveTokensAndConvert(SocialLoginResponse response) async {
+    await localDataSource.saveAccessToken(response.accessToken);
+    await localDataSource.saveRefreshToken(response.refreshToken);
+    return _toAuthResult(response);
+  }
+
   @override
-  Future<domain.User> loginWithKakao() async {
+  Future<AuthResult> loginWithKakao() async {
     if (!kIsWeb && AppEnv.optional('KAKAO_NATIVE_APP_KEY') == null) {
       throw Exception('KAKAO_NATIVE_APP_KEY가 설정되지 않았습니다.');
     }
@@ -52,15 +67,11 @@ class AuthRepositoryImpl implements AuthRepository {
       socialToken: token.accessToken,
     );
 
-    // JWT를 로컬에 저장
-    await localDataSource.saveAccessToken(result.accessToken);
-    await localDataSource.saveRefreshToken(result.refreshToken);
-
-    return result.user.toEntity();
+    return _saveTokensAndConvert(result);
   }
 
   @override
-  Future<domain.User> loginWithGoogle() async {
+  Future<AuthResult> loginWithGoogle() async {
     if (!kIsWeb && AppEnv.optional('GOOGLE_CLIENT_ID') == null) {
       throw Exception('GOOGLE_CLIENT_ID가 설정되지 않았습니다.');
     }
@@ -82,17 +93,14 @@ class AuthRepositoryImpl implements AuthRepository {
       socialToken: token,
     );
 
-    await localDataSource.saveAccessToken(result.accessToken);
-    await localDataSource.saveRefreshToken(result.refreshToken);
-
-    return result.user.toEntity();
+    return _saveTokensAndConvert(result);
   }
 
   @override
   Future<void> logout() async {
-    final accessToken = await localDataSource.getAccessToken();
-    if (accessToken != null) {
-      await remoteDataSource.logout(accessToken: accessToken);
+    final refreshTokenValue = await localDataSource.getRefreshToken();
+    if (refreshTokenValue != null) {
+      await remoteDataSource.logout(refreshToken: refreshTokenValue);
     }
 
     // 소셜 로그아웃
@@ -126,13 +134,13 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<bool> isLoggedIn() => localDataSource.hasTokens();
 
   @override
-  Future<domain.User?> autoLogin() async {
+  Future<bool> autoLogin() async {
     final hasTokens = await localDataSource.hasTokens();
-    if (!hasTokens) return null;
+    if (!hasTokens) return false;
 
     try {
       final refreshTokenValue = await localDataSource.getRefreshToken();
-      if (refreshTokenValue == null) return null;
+      if (refreshTokenValue == null) return false;
 
       // refresh token으로 새 access token 발급
       final result = await remoteDataSource.refreshToken(
@@ -142,14 +150,11 @@ class AuthRepositoryImpl implements AuthRepository {
       await localDataSource.saveAccessToken(result.accessToken);
       await localDataSource.saveRefreshToken(result.refreshToken);
 
-      final user = await remoteDataSource.getCurrentUser(
-        accessToken: result.accessToken,
-      );
-      return user.toEntity();
+      return true;
     } catch (_) {
       // 토큰 갱신 실패 시 로그아웃 처리
       await localDataSource.deleteTokens();
-      return null;
+      return false;
     }
   }
 }

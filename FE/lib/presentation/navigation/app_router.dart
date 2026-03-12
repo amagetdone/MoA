@@ -78,10 +78,10 @@ abstract class AppRoutes {
       '$assetDetail?id=$transactionId';
 }
 
-final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final appRouter = GoRouter(
-  navigatorKey: _rootNavigatorKey,
+  navigatorKey: rootNavigatorKey,
   initialLocation: AppRoutes.splash,
   routes: [
     // ── Pre-auth routes ──

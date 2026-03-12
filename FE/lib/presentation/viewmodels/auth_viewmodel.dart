@@ -1,78 +1,87 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:more_app/data/datasources/local/auth_local_datasource_impl.dart';
-import 'package:more_app/data/repositories/auth_repository_impl.dart';
-import 'package:more_app/domain/entities/user.dart';
+import 'package:more_app/domain/entities/auth_result.dart';
 import 'package:more_app/domain/repositories/auth_repository.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
 
-part 'auth_viewmodel.freezed.dart';
+sealed class AuthState {
+  const AuthState();
+}
 
-@freezed
-sealed class AuthState with _$AuthState {
-  const factory AuthState.initial() = AuthInitial;
-  const factory AuthState.loading() = AuthLoading;
-  const factory AuthState.authenticated(User user) = AuthAuthenticated;
-  const factory AuthState.unauthenticated() = AuthUnauthenticated;
-  const factory AuthState.error(String message) = AuthError;
+class AuthInitial extends AuthState {
+  const AuthInitial();
+}
+
+class AuthLoading extends AuthState {
+  const AuthLoading();
+}
+
+class AuthAuthenticated extends AuthState {
+  final AuthResult authResult;
+  const AuthAuthenticated(this.authResult);
+}
+
+class AuthAutoLoginSuccess extends AuthState {
+  const AuthAutoLoginSuccess();
+}
+
+class AuthUnauthenticated extends AuthState {
+  const AuthUnauthenticated();
+}
+
+class AuthError extends AuthState {
+  final String message;
+  const AuthError(this.message);
 }
 
 class AuthViewModel extends StateNotifier<AuthState> {
   final AuthRepository _repository;
 
-  AuthViewModel(this._repository) : super(const AuthState.initial());
+  AuthViewModel(this._repository) : super(const AuthInitial());
 
   Future<void> loginWithKakao() async {
-    state = const AuthState.loading();
+    state = const AuthLoading();
     try {
-      final user = await _repository.loginWithKakao();
-      state = AuthState.authenticated(user);
+      final result = await _repository.loginWithKakao();
+      state = AuthAuthenticated(result);
     } catch (e) {
-      state = AuthState.error(e.toString());
+      state = AuthError(e.toString());
     }
   }
 
   Future<void> loginWithGoogle() async {
-    state = const AuthState.loading();
+    state = const AuthLoading();
     try {
-      final user = await _repository.loginWithGoogle();
-      state = AuthState.authenticated(user);
+      final result = await _repository.loginWithGoogle();
+      state = AuthAuthenticated(result);
     } catch (e) {
-      state = AuthState.error(e.toString());
+      state = AuthError(e.toString());
     }
   }
 
   Future<void> autoLogin() async {
-    state = const AuthState.loading();
+    state = const AuthLoading();
     try {
-      final user = await _repository.autoLogin();
-      if (user != null) {
-        state = AuthState.authenticated(user);
+      final success = await _repository.autoLogin();
+      if (success) {
+        state = const AuthAutoLoginSuccess();
       } else {
-        state = const AuthState.unauthenticated();
+        state = const AuthUnauthenticated();
       }
     } catch (_) {
-      state = const AuthState.unauthenticated();
+      state = const AuthUnauthenticated();
     }
   }
 
   Future<void> logout() async {
-    state = const AuthState.loading();
+    state = const AuthLoading();
     try {
       await _repository.logout();
-      state = const AuthState.unauthenticated();
+      state = const AuthUnauthenticated();
     } catch (e) {
-      state = AuthState.error(e.toString());
+      state = AuthError(e.toString());
     }
   }
 }
-
-final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepositoryImpl(
-    remoteDataSource: ref.read(authRemoteDataSourceProvider),
-    localDataSource: AuthLocalDataSourceImpl(),
-  );
-});
 
 final authViewModelProvider = StateNotifierProvider<AuthViewModel, AuthState>((
   ref,

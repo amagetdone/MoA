@@ -9,31 +9,29 @@ class SeedAuthRemoteDataSource implements AuthRemoteDataSource {
   final AppLocalDataSource _localDataSource;
 
   @override
-  Future<({UserModel user, String accessToken, String refreshToken})>
-  loginWithSocialToken({
+  Future<SocialLoginResponse> loginWithSocialToken({
     required String provider,
     required String socialToken,
   }) async {
     await Future.delayed(const Duration(milliseconds: 500));
-    final user = await getCurrentUser(accessToken: socialToken);
 
-    return (
-      user: user,
+    return SocialLoginResponse(
+      status: 'TEMP',
+      account: false,
+      plan: false,
       accessToken: 'seed_access_token_${DateTime.now().millisecondsSinceEpoch}',
-      refreshToken:
-          'seed_refresh_token_${DateTime.now().millisecondsSinceEpoch}',
+      refreshToken: 'seed_refresh_token_${DateTime.now().millisecondsSinceEpoch}',
     );
   }
 
   @override
-  Future<({String accessToken, String refreshToken})> refreshToken({
+  Future<TokenRefreshResponse> refreshToken({
     required String refreshToken,
   }) async {
     await Future.delayed(const Duration(milliseconds: 250));
-    return (
+    return TokenRefreshResponse(
       accessToken: 'seed_access_token_${DateTime.now().millisecondsSinceEpoch}',
-      refreshToken:
-          'seed_refresh_token_${DateTime.now().millisecondsSinceEpoch}',
+      refreshToken: 'seed_refresh_token_${DateTime.now().millisecondsSinceEpoch}',
     );
   }
 
@@ -49,7 +47,7 @@ class SeedAuthRemoteDataSource implements AuthRemoteDataSource {
   }
 
   @override
-  Future<void> logout({required String accessToken}) async {
+  Future<void> logout({required String refreshToken}) async {
     await Future.delayed(const Duration(milliseconds: 150));
   }
 }
