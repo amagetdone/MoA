@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -10,116 +12,273 @@ import 'package:more_app/presentation/widgets/common/more_card.dart';
 import 'package:more_app/presentation/widgets/common/more_progress_bar.dart';
 
 class GoalSummaryCard extends StatelessWidget {
+  const GoalSummaryCard({super.key, required this.goal, this.onViewAll});
+
   final Goal goal;
-
-  const GoalSummaryCard({super.key, required this.goal});
-
-  IconData _getGoalIcon(String? iconName) {
-    switch (iconName) {
-      case 'travel':
-        return Icons.flight;
-      case 'car':
-        return Icons.directions_car;
-      case 'house':
-        return Icons.home;
-      case 'education':
-        return Icons.school;
-      case 'wedding':
-        return Icons.favorite;
-      case 'emergency':
-        return Icons.shield;
-      case 'shopping':
-        return Icons.shopping_bag;
-      case 'laptop':
-        return Icons.laptop_mac;
-      case 'gift':
-        return Icons.card_giftcard;
-      case 'health':
-        return Icons.health_and_safety;
-      case 'electronics':
-        return Icons.devices;
-      default:
-        return Icons.savings;
-    }
-  }
+  final VoidCallback? onViewAll;
 
   @override
   Widget build(BuildContext context) {
-    final remainingDays = goal.remainingDays;
-    final dDayText = remainingDays >= 0
-        ? 'D-$remainingDays'
-        : 'D+${-remainingDays}';
+    final dDayText = goal.remainingDays >= 0
+        ? 'D-${goal.remainingDays}'
+        : 'D+${-goal.remainingDays}';
+    final weekText = '${_currentWeek(goal)}주차 ($dDayText)';
+    final percentText = (goal.progressRate * 100).toStringAsFixed(1);
 
-    return MoreCard(
-      onTap: () => context.push(AppRoutes.goalDetailLocation(goal.id)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 360;
+
+        return MoreCard(
+          onTap: () => context.push(AppRoutes.goalDetailLocation(goal.id)),
+          padding: EdgeInsets.fromLTRB(22.w, 22.h, 22.w, 20.h),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 36.w,
-                height: 36.w,
-                decoration: BoxDecoration(
-                  color: AppColors.orange50,
-                  borderRadius: BorderRadius.circular(10.r),
-                ),
-                child: Icon(
-                  _getGoalIcon(goal.iconName),
-                  size: 20.w,
-                  color: AppColors.orange500,
-                ),
-              ),
-              SizedBox(width: 10.w),
-              Expanded(
-                child: Text(
-                  goal.name,
-                  style: AppTextStyles.bodyLg.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text.rich(
-                TextSpan(
+              if (isCompact)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextSpan(
-                      text: CurrencyFormatter.formatKRW(goal.currentAmount),
-                      style: AppTextStyles.bodyLg.copyWith(
-                        fontWeight: FontWeight.w700,
+                    Row(
+                      children: [
+                        _GoalHeaderIcon(),
+                        SizedBox(width: 14.w),
+                        Expanded(child: _GoalHeaderText(goalName: goal.name)),
+                      ],
+                    ),
+                    SizedBox(height: 10.h),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: _ViewAllButton(onPressed: onViewAll),
+                    ),
+                  ],
+                )
+              else
+                Row(
+                  children: [
+                    _GoalHeaderIcon(),
+                    SizedBox(width: 14.w),
+                    Expanded(child: _GoalHeaderText(goalName: goal.name)),
+                    _ViewAllButton(onPressed: onViewAll),
+                  ],
+                ),
+              SizedBox(height: 18.h),
+              if (isCompact)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: _GoalIllustration(
+                        assetPath: _illustrationAssetPath,
                       ),
                     ),
-                    TextSpan(
-                      text:
-                          ' / ${CurrencyFormatter.formatKRW(goal.targetAmount)}',
-                      style: AppTextStyles.bodySm.copyWith(
-                        color: AppColors.textTertiary,
+                    SizedBox(height: 16.h),
+                    _GoalProgressContent(
+                      weekText: weekText,
+                      amountText:
+                          '${CurrencyFormatter.formatKRW(goal.currentAmount)} / ${CurrencyFormatter.formatKRW(goal.targetAmount)} ($percentText%)',
+                      progressRate: goal.progressRate,
+                    ),
+                  ],
+                )
+              else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _GoalIllustration(assetPath: _illustrationAssetPath),
+                    SizedBox(width: 18.w),
+                    Expanded(
+                      child: _GoalProgressContent(
+                        weekText: weekText,
+                        amountText:
+                            '${CurrencyFormatter.formatKRW(goal.currentAmount)} / ${CurrencyFormatter.formatKRW(goal.targetAmount)} ($percentText%)',
+                        progressRate: goal.progressRate,
                       ),
                     ),
                   ],
                 ),
-              ),
             ],
           ),
-          SizedBox(height: 12.h),
-          MoreProgressBar(progress: goal.progressRate),
-          SizedBox(height: 8.h),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              dDayText,
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.textTertiary,
-              ),
-            ),
+        );
+      },
+    );
+  }
+
+  int _currentWeek(Goal goal) {
+    final now = DateTime.now();
+    final elapsedDays = now.difference(goal.startDate).inDays;
+    return math.max(1, (elapsedDays ~/ 7) + 1);
+  }
+
+  String get _illustrationAssetPath {
+    switch (goal.iconName) {
+      case 'travel':
+        return 'assets/images/onboarding1.png';
+      case 'laptop':
+      case 'electronics':
+        return 'assets/images/onboarding3.png';
+      default:
+        return 'assets/images/onboarding2.png';
+    }
+  }
+}
+
+class _GoalHeaderIcon extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 42.w,
+      height: 42.w,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(14.r),
+      ),
+      child: Icon(
+        Icons.wb_sunny_outlined,
+        color: AppColors.textPrimary,
+        size: 22.w,
+      ),
+    );
+  }
+}
+
+class _GoalHeaderText extends StatelessWidget {
+  const _GoalHeaderText({required this.goalName});
+
+  final String goalName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '목표',
+          style: AppTextStyles.headingMd.copyWith(fontWeight: FontWeight.w800),
+        ),
+        Text(
+          goalName,
+          style: AppTextStyles.bodyLg.copyWith(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+}
+
+class _ViewAllButton extends StatelessWidget {
+  const _ViewAllButton({required this.onPressed});
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: onPressed ?? () => context.go(AppRoutes.goalTab),
+      style: TextButton.styleFrom(
+        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: Text(
+        '전체보기',
+        style: AppTextStyles.bodyLg.copyWith(
+          color: AppColors.textSecondary,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+}
+
+class _GoalIllustration extends StatelessWidget {
+  const _GoalIllustration({required this.assetPath});
+
+  final String assetPath;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 104.w,
+      height: 104.w,
+      padding: EdgeInsets.all(10.w),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F7F7),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(color: AppColors.borderDefault),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16.r,
+            offset: Offset(0, 4.h),
           ),
         ],
       ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14.r),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFFFF2E0), Color(0xFFF6FAEF)],
+            ),
+            borderRadius: BorderRadius.circular(14.r),
+          ),
+          child: Image.asset(assetPath, fit: BoxFit.cover),
+        ),
+      ),
+    );
+  }
+}
+
+class _GoalProgressContent extends StatelessWidget {
+  const _GoalProgressContent({
+    required this.weekText,
+    required this.amountText,
+    required this.progressRate,
+  });
+
+  final String weekText;
+  final String amountText;
+  final double progressRate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          weekText,
+          style: AppTextStyles.bodyLg.copyWith(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(height: 4.h),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            amountText,
+            style: AppTextStyles.bodyLg.copyWith(
+              color: AppColors.textTertiary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        SizedBox(height: 12.h),
+        MoreProgressBar(
+          progress: progressRate,
+          color: AppColors.orange500,
+          backgroundColor: AppColors.gray100.withValues(alpha: 0.95),
+          height: 14.h,
+        ),
+      ],
     );
   }
 }
