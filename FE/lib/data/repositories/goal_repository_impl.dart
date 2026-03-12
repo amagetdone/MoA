@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
@@ -53,7 +54,7 @@ class GoalRepositoryImpl implements GoalRepository {
   Future<Goal> createGoal(Goal goal) async {
     try {
       final snapshot = await _remoteDataSource.createGoal(goal);
-      await _localDataSource.saveCachedSnapshot(snapshot);
+      unawaited(_localDataSource.saveCachedSnapshot(snapshot));
       return snapshot.goals.firstWhere((item) => item.id == goal.id);
     } catch (_) {
       return _localDataSource.createGoal(goal);
@@ -64,7 +65,7 @@ class GoalRepositoryImpl implements GoalRepository {
   Future<Goal> updateGoal(Goal goal) async {
     try {
       final snapshot = await _remoteDataSource.updateGoal(goal);
-      await _localDataSource.saveCachedSnapshot(snapshot);
+      unawaited(_localDataSource.saveCachedSnapshot(snapshot));
       return snapshot.goals.firstWhere((item) => item.id == goal.id);
     } catch (_) {
       return _localDataSource.updateGoal(goal);
@@ -75,7 +76,7 @@ class GoalRepositoryImpl implements GoalRepository {
   Future<List<Goal>> saveGoalPriority(List<Goal> goals) async {
     try {
       final snapshot = await _remoteDataSource.saveGoalPriority(goals);
-      await _localDataSource.saveCachedSnapshot(snapshot);
+      unawaited(_localDataSource.saveCachedSnapshot(snapshot));
       return _sortedGoals(snapshot.goals);
     } catch (_) {
       return _localDataSource.saveGoalPriority(goals);
@@ -85,7 +86,7 @@ class GoalRepositoryImpl implements GoalRepository {
   Future<AppSnapshot> _loadSnapshot() async {
     try {
       final snapshot = await _remoteDataSource.fetchSnapshot();
-      await _localDataSource.saveCachedSnapshot(snapshot);
+      unawaited(_localDataSource.saveCachedSnapshot(snapshot));
       return snapshot;
     } catch (_) {
       return _localDataSource.getCachedSnapshot();
@@ -95,7 +96,7 @@ class GoalRepositoryImpl implements GoalRepository {
   Future<void> _syncSnapshotSilently() async {
     try {
       final snapshot = await _remoteDataSource.fetchSnapshot();
-      await _localDataSource.saveCachedSnapshot(snapshot);
+      unawaited(_localDataSource.saveCachedSnapshot(snapshot));
     } catch (_) {}
   }
 

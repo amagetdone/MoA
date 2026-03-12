@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
 import 'package:more_app/data/datasources/remote/app_remote_datasource.dart';
 import 'package:more_app/data/models/app_snapshot.dart';
@@ -24,7 +26,7 @@ class HomeRepositoryImpl implements HomeRepository {
   Future<AppSnapshot> _loadSnapshot() async {
     try {
       final snapshot = await _remoteDataSource.fetchSnapshot();
-      await _localDataSource.saveCachedSnapshot(snapshot);
+      unawaited(_localDataSource.saveCachedSnapshot(snapshot));
       return snapshot;
     } catch (_) {
       return _localDataSource.getCachedSnapshot();

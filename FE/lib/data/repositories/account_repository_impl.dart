@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
 import 'package:more_app/data/datasources/remote/app_remote_datasource.dart';
 import 'package:more_app/data/models/app_snapshot.dart';
@@ -26,7 +28,7 @@ class AccountRepositoryImpl implements AccountRepository {
   Future<Account> addAccount(Account account) async {
     try {
       final snapshot = await _remoteDataSource.addAccount(account);
-      await _localDataSource.saveCachedSnapshot(snapshot);
+      unawaited(_localDataSource.saveCachedSnapshot(snapshot));
       return snapshot.accounts.firstWhere((item) => item.id == account.id);
     } catch (_) {
       return _localDataSource.addAccount(account);
@@ -37,7 +39,7 @@ class AccountRepositoryImpl implements AccountRepository {
   Future<void> removeAccount(String id) async {
     try {
       final snapshot = await _remoteDataSource.removeAccount(id);
-      await _localDataSource.saveCachedSnapshot(snapshot);
+      unawaited(_localDataSource.saveCachedSnapshot(snapshot));
     } catch (_) {
       await _localDataSource.removeAccount(id);
     }
@@ -57,7 +59,7 @@ class AccountRepositoryImpl implements AccountRepository {
   Future<AppSnapshot> _loadSnapshot() async {
     try {
       final snapshot = await _remoteDataSource.fetchSnapshot();
-      await _localDataSource.saveCachedSnapshot(snapshot);
+      unawaited(_localDataSource.saveCachedSnapshot(snapshot));
       return snapshot;
     } catch (_) {
       return _localDataSource.getCachedSnapshot();

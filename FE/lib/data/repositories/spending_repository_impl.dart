@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
 import 'package:more_app/data/datasources/remote/app_remote_datasource.dart';
 import 'package:more_app/data/models/app_snapshot.dart';
@@ -44,7 +46,7 @@ class SpendingRepositoryImpl implements SpendingRepository {
 
     try {
       final snapshot = await _remoteDataSource.updateSpendingSnapshot(updated);
-      await _localDataSource.saveCachedSnapshot(snapshot);
+      unawaited(_localDataSource.saveCachedSnapshot(snapshot));
       return _toOverview(snapshot.spending);
     } catch (_) {
       final saved = await _localDataSource.updateSpendingSnapshot(updated);
@@ -55,7 +57,7 @@ class SpendingRepositoryImpl implements SpendingRepository {
   Future<AppSnapshot> _loadSnapshot() async {
     try {
       final snapshot = await _remoteDataSource.fetchSnapshot();
-      await _localDataSource.saveCachedSnapshot(snapshot);
+      unawaited(_localDataSource.saveCachedSnapshot(snapshot));
       return snapshot;
     } catch (_) {
       return _localDataSource.getCachedSnapshot();
