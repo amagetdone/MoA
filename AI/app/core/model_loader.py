@@ -1,7 +1,7 @@
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from app.core.config import Settings
-from app.services.merchant_classifier import MerchantClassifierService
+from app.services.merchant_classifier_service import MerchantClassifierService
 
 EXPECTED_MODEL_TYPE = "electra"
 EXPECTED_MODEL_ARCHITECTURE = "ElectraForSequenceClassification"
