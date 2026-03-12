@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     model_revision: str | None = None
     model_local_dir: str | None = None
     hf_token: str | None = None
+    api_root_path: str = ""
 
     model_config = SettingsConfigDict(
         env_file=(".env", "app/.env"),

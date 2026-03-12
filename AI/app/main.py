@@ -27,7 +27,7 @@ def create_app(
             app.state.classifier = classifier_loader()
         yield
 
-    app = FastAPI(lifespan=lifespan)
+    app = FastAPI(lifespan=lifespan, root_path=settings.api_root_path)
     app.state.classifier = classifier
     app.state.settings = settings
 
