@@ -1,21 +1,20 @@
-import 'package:flutter/material.dart';
 import 'package:more_app/domain/entities/account.dart';
 import 'package:more_app/domain/entities/goal.dart';
 import 'package:more_app/domain/entities/spending.dart';
 import 'package:more_app/domain/entities/transaction.dart';
 import 'package:more_app/domain/entities/user.dart';
 
-class AppSnapshot {
+class AppSnapshotDto {
   final User user;
-  final MenuPreferencesSnapshot menuPreferences;
+  final MenuPreferencesSnapshotDto menuPreferences;
   final List<String> bankNames;
   final List<Account> accounts;
   final List<Goal> goals;
   final List<Transaction> transactions;
-  final SpendingSnapshot spending;
+  final SpendingSnapshotDto spending;
   final Map<String, List<DailySpending>> goalSavingsHistoryByGoalId;
 
-  const AppSnapshot({
+  const AppSnapshotDto({
     required this.user,
     required this.menuPreferences,
     this.bankNames = const [],
@@ -26,7 +25,7 @@ class AppSnapshot {
     this.goalSavingsHistoryByGoalId = const {},
   });
 
-  factory AppSnapshot.fromJson(Map<String, dynamic> json) {
+  factory AppSnapshotDto.fromJson(Map<String, dynamic> json) {
     final histories =
         (json['goalSavingsHistoryByGoalId'] as Map<String, dynamic>? ?? {}).map(
           (goalId, value) => MapEntry(
@@ -42,7 +41,7 @@ class AppSnapshot {
           ),
         );
 
-    return AppSnapshot(
+    return AppSnapshotDto(
       user: User(
         id: (json['user'] as Map<String, dynamic>)['id'] as String,
         name: (json['user'] as Map<String, dynamic>)['name'] as String,
@@ -51,7 +50,7 @@ class AppSnapshot {
             (json['user'] as Map<String, dynamic>)['profileImageUrl']
                 as String?,
       ),
-      menuPreferences: MenuPreferencesSnapshot.fromJson(
+      menuPreferences: MenuPreferencesSnapshotDto.fromJson(
         json['menuPreferences'] as Map<String, dynamic>? ?? const {},
       ),
       bankNames: (json['bankNames'] as List<dynamic>? ?? [])
@@ -66,7 +65,7 @@ class AppSnapshot {
       transactions: (json['transactions'] as List<dynamic>? ?? [])
           .map((item) => _transactionFromJson(item as Map<String, dynamic>))
           .toList(),
-      spending: SpendingSnapshot.fromJson(
+      spending: SpendingSnapshotDto.fromJson(
         json['spending'] as Map<String, dynamic>? ?? const {},
       ),
       goalSavingsHistoryByGoalId: histories,
@@ -103,17 +102,17 @@ class AppSnapshot {
     };
   }
 
-  AppSnapshot copyWith({
+  AppSnapshotDto copyWith({
     User? user,
-    MenuPreferencesSnapshot? menuPreferences,
+    MenuPreferencesSnapshotDto? menuPreferences,
     List<String>? bankNames,
     List<Account>? accounts,
     List<Goal>? goals,
     List<Transaction>? transactions,
-    SpendingSnapshot? spending,
+    SpendingSnapshotDto? spending,
     Map<String, List<DailySpending>>? goalSavingsHistoryByGoalId,
   }) {
-    return AppSnapshot(
+    return AppSnapshotDto(
       user: user ?? this.user,
       menuPreferences: menuPreferences ?? this.menuPreferences,
       bankNames: bankNames ?? this.bankNames,
@@ -127,17 +126,17 @@ class AppSnapshot {
   }
 }
 
-class MenuPreferencesSnapshot {
+class MenuPreferencesSnapshotDto {
   final bool notificationEnabled;
   final bool biometricEnabled;
 
-  const MenuPreferencesSnapshot({
+  const MenuPreferencesSnapshotDto({
     this.notificationEnabled = true,
     this.biometricEnabled = false,
   });
 
-  factory MenuPreferencesSnapshot.fromJson(Map<String, dynamic> json) {
-    return MenuPreferencesSnapshot(
+  factory MenuPreferencesSnapshotDto.fromJson(Map<String, dynamic> json) {
+    return MenuPreferencesSnapshotDto(
       notificationEnabled: json['notificationEnabled'] as bool? ?? true,
       biometricEnabled: json['biometricEnabled'] as bool? ?? false,
     );
@@ -150,18 +149,18 @@ class MenuPreferencesSnapshot {
     };
   }
 
-  MenuPreferencesSnapshot copyWith({
+  MenuPreferencesSnapshotDto copyWith({
     bool? notificationEnabled,
     bool? biometricEnabled,
   }) {
-    return MenuPreferencesSnapshot(
+    return MenuPreferencesSnapshotDto(
       notificationEnabled: notificationEnabled ?? this.notificationEnabled,
       biometricEnabled: biometricEnabled ?? this.biometricEnabled,
     );
   }
 }
 
-class SpendingSnapshot {
+class SpendingSnapshotDto {
   final List<SpendingCategory> categories;
   final List<DailySpending> dailySpendings;
   final List<DailySpending> monthlySpendings;
@@ -170,7 +169,7 @@ class SpendingSnapshot {
   final int monthlySavingsGoal;
   final int monthlyFixedExpense;
 
-  const SpendingSnapshot({
+  const SpendingSnapshotDto({
     this.categories = const [],
     this.dailySpendings = const [],
     this.monthlySpendings = const [],
@@ -180,8 +179,8 @@ class SpendingSnapshot {
     this.monthlyFixedExpense = 0,
   });
 
-  factory SpendingSnapshot.fromJson(Map<String, dynamic> json) {
-    return SpendingSnapshot(
+  factory SpendingSnapshotDto.fromJson(Map<String, dynamic> json) {
+    return SpendingSnapshotDto(
       weeklyBudget: json['weeklyBudget'] as int? ?? 0,
       monthlyIncome: json['monthlyIncome'] as int? ?? 0,
       monthlySavingsGoal: json['monthlySavingsGoal'] as int? ?? 0,
@@ -236,7 +235,7 @@ class SpendingSnapshot {
     };
   }
 
-  SpendingSnapshot copyWith({
+  SpendingSnapshotDto copyWith({
     List<SpendingCategory>? categories,
     List<DailySpending>? dailySpendings,
     List<DailySpending>? monthlySpendings,
@@ -245,7 +244,7 @@ class SpendingSnapshot {
     int? monthlySavingsGoal,
     int? monthlyFixedExpense,
   }) {
-    return SpendingSnapshot(
+    return SpendingSnapshotDto(
       categories: categories ?? this.categories,
       dailySpendings: dailySpendings ?? this.dailySpendings,
       monthlySpendings: monthlySpendings ?? this.monthlySpendings,
@@ -390,8 +389,8 @@ SpendingCategory _spendingCategoryFromJson(Map<String, dynamic> json) {
     name: json['name'] as String? ?? '',
     amount: json['amount'] as int? ?? 0,
     budget: json['budget'] as int? ?? 0,
-    color: _colorFromHex(json['color'] as String? ?? '#FF607D8B'),
-    icon: _iconFromKey(json['icon'] as String? ?? 'more_horiz'),
+    colorValue: _colorValueFromHex(json['color'] as String? ?? '#FF607D8B'),
+    iconKey: json['icon'] as String? ?? 'more_horiz',
   );
 }
 
@@ -400,54 +399,17 @@ Map<String, dynamic> _spendingCategoryToJson(SpendingCategory category) {
     'name': category.name,
     'amount': category.amount,
     'budget': category.budget,
-    'color': _colorToHex(category.color),
-    'icon': _iconToKey(category.icon),
+    'color': _colorValueToHex(category.colorValue),
+    'icon': category.iconKey,
   };
 }
 
-Color _colorFromHex(String value) {
+int _colorValueFromHex(String value) {
   final normalized = value.replaceFirst('#', '');
   final hex = normalized.length == 6 ? 'FF$normalized' : normalized;
-  return Color(int.parse(hex, radix: 16));
+  return int.parse(hex, radix: 16);
 }
 
-String _colorToHex(Color color) {
-  return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
-}
-
-IconData _iconFromKey(String value) {
-  switch (value) {
-    case 'restaurant':
-      return Icons.restaurant;
-    case 'directions_bus':
-      return Icons.directions_bus;
-    case 'shopping_bag':
-      return Icons.shopping_bag;
-    case 'subscriptions':
-      return Icons.subscriptions;
-    case 'sports_esports':
-      return Icons.sports_esports;
-    case 'more_horiz':
-    default:
-      return Icons.more_horiz;
-  }
-}
-
-String _iconToKey(IconData icon) {
-  if (icon.codePoint == Icons.restaurant.codePoint) {
-    return 'restaurant';
-  }
-  if (icon.codePoint == Icons.directions_bus.codePoint) {
-    return 'directions_bus';
-  }
-  if (icon.codePoint == Icons.shopping_bag.codePoint) {
-    return 'shopping_bag';
-  }
-  if (icon.codePoint == Icons.subscriptions.codePoint) {
-    return 'subscriptions';
-  }
-  if (icon.codePoint == Icons.sports_esports.codePoint) {
-    return 'sports_esports';
-  }
-  return 'more_horiz';
+String _colorValueToHex(int colorValue) {
+  return '#${colorValue.toRadixString(16).padLeft(8, '0').toUpperCase()}';
 }

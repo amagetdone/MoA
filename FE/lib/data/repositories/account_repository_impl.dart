@@ -1,8 +1,5 @@
-import 'dart:async';
-
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
-import 'package:more_app/data/datasources/remote/app_remote_datasource.dart';
-import 'package:more_app/data/models/app_snapshot.dart';
+import 'package:more_app/data/datasources/remote/account_remote_datasource.dart';
 import 'package:more_app/domain/entities/account.dart';
 import 'package:more_app/domain/entities/account_dashboard.dart';
 import 'package:more_app/domain/entities/transaction.dart';
@@ -10,26 +7,38 @@ import 'package:more_app/domain/repositories/account_repository.dart';
 
 class AccountRepositoryImpl implements AccountRepository {
   AccountRepositoryImpl({
-    required AppRemoteDataSource remoteDataSource,
+    required AccountRemoteDataSource remoteDataSource,
     required AppLocalDataSource localDataSource,
   }) : _remoteDataSource = remoteDataSource,
        _localDataSource = localDataSource;
 
-  final AppRemoteDataSource _remoteDataSource;
+  final AccountRemoteDataSource _remoteDataSource;
   final AppLocalDataSource _localDataSource;
 
   @override
   Future<AccountDashboard> fetchAccountDashboard() async {
-    final snapshot = await _loadSnapshot();
-    return _toDashboard(snapshot);
+    try {
+      return await _remoteDataSource.fetchAccountDashboard();
+    } catch (_) {
+      final snapshot = await _localDataSource.getCachedSnapshot();
+      final totalAsset = snapshot.accounts.fold(0, (sum, account) {
+        return sum + account.balance;
+      });
+
+      return AccountDashboard(
+        accounts: snapshot.accounts,
+        transactions: List<Transaction>.from(snapshot.transactions)
+          ..sort((a, b) => b.dateTime.compareTo(a.dateTime)),
+        bankNames: List<String>.from(snapshot.bankNames),
+        totalAsset: totalAsset,
+      );
+    }
   }
 
   @override
   Future<Account> addAccount(Account account) async {
     try {
-      final snapshot = await _remoteDataSource.addAccount(account);
-      unawaited(_localDataSource.saveCachedSnapshot(snapshot));
-      return snapshot.accounts.firstWhere((item) => item.id == account.id);
+      return await _remoteDataSource.addAccount(account);
     } catch (_) {
       return _localDataSource.addAccount(account);
     }
@@ -38,8 +47,7 @@ class AccountRepositoryImpl implements AccountRepository {
   @override
   Future<void> removeAccount(String id) async {
     try {
-      final snapshot = await _remoteDataSource.removeAccount(id);
-      unawaited(_localDataSource.saveCachedSnapshot(snapshot));
+      await _remoteDataSource.removeAccount(id);
     } catch (_) {
       await _localDataSource.removeAccount(id);
     }
@@ -47,36 +55,10 @@ class AccountRepositoryImpl implements AccountRepository {
 
   @override
   Future<Transaction?> findTransactionById(String id) async {
-    final snapshot = await _loadSnapshot();
-    for (final transaction in snapshot.transactions) {
-      if (transaction.id == id) {
-        return transaction;
-      }
-    }
-    return null;
-  }
-
-  Future<AppSnapshot> _loadSnapshot() async {
     try {
-      final snapshot = await _remoteDataSource.fetchSnapshot();
-      unawaited(_localDataSource.saveCachedSnapshot(snapshot));
-      return snapshot;
+      return await _remoteDataSource.findTransactionById(id);
     } catch (_) {
-      return _localDataSource.getCachedSnapshot();
+      return _localDataSource.getTransactionById(id);
     }
-  }
-
-  AccountDashboard _toDashboard(AppSnapshot snapshot) {
-    final totalAsset = snapshot.accounts.fold(0, (sum, account) {
-      return sum + account.balance;
-    });
-
-    return AccountDashboard(
-      accounts: snapshot.accounts,
-      transactions: List<Transaction>.from(snapshot.transactions)
-        ..sort((a, b) => b.dateTime.compareTo(a.dateTime)),
-      bankNames: List<String>.from(snapshot.bankNames),
-      totalAsset: totalAsset,
-    );
   }
 }

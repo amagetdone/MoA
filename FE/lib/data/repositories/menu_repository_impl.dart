@@ -1,36 +1,36 @@
-import 'dart:async';
-
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
-import 'package:more_app/data/datasources/remote/app_remote_datasource.dart';
-import 'package:more_app/data/models/app_snapshot.dart';
+import 'package:more_app/data/datasources/remote/menu_remote_datasource.dart';
+import 'package:more_app/data/models/app_snapshot_dto.dart';
 import 'package:more_app/domain/entities/goal.dart';
 import 'package:more_app/domain/entities/menu_summary.dart';
 import 'package:more_app/domain/repositories/menu_repository.dart';
 
 class MenuRepositoryImpl implements MenuRepository {
   MenuRepositoryImpl({
-    required AppRemoteDataSource remoteDataSource,
+    required MenuRemoteDataSource remoteDataSource,
     required AppLocalDataSource localDataSource,
   }) : _remoteDataSource = remoteDataSource,
        _localDataSource = localDataSource;
 
-  final AppRemoteDataSource _remoteDataSource;
+  final MenuRemoteDataSource _remoteDataSource;
   final AppLocalDataSource _localDataSource;
 
   @override
   Future<MenuSummary> fetchMenuSummary() async {
-    final snapshot = await _loadSnapshot();
-    return _toMenuSummary(snapshot);
+    try {
+      return await _remoteDataSource.fetchMenuDashboard();
+    } catch (_) {
+      final snapshot = await _localDataSource.getCachedSnapshot();
+      return _toMenuSummary(snapshot);
+    }
   }
 
   @override
   Future<MenuSummary> updateNotification(bool enabled) async {
     try {
-      final snapshot = await _remoteDataSource.updateMenuPreferences(
+      return await _remoteDataSource.updateMenuPreferences(
         notificationEnabled: enabled,
       );
-      unawaited(_localDataSource.saveCachedSnapshot(snapshot));
-      return _toMenuSummary(snapshot);
     } catch (_) {
       await _localDataSource.updateMenuPreferences(
         notificationEnabled: enabled,
@@ -42,28 +42,16 @@ class MenuRepositoryImpl implements MenuRepository {
   @override
   Future<MenuSummary> updateBiometric(bool enabled) async {
     try {
-      final snapshot = await _remoteDataSource.updateMenuPreferences(
+      return await _remoteDataSource.updateMenuPreferences(
         biometricEnabled: enabled,
       );
-      unawaited(_localDataSource.saveCachedSnapshot(snapshot));
-      return _toMenuSummary(snapshot);
     } catch (_) {
       await _localDataSource.updateMenuPreferences(biometricEnabled: enabled);
       return fetchMenuSummary();
     }
   }
 
-  Future<AppSnapshot> _loadSnapshot() async {
-    try {
-      final snapshot = await _remoteDataSource.fetchSnapshot();
-      unawaited(_localDataSource.saveCachedSnapshot(snapshot));
-      return snapshot;
-    } catch (_) {
-      return _localDataSource.getCachedSnapshot();
-    }
-  }
-
-  MenuSummary _toMenuSummary(AppSnapshot snapshot) {
+  MenuSummary _toMenuSummary(AppSnapshotDto snapshot) {
     final activeGoalCount = snapshot.goals
         .where((goal) => goal.status == GoalStatus.inProgress)
         .length;

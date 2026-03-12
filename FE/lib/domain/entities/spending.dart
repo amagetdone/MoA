@@ -1,18 +1,16 @@
-import 'package:flutter/material.dart';
-
 class SpendingCategory {
   final String name;
   final int amount;
   final int budget;
-  final Color color;
-  final IconData icon;
+  final int colorValue;
+  final String iconKey;
 
   const SpendingCategory({
     required this.name,
     required this.amount,
     required this.budget,
-    required this.color,
-    required this.icon,
+    required this.colorValue,
+    required this.iconKey,
   });
 
   double get usageRate => budget > 0 ? (amount / budget).clamp(0.0, 1.0) : 0.0;
@@ -21,15 +19,15 @@ class SpendingCategory {
     String? name,
     int? amount,
     int? budget,
-    Color? color,
-    IconData? icon,
+    int? colorValue,
+    String? iconKey,
   }) {
     return SpendingCategory(
       name: name ?? this.name,
       amount: amount ?? this.amount,
       budget: budget ?? this.budget,
-      color: color ?? this.color,
-      icon: icon ?? this.icon,
+      colorValue: colorValue ?? this.colorValue,
+      iconKey: iconKey ?? this.iconKey,
     );
   }
 }
