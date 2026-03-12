@@ -24,6 +24,7 @@ import 'package:more_app/presentation/pages/onboarding/onboarding_plan_page.dart
 import 'package:more_app/presentation/pages/profile/profile_setup_page.dart';
 import 'package:more_app/presentation/pages/spending/spending_analysis_page.dart';
 import 'package:more_app/presentation/pages/spending/spending_budget_page.dart';
+import 'package:more_app/presentation/pages/spending/spending_pattern_page.dart';
 import 'package:more_app/presentation/pages/splash/splash_page.dart';
 
 abstract class AppRoutes {
@@ -32,9 +33,9 @@ abstract class AppRoutes {
   static const String home = '/home';
   static const String goalTab = '/goal';
   static const String spendingTab = '/spending';
+  static const String spendingPattern = '/spending/pattern';
   static const String menuTab = '/menu';
 
-  // Onboarding
   static const String onboarding = '/onboarding';
   static const String onboardingProfile = '/onboarding/profile';
   static const String onboardingAccount = '/onboarding/account';
@@ -48,29 +49,23 @@ abstract class AppRoutes {
   static const String onboardingAnalysis = '/onboarding/analysis';
   static const String onboardingPlan = '/onboarding/plan';
 
-  // Profile
   static const String profileEdit = '/profile/edit';
 
-  // Account
   static const String accountManage = '/account/manage';
   static const String accountAdd = '/account/add';
   static const String accountSelect = '/account/select';
   static const String accountVerify = '/account/verify';
   static const String accountComplete = '/account/complete';
 
-  // Goal
   static const String goalCreate = '/goal/create';
   static const String goalDetail = '/goal/detail';
   static const String goalPriority = '/goal/priority';
 
-  // Spending
   static const String spendingBudget = '/spending/budget';
 
-  // Asset
   static const String asset = '/asset';
   static const String assetDetail = '/asset/detail';
 
-  // Settings
   static const String settings = '/settings';
 
   static String goalDetailLocation(String goalId) => '$goalDetail?id=$goalId';
@@ -84,7 +79,6 @@ final appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
   initialLocation: AppRoutes.splash,
   routes: [
-    // ── Pre-auth routes ──
     GoRoute(
       path: AppRoutes.splash,
       builder: (context, state) => const SplashPage(),
@@ -93,8 +87,6 @@ final appRouter = GoRouter(
       path: AppRoutes.login,
       builder: (context, state) => const LoginPage(),
     ),
-
-    // ── Onboarding flow ──
     GoRoute(
       path: AppRoutes.onboarding,
       builder: (context, state) => const OnboardingPage(),
@@ -153,13 +145,10 @@ final appRouter = GoRouter(
       path: AppRoutes.onboardingPlan,
       builder: (context, state) => const OnboardingPlanPage(),
     ),
-
-    // ── Main app with bottom tabs ──
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>
           MainShellPage(navigationShell: navigationShell),
       branches: [
-        // Home tab (홈)
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -168,16 +157,20 @@ final appRouter = GoRouter(
             ),
           ],
         ),
-        // Spending tab (분석)
         StatefulShellBranch(
           routes: [
             GoRoute(
               path: AppRoutes.spendingTab,
               builder: (context, state) => const SpendingAnalysisPage(),
+              routes: [
+                GoRoute(
+                  path: 'pattern',
+                  builder: (context, state) => const SpendingPatternPage(),
+                ),
+              ],
             ),
           ],
         ),
-        // Goal tab (목표)
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -186,7 +179,6 @@ final appRouter = GoRouter(
             ),
           ],
         ),
-        // Menu tab (내 정보)
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -197,8 +189,6 @@ final appRouter = GoRouter(
         ),
       ],
     ),
-
-    // ── Full-screen routes (outside shell) ──
     GoRoute(
       path: AppRoutes.profileEdit,
       builder: (context, state) => const ProfileSetupPage(isOnboarding: false),

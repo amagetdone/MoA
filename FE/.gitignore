@@ -52,6 +52,9 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# DevTools
+devtools_options.yaml
+
 # Symbolication related
 app.*.symbols
 
