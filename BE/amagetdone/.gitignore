@@ -38,6 +38,7 @@ out/
 
 .env
 .venv/
+.worktrees/
 docs/plans/
 AGENTS.md
 JIRA.md
