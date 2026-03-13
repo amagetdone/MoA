@@ -85,6 +85,16 @@ public class User extends BaseEntity {
 		this.userKey = userKey;
 	}
 
+	public void resetToPending() {
+		this.email = null;
+		this.nickname = null;
+		this.birthDate = null;
+		this.hasFixedIncome = null;
+		this.userKey = null;
+		this.profileUrl = null;
+		this.status = UserStatus.TEMP;
+	}
+
 	public boolean isProfileCompleted() {
 		return hasText(nickname)
 			&& hasText(email)
@@ -96,12 +106,32 @@ public class User extends BaseEntity {
 		return id;
 	}
 
+	public String getEmail() {
+		return email;
+	}
+
+	public String getNickname() {
+		return nickname;
+	}
+
+	public LocalDate getBirthDate() {
+		return birthDate;
+	}
+
+	public Boolean getHasFixedIncome() {
+		return hasFixedIncome;
+	}
+
 	public UserStatus getStatus() {
 		return status;
 	}
 
 	public String getUserKey() {
 		return userKey;
+	}
+
+	public String getProfileUrl() {
+		return profileUrl;
 	}
 
 	void linkSocialAccount(SocialAccount socialAccount) {

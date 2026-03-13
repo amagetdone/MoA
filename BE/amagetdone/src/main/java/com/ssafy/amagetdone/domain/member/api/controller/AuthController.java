@@ -3,6 +3,7 @@ package com.ssafy.amagetdone.domain.member.api.controller;
 import com.ssafy.amagetdone.domain.member.api.dto.LogoutDto;
 import com.ssafy.amagetdone.domain.member.api.dto.RefreshTokenDto;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
+import com.ssafy.amagetdone.domain.member.api.dto.TestSocialResetDto;
 import com.ssafy.amagetdone.domain.member.application.service.MemberAuthService;
 import com.ssafy.amagetdone.domain.member.application.service.MemberTokenService;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
@@ -17,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/v1/auth")
 public class AuthController {
 
 	private final MemberAuthService memberAuthService;
@@ -43,6 +44,17 @@ public class AuthController {
 			throw new MemberException(MemberErrorCode.UNSUPPORTED_SOCIAL_PROVIDER);
 		}
 		return ApiResponse.ok("소셜 로그인에 성공했습니다.", memberAuthService.authenticate(socialProvider, request));
+	}
+
+	@PostMapping("/social/test")
+	public ApiResponse<SocialAuthDto.Response> socialTestAuth() {
+		return ApiResponse.ok("테스트 소셜 로그인에 성공했습니다.", memberAuthService.authenticateTest());
+	}
+
+	@PostMapping("/social/test/reset")
+	public ApiResponse<TestSocialResetDto.Response> resetTestSocialUser() {
+		memberAuthService.resetTestUser();
+		return ApiResponse.ok("테스트 소셜 사용자를 초기화했습니다.", new TestSocialResetDto.Response(true));
 	}
 
 	@PostMapping("/refresh")

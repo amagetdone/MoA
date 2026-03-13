@@ -40,3 +40,6 @@ out/
 .venv/
 docs/plans/
 AGENTS.md
+JIRA.md
+GIT.md
+docs/*.md
