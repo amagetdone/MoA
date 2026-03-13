@@ -8,6 +8,8 @@ import com.ssafy.amagetdone.global.security.SecurityAuthenticationEntryPoint;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -47,10 +49,11 @@ public class SecurityConfig {
 	}
 
 	@Bean
-	public RequestMatcher publicEndpoints() {
+	public RequestMatcher publicEndpoints(Environment environment) {
+		boolean swaggerPublic = environment.acceptsProfiles(Profiles.of("dev", "test"));
 		return request -> {
 			String path = normalizePath(request);
-			if ("/health".equals(path)) {
+			if ("/health".equals(path) || isPublicSwaggerPath(path, swaggerPublic)) {
 				return true;
 			}
 
@@ -62,6 +65,17 @@ public class SecurityConfig {
 				|| "/v1/auth/refresh".equals(path)
 				|| "/v1/auth/logout".equals(path);
 		};
+	}
+
+	private boolean isPublicSwaggerPath(String path, boolean swaggerPublic) {
+		if (!swaggerPublic) {
+			return false;
+		}
+
+		return "/swagger-ui.html".equals(path)
+			|| path.startsWith("/swagger-ui/")
+			|| "/v3/api-docs".equals(path)
+			|| path.startsWith("/v3/api-docs/");
 	}
 
 	private String normalizePath(jakarta.servlet.http.HttpServletRequest request) {

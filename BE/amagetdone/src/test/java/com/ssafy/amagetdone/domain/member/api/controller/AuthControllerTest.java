@@ -123,7 +123,7 @@ class AuthControllerTest {
 	@Test
 	void refreshReturnsRotatedTokens() throws Exception {
 		given(memberTokenService.reissue("refresh-token"))
-			.willReturn(new RefreshTokenDto.Response("new-access-token", "new-refresh-token"));
+			.willReturn(new RefreshTokenDto.Response("ACTIVE", true, false, "new-access-token", "new-refresh-token"));
 
 		mockMvc.perform(apiPost("/v1/auth/refresh")
 				.contentType(APPLICATION_JSON)
@@ -135,6 +135,9 @@ class AuthControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.message").value("토큰 재발급에 성공했습니다."))
+			.andExpect(jsonPath("$.data.status").value("ACTIVE"))
+			.andExpect(jsonPath("$.data.account").value(true))
+			.andExpect(jsonPath("$.data.plan").value(false))
 			.andExpect(jsonPath("$.data.accessToken").value("new-access-token"))
 			.andExpect(jsonPath("$.data.refreshToken").value("new-refresh-token"));
 	}

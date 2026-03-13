@@ -80,7 +80,7 @@ class SecurityConfigIntegrationTest {
 		given(jwtAccessTokenReader.readUserId(INVALID_BEARER))
 			.willThrow(new MemberException(MemberErrorCode.INVALID_ACCESS_TOKEN));
 		given(memberTokenService.reissue("refresh-token"))
-			.willReturn(new RefreshTokenDto.Response("new-access-token", "new-refresh-token"));
+			.willReturn(new RefreshTokenDto.Response("ACTIVE", true, false, "new-access-token", "new-refresh-token"));
 
 		mockMvc.perform(apiPost("/v1/auth/refresh")
 				.header(AUTHORIZATION, INVALID_BEARER)
