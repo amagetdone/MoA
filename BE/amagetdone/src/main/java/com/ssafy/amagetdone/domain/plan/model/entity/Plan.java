@@ -17,7 +17,19 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@SuperBuilder
 @Entity
 @Table(name = "plan")
 public class Plan extends BaseEntity {
@@ -39,6 +51,7 @@ public class Plan extends BaseEntity {
 	@Column(name = "target_amount", nullable = false)
 	private Long targetAmount;
 
+	@Builder.Default
 	@ColumnDefault("0")
 	@Column(name = "saved_amount", nullable = false)
 	private Long savedAmount = 0L;
@@ -52,11 +65,13 @@ public class Plan extends BaseEntity {
 	@Column(name = "priority", nullable = false)
 	private Integer priority;
 
+	@Builder.Default
 	@ColumnDefault("'ACTIVE'")
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
 	private PlanStatus status = PlanStatus.ACTIVE;
 
+	@Builder.Default
 	@ColumnDefault("TRUE")
 	@Column(name = "auto_allocate_enabled", nullable = false)
 	private boolean autoAllocateEnabled = true;
@@ -66,7 +81,4 @@ public class Plan extends BaseEntity {
 
 	@Column(name = "end_date", nullable = false)
 	private LocalDate endDate;
-
-	protected Plan() {
-	}
 }

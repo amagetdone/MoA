@@ -16,7 +16,19 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@SuperBuilder
 @Entity
 @Table(name = "budget_rollover")
 public class BudgetRollover extends BaseEntity {
@@ -39,6 +51,7 @@ public class BudgetRollover extends BaseEntity {
 	@Column(name = "rollover_amount", nullable = false)
 	private Long rolloverAmount;
 
+	@Builder.Default
 	@ColumnDefault("'APPLIED'")
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
@@ -49,7 +62,4 @@ public class BudgetRollover extends BaseEntity {
 
 	@Column(name = "note", length = 255)
 	private String note;
-
-	protected BudgetRollover() {
-	}
 }

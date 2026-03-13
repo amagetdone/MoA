@@ -10,7 +10,18 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@SuperBuilder
 @Entity
 @Table(name = "pocket")
 public class Pocket extends BaseEntity {
@@ -36,7 +47,4 @@ public class Pocket extends BaseEntity {
 
 	@Column(name = "allocated_amount", nullable = false)
 	private Long allocatedAmount;
-
-	protected Pocket() {
-	}
 }

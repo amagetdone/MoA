@@ -12,7 +12,18 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@SuperBuilder
 @Entity
 @Table(name = "account")
 public class Account extends BaseEntity {
@@ -43,7 +54,4 @@ public class Account extends BaseEntity {
 
 	@Column(name = "bank_name", nullable = false, length = 30)
 	private String bankName;
-
-	protected Account() {
-	}
 }
