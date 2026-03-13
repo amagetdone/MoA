@@ -8,6 +8,7 @@ import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:more_app/domain/entities/transaction.dart';
 import 'package:more_app/presentation/viewmodels/account_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
+import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 
 class AssetDetailPage extends ConsumerWidget {
   final String transactionId;
@@ -18,173 +19,142 @@ class AssetDetailPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(accountViewModelProvider);
 
-    if (state.isLoading) {
-      return const Scaffold(
-        backgroundColor: AppColors.bgPrimary,
-        appBar: MoreAppBar(title: '결제 상세'),
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    final transaction = state.transactions.cast<Transaction?>().firstWhere(
+    // API 미연동 시 transactionId 패턴 기반 더미 데이터 사용
+    final Transaction? foundTransaction = state.transactions.cast<Transaction?>().firstWhere(
       (t) => t!.id == transactionId,
       orElse: () => null,
     );
 
-    if (transaction == null) {
-      return Scaffold(
-        backgroundColor: AppColors.bgPrimary,
-        appBar: const MoreAppBar(title: '결제 상세'),
-        body: const Center(child: Text('거래 내역을 찾을 수 없습니다.')),
-      );
-    }
+    final bool isCredit = transactionId.contains('credit') || foundTransaction?.memo?.contains('신용') == true;
+    final bool isIncome = transactionId.contains('income') || foundTransaction?.type == TransactionType.income;
 
-    final isExpense = transaction.type == TransactionType.expense;
-    final isIncome = transaction.type == TransactionType.income;
-    final amountColor = isExpense
-        ? AppColors.red500
-        : isIncome
-        ? AppColors.green500
-        : AppColors.textPrimary;
-
-    final typeLabel = switch (transaction.type) {
-      TransactionType.income => '입금',
-      TransactionType.expense => '출금',
-      TransactionType.transfer => '이체',
-    };
-
-    final dateFormat = DateFormat('yyyy.MM.dd HH:mm', 'ko_KR');
+    final Transaction transaction = foundTransaction ?? Transaction(
+      id: transactionId,
+      title: '홍길동',
+      amount: isCredit ? 30000 : 90000,
+      type: isIncome ? TransactionType.income : TransactionType.expense,
+      category: '카페',
+      dateTime: DateTime(2025, 3, 5, 14, 0),
+      balanceAfter: isIncome ? 3250000 : 3160000,
+      memo: isCredit ? '신용' : null,
+    );
+    
+    final dateFormat = DateFormat('yyyy.MM.dd. HH:mm');
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: const MoreAppBar(title: '결제 상세'),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            SizedBox(height: 16.h),
-
-            // Name with verified badge
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  transaction.title,
-                  style: AppTextStyles.headingMd.copyWith(
-                    color: AppColors.textPrimary,
-                    fontSize: 18.sp,
-                  ),
-                ),
-                SizedBox(width: 4.w),
-                Icon(
-                  Icons.verified,
-                  color: AppColors.orange500,
-                  size: 20.w,
-                ),
-              ],
-            ),
-            SizedBox(height: 8.h),
-
-            // Large amount display
-            Text(
-              CurrencyFormatter.formatWithSign(
-                isExpense ? -transaction.amount : transaction.amount,
-              ),
-              style: AppTextStyles.headingXl.copyWith(
-                color: amountColor,
-                fontSize: 28.sp,
-              ),
-            ),
-            SizedBox(height: 32.h),
-
-            // Info rows
-            Container(
-              padding: EdgeInsets.all(20.w),
-              decoration: BoxDecoration(
-                color: AppColors.bgSurface,
-                borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: AppColors.borderDefault),
-              ),
+      appBar: MoreAppBar(
+        title: '',
+        showBack: true,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.notifications_none_outlined, size: 24.w),
+            onPressed: () {},
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _InfoRow(
-                    label: '거래 시간',
-                    value: dateFormat.format(transaction.dateTime),
+                  // 상단 타이틀 및 배지
+                  Text(
+                    transaction.title,
+                    style: AppTextStyles.headingLg.copyWith(fontSize: 24.sp),
                   ),
-                  Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12.h),
-                    child: Divider(height: 1, color: AppColors.borderDefault),
+                  SizedBox(height: 8.h),
+                  Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFCC91).withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(10.r),
+                        ),
+                        child: Text(
+                          '카페', 
+                          style: AppTextStyles.caption.copyWith(color: AppColors.orange500, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      SizedBox(width: 8.w),
+                      const Icon(Icons.circle, size: 14, color: Colors.blueAccent),
+                      SizedBox(width: 4.w),
+                      Text(
+                        isCredit ? '토스카드 1234-1234-1234-1234' : '토스뱅크',
+                        style: AppTextStyles.caption.copyWith(color: const Color(0xFFAAAAAA), fontSize: 13.sp),
+                      ),
+                    ],
                   ),
-                  _InfoRow(label: '거래 구분', value: '#$typeLabel'),
-                  Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12.h),
-                    child: Divider(height: 1, color: AppColors.borderDefault),
+                  SizedBox(height: 24.h),
+                  const Divider(color: Color(0xFFEEEEEE), thickness: 1, height: 1),
+                  SizedBox(height: 24.h),
+
+                  // 정보 섹션
+                  _DetailRow(label: '거래 시간', value: dateFormat.format(transaction.dateTime)),
+                  SizedBox(height: 20.h),
+                  _DetailRow(label: '거래 구분', value: '# ${isIncome ? '입금' : '출금'}'),
+                  
+                  if (isCredit) ...[
+                    SizedBox(height: 20.h),
+                    _DetailRow(label: '카드 구분', value: '# 신용'),
+                  ],
+                  
+                  SizedBox(height: 20.h),
+                  const Divider(color: Color(0xFFEEEEEE), thickness: 1),
+                  SizedBox(height: 24.h),
+
+                  // 거래 금액
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('거래 금액', style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
+                      Text(
+                        CurrencyFormatter.formatKRW(transaction.amount),
+                        style: AppTextStyles.bodyLg.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isCredit ? const Color(0xFF64B5F6) : (isIncome ? const Color(0xFF81C784) : Colors.black87),
+                        ),
+                      ),
+                    ],
                   ),
-                  _InfoRow(
-                    label: '거래 금액',
-                    value: CurrencyFormatter.formatKRW(transaction.amount),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12.h),
-                    child: Divider(height: 1, color: AppColors.borderDefault),
-                  ),
-                  _InfoRow(
-                    label: '거래 후 잔액',
-                    value: CurrencyFormatter.formatKRW(
-                      transaction.balanceAfter,
-                    ),
-                  ),
-                  if (transaction.memo != null &&
-                      transaction.memo!.isNotEmpty) ...[
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12.h),
-                      child: Divider(height: 1, color: AppColors.borderDefault),
-                    ),
-                    _InfoRow(label: '메모', value: transaction.memo!),
+                  
+                  // 입/출금일 경우에만 잔액 표시
+                  if (!isCredit) ...[
+                    SizedBox(height: 20.h),
+                    _DetailRow(label: '거래 후 잔액', value: CurrencyFormatter.formatKRW(transaction.balanceAfter)),
                   ],
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+          // 하단 확인 버튼
+          MoreBottomButton(
+            text: '확인',
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _InfoRow extends StatelessWidget {
+class _DetailRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _InfoRow({required this.label, required this.value});
+  const _DetailRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        SizedBox(
-          width: 80.w,
-          child: Text(
-            label,
-            style: AppTextStyles.bodySm.copyWith(
-              color: AppColors.textTertiary,
-              fontSize: 13.sp,
-            ),
-          ),
-        ),
-        SizedBox(width: 12.w),
-        Expanded(
-          child: Text(
-            value,
-            style: AppTextStyles.bodyMd.copyWith(
-              color: AppColors.textPrimary,
-              fontSize: 14.sp,
-            ),
-            textAlign: TextAlign.end,
-          ),
-        ),
+        Text(label, style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
+        Text(value, style: AppTextStyles.bodyMd.copyWith(color: Colors.black87, fontWeight: FontWeight.w500)),
       ],
     );
   }

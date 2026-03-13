@@ -7,9 +7,9 @@ import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/viewmodels/account_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
-import 'package:more_app/presentation/widgets/common/bank_icon.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
+import 'package:more_app/presentation/widgets/common/more_card.dart';
 
 class AccountCompletePage extends ConsumerWidget {
   final bool isOnboarding;
@@ -27,102 +27,93 @@ class AccountCompletePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: MoreAppBar(title: '연동완료', showBack: false),
-      body: Center(
-        child: Padding(
-          padding: EdgeInsets.all(24.w),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 96.w,
-                height: 96.w,
-                decoration: const BoxDecoration(
-                  color: AppColors.orange50,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.check_circle,
-                  size: 64.w,
-                  color: AppColors.orange500,
-                ),
+      appBar: const MoreAppBar(title: '', showBack: true),
+      body: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '연동완료',
+              style: AppTextStyles.headingLg.copyWith(
+                fontSize: 24.sp,
+                fontWeight: FontWeight.bold,
               ),
-              SizedBox(height: 32.h),
-              Text(
-                '연동이 완료되었습니다',
-                style: AppTextStyles.headingLg.copyWith(
-                  fontSize: 22.sp,
-                ),
-                textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 12.h),
+            Text(
+              '연동이 완료되었습니다.',
+              style: AppTextStyles.bodySm.copyWith(
+                color: AppColors.textTertiary,
+                fontSize: 14.sp,
               ),
-              SizedBox(height: 24.h),
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(20.w),
-                decoration: BoxDecoration(
-                  color: AppColors.bgSurface,
-                  borderRadius: BorderRadius.circular(16.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      offset: Offset(0, 2.h),
-                      blurRadius: 8.r,
+            ),
+            SizedBox(height: 40.h),
+
+            MoreCard(
+              padding: EdgeInsets.all(20.w),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48.w,
+                    height: 48.w,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFE812),
+                      shape: BoxShape.circle,
                     ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    BankIcon(bankName: bankName, size: 40.w),
-                    SizedBox(width: 16.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            bankName,
-                            style: AppTextStyles.bodyLg.copyWith(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16.sp,
-                            ),
-                          ),
-                          SizedBox(height: 4.h),
-                          Text(
-                            accountNumber,
-                            style: AppTextStyles.bodySm.copyWith(
-                              color: AppColors.textTertiary,
-                              fontSize: 13.sp,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                    child: Center(
+                      child: Text(
+                        'B',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 22.sp,
+                          color: Colors.black87,
+                        ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  SizedBox(width: 16.w),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        bankName,
+                        style: AppTextStyles.bodyMd.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16.sp,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        accountNumber,
+                        style: AppTextStyles.bodySm.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 14.sp,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: MoreBottomButton(
-        text: '다음',
+        text: '완료',
         onPressed: () async {
-          await ref
-              .read(accountViewModelProvider.notifier)
-              .addLinkedAccount(
+          await ref.read(accountViewModelProvider.notifier).addLinkedAccount(
                 bankName: bankName,
                 accountNumber: accountNumber,
               );
           await ref.read(homeViewModelProvider.notifier).loadData();
 
-          if (!context.mounted) {
-            return;
-          }
+          if (!context.mounted) return;
 
           if (isOnboarding) {
-            context.go(AppRoutes.onboardingAccount);
+            context.go(AppRoutes.onboardingGoal);
           } else {
-            context.go(AppRoutes.accountAdd);
+            context.go(AppRoutes.accountManage);
           }
         },
       ),
