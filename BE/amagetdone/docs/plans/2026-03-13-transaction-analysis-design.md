@@ -218,5 +218,6 @@ Under `domain.budget`:
 - Saving-budget recommendation logic
 - Free-spendable amount logic
 - Final implementation of `GET /budgets/weeks/{yearWeek}/setup`
+- `GET /budgets/weeks/{yearWeek}/setup` remains a teammate-integration facade and is intentionally left out of this implementation scope
 - Any schema change to existing budget tables
 - Replacing the current SSAFY-aligned transaction table design
