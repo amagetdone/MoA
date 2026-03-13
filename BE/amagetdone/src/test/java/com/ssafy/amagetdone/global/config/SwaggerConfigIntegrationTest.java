@@ -5,11 +5,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.amazonaws.services.s3.AmazonS3;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
@@ -20,6 +23,9 @@ class SwaggerConfigIntegrationTest {
 
 	@Autowired
 	private MockMvc mockMvc;
+
+	@MockitoBean
+	private AmazonS3 amazonS3;
 
 	@Test
 	void apiDocsEndpointIsExposedUnderApiContextPath() throws Exception {
@@ -34,6 +40,16 @@ class SwaggerConfigIntegrationTest {
 		mockMvc.perform(apiGet("/swagger-ui/index.html"))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith("text/html"));
+	}
+
+	@Test
+	void apiDocsDescribeS3TestEndpointsForLocalTesting() throws Exception {
+		mockMvc.perform(apiGet("/v3/api-docs"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.paths['/test/s3/upload'].post.summary").value("Upload a file to S3"))
+			.andExpect(jsonPath("$.paths['/test/s3/upload'].post.tags[0]").value("S3 Test"))
+			.andExpect(jsonPath("$.paths['/test/s3'].delete.summary").value("Delete an uploaded S3 file"))
+			.andExpect(jsonPath("$.paths['/test/s3'].delete.tags[0]").value("S3 Test"));
 	}
 
 	private MockHttpServletRequestBuilder apiGet(String path) {
