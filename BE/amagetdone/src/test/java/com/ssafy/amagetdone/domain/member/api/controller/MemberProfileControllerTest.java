@@ -18,6 +18,7 @@ import com.ssafy.amagetdone.domain.member.exception.MemberException;
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
 import com.ssafy.amagetdone.config.SecurityConfig;
 import com.ssafy.amagetdone.global.security.AuthenticatedMember;
+import com.ssafy.amagetdone.global.infra.storage.S3StorageService;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.mock.web.MockMultipartFile;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+
 @WebMvcTest(MemberProfileController.class)
 @Import(SecurityConfig.class)
 class MemberProfileControllerTest {
@@ -36,6 +42,9 @@ class MemberProfileControllerTest {
 
 	@MockitoBean
 	private MemberProfileService memberProfileService;
+
+	@MockitoBean
+	private S3StorageService s3StorageService;
 
 	@MockitoBean
 	private JwtAccessTokenReader jwtAccessTokenReader;
@@ -114,6 +123,25 @@ class MemberProfileControllerTest {
 			.andExpect(jsonPath("$.status").value("error"))
 			.andExpect(jsonPath("$.errorCode").value(MemberErrorCode.AUTHORIZATION_HEADER_REQUIRED.code()))
 			.andExpect(jsonPath("$.message").value(MemberErrorCode.AUTHORIZATION_HEADER_REQUIRED.message()));
+	}
+
+	@Test
+	void uploadProfileImageWithoutAuthenticationReturnsObjectKey() throws Exception {
+		MockMultipartFile file = new MockMultipartFile("image", "profile.png", "image/png", "abc".getBytes());
+		given(s3StorageService.upload(file, com.ssafy.amagetdone.global.infra.storage.ImageCategory.PROFILE))
+			.willReturn("profile/new.png");
+
+		mockMvc.perform(multipart("/api/v1/members/me/profile-image")
+				.file(file)
+				.with(request -> {
+					request.setMethod("PATCH");
+					request.setContextPath("/api");
+					return request;
+				})
+				.with(csrf()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.data").value("profile/new.png"));
 	}
 
 	private MockHttpServletRequestBuilder apiPatch(String path) {

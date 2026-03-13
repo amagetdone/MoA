@@ -75,4 +75,16 @@ public class Plan extends BaseEntity {
 
 	protected Plan() {
 	}
+
+	public String getPlanUrl() {
+		return planUrl;
+	}
+
+	public String getTitle() {
+		return title;
+	}
+
+	public void updatePlanUrl(String planUrl) {
+		this.planUrl = planUrl;
+	}
 }

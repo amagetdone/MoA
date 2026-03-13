@@ -1,6 +1,7 @@
 package com.ssafy.amagetdone.domain.plan.api.controller;
 
-import com.ssafy.amagetdone.domain.plan.infra.storage.S3Uploader;
+import com.ssafy.amagetdone.global.infra.storage.ImageCategory;
+import com.ssafy.amagetdone.global.infra.storage.S3StorageService;
 import com.ssafy.amagetdone.global.response.ApiResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,15 +23,15 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/test/s3")
 public class S3TestController {
 
-	private final S3Uploader s3Uploader;
+	private final S3StorageService s3StorageService;
 
-	public S3TestController(S3Uploader s3Uploader) {
-		this.s3Uploader = s3Uploader;
+	public S3TestController(S3StorageService s3StorageService) {
+		this.s3StorageService = s3StorageService;
 	}
 
 	@Operation(
 		summary = "Upload a file to S3",
-		description = "Uploads a multipart file to the test directory in S3 and returns the uploaded file URL."
+		description = "Uploads a multipart file to the profile prefix in S3 and returns the stored object key."
 	)
 	@PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ApiResponse<String> upload(
@@ -43,23 +44,23 @@ public class S3TestController {
 		)
 		@RequestParam("file") MultipartFile file
 	) {
-		String uploadedUrl = s3Uploader.upload(file, "test");
-		return ApiResponse.ok("S3 upload test succeeded.", uploadedUrl);
+		String objectKey = s3StorageService.upload(file, ImageCategory.PROFILE);
+		return ApiResponse.ok("S3 upload test succeeded.", objectKey);
 	}
 
 	@Operation(
 		summary = "Delete an uploaded S3 file",
-		description = "Deletes an S3 object by using the full file URL returned from the upload test API."
+		description = "Deletes an S3 object by using the object key returned from the upload test API."
 	)
 	@DeleteMapping
 	public ApiResponse<Boolean> delete(
 		@Parameter(
-			description = "Full S3 file URL returned by the upload API",
-			example = "https://bucket.s3.ap-northeast-2.amazonaws.com/test/profile.png"
+			description = "S3 object key returned by the upload API",
+			example = "profile/test.png"
 		)
-		@RequestParam("fileUrl") String fileUrl
+		@RequestParam("objectKey") String objectKey
 	) {
-		s3Uploader.delete(fileUrl);
+		s3StorageService.delete(objectKey);
 		return ApiResponse.ok("S3 delete test succeeded.", true);
 	}
 }
