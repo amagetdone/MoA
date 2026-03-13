@@ -23,8 +23,15 @@ public class MemberTokenService {
 	}
 
 	public RefreshTokenDto.Response reissue(String refreshToken) {
-		MemberTokenPair memberTokenPair = reissueMemberTokensUseCase.execute(refreshToken);
-		return new RefreshTokenDto.Response(memberTokenPair.accessToken(), memberTokenPair.refreshToken());
+		ReissueMemberTokensUseCase.Result result = reissueMemberTokensUseCase.execute(refreshToken);
+		MemberTokenPair memberTokenPair = result.tokenPair();
+		return new RefreshTokenDto.Response(
+			result.status(),
+			result.account(),
+			result.plan(),
+			memberTokenPair.accessToken(),
+			memberTokenPair.refreshToken()
+		);
 	}
 
 	public LogoutDto.Response logout(String refreshToken) {

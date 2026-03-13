@@ -11,6 +11,9 @@ public final class RefreshTokenDto {
 	}
 
 	public record Response(
+		String status,
+		boolean account,
+		boolean plan,
 		String accessToken,
 		String refreshToken
 	) {
