@@ -12,6 +12,7 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onSkip;
   final VoidCallback? onBack;
   final List<Widget>? actions;
+  final Color? backgroundColor;
 
   const MoreAppBar({
     super.key,
@@ -22,6 +23,7 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.onSkip,
     this.onBack,
     this.actions,
+    this.backgroundColor,
   });
 
   @override
@@ -47,7 +49,7 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
     ];
 
     return AppBar(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: backgroundColor ?? AppColors.bgPrimary,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: true,
