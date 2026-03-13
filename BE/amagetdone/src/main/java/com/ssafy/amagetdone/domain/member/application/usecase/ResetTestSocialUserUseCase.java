@@ -1,6 +1,6 @@
 package com.ssafy.amagetdone.domain.member.application.usecase;
 
-import com.ssafy.amagetdone.domain.asset.model.repository.AccountRepository;
+import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.member.infra.client.MockSocialAuthClient;
 import com.ssafy.amagetdone.domain.member.model.repository.RefreshTokenStore;
 import com.ssafy.amagetdone.domain.member.model.repository.SocialAccountRepository;

@@ -1,7 +1,7 @@
 package com.ssafy.amagetdone.domain.transaction.model.entity;
 
-import com.ssafy.amagetdone.domain.asset.model.entity.Card;
-import com.ssafy.amagetdone.domain.asset.model.entity.Merchant;
+import com.ssafy.amagetdone.domain.account.model.entity.Card;
+import com.ssafy.amagetdone.domain.account.model.entity.Merchant;
 
 import org.hibernate.annotations.ColumnDefault;
 

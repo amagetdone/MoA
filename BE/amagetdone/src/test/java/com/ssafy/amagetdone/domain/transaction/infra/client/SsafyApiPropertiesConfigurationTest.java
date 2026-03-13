@@ -16,10 +16,10 @@ class SsafyApiPropertiesConfigurationTest {
 
 		assertTrue(applicationProperties.contains("ssafy.fin-api.base-url="));
 		assertTrue(applicationProperties.contains("ssafy.fin-api.api-key=${SSAFY_FIN_API_KEY:}"));
-		assertTrue(applicationProperties.contains("asset.ssafy.base-url="));
-		assertTrue(applicationProperties.contains("asset.ssafy.institution-code="));
-		assertTrue(applicationProperties.contains("asset.ssafy.fintech-app-no="));
-		assertTrue(applicationProperties.contains("asset.ssafy.api-key=${SSAFY_FIN_API_KEY:}"));
+		assertTrue(applicationProperties.contains("account.ssafy.base-url="));
+		assertTrue(applicationProperties.contains("account.ssafy.institution-code="));
+		assertTrue(applicationProperties.contains("account.ssafy.fintech-app-no="));
+		assertTrue(applicationProperties.contains("account.ssafy.api-key="));
 		assertTrue(applicationProperties.contains("transaction.ssafy.base-url="));
 		assertTrue(applicationProperties.contains("transaction.ssafy.institution-code="));
 		assertTrue(applicationProperties.contains("transaction.ssafy.fintech-app-no="));

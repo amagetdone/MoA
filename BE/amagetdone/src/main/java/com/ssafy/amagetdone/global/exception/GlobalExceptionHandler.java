@@ -1,6 +1,6 @@
 package com.ssafy.amagetdone.global.exception;
 
-import com.ssafy.amagetdone.domain.asset.exception.AssetException;
+import com.ssafy.amagetdone.domain.account.exception.AccountException;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
 import com.ssafy.amagetdone.global.response.ErrorResponse;
 import com.ssafy.amagetdone.domain.transaction.exception.TransactionException;
@@ -21,8 +21,8 @@ public class GlobalExceptionHandler {
 			.body(ErrorResponse.from(exception.getErrorCode()));
 	}
 
-	@ExceptionHandler(AssetException.class)
-	public ResponseEntity<ErrorResponse> handleAssetException(AssetException exception) {
+	@ExceptionHandler(AccountException.class)
+	public ResponseEntity<ErrorResponse> handleAccountException(AccountException exception) {
 		return ResponseEntity.status(exception.getErrorCode().httpStatus())
 			.body(ErrorResponse.from(exception.getErrorCode()));
 	}

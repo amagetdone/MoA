@@ -5,11 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.lang.reflect.Field;
 
-import com.ssafy.amagetdone.domain.asset.model.entity.Account;
-import com.ssafy.amagetdone.domain.asset.model.entity.Card;
-import com.ssafy.amagetdone.domain.asset.model.entity.Category;
-import com.ssafy.amagetdone.domain.asset.model.entity.Merchant;
-import com.ssafy.amagetdone.domain.asset.model.entity.Pocket;
+import com.ssafy.amagetdone.domain.account.model.entity.Account;
+import com.ssafy.amagetdone.domain.account.model.entity.Card;
+import com.ssafy.amagetdone.domain.account.model.entity.Category;
+import com.ssafy.amagetdone.domain.account.model.entity.Merchant;
+import com.ssafy.amagetdone.domain.account.model.entity.Pocket;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
 import com.ssafy.amagetdone.domain.transaction.model.entity.AccountTransactionOverride;
 import com.ssafy.amagetdone.domain.transaction.model.entity.CardTransactionOverride;
