@@ -11,7 +11,11 @@ public enum TransactionErrorCode implements ErrorCode {
 	DEMAND_DEPOSIT_TRANSACTION_API_CALL_FAILED(HttpStatus.BAD_GATEWAY, "TRANSACTION_003",
 		"Demand deposit transaction API call failed"),
 	INVALID_DEMAND_DEPOSIT_API_RESPONSE(HttpStatus.BAD_GATEWAY, "TRANSACTION_004",
-		"Invalid demand deposit transaction API response");
+		"Invalid demand deposit transaction API response"),
+	MERCHANT_INFERENCE_API_CALL_FAILED(HttpStatus.BAD_GATEWAY, "TRANSACTION_005",
+		"Merchant inference API call failed"),
+	INVALID_MERCHANT_INFERENCE_API_RESPONSE(HttpStatus.BAD_GATEWAY, "TRANSACTION_006",
+		"Invalid merchant inference API response");
 
 	private final HttpStatus httpStatus;
 	private final String code;
