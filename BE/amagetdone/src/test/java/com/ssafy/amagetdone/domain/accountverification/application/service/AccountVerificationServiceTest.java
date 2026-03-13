@@ -1,0 +1,83 @@
+package com.ssafy.amagetdone.domain.accountverification.application.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.ssafy.amagetdone.domain.accountverification.api.dto.AccountVerificationAdminDto;
+import com.ssafy.amagetdone.domain.accountverification.api.dto.AccountVerificationDto;
+import com.ssafy.amagetdone.domain.accountverification.application.usecase.CheckAccountVerificationUseCase;
+import com.ssafy.amagetdone.domain.accountverification.application.usecase.GetAccountVerificationStatusUseCase;
+import com.ssafy.amagetdone.domain.accountverification.application.usecase.RequestAccountVerificationUseCase;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+class AccountVerificationServiceTest {
+
+	@Mock
+	private RequestAccountVerificationUseCase requestAccountVerificationUseCase;
+
+	@Mock
+	private CheckAccountVerificationUseCase checkAccountVerificationUseCase;
+
+	@Mock
+	private GetAccountVerificationStatusUseCase getAccountVerificationStatusUseCase;
+
+	@InjectMocks
+	private AccountVerificationService accountVerificationService;
+
+	@Test
+	void delegatesVerificationMethodsToUseCases() {
+		AccountVerificationDto.RequestVerificationRequest request =
+			new AccountVerificationDto.RequestVerificationRequest("0011234567890123");
+		AccountVerificationDto.RequestVerificationResponse requestResponse =
+			new AccountVerificationDto.RequestVerificationResponse(
+				12L,
+				"0011234567890123",
+				"AMAGETDONE",
+				88L,
+				"2026-03-13T09:00:00Z",
+				"REQUESTED"
+			);
+		AccountVerificationAdminDto.CheckVerificationRequest checkRequest =
+			new AccountVerificationAdminDto.CheckVerificationRequest(7, "0011234567890123", "1234");
+		AccountVerificationAdminDto.CheckVerificationResponse checkResponse =
+			new AccountVerificationAdminDto.CheckVerificationResponse(
+				12L,
+				"0011234567890123",
+				"SUCCESS",
+				true,
+				88L,
+				"2026-03-13T09:03:00Z"
+			);
+		AccountVerificationAdminDto.VerificationStatusResponse statusResponse =
+			new AccountVerificationAdminDto.VerificationStatusResponse(
+				12L,
+				7,
+				"0011234567890123",
+				"SUCCESS",
+				true,
+				"AMAGETDONE",
+				88L,
+				"2026-03-13T09:00:00Z",
+				"2026-03-13T09:03:00Z",
+				null
+			);
+
+		when(requestAccountVerificationUseCase.execute(7, request)).thenReturn(requestResponse);
+		when(checkAccountVerificationUseCase.execute(checkRequest)).thenReturn(checkResponse);
+		when(getAccountVerificationStatusUseCase.execute(7, "0011234567890123")).thenReturn(statusResponse);
+
+		assertThat(accountVerificationService.requestVerification(7, request)).isEqualTo(requestResponse);
+		assertThat(accountVerificationService.checkVerification(checkRequest)).isEqualTo(checkResponse);
+		assertThat(accountVerificationService.getVerificationStatus(7, "0011234567890123")).isEqualTo(statusResponse);
+		verify(requestAccountVerificationUseCase).execute(7, request);
+		verify(checkAccountVerificationUseCase).execute(checkRequest);
+		verify(getAccountVerificationStatusUseCase).execute(7, "0011234567890123");
+	}
+}

@@ -2,7 +2,7 @@
 
 ## Goal
 
-SSAFY 1원 인증 API를 현재 `domain/account` 구조에 맞게 추가한다. 사용자는 본인 계좌에 대해 인증 요청을 생성하고, 관리자 기능은 해당 요청을 검증하고 우리 DB에 저장된 인증 상태를 확인할 수 있어야 한다.
+SSAFY 1원 인증 API를 별도 `domain/accountverification` 도메인으로 추가한다. 사용자는 본인 계좌에 대해 인증 요청을 생성하고, 관리자 기능은 해당 요청을 검증하고 우리 DB에 저장된 인증 상태를 확인할 수 있어야 한다.
 
 ## Scope
 
@@ -86,24 +86,24 @@ Response `data`
 
 ## Domain Structure
 
-기능은 별도 도메인으로 분리하지 않고 기존 `domain/account` 안에 확장한다.
+기능은 `domain/accountverification`으로 분리하고, `domain/account`는 계좌 원본 정보와 `verified` 상태만 유지한다.
 
-- `api`
-  사용자 요청 DTO, 관리자 요청/응답 DTO, 컨트롤러 엔드포인트 추가
-- `application`
-  요청 생성, 검증 수행, 상태 조회용 use case 추가
-- `service`
-  `AccountService`에서 새 use case를 조합해 API 응답 DTO로 변환
-- `model`
-  `AccountVerification` 엔티티, 상태 enum, repository 추가
-- `infra`
-  SSAFY `openAccountAuth`, `checkAuthCode` 전용 client 메서드와 DTO 추가
-- `exception`
-  1원 인증 요청/검증 실패용 에러 코드 추가
+- `domain/account`
+  계좌 엔티티, 계좌 조회/연동, `verified` 상태 보유
+- `domain/accountverification/api`
+  사용자 요청 DTO, 관리자 요청/응답 DTO, 컨트롤러 엔드포인트
+- `domain/accountverification/application`
+  요청 생성, 검증 수행, 상태 조회용 use case와 service
+- `domain/accountverification/model`
+  `AccountVerification` 엔티티, 상태 enum, repository
+- `domain/accountverification/infra`
+  SSAFY `openAccountAuth`, `checkAuthCode` 전용 client와 DTO
+- `domain/accountverification/exception`
+  1원 인증 요청/검증 실패용 에러 코드와 예외
 
 ## Persistence Design
 
-새 엔티티 `AccountVerification`은 다음 책임을 가진다.
+`domain/accountverification`의 `AccountVerification` 엔티티는 다음 책임을 가진다.
 
 - 어떤 사용자의 어떤 계좌에 대해 1원 인증 요청이 생성됐는지 저장
 - 최근 요청의 상태를 `REQUESTED`, `SUCCESS`, `FAILED`, `EXPIRED` 중 하나로 관리
@@ -151,19 +151,19 @@ Response `data`
 
 ## Infra Design
 
-`SsafyDemandDepositAccountApiClient`에 계좌 인증 메서드를 확장한다.
+`domain/accountverification/infra`에 전용 SSAFY 계좌 인증 client를 둔다.
 
-- `requestAccountVerification`
+- `SsafyAccountVerificationApiClient.requestVerification`
   내부적으로 `POST /accountAuth/openAccountAuth` 호출
-- `checkAccountVerification`
+- `SsafyAccountVerificationApiClient.checkVerification`
   내부적으로 `POST /accountAuth/checkAuthCode` 호출
 
 별도 DTO 파일을 추가한다.
 
-- `AccountVerificationDto.RequestVerificationRequest`
-- `AccountVerificationDto.RequestVerificationResponse`
-- `AccountVerificationDto.CheckVerificationRequest`
-- `AccountVerificationDto.CheckVerificationResponse`
+- `AccountVerificationClientDto.RequestVerificationRequest`
+- `AccountVerificationClientDto.RequestVerificationResponse`
+- `AccountVerificationClientDto.CheckVerificationRequest`
+- `AccountVerificationClientDto.CheckVerificationResponse`
 
 ## Error Handling
 
@@ -176,14 +176,14 @@ Response `data`
 - SSAFY 응답 형식 오류
 - 인증 코드 불일치 또는 만료
 
-SSAFY의 `A1086`, `A1087`, `A1088`, `A1090` 계열은 내부 `AccountErrorCode`로 매핑해 구분 가능하게 둔다.
+SSAFY의 `A1086`, `A1087`, `A1088`, `A1090` 계열은 내부 `AccountVerificationErrorCode`로 매핑해 구분 가능하게 둔다.
 
 ## Testing Strategy
 
 - 컨트롤러 테스트
   `user` 요청 엔드포인트, `admin` 검증/조회 엔드포인트의 경계와 메시지 확인
 - 서비스 테스트
-  `AccountService`가 새 use case를 올바르게 위임하는지 확인
+  `AccountVerificationService`가 새 use case를 올바르게 위임하는지 확인
 - use case 테스트
   요청 저장, 성공 시 `Account.verified` 반영, 실패 시 상태 갱신 확인
 - infra client 테스트
@@ -195,3 +195,4 @@ SSAFY의 `A1086`, `A1087`, `A1088`, `A1090` 계열은 내부 `AccountErrorCode`�
 
 - `authText`는 설정값 또는 상수로 관리하되, 한 곳에서만 정의한다.
 - 사용자 앱 흐름은 user API를 사용하지만, 검증 판단과 운영 확인 기능은 admin API와 DB 상태 중심으로 둔다.
+- `Account.verified` 변경은 `domain/accountverification`에서 `Account` 엔티티를 조회해 반영한다.

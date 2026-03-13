@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.lang.reflect.Field;
 
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
+import com.ssafy.amagetdone.domain.accountverification.model.entity.AccountVerification;
 import com.ssafy.amagetdone.domain.account.model.entity.Card;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetAdjustment;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetMonth;
@@ -52,12 +53,14 @@ class ErdSchemaAlignmentTest {
 	void booleanColumnsUsePostgresBooleanDefaults() throws Exception {
 		assertColumnDefault(BaseEntity.class, "deleted", "FALSE");
 		assertColumnDefault(Account.class, "verified", "FALSE");
+		assertColumnDefault(AccountVerification.class, "status", "'REQUESTED'");
 		assertColumnDefault(Setting.class, "alarm", "FALSE");
 	}
 
 	@Test
 	void erdDefaultsAreDeclaredOnEntityMappings() throws Exception {
 		assertColumnDefault(Account.class, "verified", "FALSE");
+		assertColumnDefault(AccountVerification.class, "status", "'REQUESTED'");
 		assertColumnDefault(Setting.class, "alarm", "FALSE");
 		assertColumnDefault(User.class, "status", "'ACTIVE'");
 		assertColumnDefault(Plan.class, "savedAmount", "0");
