@@ -27,7 +27,7 @@ class AccountAddPage extends ConsumerWidget {
         showBack: true,
         skipText: isOnboarding ? '건너뛰기' : null,
         onSkip: isOnboarding
-            ? () => context.go(AppRoutes.onboardingGoal)
+            ? () => context.go(AppRoutes.home)
             : null,
       ),
       body: ListView(
@@ -112,7 +112,7 @@ class AccountAddPage extends ConsumerWidget {
         text: isOnboarding ? '계좌 연동 완료' : '완료',
         onPressed: () {
           if (isOnboarding) {
-            context.go(AppRoutes.onboardingGoal);
+            context.go(AppRoutes.onboardingLoading, extra: {'nextRoute': AppRoutes.onboardingAnalysis});
           } else {
             context.pop();
           }

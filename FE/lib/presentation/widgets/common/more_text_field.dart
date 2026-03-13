@@ -12,9 +12,11 @@ class MoreTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final List<TextInputFormatter>? inputFormatters;
   final String? suffix;
+  final Widget? suffixIcon;
   final ValueChanged<String>? onChanged;
   final VoidCallback? onTap;
   final int maxLines;
+  final String? errorText;
 
   const MoreTextField({
     super.key,
@@ -25,9 +27,11 @@ class MoreTextField extends StatelessWidget {
     this.keyboardType,
     this.inputFormatters,
     this.suffix,
+    this.suffixIcon,
     this.onChanged,
     this.onTap,
     this.maxLines = 1,
+    this.errorText,
   });
 
   @override
@@ -63,6 +67,7 @@ class MoreTextField extends StatelessWidget {
               hintStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.textTertiary),
               suffixText: suffix,
               suffixStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary),
+              suffixIcon: suffixIcon,
               filled: true,
               fillColor: Colors.transparent,
               border: OutlineInputBorder(
@@ -81,6 +86,19 @@ class MoreTextField extends StatelessWidget {
             ),
           ),
         ),
+        if (errorText != null) ...[
+          SizedBox(height: 6.h),
+          Padding(
+            padding: EdgeInsets.only(left: 8.w),
+            child: Text(
+              errorText!,
+              style: AppTextStyles.bodySm.copyWith(
+                color: Colors.red,
+                fontSize: 12.sp,
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

@@ -33,6 +33,11 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
   String? _selectedIncome;
   bool _isSubmitting = false;
 
+  // Validation errors
+  String? _nicknameError;
+  String? _emailError;
+  String? _birthDateError;
+
   // Agreement checkboxes
   bool _agreeAll = false;
   bool _agreeTerms = false;
@@ -63,15 +68,44 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
   }
 
   bool get _isFormValid {
-    final hasBasicInfo = _nicknameController.text.isNotEmpty &&
-        _emailController.text.isNotEmpty &&
+    final hasBasicInfo = _nicknameController.text.trim().isNotEmpty &&
+        _emailController.text.trim().isNotEmpty &&
         _birthDateController.text.isNotEmpty &&
         _selectedIncome != null;
 
     if (widget.isOnboarding) {
       return hasBasicInfo && _agreeTerms && _agreePrivacy;
     }
-    return _nicknameController.text.isNotEmpty && _emailController.text.isNotEmpty;
+    return _nicknameController.text.trim().isNotEmpty && _emailController.text.trim().isNotEmpty;
+  }
+
+  String? _validateNickname(String value) {
+    if (value.trim().isEmpty) return '닉네임을 입력해주세요';
+    if (value.trim().length < 2) return '닉네임은 2자 이상이어야 합니다';
+    return null;
+  }
+
+  String? _validateEmail(String value) {
+    if (value.trim().isEmpty) return '이메일을 입력해주세요';
+    final emailRegex = RegExp(r'^[\w\.-]+@[\w\.-]+\.\w{2,}$');
+    if (!emailRegex.hasMatch(value.trim())) return '올바른 이메일 형식이 아닙니다';
+    return null;
+  }
+
+  bool _validateAll() {
+    final nicknameErr = _validateNickname(_nicknameController.text);
+    final emailErr = _validateEmail(_emailController.text);
+    final birthErr = widget.isOnboarding && _birthDateController.text.isEmpty
+        ? '생년월일을 선택해주세요'
+        : null;
+
+    setState(() {
+      _nicknameError = nicknameErr;
+      _emailError = emailErr;
+      _birthDateError = birthErr;
+    });
+
+    return nicknameErr == null && emailErr == null && birthErr == null;
   }
 
   void _onAgreeAllChanged(bool? value) {
@@ -90,7 +124,8 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
   }
 
   Future<void> _onSubmit() async {
-    if (!_isFormValid || _isSubmitting) return;
+    if (_isSubmitting) return;
+    if (!_validateAll() || !_isFormValid) return;
 
     if (widget.isOnboarding) {
       setState(() => _isSubmitting = true);
@@ -293,7 +328,10 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
               label: '닉네임',
               hint: '닉네임을 입력해주세요',
               controller: _nicknameController,
-              onChanged: (_) => setState(() {}),
+              errorText: _nicknameError,
+              onChanged: (value) => setState(() {
+                _nicknameError = _validateNickname(value);
+              }),
             ),
             SizedBox(height: 24.h),
 
@@ -303,60 +341,31 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
               hint: '이메일을 입력해주세요',
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
-              onChanged: (_) => setState(() {}),
+              errorText: _emailError,
+              onChanged: (value) => setState(() {
+                _emailError = _validateEmail(value);
+              }),
             ),
             SizedBox(height: 24.h),
 
             if (widget.isOnboarding) ...[
               // Birth date with calendar icon
-              Text(
-                '생년월일',
-                style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              SizedBox(height: 8.h),
-              GestureDetector(
-                onTap: _pickBirthDate,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.bgSurface,
-                    borderRadius: BorderRadius.circular(16.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
-                        offset: Offset(0, 2.h),
-                        blurRadius: 8.r,
-                      ),
-                    ],
-                  ),
-                  child: AbsorbPointer(
-                    child: TextField(
-                      controller: _birthDateController,
-                      style: AppTextStyles.bodyMd,
-                      decoration: InputDecoration(
-                        hintText: 'YYYY.MM.DD',
-                        hintStyle: AppTextStyles.bodyMd.copyWith(
-                          color: AppColors.textTertiary,
-                        ),
-                        suffixIcon: Icon(
-                          Icons.calendar_today_outlined,
-                          size: 20.w,
-                          color: AppColors.textTertiary,
-                        ),
-                        filled: true,
-                        fillColor: Colors.transparent,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16.r),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 16.w,
-                          vertical: 12.h,
-                        ),
-                      ),
-                    ),
-                  ),
+              MoreTextField(
+                label: '생년월일',
+                hint: 'YYYY.MM.DD',
+                controller: _birthDateController,
+                readOnly: true,
+                onTap: () async {
+                  await _pickBirthDate();
+                  if (_birthDateController.text.isNotEmpty) {
+                    setState(() => _birthDateError = null);
+                  }
+                },
+                errorText: _birthDateError,
+                suffixIcon: Icon(
+                  Icons.calendar_today_outlined,
+                  size: 20.w,
+                  color: AppColors.textTertiary,
                 ),
               ),
               SizedBox(height: 24.h),

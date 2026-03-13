@@ -173,7 +173,7 @@ class OnboardingAnalysisPage extends StatelessWidget {
           text: '다음',
           progress: 5 / 6,
           onPressed: () {
-            context.push(AppRoutes.onboardingPlan);
+            context.go(AppRoutes.onboardingGoal);
           },
         ),
       ),

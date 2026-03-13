@@ -131,7 +131,12 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: AppRoutes.onboardingLoading,
-      builder: (context, state) => const OnboardingLoadingPage(),
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>? ?? const {};
+        return OnboardingLoadingPage(
+          nextRoute: extra['nextRoute'] as String?,
+        );
+      },
     ),
     GoRoute(
       path: AppRoutes.onboardingIncome,

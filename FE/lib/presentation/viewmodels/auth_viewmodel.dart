@@ -21,7 +21,8 @@ class AuthAuthenticated extends AuthState {
 }
 
 class AuthAutoLoginSuccess extends AuthState {
-  const AuthAutoLoginSuccess();
+  final AuthResult authResult;
+  const AuthAutoLoginSuccess(this.authResult);
 }
 
 class AuthUnauthenticated extends AuthState {
@@ -61,9 +62,9 @@ class AuthViewModel extends StateNotifier<AuthState> {
   Future<void> autoLogin() async {
     state = const AuthLoading();
     try {
-      final success = await _repository.autoLogin();
-      if (success) {
-        state = const AuthAutoLoginSuccess();
+      final result = await _repository.autoLogin();
+      if (result != null) {
+        state = AuthAutoLoginSuccess(result);
       } else {
         state = const AuthUnauthenticated();
       }

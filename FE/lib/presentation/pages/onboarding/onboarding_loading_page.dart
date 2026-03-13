@@ -7,7 +7,9 @@ import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/widgets/common/more_text_field.dart';
 
 class OnboardingLoadingPage extends StatefulWidget {
-  const OnboardingLoadingPage({super.key});
+  final String? nextRoute;
+
+  const OnboardingLoadingPage({super.key, this.nextRoute});
 
   @override
   State<OnboardingLoadingPage> createState() => _OnboardingLoadingPageState();
@@ -31,19 +33,22 @@ class _OnboardingLoadingPageState extends State<OnboardingLoadingPage>
   }
 
   Future<void> _runPhases() async {
+    final nextRoute = widget.nextRoute ?? AppRoutes.onboardingAnalysis;
+
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
 
-    // Show salary check dialog
-    await _showIncomeDialog();
-    if (!mounted) return;
+    // 계좌 → 분석 플로우일 때만 수입 확인 다이얼로그 표시
+    if (nextRoute == AppRoutes.onboardingAnalysis) {
+      await _showIncomeDialog();
+      if (!mounted) return;
+    }
 
     setState(() => _phase = 1);
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
 
-    // Auto-navigate to analysis
-    context.go(AppRoutes.onboardingAnalysis);
+    context.go(nextRoute);
   }
 
   Future<void> _showIncomeDialog() async {
