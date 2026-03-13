@@ -3,20 +3,28 @@ package com.ssafy.amagetdone.domain.transaction.application.service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.time.temporal.WeekFields;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.ssafy.amagetdone.domain.asset.model.entity.Category;
+import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeek;
+import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeekCategory;
+import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekCategoryRepository;
+import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.vo.ExpenseScope;
 import com.ssafy.amagetdone.domain.transaction.api.dto.ExpenseSummaryDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionListDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.SyncLatestTransactionsUseCase;
 import com.ssafy.amagetdone.domain.transaction.model.entity.AccountTransactionOverride;
 import com.ssafy.amagetdone.domain.transaction.model.entity.CardTransactionOverride;
@@ -34,20 +42,28 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class TransactionQueryService {
 
+	private static final WeekFields ISO_WEEK_FIELDS = WeekFields.of(Locale.UK);
+
 	private final AccountTransactionOverrideRepository accountTransactionOverrideRepository;
 	private final CardTransactionOverrideRepository cardTransactionOverrideRepository;
 	private final TransactionAnalysisResultRepository transactionAnalysisResultRepository;
+	private final EssentialExpenseSnapshotWeekRepository essentialExpenseSnapshotWeekRepository;
+	private final EssentialExpenseSnapshotWeekCategoryRepository essentialExpenseSnapshotWeekCategoryRepository;
 	private final SyncLatestTransactionsUseCase syncLatestTransactionsUseCase;
 
 	public TransactionQueryService(
 		AccountTransactionOverrideRepository accountTransactionOverrideRepository,
 		CardTransactionOverrideRepository cardTransactionOverrideRepository,
 		TransactionAnalysisResultRepository transactionAnalysisResultRepository,
+		EssentialExpenseSnapshotWeekRepository essentialExpenseSnapshotWeekRepository,
+		EssentialExpenseSnapshotWeekCategoryRepository essentialExpenseSnapshotWeekCategoryRepository,
 		SyncLatestTransactionsUseCase syncLatestTransactionsUseCase
 	) {
 		this.accountTransactionOverrideRepository = accountTransactionOverrideRepository;
 		this.cardTransactionOverrideRepository = cardTransactionOverrideRepository;
 		this.transactionAnalysisResultRepository = transactionAnalysisResultRepository;
+		this.essentialExpenseSnapshotWeekRepository = essentialExpenseSnapshotWeekRepository;
+		this.essentialExpenseSnapshotWeekCategoryRepository = essentialExpenseSnapshotWeekCategoryRepository;
 		this.syncLatestTransactionsUseCase = syncLatestTransactionsUseCase;
 	}
 
@@ -152,6 +168,96 @@ public class TransactionQueryService {
 			size,
 			(long) filteredProjections.size(),
 			items
+		);
+	}
+
+	public WeeklyTransactionAnalysisDto.Response getWeeklyTransactionAnalysis(Integer userId, String yearWeek) {
+		EssentialExpenseSnapshotWeek snapshotWeek = essentialExpenseSnapshotWeekRepository.findByUser_IdAndYearWeek(userId, yearWeek)
+			.orElseThrow(() -> new IllegalArgumentException("Weekly analysis not found"));
+		List<Projection> projections = loadProjections(
+			userId,
+			snapshotWeek.getWeekStartDate().atStartOfDay(),
+			snapshotWeek.getWeekEndDate().atTime(23, 59, 59)
+		);
+		List<WeeklyTransactionAnalysisDto.CategoryExpense> categoryExpenses = essentialExpenseSnapshotWeekCategoryRepository.findAll().stream()
+			.filter(item -> item.getSnapshotWeek().getId().equals(snapshotWeek.getId()))
+			.map(item -> new WeeklyTransactionAnalysisDto.CategoryExpense(
+				item.getCategory().getId(),
+				item.getCategory().getName(),
+				item.getAmount()
+			))
+			.toList();
+
+		return new WeeklyTransactionAnalysisDto.Response(
+			snapshotWeek.getYearWeek(),
+			snapshotWeek.getWeekStartDate(),
+			snapshotWeek.getWeekEndDate(),
+			projections.stream()
+				.filter(this::isPureExpense)
+				.mapToLong(projection -> projection.transaction().getTransactionBalance())
+				.sum(),
+			snapshotWeek.getEssentialAmount(),
+			snapshotWeek.getFixedEssentialAmount(),
+			snapshotWeek.getVariableEssentialAmount(),
+			categoryExpenses,
+			snapshotWeek.getAnalyzedAt()
+		);
+	}
+
+	public MonthlyTransactionAnalysisDto.Response getMonthlyTransactionAnalysis(Integer userId, String yearMonth) {
+		YearMonth targetMonth = YearMonth.parse(yearMonth);
+		LocalDateTime fromDateTime = targetMonth.atDay(1).atStartOfDay();
+		LocalDateTime toDateTime = targetMonth.atEndOfMonth().atTime(23, 59, 59);
+		List<Projection> projections = loadProjections(userId, fromDateTime, toDateTime);
+		List<EssentialExpenseSnapshotWeek> snapshots = essentialExpenseSnapshotWeekRepository
+			.findAllByUser_IdAndWeekStartDateBetweenOrderByWeekStartDate(
+				userId,
+				targetMonth.atDay(1).with(TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY)),
+				targetMonth.atEndOfMonth()
+			);
+		List<Integer> snapshotIds = snapshots.stream()
+			.map(EssentialExpenseSnapshotWeek::getId)
+			.toList();
+		Map<Integer, Long> essentialCategoryAmounts = essentialExpenseSnapshotWeekCategoryRepository.findAll().stream()
+			.filter(item -> snapshotIds.contains(item.getSnapshotWeek().getId()))
+			.collect(Collectors.groupingBy(
+				item -> item.getCategory().getId(),
+				Collectors.summingLong(EssentialExpenseSnapshotWeekCategory::getAmount)
+			));
+		Map<Integer, Category> categoriesById = essentialExpenseSnapshotWeekCategoryRepository.findAll().stream()
+			.filter(item -> snapshotIds.contains(item.getSnapshotWeek().getId()))
+			.collect(Collectors.toMap(
+				item -> item.getCategory().getId(),
+				EssentialExpenseSnapshotWeekCategory::getCategory,
+				(left, right) -> left
+			));
+		long expenseAmount = projections.stream()
+			.filter(this::isPureExpense)
+			.mapToLong(projection -> projection.transaction().getTransactionBalance())
+			.sum();
+		long monthlyEssentialAmount = snapshots.stream().mapToLong(EssentialExpenseSnapshotWeek::getEssentialAmount).sum();
+
+		List<MonthlyTransactionAnalysisDto.CategoryExpense> categoryExpenses = essentialCategoryAmounts.entrySet().stream()
+			.map(entry -> {
+				Category category = categoriesById.get(entry.getKey());
+				double ratio = expenseAmount == 0L ? 0d : (entry.getValue() * 100d) / expenseAmount;
+				return new MonthlyTransactionAnalysisDto.CategoryExpense(
+					category.getId(),
+					category.getName(),
+					entry.getValue(),
+					round(ratio)
+				);
+			})
+			.toList();
+
+		return new MonthlyTransactionAnalysisDto.Response(
+			targetMonth.toString(),
+			expenseAmount,
+			monthlyEssentialAmount,
+			snapshots.stream().mapToLong(EssentialExpenseSnapshotWeek::getFixedEssentialAmount).sum(),
+			snapshots.stream().mapToLong(EssentialExpenseSnapshotWeek::getVariableEssentialAmount).sum(),
+			categoryExpenses,
+			snapshots.stream().map(EssentialExpenseSnapshotWeek::getAnalyzedAt).max(LocalDateTime::compareTo).orElse(null)
 		);
 	}
 
