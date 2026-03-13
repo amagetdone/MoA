@@ -13,7 +13,7 @@ import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.util.List;
 
-import com.ssafy.amagetdone.domain.asset.model.repository.AccountRepository;
+import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.application.usecase.FindOrCreateSocialUserUseCase;

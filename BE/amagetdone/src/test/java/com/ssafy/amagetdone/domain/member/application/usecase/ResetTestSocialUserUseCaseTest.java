@@ -10,7 +10,7 @@ import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.util.Optional;
 
-import com.ssafy.amagetdone.domain.asset.model.repository.AccountRepository;
+import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.member.model.entity.SocialAccount;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.repository.RefreshTokenStore;
