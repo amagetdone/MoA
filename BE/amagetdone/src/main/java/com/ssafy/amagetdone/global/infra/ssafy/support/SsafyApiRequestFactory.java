@@ -1,6 +1,9 @@
 package com.ssafy.amagetdone.global.infra.ssafy.support;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -16,6 +19,16 @@ public class SsafyApiRequestFactory {
 
 	private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
 	private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HHmmss");
+	private static final ZoneId KST_ZONE = ZoneId.of("Asia/Seoul");
+	private final Clock clock;
+
+	public SsafyApiRequestFactory() {
+		this(Clock.system(KST_ZONE));
+	}
+
+	public SsafyApiRequestFactory(Clock clock) {
+		this.clock = clock;
+	}
 
 	public <T> SsafyRequestEnvelope<T> create(
 		String apiName,
@@ -29,7 +42,7 @@ public class SsafyApiRequestFactory {
 			throw new SsafyApiException(SsafyApiException.Reason.INVALID_CONFIGURATION);
 		}
 
-		LocalDateTime now = LocalDateTime.now();
+		LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), KST_ZONE);
 		SsafyRequestHeader header = new SsafyRequestHeader(
 			apiName,
 			now.format(DATE_FORMAT),
