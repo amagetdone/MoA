@@ -29,4 +29,15 @@ class EnvLoaderTest {
 		assertEquals("prod", System.getProperty("spring.profiles.active"));
 		assertEquals("test-secret", System.getProperty("JWT_SECRET"));
 	}
+
+	@Test
+	void loadRequiredEnvFindsDotEnvInParentDirectory() throws IOException {
+		Files.writeString(tempDir.resolve(".env"), "SPRING_PROFILES_ACTIVE=test\nJWT_SECRET=parent-secret\n");
+		Path nestedDir = Files.createDirectories(tempDir.resolve("worktrees/feature/backend"));
+
+		EnvLoader.loadRequiredEnv(nestedDir);
+
+		assertEquals("test", System.getProperty("spring.profiles.active"));
+		assertEquals("parent-secret", System.getProperty("JWT_SECRET"));
+	}
 }
