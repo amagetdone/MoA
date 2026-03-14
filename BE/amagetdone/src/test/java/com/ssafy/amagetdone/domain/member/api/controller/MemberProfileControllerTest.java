@@ -7,31 +7,29 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ssafy.amagetdone.domain.member.api.dto.ProfileCompletionDto;
+import com.ssafy.amagetdone.domain.member.application.service.MemberProfileImageService;
 import com.ssafy.amagetdone.domain.member.application.service.MemberProfileService;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
 import com.ssafy.amagetdone.config.SecurityConfig;
 import com.ssafy.amagetdone.global.security.AuthenticatedMember;
-import com.ssafy.amagetdone.global.infra.storage.S3StorageService;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-import org.springframework.mock.web.MockMultipartFile;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 
 @WebMvcTest(MemberProfileController.class)
 @Import(SecurityConfig.class)
@@ -44,7 +42,7 @@ class MemberProfileControllerTest {
 	private MemberProfileService memberProfileService;
 
 	@MockitoBean
-	private S3StorageService s3StorageService;
+	private MemberProfileImageService memberProfileImageService;
 
 	@MockitoBean
 	private JwtAccessTokenReader jwtAccessTokenReader;
@@ -126,13 +124,16 @@ class MemberProfileControllerTest {
 	}
 
 	@Test
-	void uploadProfileImageWithoutAuthenticationReturnsObjectKey() throws Exception {
+	void uploadProfileImageWithAuthenticatedPrincipalReturnsObjectKey() throws Exception {
 		MockMultipartFile file = new MockMultipartFile("image", "profile.png", "image/png", "abc".getBytes());
-		given(s3StorageService.upload(file, com.ssafy.amagetdone.global.infra.storage.ImageCategory.PROFILE))
+		given(memberProfileImageService.replaceProfileImage(1, file))
 			.willReturn("profile/new.png");
 
 		mockMvc.perform(multipart("/api/v1/members/me/profile-image")
 				.file(file)
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+				))
 				.with(request -> {
 					request.setMethod("PATCH");
 					request.setContextPath("/api");

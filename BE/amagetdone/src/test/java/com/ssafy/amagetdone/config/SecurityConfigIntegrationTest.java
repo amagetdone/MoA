@@ -19,6 +19,7 @@ import com.ssafy.amagetdone.domain.member.api.dto.ProfileCompletionDto;
 import com.ssafy.amagetdone.domain.member.api.dto.RefreshTokenDto;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
 import com.ssafy.amagetdone.domain.member.application.service.MemberAuthService;
+import com.ssafy.amagetdone.domain.member.application.service.MemberProfileImageService;
 import com.ssafy.amagetdone.domain.member.application.service.MemberProfileService;
 import com.ssafy.amagetdone.domain.member.application.service.MemberTokenService;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
@@ -56,6 +57,9 @@ class SecurityConfigIntegrationTest {
 
 	@MockitoBean
 	private MemberProfileService memberProfileService;
+
+	@MockitoBean
+	private MemberProfileImageService memberProfileImageService;
 
 	@MockitoBean
 	private JwtAccessTokenReader jwtAccessTokenReader;
