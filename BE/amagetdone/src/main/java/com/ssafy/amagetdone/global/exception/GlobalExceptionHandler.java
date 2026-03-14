@@ -3,6 +3,7 @@ package com.ssafy.amagetdone.global.exception;
 import com.ssafy.amagetdone.domain.account.exception.AccountException;
 import com.ssafy.amagetdone.domain.accountverification.exception.AccountVerificationException;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
+import com.ssafy.amagetdone.domain.plan.exception.PlanException;
 import com.ssafy.amagetdone.global.response.ErrorResponse;
 import com.ssafy.amagetdone.domain.transaction.exception.TransactionException;
 
@@ -30,6 +31,12 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(AccountVerificationException.class)
 	public ResponseEntity<ErrorResponse> handleAccountVerificationException(AccountVerificationException exception) {
+		return ResponseEntity.status(exception.getErrorCode().httpStatus())
+			.body(ErrorResponse.from(exception.getErrorCode()));
+	}
+
+	@ExceptionHandler(PlanException.class)
+	public ResponseEntity<ErrorResponse> handlePlanException(PlanException exception) {
 		return ResponseEntity.status(exception.getErrorCode().httpStatus())
 			.body(ErrorResponse.from(exception.getErrorCode()));
 	}
