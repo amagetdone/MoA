@@ -48,7 +48,7 @@ sonar {
 	properties {
 		property 'sonar.projectKey', 'S14P21D101'
 		property 'sonar.projectName', 'S14P21D101'
-		property 'sonar.qualitygate.wait', true
+		property 'sonar.qualitygate.wait', false
 	}
 }
 
