@@ -45,7 +45,7 @@ sonar-sast:
   script:
     - cd BE/amagetdone
     - chmod +x ./gradlew
-    - ./gradlew sonar
+    - ./gradlew classes sonar
 
 dependency-scan:
   extends: .gradle-security-job
