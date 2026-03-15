@@ -76,7 +76,7 @@ public class Account extends BaseEntity {
 		account.bankCode = bankCode;
 		account.bankName = bankName;
 		account.currency = currency;
-		account.verified = true;
+		account.verified = false;
 		return account;
 	}
 
@@ -106,6 +106,9 @@ public class Account extends BaseEntity {
 		if (hasText(currency)) {
 			this.currency = currency;
 		}
+	}
+
+	public void markVerified() {
 		this.verified = true;
 	}
 
