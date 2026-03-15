@@ -5,22 +5,62 @@ variables:
   GIT_DEPTH: "0"
 
 stages:
-  - build-sonar
+  - security-scan
 
-build-sonar:
-  stage: build-sonar
-  cache:
-    policy: pull-push
-    key: "sonar-cache-$CI_COMMIT_REF_SLUG"
-    paths:
-      - "${SONAR_USER_HOME}/cache"
-  script:
-    - cd BE/amagetdone
-    - chmod +x ./gradlew
-    - ./gradlew sonar
+.security-job:
+  stage: security-scan
   allow_failure: true
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == "main"'
     - if: '$CI_COMMIT_BRANCH == "develop"'
     - if: '$CI_COMMIT_BRANCH == "dev/backend"'
+
+.gradle-security-job:
+  extends: .security-job
+  cache:
+    policy: pull-push
+    key: "sonar-cache-$CI_COMMIT_REF_SLUG"
+    paths:
+      - "${SONAR_USER_HOME}/cache"
+      - "BE/amagetdone/.gradle"
+  before_script:
+    - |
+      for candidate in \
+        /tmp/jdk17 \
+        /usr/lib/jvm/java-17-openjdk-amd64 \
+        /usr/lib/jvm/temurin-17-jdk-amd64
+      do
+        if [ -x "$candidate/bin/java" ]; then
+          export JAVA_HOME="$candidate"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          break
+        fi
+      done
+    - test -n "$JAVA_HOME"
+    - java -version
+
+sonar-sast:
+  extends: .gradle-security-job
+  script:
+    - cd BE/amagetdone
+    - chmod +x ./gradlew
+    - ./gradlew sonar
+
+dependency-scan:
+  extends: .gradle-security-job
+  script:
+    - cd BE/amagetdone
+    - chmod +x ./gradlew
+    - ./gradlew dependencyCheckAnalyze
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - BE/amagetdone/build/reports/dependency-check/
+
+secret-scan:
+  extends: .security-job
+  script:
+    - chmod +x scripts/ci/secret_scan.sh
+    - bash scripts/ci/secret_scan.sh
