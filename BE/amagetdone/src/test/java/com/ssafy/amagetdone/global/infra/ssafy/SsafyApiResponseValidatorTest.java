@@ -42,7 +42,7 @@ class SsafyApiResponseValidatorTest {
 	void validateThrowsWhenResponseCodeIsNotSuccess() {
 		SsafyApiResponseValidator validator = new SsafyApiResponseValidator();
 
-		assertThrows(
+		SsafyApiException exception = assertThrows(
 			SsafyApiException.class,
 			() -> validator.validate(
 				new SsafyResponseEnvelope<>(
@@ -61,6 +61,10 @@ class SsafyApiResponseValidatorTest {
 				)
 			)
 		);
+
+		assertEquals(SsafyApiException.Reason.FAILED_RESPONSE_CODE, exception.reason());
+		assertEquals("H1000", exception.responseCode());
+		assertEquals("invalid", exception.responseMessage());
 	}
 
 	@Test

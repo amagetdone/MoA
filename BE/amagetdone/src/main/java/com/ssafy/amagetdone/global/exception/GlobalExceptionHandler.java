@@ -26,7 +26,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(AccountException.class)
 	public ResponseEntity<ErrorResponse> handleAccountException(AccountException exception) {
 		return ResponseEntity.status(exception.getErrorCode().httpStatus())
-			.body(ErrorResponse.from(exception.getErrorCode()));
+			.body(ErrorResponse.from(exception.getErrorCode(), exception.getDetail()));
 	}
 
 	@ExceptionHandler(AccountVerificationException.class)
