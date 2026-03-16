@@ -2,25 +2,31 @@
 
 ## Context
 
-The current AI service already exposes FastAPI endpoints for merchant inference under `AI/app`, but it does not yet follow the fuller `app/domain/<domain>` structure described in `AI/AGENTS.md`.
+The AI service already has a new `image_generation` domain under `AI/app/domain`, but its current contract was designed for text-only image generation through an OpenAI-compatible images endpoint.
 
-This feature adds an image generation endpoint that must not call OpenAI directly. Instead, it must use the SSAFY GMS relay server configured through environment variables. The user also wants the implementation to stay consistent with future agent-style features by using LangChain and LangGraph where practical, with prompts managed in a separate Python module.
+The new requirement changes the feature into a multimodal image-generation flow:
+
+- the public API must accept `user_prompt`, `image_base64`, and `mime_type`
+- the upstream provider must be Google Gemini image generation through the SSAFY GMS relay
+- the service should call `generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`
+- prompts should still be managed through LangChain and LangGraph
+- Langfuse tracing must remain in place without logging raw image payloads
 
 ## Decision
 
-Use a hybrid approach:
+Use a hybrid redesign:
 
-- Keep the existing merchant inference code unchanged.
-- Add the new feature under a fresh `image_generation` domain structure.
-- Use LangGraph for workflow orchestration.
-- Use LangChain prompt packages for prompt management and formatting.
-- Use the OpenAI Python SDK only for the final image generation call so the request is guaranteed to go through `OPENAI_BASE_URL/v1/images/generations`.
+- keep the existing `image_generation` domain package
+- replace the OpenAI-specific request and response contract with a Gemini multimodal contract
+- keep LangGraph as the orchestration layer
+- keep LangChain prompt formatting for prompt refinement
+- replace the provider call with a small HTTP client boundary that sends Gemini `generateContent` requests through the GMS relay
 
-This keeps the new code aligned with the project direction without forcing a risky migration of the existing API structure.
+This avoids creating a duplicate domain while keeping the architecture aligned with the current project direction.
 
 ## API Contract
 
-Expose a new endpoint:
+Expose:
 
 - `POST /v1/image-generation`
 
@@ -28,7 +34,9 @@ Request body:
 
 ```json
 {
-  "prompt_goal": "우주 배경의 초현실적인 고양이 일러스트"
+  "user_prompt": "Create a futuristic banana with neon lights in a cyberpunk city.",
+  "image_base64": "<base64 input image>",
+  "mime_type": "image/png"
 }
 ```
 
@@ -36,155 +44,178 @@ Response body:
 
 ```json
 {
-  "image_base64": "<base64 image payload>",
+  "image_base64": "<generated image base64>",
   "mime_type": "image/png",
-  "model": "dall-e-3",
-  "prompt": "A surreal illustration of a cat set against the backdrop of space."
+  "model": "gemini-2.5-flash-image",
+  "prompt": "<final prompt used upstream>"
 }
 ```
 
-The public API only accepts `prompt_goal`. The actual image model and size are fixed by server configuration and are not exposed as request fields.
+The public API accepts exactly one input image. It does not expose provider-specific options such as candidate count or safety settings.
 
 ## GMS Relay Contract
 
 The service will call the GMS relay through:
 
-- `POST {OPENAI_BASE_URL}/images/generations`
+- `POST {OPENAI_BASE_URL}/models/{IMAGE_GENERATION_MODEL}:generateContent`
 
 Headers:
 
-- `Authorization: Bearer {AI_API_KEY}`
+- `x-goog-api-key: {AI_API_KEY}`
 - `Content-Type: application/json`
 
 Payload:
 
 ```json
 {
-  "model": "dall-e-3",
-  "prompt": "<final prompt from graph>",
-  "size": "1024x1024"
+  "contents": [
+    {
+      "parts": [
+        {
+          "text": "<final prompt from graph>"
+        },
+        {
+          "inline_data": {
+            "mime_type": "image/png",
+            "data": "<input image base64>"
+          }
+        }
+      ]
+    }
+  ]
 }
 ```
 
-The implementation will expect the OpenAI-compatible image response shape and read the base64 image from `data[0].b64_json`. If the relay returns a malformed response or omits `b64_json`, the API should return `502 Bad Gateway`.
+The implementation should read the generated image from `candidates[].content.parts[].inline_data.data`. If no generated inline image is present, the API should return `502 Bad Gateway` and include safe schema diagnostics for debugging.
 
 ## Architecture
 
-Create a new domain package under `AI/app/domain/image_generation` with these responsibilities:
+Keep the existing domain package under `AI/app/domain/image_generation` and redefine its responsibilities:
 
 - `api/controller/image_generation_controller.py`
   - FastAPI route and request handling
 - `api/dto/detail_dto.py`
-  - Request and response DTOs
+  - request and response DTOs for multimodal input
 - `service/image_generation_service.py`
-  - Domain service that invokes the graph and maps errors
+  - domain service that invokes the graph and calls the GMS Gemini endpoint
 - `agents/graph.py`
   - LangGraph `StateGraph` definition
 - `agents/nodes/build_prompt_node.py`
-  - Builds the final prompt from the user goal
+  - builds the final Gemini prompt from the user prompt
 - `agents/nodes/generate_image_node.py`
-  - Calls the OpenAI SDK against the GMS relay
+  - delegates to the service-layer generator boundary
 - `agents/prompts/image_generation_prompt.py`
-  - Prompt template and helper functions
+  - prompt template and helper functions
 - `agents/states/state.py`
-  - Typed graph state
+  - typed graph state for multimodal image generation
 
-The FastAPI app should include this new router alongside the existing inference router.
+The FastAPI app should keep the existing image-generation route path and continue including the router alongside the merchant inference router.
 
 ## LangChain and LangGraph Usage
 
-Use LangGraph as the control plane for the feature. The graph should have two simple nodes:
+Use LangGraph as the control plane with two nodes:
 
 1. `build_prompt`
-   - Input: `prompt_goal`
-   - Output: `final_prompt`
-   - Uses LangChain prompt classes to build a generation-ready image prompt from the user goal.
+   - input: `user_prompt`
+   - output: `final_prompt`
+   - uses LangChain prompt classes to refine the user request into a concise Gemini image instruction
 
 2. `generate_image`
-   - Input: `final_prompt`
-   - Output: `image_base64`, `mime_type`, `model`
-   - Uses the OpenAI SDK configured with `base_url=OPENAI_BASE_URL`.
+   - input: `final_prompt`, `input_image_base64`, `input_mime_type`
+   - output: `generated_image_base64`, `output_mime_type`, `model`
+   - delegates to a generator boundary that builds the Gemini HTTP payload
 
-This keeps orchestration, prompt management, and future extensibility aligned with the agent-oriented structure the project is moving toward.
+The graph state should include:
+
+- `user_prompt`
+- `input_image_base64`
+- `input_mime_type`
+- `final_prompt`
+- `generated_image_base64`
+- `output_mime_type`
+- `model`
+
+This keeps the prompt-shaping logic separate from the provider-specific transport.
 
 ## Configuration
 
-Extend `AI/app/core/config.py` with image-generation and tracing settings:
+Keep using `AI/app/core/config.py`, but redefine the image-generation settings for Gemini:
 
 - `ai_api_key`
 - `openai_base_url`
-- `image_generation_model` with default `dall-e-3`
-- `image_generation_size` with default `1024x1024`
+  - keep the name for continuity, but point it to the GMS Gemini base path
+- `image_generation_model`
+  - default: `gemini-2.5-flash-image`
 - `langfuse_public_key`
 - `langfuse_secret_key`
 - `langfuse_base_url`
 - `langfuse_tracing_enabled`
 
-Blank strings should be normalized to `None` for optional settings.
+The previous `image_generation_size` setting is no longer required for this design and should be removed unless some other feature still depends on it.
 
-The service should document these values in `.env.example` if that file exists or create it if missing.
+Blank strings should still normalize to `None` for optional settings.
 
 ## Logging and Tracing
 
 Manage Langfuse integration under `AI/app/core/logging`.
 
-Recommended files:
-
-- `AI/app/core/logging/__init__.py`
-- `AI/app/core/logging/langfuse.py`
-
 Behavior:
 
-- Initialize Langfuse lazily from settings.
-- If Langfuse credentials are missing, tracing becomes a no-op without breaking the endpoint.
-- Record request-level tracing for the graph execution.
-- Capture metadata such as:
-  - `prompt_goal`
+- keep lazy Langfuse initialization
+- keep no-op behavior when Langfuse is unconfigured or disabled
+- record request-level tracing for the graph execution
+- record child-span tracing for the Gemini GMS request
+- capture safe metadata such as:
+  - `user_prompt`
   - `final_prompt`
+  - `input_mime_type`
+  - `output_mime_type`
   - `model`
-  - `size`
-  - success or failure
-  - upstream error message when available
+  - safe response schema keys when parsing fails
 
 Do not log:
 
 - API keys
-- raw image base64 payloads
+- raw request image base64
+- raw generated image base64
 - sensitive headers
-
-The LangGraph flow and the upstream GMS image generation call should each be wrapped in their own trace or span so failures can be distinguished quickly.
 
 ## Error Handling
 
 Return clear HTTP errors for these cases:
 
 - `422 Unprocessable Entity`
-  - invalid request body, such as blank `prompt_goal`
+  - blank `user_prompt`
+  - blank `image_base64`
+  - blank `mime_type`
 - `502 Bad Gateway`
-  - GMS/OpenAI-compatible response missing `b64_json`
+  - Gemini response missing a generated inline image
   - malformed upstream response
 - `503 Service Unavailable`
   - critical client initialization problems caused by missing required settings
 
-The response body should not leak secrets or raw upstream headers.
+The response body should not leak raw payloads or secrets.
 
 ## Testing
 
-Add automated coverage for:
+Add or update automated coverage for:
 
-- endpoint success path
-- endpoint failure when upstream response does not contain `b64_json`
-- prompt-building behavior
-- graph execution result mapping
-- Langfuse no-op mode when tracing is disabled or unconfigured
-- correct upstream payload shape containing only configured `model`, computed `prompt`, and configured `size`
+- endpoint success path with `user_prompt`, `image_base64`, `mime_type`
+- endpoint validation failures for blank fields
+- graph behavior with multimodal state
+- service payload construction for Gemini `generateContent`
+- response parsing from `candidates[].content.parts[]`
+- failure diagnostics when inline image data is missing
+- Langfuse no-op mode and metadata filtering
 
-Tests should avoid real network calls by stubbing the OpenAI client boundary.
+Tests should avoid real network calls by stubbing the provider boundary.
 
 ## Non-Goals
 
 This task does not include:
 
-- streaming binary image responses
-- exposing model, size, quality, or style as public request fields
+- multiple input images
+- binary streaming responses
+- passing S3 URLs directly to Gemini
+- adding provider-specific advanced options to the public API
 - migrating the existing merchant inference feature into the new domain structure
