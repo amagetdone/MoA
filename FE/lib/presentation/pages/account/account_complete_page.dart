@@ -29,7 +29,7 @@ class AccountCompletePage extends ConsumerWidget {
       backgroundColor: AppColors.bgPrimary,
       appBar: const MoreAppBar(title: '', showBack: true),
       body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+        padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -40,7 +40,7 @@ class AccountCompletePage extends ConsumerWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(height: 12.h),
+            SizedBox(height: 6.h),
             Text(
               '연동이 완료되었습니다.',
               style: AppTextStyles.bodySm.copyWith(
@@ -48,7 +48,7 @@ class AccountCompletePage extends ConsumerWidget {
                 fontSize: 14.sp,
               ),
             ),
-            SizedBox(height: 40.h),
+            SizedBox(height: 24.h),
 
             MoreCard(
               padding: EdgeInsets.all(20.w),
@@ -101,6 +101,7 @@ class AccountCompletePage extends ConsumerWidget {
       ),
       bottomNavigationBar: MoreBottomButton(
         text: '완료',
+        progress: isOnboarding ? 4 / 7 : null,
         onPressed: () async {
           await ref.read(accountViewModelProvider.notifier).addLinkedAccount(
                 bankName: bankName,
@@ -111,7 +112,7 @@ class AccountCompletePage extends ConsumerWidget {
           if (!context.mounted) return;
 
           if (isOnboarding) {
-            context.go(AppRoutes.onboardingGoal);
+            context.go(AppRoutes.onboardingAccount);
           } else {
             context.go(AppRoutes.accountManage);
           }

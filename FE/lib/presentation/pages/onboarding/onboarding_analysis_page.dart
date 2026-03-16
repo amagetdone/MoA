@@ -19,14 +19,22 @@ class OnboardingAnalysisPage extends StatelessWidget {
       child: Scaffold(
         backgroundColor: AppColors.bgPrimary,
         appBar: MoreAppBar(
-          title: '분석 결과',
+          title: '',
           showBack: false,
         ),
         body: SingleChildScrollView(
-          padding: EdgeInsets.all(24.w),
+          padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(
+                '분석 결과',
+                style: AppTextStyles.headingLg.copyWith(
+                  fontSize: 24.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 6.h),
               Text(
                 '3개월 간 소비패턴을 분석했어요.',
                 style: AppTextStyles.bodyMd.copyWith(
@@ -34,7 +42,7 @@ class OnboardingAnalysisPage extends StatelessWidget {
                   fontSize: 14.sp,
                 ),
               ),
-              SizedBox(height: 20.h),
+              SizedBox(height: 24.h),
 
               // Stats card
               MoreCard(
@@ -57,7 +65,7 @@ class OnboardingAnalysisPage extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(height: 16.h),
+              SizedBox(height: 12.h),
 
               // Donut chart card
               MoreCard(
@@ -171,7 +179,7 @@ class OnboardingAnalysisPage extends StatelessWidget {
         ),
         bottomNavigationBar: MoreBottomButton(
           text: '다음',
-          progress: 5 / 6,
+          progress: 5 / 7,
           onPressed: () {
             context.go(AppRoutes.onboardingGoal);
           },

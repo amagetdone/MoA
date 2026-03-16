@@ -92,6 +92,8 @@ class AuthRepositoryImpl implements AuthRepository {
         refreshToken: refreshTokenValue,
       );
 
+      print('[AutoLogin] status=${result.status}, account=${result.account}, plan=${result.plan}');
+
       await localDataSource.saveAccessToken(result.accessToken);
       await localDataSource.saveRefreshToken(result.refreshToken);
 

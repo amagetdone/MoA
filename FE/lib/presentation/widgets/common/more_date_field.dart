@@ -9,12 +9,16 @@ class MoreDateField extends StatelessWidget {
   final String label;
   final DateTime? value;
   final ValueChanged<DateTime> onChanged;
+  final DateTime? firstDate;
+  final DateTime? lastDate;
 
   const MoreDateField({
     super.key,
     required this.label,
     this.value,
     required this.onChanged,
+    this.firstDate,
+    this.lastDate,
   });
 
   @override
@@ -79,7 +83,9 @@ class MoreDateField extends StatelessWidget {
       '1월', '2월', '3월', '4월', '5월', '6월',
       '7월', '8월', '9월', '10월', '11월', '12월',
     ];
-    final years = List.generate(now.year - 1950 + 11, (i) => 1950 + i);
+    final minYear = firstDate?.year ?? 1950;
+    final maxYear = lastDate?.year ?? (now.year + 10);
+    final years = List.generate(maxYear - minYear + 1, (i) => minYear + i);
 
     int yearIndex = years.indexOf(initial.year);
     if (yearIndex < 0) yearIndex = years.indexOf(now.year);
@@ -102,8 +108,13 @@ class MoreDateField extends StatelessWidget {
             if (dayIndex >= maxDay) {
               dayIndex = maxDay - 1;
             }
+            final currentDay = (dayIndex + 1).clamp(1, maxDay);
+            final currentSelected = DateTime(years[yearIndex], monthIndex + 1, currentDay);
+            final isTooEarly = firstDate != null && currentSelected.isBefore(DateTime(firstDate!.year, firstDate!.month, firstDate!.day));
+            final isTooLate = lastDate != null && currentSelected.isAfter(DateTime(lastDate!.year, lastDate!.month, lastDate!.day));
+            final isInvalid = isTooEarly || isTooLate;
             return Container(
-              height: 320.h,
+              height: 360.h,
               decoration: BoxDecoration(
                 color: AppColors.bgSurface,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
@@ -125,15 +136,16 @@ class MoreDateField extends StatelessWidget {
                           ),
                         ),
                         GestureDetector(
-                          onTap: () {
-                            final day = (dayIndex + 1).clamp(1, maxDay);
-                            onChanged(DateTime(years[yearIndex], monthIndex + 1, day));
-                            Navigator.pop(ctx);
-                          },
+                          onTap: isInvalid
+                              ? null
+                              : () {
+                                  onChanged(currentSelected);
+                                  Navigator.pop(ctx);
+                                },
                           child: Text(
                             '확인',
                             style: AppTextStyles.bodyMd.copyWith(
-                              color: AppColors.orange500,
+                              color: isInvalid ? AppColors.gray100 : AppColors.orange500,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -142,6 +154,19 @@ class MoreDateField extends StatelessWidget {
                     ),
                   ),
                   Divider(height: 1, color: AppColors.borderDefault),
+                  if (isInvalid)
+                    Padding(
+                      padding: EdgeInsets.only(top: 8.h),
+                      child: Text(
+                        isTooEarly
+                            ? '${DateFormat('yyyy.MM.dd').format(firstDate!)} 이후 날짜를 선택해주세요.'
+                            : '${DateFormat('yyyy.MM.dd').format(lastDate!)} 이전 날짜를 선택해주세요.',
+                        style: AppTextStyles.bodySm.copyWith(
+                          color: Colors.red,
+                          fontSize: 12.sp,
+                        ),
+                      ),
+                    ),
                   Expanded(
                     child: Row(
                       children: [

@@ -17,10 +17,6 @@ class LoginPage extends ConsumerWidget {
         final result = next.authResult;
         if (result.status == 'TEMP') {
           context.go(AppRoutes.onboardingProfile);
-        } else if (!result.account) {
-          context.go(AppRoutes.onboardingAccount);
-        } else if (!result.plan) {
-          context.go(AppRoutes.onboardingGoal);
         } else {
           context.go(AppRoutes.home);
         }
@@ -46,8 +42,8 @@ class LoginPage extends ConsumerWidget {
               // 로고
               Image.asset(
                 'assets/images/logo/applogo.png',
-                width: 100.w,
-                height: 100.w,
+                width: 80.w,
+                height: 80.w,
               ),
               SizedBox(height: 16.h),
 
@@ -92,8 +88,7 @@ class LoginPage extends ConsumerWidget {
                 iconPath: 'assets/images/logo/googlelogo.png',
                 borderColor: AppColors.borderDefault,
               ),
-
-              SizedBox(height: 40.h),
+              Spacer(flex: 3),
             ],
           ),
         ),

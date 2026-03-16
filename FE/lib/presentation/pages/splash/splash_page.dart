@@ -34,10 +34,6 @@ class _SplashPageState extends ConsumerState<SplashPage> {
       final result = state.authResult;
       if (result.status == 'TEMP') {
         context.go(AppRoutes.onboardingProfile);
-      } else if (!result.account) {
-        context.go(AppRoutes.onboardingAccount);
-      } else if (!result.plan) {
-        context.go(AppRoutes.onboardingGoal);
       } else {
         context.go(AppRoutes.home);
       }
@@ -53,8 +49,8 @@ class _SplashPageState extends ConsumerState<SplashPage> {
       body: Center(
         child: Image.asset(
           'assets/images/logo/applogo.png',
-          width: 120.w,
-          height: 120.w,
+          width: 80.w,
+          height: 80.w,
         ),
       ),
     );

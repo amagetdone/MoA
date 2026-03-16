@@ -21,7 +21,7 @@ class GoalListPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       body: goalState.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const SizedBox.shrink()
           : goalState.errorMessage != null
               ? _buildError(context, goalState.errorMessage!, viewModel)
               : SafeArea(

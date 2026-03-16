@@ -25,32 +25,7 @@ class MoreBottomButton extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
-              width: double.infinity,
-              height: 52.h,
-              child: ElevatedButton(
-                onPressed: enabled ? onPressed : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      enabled ? AppColors.buttonPrimary : AppColors.gray100,
-                  foregroundColor:
-                      enabled ? AppColors.white : AppColors.textTertiary,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                ),
-                child: Text(
-                  text,
-                  style: AppTextStyles.bodyLg.copyWith(
-                    color: enabled ? AppColors.white : AppColors.textTertiary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
             if (progress != null) ...[
-              SizedBox(height: 12.h),
               SizedBox(
                 height: 6.h,
                 width: double.infinity,
@@ -85,7 +60,38 @@ class MoreBottomButton extends StatelessWidget {
                   ),
                 ),
               ),
+              SizedBox(height: 12.h),
             ],
+            SizedBox(
+              width: double.infinity,
+              height: 52.h,
+              child: ElevatedButton(
+                onPressed: enabled ? onPressed : null,
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.resolveWith((states) {
+                    if (!enabled) return AppColors.gray100;
+                    if (states.contains(WidgetState.pressed)) return AppColors.orange600;
+                    return AppColors.buttonPrimary;
+                  }),
+                  foregroundColor: WidgetStateProperty.all(
+                    enabled ? AppColors.white : AppColors.textTertiary,
+                  ),
+                  elevation: WidgetStateProperty.all(0),
+                  shape: WidgetStateProperty.all(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                  ),
+                ),
+                child: Text(
+                  text,
+                  style: AppTextStyles.bodyLg.copyWith(
+                    color: enabled ? AppColors.white : AppColors.textTertiary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

@@ -46,7 +46,7 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
           ),
           Expanded(
             child: goalState.isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const SizedBox.shrink()
                 : displayGoals.isEmpty
                 ? Center(
                     child: Text(

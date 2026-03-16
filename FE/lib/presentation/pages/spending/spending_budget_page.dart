@@ -144,7 +144,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
         ],
       ),
       body: state.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const SizedBox.shrink()
           : Column(
               children: [
                 Expanded(
