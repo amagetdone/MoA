@@ -34,6 +34,7 @@ dependencies:
   json_annotation: ^4.9.0
 
   # UI / UX
+  video_player: ^2.9.2
   flutter_screenutil: ^5.9.3
   flutter_svg: ^2.0.17
   cached_network_image: ^3.4.1
