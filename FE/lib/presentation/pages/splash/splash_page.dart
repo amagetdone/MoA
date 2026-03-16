@@ -31,14 +31,12 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
     final state = ref.read(authViewModelProvider);
     if (state is AuthAutoLoginSuccess) {
-      // TODO: 테스트용 - 원복 필요
-      context.go(AppRoutes.onboardingProfile);
-      // final result = state.authResult;
-      // if (result.status == 'TEMP') {
-      //   context.go(AppRoutes.onboardingProfile);
-      // } else {
-      //   context.go(AppRoutes.home);
-      // }
+      final result = state.authResult;
+      if (result.status == 'TEMP') {
+        context.go(AppRoutes.onboardingProfile);
+      } else {
+        context.go(AppRoutes.home);
+      }
     } else {
       context.go(AppRoutes.login);
     }

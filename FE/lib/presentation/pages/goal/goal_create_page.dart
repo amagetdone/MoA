@@ -11,6 +11,7 @@ import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 import 'package:more_app/presentation/widgets/common/more_date_field.dart';
+import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:more_app/presentation/widgets/common/more_text_field.dart';
 
 class GoalCreatePage extends ConsumerStatefulWidget {
@@ -185,6 +186,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
               hint: '0',
               controller: _amountController,
               keyboardType: TextInputType.number,
+              inputFormatters: [CurrencyInputFormatter()],
               suffix: '원',
               onChanged: (_) => setState(() {}),
             ),
@@ -197,9 +199,13 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
                   child: MoreDateField(
                     label: '시작일',
                     value: _startDate,
+                    firstDate: DateTime.now(),
                     onChanged: (date) {
                       setState(() {
                         _startDate = date;
+                        if (_endDate != null && _endDate!.isBefore(date)) {
+                          _endDate = null;
+                        }
                       });
                     },
                   ),
@@ -209,6 +215,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
                   child: MoreDateField(
                     label: '종료일',
                     value: _endDate,
+                    firstDate: _startDate ?? DateTime.now(),
                     onChanged: (date) {
                       setState(() {
                         _endDate = date;

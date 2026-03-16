@@ -65,7 +65,7 @@ class OnboardingAnalysisPage extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(height: 16.h),
+              SizedBox(height: 12.h),
 
               // Donut chart card
               MoreCard(

@@ -50,12 +50,11 @@ abstract class AppRoutes {
 
   static const String profileEdit = '/profile/edit';
   static const String spendingBudget = '/spending/budget';
-  
-  // 자산 및 거래내역 경로를 분석 탭 하위로 지정 (하단바 유지)
+
   static const String asset = '/spending/asset';
   static const String assetDetail = '/spending/asset/detail';
   static const String accountManage = '/spending/asset/manage';
-  
+
   static const String accountAdd = '/account/add';
   static const String accountSelect = '/account/select';
   static const String accountVerify = '/account/verify';
@@ -118,12 +117,12 @@ final appRouter = GoRouter(
               routes: [
                 GoRoute(path: 'pattern', builder: (context, state) => const SpendingPatternPage()),
                 GoRoute(
-                  path: 'asset', 
-                  builder: (context, state) => const AssetPage(),
-                  routes: [
-                    GoRoute(path: 'detail', builder: (context, state) => AssetDetailPage(transactionId: state.uri.queryParameters['id'] ?? '')),
-                    GoRoute(path: 'manage', builder: (context, state) => const AccountManagePage()),
-                  ]
+                    path: 'asset',
+                    builder: (context, state) => const AssetPage(),
+                    routes: [
+                      GoRoute(path: 'detail', builder: (context, state) => AssetDetailPage(transactionId: state.uri.queryParameters['id'] ?? '')),
+                      GoRoute(path: 'manage', builder: (context, state) => const AccountManagePage()),
+                    ]
                 ),
               ],
             ),

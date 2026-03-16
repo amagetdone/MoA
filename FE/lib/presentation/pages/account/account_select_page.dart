@@ -5,11 +5,14 @@ import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
-import 'package:more_app/presentation/viewmodels/account_viewmodel.dart';
-import 'package:more_app/presentation/widgets/common/bank_icon.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
-import 'package:more_app/presentation/widgets/common/more_text_field.dart';
+
+class _BankInfo {
+  final String name;
+  final String logoPath;
+  _BankInfo(this.name, this.logoPath);
+}
 
 class AccountSelectPage extends ConsumerStatefulWidget {
   final bool isOnboarding;
@@ -24,11 +27,33 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
   String? _selectedBank;
   final TextEditingController _accountNumberController =
       TextEditingController();
+  final FocusNode _accountFocusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
   bool _showAllBanks = false;
+
+  final List<_BankInfo> _allBanks = [
+    _BankInfo('국민은행', 'assets/images/logo/KB_logo.png'),
+    _BankInfo('신한은행', 'assets/images/logo/shinhan_logo.png'),
+    _BankInfo('우리은행', 'assets/images/logo/woori_logo.png'),
+    _BankInfo('하나은행', 'assets/images/logo/KEB_hana_logo.png'),
+    _BankInfo('기업은행', 'assets/images/logo/ibk_logo.png'),
+    _BankInfo('iM뱅크', 'assets/images/logo/iM_logo.png'),
+    _BankInfo('카카오뱅크', 'assets/images/logo/kakaobank.png'),
+    _BankInfo('농협은행', 'assets/images/logo/nonghyup_logo.png'),
+    _BankInfo('새마을금고', 'assets/images/logo/mg_logo.png'),
+    _BankInfo('SC제일은행', 'assets/images/logo/sc_jeil_logo.png'),
+    _BankInfo('씨티은행', 'assets/images/logo/citi_logo.png'),
+    _BankInfo('KDB산업은행', 'assets/images/logo/industry_logo.png'),
+    _BankInfo('경남은행', 'assets/images/logo/kyung_nam_logo.png'),
+    _BankInfo('전북은행', 'assets/images/logo/gwangju_logo.jpg'),
+    _BankInfo('수협은행', 'assets/images/logo/suhyup_logo.png'),
+  ];
 
   @override
   void dispose() {
     _accountNumberController.dispose();
+    _accountFocusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -54,9 +79,7 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(accountViewModelProvider);
-    final bankNames = state.bankNames;
-    final visibleBanks = _showAllBanks ? bankNames : bankNames.take(12).toList();
+    final displayBanks = _showAllBanks ? _allBanks : _allBanks.take(9).toList();
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
@@ -65,6 +88,8 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
         showBack: true,
       ),
       body: SingleChildScrollView(
+        controller: _scrollController,
+        physics: const ClampingScrollPhysics(),
         padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,7 +112,6 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
               ),
               SizedBox(height: 24.h),
             ],
-            // Bank selection
             Text(
               '은행 선택',
               style: AppTextStyles.headingMd.copyWith(
@@ -96,102 +120,123 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
               ),
             ),
             SizedBox(height: 12.h),
-            if (state.isLoading)
-              const SizedBox.shrink()
-            else if (state.errorMessage != null)
-              Text(
-                '은행 목록을 불러오지 못했습니다.\n${state.errorMessage!}',
-                style: AppTextStyles.bodySm.copyWith(color: AppColors.red500),
-              )
-            else ...[
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 16.w,
-                  mainAxisSpacing: 16.h,
-                  childAspectRatio: 1.0,
-                ),
-                itemCount: visibleBanks.length,
-                itemBuilder: (context, index) {
-                  final bankName = visibleBanks[index];
-                  final isSelected = _selectedBank == bankName;
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedBank = bankName;
-                      });
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.orange500.withValues(alpha: 0.1)
-                            : AppColors.bgSurface,
-                        borderRadius: BorderRadius.circular(16.r),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.orange500
-                              : Colors.transparent,
-                          width: 2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            offset: Offset(0, 1.h),
-                            blurRadius: 4.r,
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          BankIcon(bankName: bankName, size: 40.w),
-                          SizedBox(height: 8.h),
-                          Text(
-                            bankName,
-                            style: AppTextStyles.bodySm.copyWith(
-                              color: isSelected
-                                  ? AppColors.orange500
-                                  : AppColors.textPrimary,
-                              fontWeight: isSelected
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
-                            ),
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 8.w,
+                mainAxisSpacing: 8.h,
+                childAspectRatio: 0.95,
               ),
-              if (bankNames.length > 12) ...[
-                SizedBox(height: 12.h),
-                Center(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _showAllBanks = !_showAllBanks),
-                    child: Icon(
-                      _showAllBanks
-                          ? Icons.keyboard_arrow_up
-                          : Icons.keyboard_arrow_down,
-                      size: 28.w,
-                      color: AppColors.textTertiary,
+              itemCount: displayBanks.length,
+              itemBuilder: (context, index) {
+                final bank = displayBanks[index];
+                final isSelected = _selectedBank == bank.name;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _selectedBank = bank.name);
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _accountFocusNode.requestFocus();
+                      _scrollController.animateTo(
+                        _scrollController.position.maxScrollExtent,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut,
+                      );
+                    });
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color: isSelected ? AppColors.orange500 : Colors.transparent,
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ClipOval(
+                          child: SizedBox(
+                            width: 50.w,
+                            height: 50.w,
+                            child: Image.asset(
+                              bank.logoPath,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: const Color(0xFFF5F5F5),
+                                  child: Center(child: Text('B', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp, color: Colors.black87))),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 8.h),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            bank.name,
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.textPrimary,
+                              fontSize: 11.sp,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                );
+              },
+            ),
+
+            SizedBox(height: 12.h),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => setState(() => _showAllBanks = !_showAllBanks),
+              child: Center(
+                child: Icon(
+                  _showAllBanks ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  color: Colors.black38,
+                  size: 24.w,
                 ),
-              ],
-            ],
+              ),
+            ),
 
             if (_selectedBank != null) ...[
-              SizedBox(height: 24.h),
-              MoreTextField(
-                label: '계좌번호',
-                hint: '계좌번호를 입력해주세요',
+              SizedBox(height: 20.h),
+              Text('계좌번호', style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold, fontSize: 15.sp)),
+              SizedBox(height: 12.h),
+              TextField(
                 controller: _accountNumberController,
+                focusNode: _accountFocusNode,
                 keyboardType: TextInputType.number,
+                style: TextStyle(fontSize: 14.sp),
+                decoration: InputDecoration(
+                  hintText: '계좌번호를 입력해주세요.',
+                  hintStyle: AppTextStyles.bodySm.copyWith(color: const Color(0xFFCCCCCC), fontSize: 13.sp),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                    borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                    borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                    borderSide: const BorderSide(color: AppColors.orange500, width: 1.2),
+                  ),
+                ),
                 onChanged: (_) => setState(() {}),
               ),
             ],

@@ -178,16 +178,15 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
         final birthDate = _birthDateController.text.replaceAll('.', '-');
         final dio = ref.read(apiClientProvider).dio;
 
-        // TODO: 테스트용 - 프로필 PATCH 주석 처리 (원복 필요)
-        // await dio.patch(
-        //   'v1/members/me/profile',
-        //   data: {
-        //     'nickname': _nicknameController.text,
-        //     'email': _emailController.text,
-        //     'birthDate': birthDate,
-        //     'hasFixedIncome': _selectedIncome == '있어요',
-        //   },
-        // );
+        await dio.patch(
+          'v1/members/me/profile',
+          data: {
+            'nickname': _nicknameController.text,
+            'email': _emailController.text,
+            'birthDate': birthDate,
+            'hasFixedIncome': _selectedIncome == '있어요',
+          },
+        );
 
         await _uploadProfileImage();
 

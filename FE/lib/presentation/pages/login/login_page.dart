@@ -14,14 +14,12 @@ class LoginPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.listen<AuthState>(authViewModelProvider, (prev, next) {
       if (next is AuthAuthenticated) {
-        // TODO: 테스트용 - 원복 필요
-        context.go(AppRoutes.onboardingProfile);
-        // final result = next.authResult;
-        // if (result.status == 'TEMP') {
-        //   context.go(AppRoutes.onboardingProfile);
-        // } else {
-        //   context.go(AppRoutes.home);
-        // }
+        final result = next.authResult;
+        if (result.status == 'TEMP') {
+          context.go(AppRoutes.onboardingProfile);
+        } else {
+          context.go(AppRoutes.home);
+        }
       } else if (next is AuthError) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(next.message)),

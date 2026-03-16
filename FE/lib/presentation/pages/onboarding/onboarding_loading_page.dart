@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:more_app/presentation/widgets/common/more_text_field.dart';
 
 class OnboardingLoadingPage extends StatefulWidget {
@@ -85,6 +86,7 @@ class _OnboardingLoadingPageState extends State<OnboardingLoadingPage>
                 hint: '0',
                 controller: _incomeController,
                 keyboardType: TextInputType.number,
+                inputFormatters: [CurrencyInputFormatter()],
                 suffix: '원',
               ),
             ],
