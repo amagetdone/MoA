@@ -6,6 +6,7 @@ import com.ssafy.amagetdone.global.docs.controller.BudgetDocsController;
 import com.ssafy.amagetdone.global.response.ApiResponse;
 import com.ssafy.amagetdone.global.security.AuthenticatedMember;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/budgets/weeks")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
 public class BudgetController implements BudgetDocsController {
 
 	private final GetWeeklyEssentialExpensesUseCase getWeeklyEssentialExpensesUseCase;

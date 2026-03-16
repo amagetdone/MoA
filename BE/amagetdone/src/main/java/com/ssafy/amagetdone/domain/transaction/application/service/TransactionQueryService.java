@@ -23,6 +23,7 @@ import com.ssafy.amagetdone.domain.budget.model.vo.ExpenseScope;
 import com.ssafy.amagetdone.domain.transaction.api.dto.ExpenseSummaryDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisJobDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionListDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.SyncLatestTransactionsUseCase;
@@ -121,6 +122,63 @@ public class TransactionQueryService {
 		);
 	}
 
+	public TransactionAnalysisJobDto.OnboardingResult getOnboardingAnalysisResult(Integer userId, LocalDateTime referenceDateTime) {
+		LocalDateTime resolvedReferenceDateTime = referenceDateTime == null ? LocalDateTime.now() : referenceDateTime;
+		LocalDateTime fromDateTime = resolvedReferenceDateTime.minusMonths(3);
+		List<Projection> projections = loadProjections(userId, fromDateTime, resolvedReferenceDateTime);
+
+		long totalIncomeAmount = projections.stream()
+			.filter(this::isIncome)
+			.mapToLong(projection -> projection.transaction().getTransactionBalance())
+			.sum();
+		long totalExpenseAmount = projections.stream()
+			.filter(this::isPureExpense)
+			.mapToLong(projection -> projection.transaction().getTransactionBalance())
+			.sum();
+		long totalFixedExpenseAmount = projections.stream()
+			.filter(this::isPureExpense)
+			.filter(projection -> resolveExpenseScope(projection) == ExpenseScope.FIXED)
+			.mapToLong(projection -> projection.transaction().getTransactionBalance())
+			.sum();
+		long totalVariableExpenseAmount = projections.stream()
+			.filter(this::isPureExpense)
+			.filter(projection -> resolveExpenseScope(projection) == ExpenseScope.VARIABLE)
+			.mapToLong(projection -> projection.transaction().getTransactionBalance())
+			.sum();
+
+		long averageIncome = Math.round(totalIncomeAmount / 3d);
+		long averageExpense = Math.round(totalExpenseAmount / 3d);
+		long remainingAmount = averageIncome - averageExpense;
+		double fixedExpenseRatio = totalExpenseAmount == 0L ? 0d : round((totalFixedExpenseAmount * 100d) / totalExpenseAmount);
+		double variableExpenseRatio = totalExpenseAmount == 0L ? 0d : round((totalVariableExpenseAmount * 100d) / totalExpenseAmount);
+
+		List<TransactionAnalysisJobDto.CategoryExpense> categoryExpenses = projections.stream()
+			.filter(this::isPureExpense)
+			.collect(Collectors.groupingBy(
+				projection -> resolveCategory(projection),
+				Collectors.summingLong(projection -> projection.transaction().getTransactionBalance())
+			))
+			.entrySet().stream()
+			.sorted((left, right) -> Long.compare(right.getValue(), left.getValue()))
+			.map(entry -> new TransactionAnalysisJobDto.CategoryExpense(
+				entry.getKey().getId(),
+				entry.getKey().getName(),
+				entry.getValue()
+			))
+			.toList();
+
+		return new TransactionAnalysisJobDto.OnboardingResult(
+			"3개월 간 소비패턴을 분석했어요.",
+			averageIncome,
+			averageExpense,
+			remainingAmount,
+			fixedExpenseRatio,
+			variableExpenseRatio,
+			buildOnboardingInsightMessage(averageIncome, averageExpense),
+			categoryExpenses
+		);
+	}
+
 	public TransactionListDto.Response listTransactions(Integer userId, TransactionListDto.Query query) {
 		LocalDate resolvedToDate = query.toDate() == null ? LocalDate.now() : query.toDate();
 		LocalDate resolvedFromDate = query.fromDate() == null ? resolvedToDate.minusMonths(1) : query.fromDate();
@@ -133,7 +191,6 @@ public class TransactionQueryService {
 			resolvedFromDate.atStartOfDay(),
 			resolvedToDate.atTime(23, 59, 59)
 		).stream()
-			.filter(projection -> matchesSourceType(projection, query.sourceType()))
 			.filter(projection -> matchesAnalysisInclusion(projection, query.analysisInclusion()))
 			.toList();
 
@@ -338,6 +395,13 @@ public class TransactionQueryService {
 		return true;
 	}
 
+	private boolean isIncome(Projection projection) {
+		if (projection.transaction() instanceof AccountTransactionOverride accountTransaction) {
+			return accountTransaction.getTransactionType() == 1;
+		}
+		return hasExcludedReason(projection, TransactionExcludedReason.INCOME);
+	}
+
 	private boolean hasExcludedReason(Projection projection, TransactionExcludedReason excludedReason) {
 		return projection.analysisResult() != null && projection.analysisResult().getExcludedReason() == excludedReason;
 	}
@@ -358,13 +422,6 @@ public class TransactionQueryService {
 			.orElse(null);
 	}
 
-	private boolean matchesSourceType(Projection projection, String sourceType) {
-		if (sourceType == null || sourceType.isBlank()) {
-			return true;
-		}
-		return sourceType.equalsIgnoreCase(sourceTypeOf(projection.transaction()));
-	}
-
 	private boolean matchesAnalysisInclusion(Projection projection, String analysisInclusion) {
 		if (analysisInclusion == null || analysisInclusion.isBlank() || "ALL".equalsIgnoreCase(analysisInclusion)) {
 			return true;
@@ -373,14 +430,16 @@ public class TransactionQueryService {
 		return "INCLUDED".equalsIgnoreCase(analysisInclusion) ? analysisIncluded : !analysisIncluded;
 	}
 
+	private Category resolveCategory(Projection projection) {
+		return projection.analysisResult() != null ? projection.analysisResult().getCategory() : projection.transaction().getCategory();
+	}
+
 	private TransactionListDto.Item toTransactionListItem(Projection projection) {
 		TransactionOverride transaction = projection.transaction();
 		TransactionAnalysisResult analysisResult = projection.analysisResult();
 		Category category = analysisResult != null ? analysisResult.getCategory() : transaction.getCategory();
 		return new TransactionListDto.Item(
 			transaction.getId(),
-			sourceTypeOf(transaction),
-			sourceIdOf(transaction),
 			transaction.getTransactionDateTime(),
 			merchantTextOf(transaction),
 			transaction.getTransactionBalance(),
@@ -390,17 +449,6 @@ public class TransactionQueryService {
 			analysisResult != null && analysisResult.isAnalysisIncluded(),
 			analysisResult != null && analysisResult.getExcludedReason() != null ? analysisResult.getExcludedReason().name() : null
 		);
-	}
-
-	private String sourceTypeOf(TransactionOverride transaction) {
-		return transaction instanceof CardTransactionOverride ? "CARD" : "ACCOUNT";
-	}
-
-	private String sourceIdOf(TransactionOverride transaction) {
-		if (transaction instanceof CardTransactionOverride cardTransaction) {
-			return String.valueOf(cardTransaction.getCard().getCardUniqueNo());
-		}
-		return ((AccountTransactionOverride) transaction).getAccount().getId();
 	}
 
 	private String merchantTextOf(TransactionOverride transaction) {
@@ -416,6 +464,16 @@ public class TransactionQueryService {
 			return accountTransaction.getTransactionType() == 1 ? "IN" : "OUT";
 		}
 		return "OUT";
+	}
+
+	private String buildOnboardingInsightMessage(long averageIncome, long averageExpense) {
+		if (averageIncome <= 0L) {
+			return "소비 분석 데이터가 아직 충분하지 않아요.";
+		}
+		if (averageExpense >= Math.round(averageIncome * 0.6d)) {
+			return "소비 절약이 필요해보여요.";
+		}
+		return "현재 소비 흐름을 잘 유지하고 있어요.";
 	}
 
 	private double round(double value) {

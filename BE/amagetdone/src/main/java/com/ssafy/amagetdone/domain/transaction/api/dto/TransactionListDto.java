@@ -12,7 +12,6 @@ public final class TransactionListDto {
 	public record Query(
 		LocalDate fromDate,
 		LocalDate toDate,
-		String sourceType,
 		String analysisInclusion,
 		Integer page,
 		Integer size
@@ -37,8 +36,6 @@ public final class TransactionListDto {
 
 	public record Item(
 		Integer transactionId,
-		String sourceType,
-		String sourceId,
 		LocalDateTime occurredAt,
 		String merchantText,
 		Long amount,

@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springframework.http.MediaType;
@@ -24,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Tag(name = "회원 프로필 API")
 @RestController
 @RequestMapping("/v1/members")
+@SecurityRequirement(name = "bearerAuth")
 public class MemberProfileController {
 
 	private final MemberProfileService memberProfileService;

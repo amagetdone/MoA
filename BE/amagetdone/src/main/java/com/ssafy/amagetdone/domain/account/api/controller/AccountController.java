@@ -8,6 +8,8 @@ import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
 import com.ssafy.amagetdone.global.response.ApiResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "계좌 사용자 API")
 @RestController
 @RequestMapping("/v1/accounts")
+@SecurityRequirement(name = "bearerAuth")
 public class AccountController {
 
 	private final AccountService accountService;
@@ -35,6 +38,7 @@ public class AccountController {
 	@Operation(summary = "내 계좌 연동 동기화")
 	@PostMapping("/me/sync")
 	public ApiResponse<List<AccountDto.AccountSummaryResponse>> syncAccounts(
+		@Parameter(hidden = true)
 		@RequestHeader(name = "Authorization", required = false) String authorization
 	) {
 		int userId = jwtAccessTokenReader.readUserId(authorization);
@@ -44,6 +48,7 @@ public class AccountController {
 	@Operation(summary = "내 계좌 목록 조회")
 	@GetMapping("/me")
 	public ApiResponse<List<AccountDto.AccountSummaryResponse>> getAccounts(
+		@Parameter(hidden = true)
 		@RequestHeader(name = "Authorization", required = false) String authorization
 	) {
 		int userId = jwtAccessTokenReader.readUserId(authorization);
@@ -53,6 +58,7 @@ public class AccountController {
 	@Operation(summary = "계좌 잔액 조회")
 	@GetMapping("/{accountNo}/balance")
 	public ApiResponse<AccountDto.AccountBalanceResponse> getBalance(
+		@Parameter(hidden = true)
 		@RequestHeader(name = "Authorization", required = false) String authorization,
 		@PathVariable String accountNo
 	) {
@@ -63,6 +69,7 @@ public class AccountController {
 	@Operation(summary = "계좌 입금")
 	@PostMapping("/deposit")
 	public ApiResponse<AccountDto.DepositResponse> deposit(
+		@Parameter(hidden = true)
 		@RequestHeader(name = "Authorization", required = false) String authorization,
 		@RequestBody AccountDto.DepositRequest request
 	) {
@@ -73,6 +80,7 @@ public class AccountController {
 	@Operation(summary = "계좌 이체")
 	@PostMapping("/transfer")
 	public ApiResponse<AccountDto.TransferResponse> transfer(
+		@Parameter(hidden = true)
 		@RequestHeader(name = "Authorization", required = false) String authorization,
 		@RequestBody AccountDto.TransferRequest request
 	) {
@@ -83,6 +91,7 @@ public class AccountController {
 	@Operation(summary = "계좌 거래내역 목록 조회")
 	@GetMapping("/{accountNo}/transactions")
 	public ApiResponse<AccountDto.TransactionHistoryResponse> getTransactions(
+		@Parameter(hidden = true)
 		@RequestHeader(name = "Authorization", required = false) String authorization,
 		@PathVariable String accountNo,
 		@RequestParam String startDate,

@@ -1,0 +1,28 @@
+{
+  "yearMonth": "2026-03",
+  "expenseAmount": 1690000,
+  "monthlyEssentialAmount": 920000,
+  "fixedEssentialAmount": 610000,
+  "variableEssentialAmount": 310000,
+  "categoryExpenses": [
+    {
+      "categoryId": 10,
+      "categoryName": "식비",
+      "amount": 620000,
+      "ratio": 36.69
+    },
+    {
+      "categoryId": 20,
+      "categoryName": "주거",
+      "amount": 540000,
+      "ratio": 31.95
+    },
+    {
+      "categoryId": 30,
+      "categoryName": "교통",
+      "amount": 170000,
+      "ratio": 10.06
+    }
+  ],
+  "lastAnalyzedAt": "2026-03-16T09:00:00"
+}

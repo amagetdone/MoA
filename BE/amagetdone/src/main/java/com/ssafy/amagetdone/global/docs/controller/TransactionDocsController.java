@@ -54,7 +54,6 @@ public interface TransactionDocsController {
 		@Parameter(hidden = true) AuthenticatedMember authenticatedMember,
 		@Parameter(description = "시작 날짜, yyyy-MM-dd") LocalDate fromDate,
 		@Parameter(description = "종료 날짜, yyyy-MM-dd") LocalDate toDate,
-		@Parameter(description = "거래 원천 유형") String sourceType,
 		@Parameter(description = "분석 포함 옵션") String analysisInclusion,
 		@Parameter(description = "페이지 번호") Integer page,
 		@Parameter(description = "페이지 크기") Integer size
