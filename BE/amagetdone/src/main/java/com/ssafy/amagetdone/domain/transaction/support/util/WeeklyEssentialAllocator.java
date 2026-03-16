@@ -10,7 +10,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.ssafy.amagetdone.domain.asset.model.entity.Category;
+import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.domain.budget.model.vo.ExpenseScope;
 
 import org.springframework.stereotype.Component;

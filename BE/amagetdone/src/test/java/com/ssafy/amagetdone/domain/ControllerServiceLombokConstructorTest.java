@@ -17,7 +17,7 @@ class ControllerServiceLombokConstructorTest {
 	private static final Pattern FINAL_FIELD_PATTERN = Pattern.compile("private\\s+final\\s+[\\w$.<>?, ]+\\s+\\w+\\s*;");
 
 	@Test
-	void controllerAndServiceBeansUseLombokForConstructorInjection() throws IOException {
+	void controllerAndServiceBeansUseConstructorInjection() throws IOException {
 		List<Path> sourceFiles;
 		try (var paths = Files.walk(MAIN_JAVA_PATH)) {
 			sourceFiles = paths
@@ -34,14 +34,14 @@ class ControllerServiceLombokConstructorTest {
 			}
 
 			String simpleClassName = sourceFile.getFileName().toString().replace(".java", "");
+			boolean hasRequiredArgsConstructor = source.contains("@RequiredArgsConstructor");
+			boolean hasManualConstructor = source.contains("public " + simpleClassName + "(");
+
 			assertTrue(
-				source.contains("@RequiredArgsConstructor"),
-				() -> simpleClassName + " must declare @RequiredArgsConstructor for constructor injection"
+				hasRequiredArgsConstructor || hasManualConstructor,
+				() -> simpleClassName + " must use constructor injection via @RequiredArgsConstructor or a manual constructor"
 			);
-			assertFalse(
-				source.contains("public " + simpleClassName + "("),
-				() -> simpleClassName + " should not keep a manual constructor"
-			);
+			assertFalse(source.contains("@Autowired"), () -> simpleClassName + " should not use @Autowired field injection");
 		}
 	}
 

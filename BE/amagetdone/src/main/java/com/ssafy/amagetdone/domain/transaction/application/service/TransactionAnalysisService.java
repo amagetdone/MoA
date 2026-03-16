@@ -12,10 +12,10 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.ssafy.amagetdone.domain.asset.model.entity.Account;
-import com.ssafy.amagetdone.domain.asset.model.entity.Category;
-import com.ssafy.amagetdone.domain.asset.model.repository.AccountRepository;
-import com.ssafy.amagetdone.domain.asset.model.repository.CategoryRepository;
+import com.ssafy.amagetdone.domain.account.model.entity.Account;
+import com.ssafy.amagetdone.domain.account.model.entity.Category;
+import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
+import com.ssafy.amagetdone.domain.account.model.repository.CategoryRepository;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeek;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeekCategory;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekCategoryRepository;

@@ -8,11 +8,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import com.ssafy.amagetdone.domain.asset.model.entity.Account;
-import com.ssafy.amagetdone.domain.asset.model.entity.Card;
-import com.ssafy.amagetdone.domain.asset.model.entity.Category;
-import com.ssafy.amagetdone.domain.asset.model.entity.Merchant;
-import com.ssafy.amagetdone.domain.asset.model.entity.Pocket;
+import com.ssafy.amagetdone.domain.account.model.entity.Card;
+import com.ssafy.amagetdone.domain.account.model.entity.Category;
+import com.ssafy.amagetdone.domain.account.model.entity.Merchant;
+import com.ssafy.amagetdone.domain.account.model.entity.Pocket;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetAdjustment;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetMonth;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetRollover;
@@ -40,7 +39,6 @@ class EntityLombokAnnotationTest {
 	);
 
 	private static final List<Class<?>> SUPER_BUILDER_ENTITIES = List.of(
-		Account.class,
 		Card.class,
 		Pocket.class,
 		BudgetAdjustment.class,

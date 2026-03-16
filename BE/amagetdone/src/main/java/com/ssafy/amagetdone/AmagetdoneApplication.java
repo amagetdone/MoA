@@ -2,7 +2,7 @@ package com.ssafy.amagetdone;
 
 import java.nio.file.Path;
 
-import com.ssafy.amagetdone.config.EnvLoader;
+import com.ssafy.amagetdone.global.config.EnvLoader;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

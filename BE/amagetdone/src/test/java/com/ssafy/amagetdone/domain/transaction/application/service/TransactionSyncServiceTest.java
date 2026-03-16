@@ -12,14 +12,14 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import com.ssafy.amagetdone.domain.asset.model.entity.Account;
-import com.ssafy.amagetdone.domain.asset.model.entity.Card;
-import com.ssafy.amagetdone.domain.asset.model.entity.Category;
-import com.ssafy.amagetdone.domain.asset.model.entity.Merchant;
-import com.ssafy.amagetdone.domain.asset.model.repository.AccountRepository;
-import com.ssafy.amagetdone.domain.asset.model.repository.CardRepository;
-import com.ssafy.amagetdone.domain.asset.model.repository.CategoryRepository;
-import com.ssafy.amagetdone.domain.asset.model.repository.MerchantRepository;
+import com.ssafy.amagetdone.domain.account.model.entity.Account;
+import com.ssafy.amagetdone.domain.account.model.entity.Card;
+import com.ssafy.amagetdone.domain.account.model.entity.Category;
+import com.ssafy.amagetdone.domain.account.model.entity.Merchant;
+import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
+import com.ssafy.amagetdone.domain.account.model.repository.CardRepository;
+import com.ssafy.amagetdone.domain.account.model.repository.CategoryRepository;
+import com.ssafy.amagetdone.domain.account.model.repository.MerchantRepository;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.vo.UserStatus;
 import com.ssafy.amagetdone.domain.transaction.infra.client.SsafyCardTransactionApiClient;
@@ -37,6 +37,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class TransactionSyncServiceTest {
@@ -326,14 +327,10 @@ class TransactionSyncServiceTest {
 	}
 
 	private Account account(User user, String id, String accountNo) {
-		return Account.builder()
-			.id(id)
-			.user(user)
-			.accountNo(accountNo)
-			.bankCode("001")
-			.bankName("테스트은행")
-			.verified(true)
-			.build();
+		Account account = Account.create(user, accountNo, null, null, null, "001", "test-bank", null);
+		ReflectionTestUtils.setField(account, "id", id);
+		account.markVerified();
+		return account;
 	}
 
 	private Card card(Account withdrawalAccount, Long cardUniqueNo, String cardNo, String cvc) {

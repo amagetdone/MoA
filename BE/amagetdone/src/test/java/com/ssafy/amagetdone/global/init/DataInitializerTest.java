@@ -10,8 +10,8 @@ import static org.mockito.Mockito.verify;
 import java.lang.reflect.Method;
 import java.util.List;
 
-import com.ssafy.amagetdone.domain.asset.model.entity.Category;
-import com.ssafy.amagetdone.domain.asset.model.repository.CategoryRepository;
+import com.ssafy.amagetdone.domain.account.model.entity.Category;
+import com.ssafy.amagetdone.domain.account.model.repository.CategoryRepository;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

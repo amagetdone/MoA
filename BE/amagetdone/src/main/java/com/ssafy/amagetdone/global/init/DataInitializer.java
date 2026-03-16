@@ -2,8 +2,8 @@ package com.ssafy.amagetdone.global.init;
 
 import java.util.List;
 
-import com.ssafy.amagetdone.domain.asset.model.entity.Category;
-import com.ssafy.amagetdone.domain.asset.model.repository.CategoryRepository;
+import com.ssafy.amagetdone.domain.account.model.entity.Category;
+import com.ssafy.amagetdone.domain.account.model.repository.CategoryRepository;
 
 import org.springframework.stereotype.Component;
 

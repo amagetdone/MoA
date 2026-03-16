@@ -46,10 +46,10 @@ class SwaggerConfigIntegrationTest {
 	void apiDocsDescribeS3TestEndpointsForLocalTesting() throws Exception {
 		mockMvc.perform(apiGet("/v3/api-docs"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.paths['/test/s3/upload'].post.summary").value("Upload a file to S3"))
-			.andExpect(jsonPath("$.paths['/test/s3/upload'].post.tags[0]").value("S3 Test"))
-			.andExpect(jsonPath("$.paths['/test/s3'].delete.summary").value("Delete an uploaded S3 file"))
-			.andExpect(jsonPath("$.paths['/test/s3'].delete.tags[0]").value("S3 Test"));
+			.andExpect(jsonPath("$.paths['/test/s3/upload'].post.summary").value("S3 파일 업로드 테스트"))
+			.andExpect(jsonPath("$.paths['/test/s3/upload'].post.tags[0]").value("S3 테스트"))
+			.andExpect(jsonPath("$.paths['/test/s3'].delete.summary").value("S3 업로드 파일 삭제 테스트"))
+			.andExpect(jsonPath("$.paths['/test/s3'].delete.tags[0]").value("S3 테스트"));
 	}
 
 	@Test
@@ -57,12 +57,12 @@ class SwaggerConfigIntegrationTest {
 		mockMvc.perform(apiGet("/v3/api-docs"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.paths['/v1/members/me/profile-image'].patch.summary").value("프로필 이미지 업로드"))
-			.andExpect(jsonPath("$.paths['/v1/members/me/profile-image'].patch.tags[0]").value("Member Profile API"))
+			.andExpect(jsonPath("$.paths['/v1/members/me/profile-image'].patch.tags[0]").value("회원 프로필 API"))
 			.andExpect(jsonPath(
 				"$.paths['/v1/members/me/profile-image'].patch.requestBody.content['multipart/form-data'].schema.properties.image.format"
 			).value("binary"))
 			.andExpect(jsonPath("$.paths['/v1/plans/{planId}/image'].patch.summary").value("목표 이미지 업로드"))
-			.andExpect(jsonPath("$.paths['/v1/plans/{planId}/image'].patch.tags[0]").value("Plan Image API"))
+			.andExpect(jsonPath("$.paths['/v1/plans/{planId}/image'].patch.tags[0]").value("목표 이미지 API"))
 			.andExpect(jsonPath(
 				"$.paths['/v1/plans/{planId}/image'].patch.requestBody.content['multipart/form-data'].schema.properties.image.format"
 			).value("binary"));

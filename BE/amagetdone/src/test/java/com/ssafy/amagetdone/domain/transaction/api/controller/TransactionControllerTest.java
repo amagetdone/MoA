@@ -3,8 +3,8 @@ package com.ssafy.amagetdone.domain.transaction.api.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -34,15 +34,20 @@ import com.ssafy.amagetdone.domain.transaction.application.usecase.StartTransact
 import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisJob;
 import com.ssafy.amagetdone.domain.transaction.model.vo.TransactionAnalysisJobStatus;
 import com.ssafy.amagetdone.domain.transaction.model.vo.TransactionAnalysisStep;
+import com.ssafy.amagetdone.global.config.SecurityConfig;
+import com.ssafy.amagetdone.global.security.AuthenticatedMember;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @WebMvcTest(TransactionController.class)
+@Import(SecurityConfig.class)
 class TransactionControllerTest {
 
 	@Autowired
@@ -74,7 +79,6 @@ class TransactionControllerTest {
 
 	@Test
 	void getExpenseSummaryReadsAuthorizationAndReturnsApiResponse() throws Exception {
-		given(jwtAccessTokenReader.readUserId("Bearer access-token")).willReturn(1);
 		given(getExpenseSummaryUseCase.execute(1, YearMonth.of(2025, 10), YearMonth.of(2026, 3), "MONTH"))
 			.willReturn(new ExpenseSummaryDto.Response(
 				new ExpenseSummaryDto.Range("2025-10", "2026-03", "MONTH"),
@@ -84,7 +88,9 @@ class TransactionControllerTest {
 			));
 
 		mockMvc.perform(apiGet("/transactions/expenses/summary")
-				.header(AUTHORIZATION, "Bearer access-token")
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+				))
 				.param("fromMonth", "2025-10")
 				.param("toMonth", "2026-03")
 				.param("bucket", "MONTH"))
@@ -97,7 +103,6 @@ class TransactionControllerTest {
 
 	@Test
 	void getMonthlyExpenseReadsAuthorizationAndReturnsApiResponse() throws Exception {
-		given(jwtAccessTokenReader.readUserId("Bearer access-token")).willReturn(1);
 		given(getMonthlyExpenseUseCase.execute(1, YearMonth.of(2026, 3)))
 			.willReturn(new MonthlyExpenseDto.Response(
 				"2026-03",
@@ -111,7 +116,9 @@ class TransactionControllerTest {
 			));
 
 		mockMvc.perform(apiGet("/transactions/expenses/monthly")
-				.header(AUTHORIZATION, "Bearer access-token")
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+				))
 				.param("month", "2026-03"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
@@ -122,7 +129,6 @@ class TransactionControllerTest {
 
 	@Test
 	void listTransactionsReadsAuthorizationAndReturnsListPayload() throws Exception {
-		given(jwtAccessTokenReader.readUserId("Bearer access-token")).willReturn(1);
 		given(listTransactionsUseCase.execute(eq(1), any(TransactionListDto.Query.class)))
 			.willReturn(new TransactionListDto.Response(
 				new TransactionListDto.Sync("SUCCEEDED", true, LocalDateTime.of(2026, 3, 13, 15, 18, 11)),
@@ -145,7 +151,9 @@ class TransactionControllerTest {
 			));
 
 		mockMvc.perform(apiGet("/transactions")
-				.header(AUTHORIZATION, "Bearer access-token")
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+				))
 				.param("fromDate", "2026-03-01")
 				.param("toDate", "2026-03-13")
 				.param("sourceType", "CARD")
@@ -169,11 +177,12 @@ class TransactionControllerTest {
 			.currentStep(TransactionAnalysisStep.SYNCING)
 			.requestedAt(LocalDateTime.of(2026, 3, 13, 15, 19))
 			.build();
-		given(jwtAccessTokenReader.readUserId("Bearer access-token")).willReturn(1);
 		given(startTransactionAnalysisJobUseCase.execute(1, 6, false)).willReturn(job);
 
 		mockMvc.perform(apiPost("/transactions/analysis-jobs")
-				.header(AUTHORIZATION, "Bearer access-token")
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+				))
 				.contentType(APPLICATION_JSON)
 				.content("""
 					{
@@ -200,11 +209,12 @@ class TransactionControllerTest {
 			.requestedAt(LocalDateTime.of(2026, 3, 13, 15, 19))
 			.startedAt(LocalDateTime.of(2026, 3, 13, 15, 19, 2))
 			.build();
-		given(jwtAccessTokenReader.readUserId("Bearer access-token")).willReturn(1);
 		given(getTransactionAnalysisJobUseCase.execute("txn-analysis-20260313-001")).willReturn(job);
 
 		mockMvc.perform(apiGet("/transactions/analysis-jobs/txn-analysis-20260313-001")
-				.header(AUTHORIZATION, "Bearer access-token"))
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.data.jobId").value("txn-analysis-20260313-001"))
@@ -214,7 +224,6 @@ class TransactionControllerTest {
 
 	@Test
 	void getWeeklyAnalysisReturnsEssentialBreakdownAndCategoryExpenses() throws Exception {
-		given(jwtAccessTokenReader.readUserId("Bearer access-token")).willReturn(1);
 		given(getWeeklyTransactionAnalysisUseCase.execute(1, "2026-W10"))
 			.willReturn(new WeeklyTransactionAnalysisDto.Response(
 				"2026-W10",
@@ -233,7 +242,9 @@ class TransactionControllerTest {
 			));
 
 		mockMvc.perform(apiGet("/transactions/analysis/weeks/2026-W10")
-				.header(AUTHORIZATION, "Bearer access-token"))
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.data.yearWeek").value("2026-W10"))
@@ -246,7 +257,6 @@ class TransactionControllerTest {
 
 	@Test
 	void getMonthlyAnalysisReturnsMonthlyEssentialAmountDerivedFromWeeklySnapshots() throws Exception {
-		given(jwtAccessTokenReader.readUserId("Bearer access-token")).willReturn(1);
 		given(getMonthlyTransactionAnalysisUseCase.execute(1, "2026-03"))
 			.willReturn(new MonthlyTransactionAnalysisDto.Response(
 				"2026-03",
@@ -262,7 +272,9 @@ class TransactionControllerTest {
 			));
 
 		mockMvc.perform(apiGet("/transactions/analysis/months/2026-03")
-				.header(AUTHORIZATION, "Bearer access-token"))
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.data.yearMonth").value("2026-03"))

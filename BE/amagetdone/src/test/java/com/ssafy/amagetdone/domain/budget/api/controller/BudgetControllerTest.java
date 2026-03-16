@@ -1,7 +1,7 @@
 package com.ssafy.amagetdone.domain.budget.api.controller;
 
 import static org.mockito.BDDMockito.given;
-import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -13,15 +13,20 @@ import java.util.List;
 import com.ssafy.amagetdone.domain.budget.api.dto.WeeklyEssentialExpenseDto;
 import com.ssafy.amagetdone.domain.budget.application.usecase.GetWeeklyEssentialExpensesUseCase;
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
+import com.ssafy.amagetdone.global.config.SecurityConfig;
+import com.ssafy.amagetdone.global.security.AuthenticatedMember;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @WebMvcTest(BudgetController.class)
+@Import(SecurityConfig.class)
 class BudgetControllerTest {
 
 	@Autowired
@@ -35,7 +40,6 @@ class BudgetControllerTest {
 
 	@Test
 	void getWeeklyEssentialExpensesReturnsOnlyEssentialExpenseSections() throws Exception {
-		given(jwtAccessTokenReader.readUserId("Bearer access-token")).willReturn(1);
 		given(getWeeklyEssentialExpensesUseCase.execute(1, "2026-W10"))
 			.willReturn(new WeeklyEssentialExpenseDto.Response(
 				"2026-W10",
@@ -54,7 +58,9 @@ class BudgetControllerTest {
 			));
 
 		mockMvc.perform(apiGet("/budgets/weeks/2026-W10/essential-expenses")
-				.header(AUTHORIZATION, "Bearer access-token"))
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.data.essentialAmount").value(155000))

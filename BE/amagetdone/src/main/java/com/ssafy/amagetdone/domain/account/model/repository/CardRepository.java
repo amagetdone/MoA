@@ -2,7 +2,6 @@ package com.ssafy.amagetdone.domain.account.model.repository;
 
 import java.util.List;
 
-import com.ssafy.amagetdone.domain.asset.model.entity.Card;
 import com.ssafy.amagetdone.domain.account.model.entity.Card;
 
 import org.springframework.data.jpa.repository.JpaRepository;

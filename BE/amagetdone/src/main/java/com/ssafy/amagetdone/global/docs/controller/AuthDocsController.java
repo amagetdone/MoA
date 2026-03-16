@@ -13,59 +13,59 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-@Tag(name = "Auth", description = "Authentication APIs")
+@Tag(name = "인증", description = "인증 관련 API")
 public interface AuthDocsController {
 
-	@Operation(summary = "Social login", description = "Logs a user in with the given social provider.")
+	@Operation(summary = "소셜 로그인", description = "지정한 소셜 제공자로 로그인합니다.")
 	@ApiResponses({
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Social login succeeded"),
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid provider or request", content = @Content)
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "소셜 로그인 성공"),
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 제공자 또는 요청입니다.", content = @Content)
 	})
 	ApiResponse<SocialAuthDto.Response> socialAuth(
-		@Parameter(description = "Social provider") String provider,
+		@Parameter(description = "소셜 제공자") String provider,
 		@io.swagger.v3.oas.annotations.parameters.RequestBody(
 			required = true,
-			description = "Social login request",
+			description = "소셜 로그인 요청",
 			content = @Content(schema = @Schema(implementation = SocialAuthDto.Request.class))
 		)
 		SocialAuthDto.Request request
 	);
 
-	@Operation(summary = "Test social login", description = "Logs in with the test social account.")
+	@Operation(summary = "테스트 소셜 로그인", description = "테스트용 소셜 계정으로 로그인합니다.")
 	@ApiResponses({
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Test login succeeded")
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "테스트 로그인 성공")
 	})
 	ApiResponse<SocialAuthDto.Response> socialTestAuth();
 
-	@Operation(summary = "Reset test social user", description = "Resets the test social user.")
+	@Operation(summary = "테스트 소셜 사용자 초기화", description = "테스트용 소셜 사용자를 초기화합니다.")
 	@ApiResponses({
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Test user reset succeeded")
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "테스트 사용자 초기화 성공")
 	})
 	ApiResponse<TestSocialResetDto.Response> resetTestSocialUser();
 
-	@Operation(summary = "Refresh token", description = "Reissues tokens using a refresh token.")
+	@Operation(summary = "토큰 재발급", description = "리프레시 토큰으로 토큰을 재발급합니다.")
 	@ApiResponses({
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Token refresh succeeded"),
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "토큰 재발급 성공"),
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청입니다.", content = @Content)
 	})
 	ApiResponse<RefreshTokenDto.Response> refresh(
 		@io.swagger.v3.oas.annotations.parameters.RequestBody(
 			required = true,
-			description = "Token refresh request",
+			description = "토큰 재발급 요청",
 			content = @Content(schema = @Schema(implementation = RefreshTokenDto.Request.class))
 		)
 		RefreshTokenDto.Request request
 	);
 
-	@Operation(summary = "Logout", description = "Invalidates the refresh token.")
+	@Operation(summary = "로그아웃", description = "리프레시 토큰을 무효화합니다.")
 	@ApiResponses({
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Logout succeeded"),
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "로그아웃 성공"),
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청입니다.", content = @Content)
 	})
 	ApiResponse<LogoutDto.Response> logout(
 		@io.swagger.v3.oas.annotations.parameters.RequestBody(
 			required = true,
-			description = "Logout request",
+			description = "로그아웃 요청",
 			content = @Content(schema = @Schema(implementation = LogoutDto.Request.class))
 		)
 		LogoutDto.Request request

@@ -56,6 +56,7 @@ public class Plan extends BaseEntity {
 
 	@ColumnDefault("0")
 	@Column(name = "saved_amount", nullable = false)
+	@Builder.Default
 	private Long savedAmount = 0L;
 
 	@Column(name = "start_date", nullable = false)
@@ -86,9 +87,6 @@ public class Plan extends BaseEntity {
 
 	@Column(name = "end_date", nullable = false)
 	private LocalDate endDate;
-
-	protected Plan() {
-	}
 
 	public String getPlanUrl() {
 		return planUrl;

@@ -10,8 +10,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.ssafy.amagetdone.config.SecurityConfig;
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
+import com.ssafy.amagetdone.global.config.SecurityConfig;
 import com.ssafy.amagetdone.global.infra.storage.ImageCategory;
 import com.ssafy.amagetdone.global.infra.storage.S3StorageService;
 import com.ssafy.amagetdone.global.security.AuthenticatedMember;
@@ -59,7 +59,7 @@ class S3TestControllerTest {
 				.with(apiContextPath()))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.message").value("S3 upload test succeeded."))
+			.andExpect(jsonPath("$.message").value("S3 업로드 테스트에 성공했습니다."))
 			.andExpect(jsonPath("$.data").value("profile/test.png"));
 	}
 
@@ -76,7 +76,7 @@ class S3TestControllerTest {
 				.param("objectKey", objectKey))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.message").value("S3 delete test succeeded."))
+			.andExpect(jsonPath("$.message").value("S3 삭제 테스트에 성공했습니다."))
 			.andExpect(jsonPath("$.data").value(true));
 
 		verify(s3StorageService).delete(objectKey);

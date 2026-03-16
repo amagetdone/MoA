@@ -1,4 +1,4 @@
-package com.ssafy.amagetdone.config;
+package com.ssafy.amagetdone.global.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;

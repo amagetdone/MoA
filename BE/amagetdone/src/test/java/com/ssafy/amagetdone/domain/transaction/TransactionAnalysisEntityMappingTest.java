@@ -7,8 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
 
-import com.ssafy.amagetdone.config.EnvLoader;
-import com.ssafy.amagetdone.domain.asset.model.entity.Category;
+import com.ssafy.amagetdone.global.config.EnvLoader;
+import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionOverride;
 

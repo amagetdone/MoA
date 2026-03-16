@@ -11,7 +11,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import java.time.Instant;
 
-import com.ssafy.amagetdone.config.SocialAuthProperties;
+import com.ssafy.amagetdone.global.config.SocialAuthProperties;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
 import com.ssafy.amagetdone.domain.member.model.vo.SocialProvider;

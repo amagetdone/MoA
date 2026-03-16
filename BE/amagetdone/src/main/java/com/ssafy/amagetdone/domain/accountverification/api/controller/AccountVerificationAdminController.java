@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Account Verification Admin API")
+@Tag(name = "계좌 인증 관리자 API")
 @RestController
 @RequestMapping("/v1/admin/accounts/verification")
 public class AccountVerificationAdminController {
@@ -31,7 +31,7 @@ public class AccountVerificationAdminController {
 	public ApiResponse<AccountVerificationAdminDto.CheckVerificationResponse> checkVerification(
 		@RequestBody AccountVerificationAdminDto.CheckVerificationRequest request
 	) {
-		return ApiResponse.ok("1원 인증 검증이 완료되었습니다.", accountVerificationService.checkVerification(request));
+		return ApiResponse.ok("1원 인증 검증을 완료했습니다.", accountVerificationService.checkVerification(request));
 	}
 
 	@Operation(summary = "1원 인증 상태 조회")
