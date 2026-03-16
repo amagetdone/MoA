@@ -108,6 +108,12 @@ class GoalViewModel extends StateNotifier<GoalState> {
     );
   }
 
+  void removeGoal(String goalId) {
+    state = state.copyWith(
+      goals: state.goals.where((g) => g.id != goalId).toList(),
+    );
+  }
+
   Future<void> reorderGoals(List<Goal> reordered) async {
     final reorderedGoals = await _repository.saveGoalPriority(reordered);
     state = state.copyWith(goals: reorderedGoals);
