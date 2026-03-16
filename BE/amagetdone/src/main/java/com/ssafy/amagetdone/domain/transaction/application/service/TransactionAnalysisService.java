@@ -45,12 +45,14 @@ import com.ssafy.amagetdone.domain.transaction.support.util.WeeklyEssentialAlloc
 import com.ssafy.amagetdone.domain.transaction.support.util.WeeklyEssentialAllocator.Entry;
 import com.ssafy.amagetdone.domain.transaction.support.util.WeeklyEssentialAllocator.WeeklySnapshot;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class TransactionAnalysisService {
 
 	private static final int DEFAULT_MONTHS = 6;
@@ -71,77 +73,7 @@ public class TransactionAnalysisService {
 	private final TransactionExclusionPolicy transactionExclusionPolicy;
 	private final FixedExpenseClassifier fixedExpenseClassifier;
 	private final WeeklyEssentialAllocator weeklyEssentialAllocator;
-	private final Clock clock;
-
-	@Autowired
-	public TransactionAnalysisService(
-		UserRepository userRepository,
-		AccountRepository accountRepository,
-		CategoryRepository categoryRepository,
-		AccountTransactionOverrideRepository accountTransactionOverrideRepository,
-		CardTransactionOverrideRepository cardTransactionOverrideRepository,
-		TransactionAnalysisJobRepository transactionAnalysisJobRepository,
-		TransactionAnalysisResultRepository transactionAnalysisResultRepository,
-		EssentialExpenseSnapshotWeekRepository essentialExpenseSnapshotWeekRepository,
-		EssentialExpenseSnapshotWeekCategoryRepository essentialExpenseSnapshotWeekCategoryRepository,
-		MerchantInferenceApiClient merchantInferenceApiClient,
-		TransactionSyncService transactionSyncService,
-		TransactionExclusionPolicy transactionExclusionPolicy,
-		FixedExpenseClassifier fixedExpenseClassifier,
-		WeeklyEssentialAllocator weeklyEssentialAllocator
-	) {
-		this(
-			userRepository,
-			accountRepository,
-			categoryRepository,
-			accountTransactionOverrideRepository,
-			cardTransactionOverrideRepository,
-			transactionAnalysisJobRepository,
-			transactionAnalysisResultRepository,
-			essentialExpenseSnapshotWeekRepository,
-			essentialExpenseSnapshotWeekCategoryRepository,
-			merchantInferenceApiClient,
-			transactionSyncService,
-			transactionExclusionPolicy,
-			fixedExpenseClassifier,
-			weeklyEssentialAllocator,
-			Clock.systemDefaultZone()
-		);
-	}
-
-	TransactionAnalysisService(
-		UserRepository userRepository,
-		AccountRepository accountRepository,
-		CategoryRepository categoryRepository,
-		AccountTransactionOverrideRepository accountTransactionOverrideRepository,
-		CardTransactionOverrideRepository cardTransactionOverrideRepository,
-		TransactionAnalysisJobRepository transactionAnalysisJobRepository,
-		TransactionAnalysisResultRepository transactionAnalysisResultRepository,
-		EssentialExpenseSnapshotWeekRepository essentialExpenseSnapshotWeekRepository,
-		EssentialExpenseSnapshotWeekCategoryRepository essentialExpenseSnapshotWeekCategoryRepository,
-		MerchantInferenceApiClient merchantInferenceApiClient,
-		TransactionSyncService transactionSyncService,
-		TransactionExclusionPolicy transactionExclusionPolicy,
-		FixedExpenseClassifier fixedExpenseClassifier,
-		WeeklyEssentialAllocator weeklyEssentialAllocator,
-		Clock clock
-	) {
-		this.userRepository = userRepository;
-		this.accountRepository = accountRepository;
-		this.categoryRepository = categoryRepository;
-		this.accountTransactionOverrideRepository = accountTransactionOverrideRepository;
-		this.cardTransactionOverrideRepository = cardTransactionOverrideRepository;
-		this.transactionAnalysisJobRepository = transactionAnalysisJobRepository;
-		this.transactionAnalysisResultRepository = transactionAnalysisResultRepository;
-		this.essentialExpenseSnapshotWeekRepository = essentialExpenseSnapshotWeekRepository;
-		this.essentialExpenseSnapshotWeekCategoryRepository = essentialExpenseSnapshotWeekCategoryRepository;
-		this.merchantInferenceApiClient = merchantInferenceApiClient;
-		this.transactionSyncService = transactionSyncService;
-		this.transactionExclusionPolicy = transactionExclusionPolicy;
-		this.fixedExpenseClassifier = fixedExpenseClassifier;
-		this.weeklyEssentialAllocator = weeklyEssentialAllocator;
-		this.clock = clock;
-	}
+	private Clock clock = Clock.systemDefaultZone();
 
 	public TransactionAnalysisJob createJob(Integer userId, Integer months) {
 		if (transactionAnalysisJobRepository.existsByUser_IdAndStatus(userId, TransactionAnalysisJobStatus.RUNNING)) {

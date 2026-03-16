@@ -9,23 +9,18 @@ import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnaps
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.vo.ExpenseScope;
 
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class EssentialExpenseSnapshotQueryService {
 
 	private final EssentialExpenseSnapshotWeekRepository essentialExpenseSnapshotWeekRepository;
 	private final EssentialExpenseSnapshotWeekCategoryRepository essentialExpenseSnapshotWeekCategoryRepository;
-
-	public EssentialExpenseSnapshotQueryService(
-		EssentialExpenseSnapshotWeekRepository essentialExpenseSnapshotWeekRepository,
-		EssentialExpenseSnapshotWeekCategoryRepository essentialExpenseSnapshotWeekCategoryRepository
-	) {
-		this.essentialExpenseSnapshotWeekRepository = essentialExpenseSnapshotWeekRepository;
-		this.essentialExpenseSnapshotWeekCategoryRepository = essentialExpenseSnapshotWeekCategoryRepository;
-	}
 
 	public WeeklyEssentialExpenseDto.Response getWeeklyEssentialExpenses(Integer userId, String yearWeek) {
 		EssentialExpenseSnapshotWeek snapshotWeek = essentialExpenseSnapshotWeekRepository.findByUser_IdAndYearWeek(userId, yearWeek)

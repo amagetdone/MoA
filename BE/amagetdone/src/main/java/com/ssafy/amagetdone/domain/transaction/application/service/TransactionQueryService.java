@@ -35,11 +35,14 @@ import com.ssafy.amagetdone.domain.transaction.model.repository.CardTransactionO
 import com.ssafy.amagetdone.domain.transaction.model.repository.TransactionAnalysisResultRepository;
 import com.ssafy.amagetdone.domain.transaction.model.vo.TransactionExcludedReason;
 
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class TransactionQueryService {
 
 	private static final WeekFields ISO_WEEK_FIELDS = WeekFields.of(Locale.UK);
@@ -50,22 +53,6 @@ public class TransactionQueryService {
 	private final EssentialExpenseSnapshotWeekRepository essentialExpenseSnapshotWeekRepository;
 	private final EssentialExpenseSnapshotWeekCategoryRepository essentialExpenseSnapshotWeekCategoryRepository;
 	private final SyncLatestTransactionsUseCase syncLatestTransactionsUseCase;
-
-	public TransactionQueryService(
-		AccountTransactionOverrideRepository accountTransactionOverrideRepository,
-		CardTransactionOverrideRepository cardTransactionOverrideRepository,
-		TransactionAnalysisResultRepository transactionAnalysisResultRepository,
-		EssentialExpenseSnapshotWeekRepository essentialExpenseSnapshotWeekRepository,
-		EssentialExpenseSnapshotWeekCategoryRepository essentialExpenseSnapshotWeekCategoryRepository,
-		SyncLatestTransactionsUseCase syncLatestTransactionsUseCase
-	) {
-		this.accountTransactionOverrideRepository = accountTransactionOverrideRepository;
-		this.cardTransactionOverrideRepository = cardTransactionOverrideRepository;
-		this.transactionAnalysisResultRepository = transactionAnalysisResultRepository;
-		this.essentialExpenseSnapshotWeekRepository = essentialExpenseSnapshotWeekRepository;
-		this.essentialExpenseSnapshotWeekCategoryRepository = essentialExpenseSnapshotWeekCategoryRepository;
-		this.syncLatestTransactionsUseCase = syncLatestTransactionsUseCase;
-	}
 
 	public ExpenseSummaryDto.Response getExpenseSummary(
 		Integer userId,

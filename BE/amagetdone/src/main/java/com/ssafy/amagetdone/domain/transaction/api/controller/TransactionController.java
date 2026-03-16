@@ -6,14 +6,21 @@ import java.time.YearMonth;
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
 import com.ssafy.amagetdone.domain.transaction.api.dto.ExpenseSummaryDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisJobDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionListDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetExpenseSummaryUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyExpenseUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyTransactionAnalysisUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetTransactionAnalysisJobUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.GetWeeklyTransactionAnalysisUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.ListTransactionsUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.StartTransactionAnalysisJobUseCase;
+import com.ssafy.amagetdone.global.docs.controller.TransactionDocsController;
 import com.ssafy.amagetdone.global.response.ApiResponse;
+
+import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +35,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/transactions")
-public class TransactionQueryController {
+@RequiredArgsConstructor
+public class TransactionController implements TransactionDocsController {
 
 	private final JwtAccessTokenReader jwtAccessTokenReader;
 	private final GetExpenseSummaryUseCase getExpenseSummaryUseCase;
@@ -36,22 +44,8 @@ public class TransactionQueryController {
 	private final ListTransactionsUseCase listTransactionsUseCase;
 	private final StartTransactionAnalysisJobUseCase startTransactionAnalysisJobUseCase;
 	private final GetTransactionAnalysisJobUseCase getTransactionAnalysisJobUseCase;
-
-	public TransactionQueryController(
-		JwtAccessTokenReader jwtAccessTokenReader,
-		GetExpenseSummaryUseCase getExpenseSummaryUseCase,
-		GetMonthlyExpenseUseCase getMonthlyExpenseUseCase,
-		ListTransactionsUseCase listTransactionsUseCase,
-		StartTransactionAnalysisJobUseCase startTransactionAnalysisJobUseCase,
-		GetTransactionAnalysisJobUseCase getTransactionAnalysisJobUseCase
-	) {
-		this.jwtAccessTokenReader = jwtAccessTokenReader;
-		this.getExpenseSummaryUseCase = getExpenseSummaryUseCase;
-		this.getMonthlyExpenseUseCase = getMonthlyExpenseUseCase;
-		this.listTransactionsUseCase = listTransactionsUseCase;
-		this.startTransactionAnalysisJobUseCase = startTransactionAnalysisJobUseCase;
-		this.getTransactionAnalysisJobUseCase = getTransactionAnalysisJobUseCase;
-	}
+	private final GetWeeklyTransactionAnalysisUseCase getWeeklyTransactionAnalysisUseCase;
+	private final GetMonthlyTransactionAnalysisUseCase getMonthlyTransactionAnalysisUseCase;
 
 	@GetMapping("/expenses/summary")
 	public ApiResponse<ExpenseSummaryDto.Response> getExpenseSummary(
@@ -74,7 +68,7 @@ public class TransactionQueryController {
 	) {
 		int userId = jwtAccessTokenReader.readUserId(authorization);
 		return ApiResponse.ok(
-			"월 소비 금액을 조회했습니다.",
+			"월별 소비 금액을 조회했습니다.",
 			getMonthlyExpenseUseCase.execute(userId, parseYearMonth(month))
 		);
 	}
@@ -131,6 +125,30 @@ public class TransactionQueryController {
 		return ApiResponse.ok(
 			"소비 분석 작업 상태를 조회했습니다.",
 			TransactionAnalysisJobDto.StatusResponse.from(getTransactionAnalysisJobUseCase.execute(jobId))
+		);
+	}
+
+	@GetMapping("/analysis/weeks/{yearWeek}")
+	public ApiResponse<WeeklyTransactionAnalysisDto.Response> getWeeklyAnalysis(
+		@RequestHeader(name = "Authorization", required = false) String authorization,
+		@PathVariable("yearWeek") String yearWeek
+	) {
+		int userId = jwtAccessTokenReader.readUserId(authorization);
+		return ApiResponse.ok(
+			"주간 소비 분석을 조회했습니다.",
+			getWeeklyTransactionAnalysisUseCase.execute(userId, yearWeek)
+		);
+	}
+
+	@GetMapping("/analysis/months/{yearMonth}")
+	public ApiResponse<MonthlyTransactionAnalysisDto.Response> getMonthlyAnalysis(
+		@RequestHeader(name = "Authorization", required = false) String authorization,
+		@PathVariable("yearMonth") String yearMonth
+	) {
+		int userId = jwtAccessTokenReader.readUserId(authorization);
+		return ApiResponse.ok(
+			"월간 소비 분석을 조회했습니다.",
+			getMonthlyTransactionAnalysisUseCase.execute(userId, yearMonth)
 		);
 	}
 

@@ -9,7 +9,10 @@ import com.ssafy.amagetdone.domain.member.application.service.MemberTokenService
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
 import com.ssafy.amagetdone.domain.member.model.vo.SocialProvider;
+import com.ssafy.amagetdone.global.docs.controller.AuthDocsController;
 import com.ssafy.amagetdone.global.response.ApiResponse;
+
+import lombok.RequiredArgsConstructor;
 
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,15 +22,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/v1/auth")
-public class AuthController {
+@RequiredArgsConstructor
+public class AuthController implements AuthDocsController {
 
 	private final MemberAuthService memberAuthService;
 	private final MemberTokenService memberTokenService;
-
-	public AuthController(MemberAuthService memberAuthService, MemberTokenService memberTokenService) {
-		this.memberAuthService = memberAuthService;
-		this.memberTokenService = memberTokenService;
-	}
 
 	@PostMapping("/social/{provider}")
 	public ApiResponse<SocialAuthDto.Response> socialAuth(

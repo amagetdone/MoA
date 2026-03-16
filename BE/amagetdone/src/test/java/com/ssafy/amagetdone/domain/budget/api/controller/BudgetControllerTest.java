@@ -21,8 +21,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-@WebMvcTest(BudgetEssentialExpenseController.class)
-class BudgetEssentialExpenseControllerTest {
+@WebMvcTest(BudgetController.class)
+class BudgetControllerTest {
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -46,10 +46,10 @@ class BudgetEssentialExpenseControllerTest {
 				72000L,
 				83000L,
 				List.of(
-					new WeeklyEssentialExpenseDto.CategoryExpense(2, "구독료", 17000L),
-					new WeeklyEssentialExpenseDto.CategoryExpense(12, "주거/통신", 55000L)
+					new WeeklyEssentialExpenseDto.CategoryExpense(2, "Subscription", 17000L),
+					new WeeklyEssentialExpenseDto.CategoryExpense(12, "Housing", 55000L)
 				),
-				List.of(new WeeklyEssentialExpenseDto.CategoryExpense(10, "식비", 83000L)),
+				List.of(new WeeklyEssentialExpenseDto.CategoryExpense(10, "Food", 83000L)),
 				LocalDateTime.of(2026, 3, 13, 15, 20)
 			));
 
@@ -58,8 +58,8 @@ class BudgetEssentialExpenseControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.data.essentialAmount").value(155000))
-			.andExpect(jsonPath("$.data.fixedExpenseCategories[0].categoryName").value("구독료"))
-			.andExpect(jsonPath("$.data.variableExpenseCategories[0].categoryName").value("식비"))
+			.andExpect(jsonPath("$.data.fixedExpenseCategories[0].categoryName").value("Subscription"))
+			.andExpect(jsonPath("$.data.variableExpenseCategories[0].categoryName").value("Food"))
 			.andExpect(jsonPath("$.data.savingBudget").doesNotExist())
 			.andExpect(jsonPath("$.data.freeSpendable").doesNotExist());
 	}

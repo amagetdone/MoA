@@ -20,11 +20,15 @@ import com.ssafy.amagetdone.domain.member.model.vo.UserStatus;
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
 import com.ssafy.amagetdone.domain.transaction.api.dto.ExpenseSummaryDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisJobDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionListDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetExpenseSummaryUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyExpenseUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyTransactionAnalysisUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetTransactionAnalysisJobUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.GetWeeklyTransactionAnalysisUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.ListTransactionsUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.StartTransactionAnalysisJobUseCase;
 import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisJob;
@@ -38,8 +42,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-@WebMvcTest(TransactionQueryController.class)
-class TransactionQueryControllerTest {
+@WebMvcTest(TransactionController.class)
+class TransactionControllerTest {
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -61,6 +65,12 @@ class TransactionQueryControllerTest {
 
 	@MockitoBean
 	private GetTransactionAnalysisJobUseCase getTransactionAnalysisJobUseCase;
+
+	@MockitoBean
+	private GetWeeklyTransactionAnalysisUseCase getWeeklyTransactionAnalysisUseCase;
+
+	@MockitoBean
+	private GetMonthlyTransactionAnalysisUseCase getMonthlyTransactionAnalysisUseCase;
 
 	@Test
 	void getExpenseSummaryReadsAuthorizationAndReturnsApiResponse() throws Exception {
@@ -111,7 +121,7 @@ class TransactionQueryControllerTest {
 	}
 
 	@Test
-	void getTransactionsReadsAuthorizationAndReturnsListPayload() throws Exception {
+	void listTransactionsReadsAuthorizationAndReturnsListPayload() throws Exception {
 		given(jwtAccessTokenReader.readUserId("Bearer access-token")).willReturn(1);
 		given(listTransactionsUseCase.execute(eq(1), any(TransactionListDto.Query.class)))
 			.willReturn(new TransactionListDto.Response(
@@ -124,10 +134,10 @@ class TransactionQueryControllerTest {
 					"CARD",
 					"5544332211",
 					LocalDateTime.of(2026, 3, 12, 13, 22, 11),
-					"스타벅스 강남점",
+					"Coffee Shop",
 					6100L,
 					"OUT",
-					new TransactionListDto.CategoryView(13, "카페"),
+					new TransactionListDto.CategoryView(13, "Cafe"),
 					"VARIABLE",
 					true,
 					null
@@ -146,15 +156,14 @@ class TransactionQueryControllerTest {
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.data.sync.triggered").value(true))
 			.andExpect(jsonPath("$.data.totalElements").value(143))
-			.andExpect(jsonPath("$.data.items[0].merchantText").value("스타벅스 강남점"));
+			.andExpect(jsonPath("$.data.items[0].merchantText").value("Coffee Shop"));
 	}
 
 	@Test
 	void createAnalysisJobReturnsAcceptedResponse() throws Exception {
-		User user = user(1);
 		TransactionAnalysisJob job = TransactionAnalysisJob.builder()
 			.id("txn-analysis-20260313-001")
-			.user(user)
+			.user(user(1))
 			.requestedMonths(6)
 			.status(TransactionAnalysisJobStatus.PENDING)
 			.currentStep(TransactionAnalysisStep.SYNCING)
@@ -182,10 +191,9 @@ class TransactionQueryControllerTest {
 
 	@Test
 	void getAnalysisJobStatusReturnsApiResponse() throws Exception {
-		User user = user(1);
 		TransactionAnalysisJob job = TransactionAnalysisJob.builder()
 			.id("txn-analysis-20260313-001")
-			.user(user)
+			.user(user(1))
 			.requestedMonths(6)
 			.status(TransactionAnalysisJobStatus.RUNNING)
 			.currentStep(TransactionAnalysisStep.CATEGORY_LABELING)
@@ -202,6 +210,67 @@ class TransactionQueryControllerTest {
 			.andExpect(jsonPath("$.data.jobId").value("txn-analysis-20260313-001"))
 			.andExpect(jsonPath("$.data.status").value("RUNNING"))
 			.andExpect(jsonPath("$.data.progress.step").value("CATEGORY_LABELING"));
+	}
+
+	@Test
+	void getWeeklyAnalysisReturnsEssentialBreakdownAndCategoryExpenses() throws Exception {
+		given(jwtAccessTokenReader.readUserId("Bearer access-token")).willReturn(1);
+		given(getWeeklyTransactionAnalysisUseCase.execute(1, "2026-W10"))
+			.willReturn(new WeeklyTransactionAnalysisDto.Response(
+				"2026-W10",
+				LocalDate.of(2026, 3, 2),
+				LocalDate.of(2026, 3, 8),
+				480000L,
+				155000L,
+				72000L,
+				83000L,
+				List.of(
+					new WeeklyTransactionAnalysisDto.CategoryExpense(2, "Subscription", 17000L),
+					new WeeklyTransactionAnalysisDto.CategoryExpense(12, "Housing", 55000L),
+					new WeeklyTransactionAnalysisDto.CategoryExpense(10, "Food", 83000L)
+				),
+				LocalDateTime.of(2026, 3, 13, 15, 20)
+			));
+
+		mockMvc.perform(apiGet("/transactions/analysis/weeks/2026-W10")
+				.header(AUTHORIZATION, "Bearer access-token"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.data.yearWeek").value("2026-W10"))
+			.andExpect(jsonPath("$.data.expenseAmount").value(480000))
+			.andExpect(jsonPath("$.data.essentialAmount").value(155000))
+			.andExpect(jsonPath("$.data.fixedEssentialAmount").value(72000))
+			.andExpect(jsonPath("$.data.variableEssentialAmount").value(83000))
+			.andExpect(jsonPath("$.data.categoryExpenses[0].categoryName").value("Subscription"));
+	}
+
+	@Test
+	void getMonthlyAnalysisReturnsMonthlyEssentialAmountDerivedFromWeeklySnapshots() throws Exception {
+		given(jwtAccessTokenReader.readUserId("Bearer access-token")).willReturn(1);
+		given(getMonthlyTransactionAnalysisUseCase.execute(1, "2026-03"))
+			.willReturn(new MonthlyTransactionAnalysisDto.Response(
+				"2026-03",
+				1900000L,
+				680000L,
+				430000L,
+				250000L,
+				List.of(
+					new MonthlyTransactionAnalysisDto.CategoryExpense(10, "Food", 750000L, 39.47),
+					new MonthlyTransactionAnalysisDto.CategoryExpense(2, "Subscription", 68000L, 3.58)
+				),
+				LocalDateTime.of(2026, 3, 13, 15, 20)
+			));
+
+		mockMvc.perform(apiGet("/transactions/analysis/months/2026-03")
+				.header(AUTHORIZATION, "Bearer access-token"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.data.yearMonth").value("2026-03"))
+			.andExpect(jsonPath("$.data.expenseAmount").value(1900000))
+			.andExpect(jsonPath("$.data.monthlyEssentialAmount").value(680000))
+			.andExpect(jsonPath("$.data.fixedEssentialAmount").value(430000))
+			.andExpect(jsonPath("$.data.variableEssentialAmount").value(250000))
+			.andExpect(jsonPath("$.data.categoryExpenses[0].ratio").value(39.47));
 	}
 
 	private User user(int id) {

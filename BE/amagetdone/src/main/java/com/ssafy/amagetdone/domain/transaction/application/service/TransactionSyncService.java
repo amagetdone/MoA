@@ -26,11 +26,14 @@ import com.ssafy.amagetdone.domain.transaction.model.repository.CardTransactionO
 import com.ssafy.amagetdone.domain.transaction.support.util.TransactionDateRangeFactory;
 import com.ssafy.amagetdone.domain.transaction.support.util.TransactionDateRangeFactory.DateRange;
 
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class TransactionSyncService {
 
 	private static final int DEFAULT_CATEGORY_ID = 4;
@@ -48,28 +51,6 @@ public class TransactionSyncService {
 	private final SsafyDemandDepositTransactionApiClient demandDepositTransactionApiClient;
 	private final SsafyCardTransactionApiClient cardTransactionApiClient;
 	private final TransactionDateRangeFactory dateRangeFactory;
-
-	public TransactionSyncService(
-		AccountRepository accountRepository,
-		CardRepository cardRepository,
-		CategoryRepository categoryRepository,
-		MerchantRepository merchantRepository,
-		AccountTransactionOverrideRepository accountTransactionOverrideRepository,
-		CardTransactionOverrideRepository cardTransactionOverrideRepository,
-		SsafyDemandDepositTransactionApiClient demandDepositTransactionApiClient,
-		SsafyCardTransactionApiClient cardTransactionApiClient,
-		TransactionDateRangeFactory dateRangeFactory
-	) {
-		this.accountRepository = accountRepository;
-		this.cardRepository = cardRepository;
-		this.categoryRepository = categoryRepository;
-		this.merchantRepository = merchantRepository;
-		this.accountTransactionOverrideRepository = accountTransactionOverrideRepository;
-		this.cardTransactionOverrideRepository = cardTransactionOverrideRepository;
-		this.demandDepositTransactionApiClient = demandDepositTransactionApiClient;
-		this.cardTransactionApiClient = cardTransactionApiClient;
-		this.dateRangeFactory = dateRangeFactory;
-	}
 
 	public SyncResult syncLatest(Integer userId, int months, boolean forceFullSync) {
 		int insertedAccountCount = accountRepository.findAllByUser_Id(userId).stream()

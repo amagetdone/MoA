@@ -3,7 +3,10 @@ package com.ssafy.amagetdone.domain.member.api.controller;
 import com.ssafy.amagetdone.domain.member.api.dto.ProfileCompletionDto;
 import com.ssafy.amagetdone.domain.member.application.service.MemberProfileService;
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
+import com.ssafy.amagetdone.global.docs.controller.MemberProfileDocsController;
 import com.ssafy.amagetdone.global.response.ApiResponse;
+
+import lombok.RequiredArgsConstructor;
 
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,18 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/v1/members")
-public class MemberProfileController {
+@RequiredArgsConstructor
+public class MemberProfileController implements MemberProfileDocsController {
 
 	private final MemberProfileService memberProfileService;
 	private final JwtAccessTokenReader jwtAccessTokenReader;
-
-	public MemberProfileController(
-		MemberProfileService memberProfileService,
-		JwtAccessTokenReader jwtAccessTokenReader
-	) {
-		this.memberProfileService = memberProfileService;
-		this.jwtAccessTokenReader = jwtAccessTokenReader;
-	}
 
 	@PatchMapping("/me/profile")
 	public ApiResponse<ProfileCompletionDto.Response> completeProfile(

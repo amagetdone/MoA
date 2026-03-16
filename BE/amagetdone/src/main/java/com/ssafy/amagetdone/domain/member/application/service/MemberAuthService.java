@@ -17,11 +17,14 @@ import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.member.support.log.MemberLogHelper;
 import com.ssafy.amagetdone.domain.member.support.util.MemberTokenPair;
 
+import lombok.RequiredArgsConstructor;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class MemberAuthService {
 
 	private static final Logger log = LoggerFactory.getLogger(MemberAuthService.class);
@@ -32,22 +35,6 @@ public class MemberAuthService {
 	private final ResetTestSocialUserUseCase resetTestSocialUserUseCase;
 	private final AccountRepository accountRepository;
 	private final PlanRepository planRepository;
-
-	public MemberAuthService(
-		List<SocialAuthClient> socialAuthClients,
-		FindOrCreateSocialUserUseCase findOrCreateSocialUserUseCase,
-		IssueMemberTokensUseCase issueMemberTokensUseCase,
-		ResetTestSocialUserUseCase resetTestSocialUserUseCase,
-		AccountRepository accountRepository,
-		PlanRepository planRepository
-	) {
-		this.socialAuthClients = socialAuthClients;
-		this.findOrCreateSocialUserUseCase = findOrCreateSocialUserUseCase;
-		this.issueMemberTokensUseCase = issueMemberTokensUseCase;
-		this.resetTestSocialUserUseCase = resetTestSocialUserUseCase;
-		this.accountRepository = accountRepository;
-		this.planRepository = planRepository;
-	}
 
 	public SocialAuthDto.Response authenticate(SocialProvider provider, SocialAuthDto.Request request) {
 		return authenticateInternal(provider, request);

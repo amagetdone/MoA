@@ -3,7 +3,10 @@ package com.ssafy.amagetdone.domain.budget.api.controller;
 import com.ssafy.amagetdone.domain.budget.api.dto.WeeklyEssentialExpenseDto;
 import com.ssafy.amagetdone.domain.budget.application.usecase.GetWeeklyEssentialExpensesUseCase;
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
+import com.ssafy.amagetdone.global.docs.controller.BudgetDocsController;
 import com.ssafy.amagetdone.global.response.ApiResponse;
+
+import lombok.RequiredArgsConstructor;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,18 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/budgets/weeks")
-public class BudgetEssentialExpenseController {
+@RequiredArgsConstructor
+public class BudgetController implements BudgetDocsController {
 
 	private final JwtAccessTokenReader jwtAccessTokenReader;
 	private final GetWeeklyEssentialExpensesUseCase getWeeklyEssentialExpensesUseCase;
-
-	public BudgetEssentialExpenseController(
-		JwtAccessTokenReader jwtAccessTokenReader,
-		GetWeeklyEssentialExpensesUseCase getWeeklyEssentialExpensesUseCase
-	) {
-		this.jwtAccessTokenReader = jwtAccessTokenReader;
-		this.getWeeklyEssentialExpensesUseCase = getWeeklyEssentialExpensesUseCase;
-	}
 
 	@GetMapping("/{yearWeek}/essential-expenses")
 	public ApiResponse<WeeklyEssentialExpenseDto.Response> getWeeklyEssentialExpenses(
