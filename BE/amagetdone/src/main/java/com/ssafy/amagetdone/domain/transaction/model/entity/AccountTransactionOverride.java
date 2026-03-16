@@ -1,6 +1,6 @@
 package com.ssafy.amagetdone.domain.transaction.model.entity;
 
-import com.ssafy.amagetdone.domain.asset.model.entity.Account;
+import com.ssafy.amagetdone.domain.account.model.entity.Account;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

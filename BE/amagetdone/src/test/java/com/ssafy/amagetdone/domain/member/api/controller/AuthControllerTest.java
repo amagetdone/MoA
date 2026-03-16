@@ -16,15 +16,19 @@ import com.ssafy.amagetdone.domain.member.application.service.MemberAuthService;
 import com.ssafy.amagetdone.domain.member.application.service.MemberTokenService;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.model.vo.SocialProvider;
+import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
+import com.ssafy.amagetdone.config.SecurityConfig;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @WebMvcTest(AuthController.class)
+@Import(SecurityConfig.class)
 class AuthControllerTest {
 
 	@Autowired
@@ -35,6 +39,9 @@ class AuthControllerTest {
 
 	@MockitoBean
 	private MemberTokenService memberTokenService;
+
+	@MockitoBean
+	private JwtAccessTokenReader jwtAccessTokenReader;
 
 	@Test
 	void socialAuthReturnsJwtPayloadForKakao() throws Exception {
@@ -116,7 +123,7 @@ class AuthControllerTest {
 	@Test
 	void refreshReturnsRotatedTokens() throws Exception {
 		given(memberTokenService.reissue("refresh-token"))
-			.willReturn(new RefreshTokenDto.Response("new-access-token", "new-refresh-token"));
+			.willReturn(new RefreshTokenDto.Response("ACTIVE", true, false, "new-access-token", "new-refresh-token"));
 
 		mockMvc.perform(apiPost("/v1/auth/refresh")
 				.contentType(APPLICATION_JSON)
@@ -128,6 +135,9 @@ class AuthControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.message").value("토큰 재발급에 성공했습니다."))
+			.andExpect(jsonPath("$.data.status").value("ACTIVE"))
+			.andExpect(jsonPath("$.data.account").value(true))
+			.andExpect(jsonPath("$.data.plan").value(false))
 			.andExpect(jsonPath("$.data.accessToken").value("new-access-token"))
 			.andExpect(jsonPath("$.data.refreshToken").value("new-refresh-token"));
 	}

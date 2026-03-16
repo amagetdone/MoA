@@ -13,6 +13,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -35,6 +37,7 @@ import lombok.experimental.SuperBuilder;
 public class Plan extends BaseEntity {
 
 	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "id", nullable = false)
 	private Integer id;
 
@@ -51,7 +54,6 @@ public class Plan extends BaseEntity {
 	@Column(name = "target_amount", nullable = false)
 	private Long targetAmount;
 
-	@Builder.Default
 	@ColumnDefault("0")
 	@Column(name = "saved_amount", nullable = false)
 	private Long savedAmount = 0L;
@@ -76,9 +78,27 @@ public class Plan extends BaseEntity {
 	@Column(name = "auto_allocate_enabled", nullable = false)
 	private boolean autoAllocateEnabled = true;
 
-	@Column(name = "plan_url", length = 255)
+	@Column(name = "plan_img_url", length = 255)
 	private String planUrl;
+
+	@Column(name = "plan_video_url", length = 255)
+	private String videoUrl;
 
 	@Column(name = "end_date", nullable = false)
 	private LocalDate endDate;
+
+	protected Plan() {
+	}
+
+	public String getPlanUrl() {
+		return planUrl;
+	}
+
+	public String getTitle() {
+		return title;
+	}
+
+	public void updatePlanUrl(String planUrl) {
+		this.planUrl = planUrl;
+	}
 }

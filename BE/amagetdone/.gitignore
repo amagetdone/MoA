@@ -1,5 +1,7 @@
 HELP.md
 .gradle
+.gradle-home*/
+.gradle-local/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
@@ -44,3 +46,5 @@ AGENTS.md
 JIRA.md
 GIT.md
 docs/*.md
+docs/superpowers/
+

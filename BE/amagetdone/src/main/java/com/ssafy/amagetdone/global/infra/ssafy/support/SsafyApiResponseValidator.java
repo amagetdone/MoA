@@ -16,7 +16,11 @@ public class SsafyApiResponseValidator {
 			throw new SsafyApiException(SsafyApiException.Reason.INVALID_HEADER);
 		}
 		if (!SUCCESS_CODE.equals(envelope.header().responseCode())) {
-			throw new SsafyApiException(SsafyApiException.Reason.FAILED_RESPONSE_CODE);
+			throw new SsafyApiException(
+				SsafyApiException.Reason.FAILED_RESPONSE_CODE,
+				envelope.header().responseCode(),
+				envelope.header().responseMessage()
+			);
 		}
 		if (envelope.payload() == null) {
 			throw new SsafyApiException(SsafyApiException.Reason.INVALID_PAYLOAD);

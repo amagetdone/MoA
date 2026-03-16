@@ -96,6 +96,10 @@ public class User extends BaseEntity {
 		this.userKey = userKey;
 	}
 
+	public void updateProfileUrl(String profileUrl) {
+		this.profileUrl = profileUrl;
+	}
+
 	public void resetToPending() {
 		this.email = null;
 		this.nickname = null;

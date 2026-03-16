@@ -4,6 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+
 import com.ssafy.amagetdone.global.infra.ssafy.envelope.SsafyRequestEnvelope;
 import com.ssafy.amagetdone.global.infra.ssafy.support.SsafyApiRequestFactory;
 
@@ -49,6 +53,24 @@ class SsafyApiRequestFactoryTest {
 		assertEquals("inquireCreditCardTransactionList", request.header().apiName());
 		assertEquals("user-key", request.header().userKey());
 		assertEquals("card", request.payload().value());
+	}
+
+	@Test
+	void createBuildsTransmissionDateTimeInKst() {
+		Clock fixedUtcClock = Clock.fixed(Instant.parse("2026-03-14T15:30:45Z"), ZoneOffset.UTC);
+		SsafyApiRequestFactory factory = new SsafyApiRequestFactory(fixedUtcClock);
+
+		SsafyRequestEnvelope<TestPayload> request = factory.create(
+			"inquireDemandDepositAccountList",
+			"00100",
+			"001",
+			"test-api-key",
+			"user-key",
+			new TestPayload("deposit")
+		);
+
+		assertEquals("20260315", request.header().transmissionDate());
+		assertEquals("003045", request.header().transmissionTime());
 	}
 
 	private record TestPayload(String value) {

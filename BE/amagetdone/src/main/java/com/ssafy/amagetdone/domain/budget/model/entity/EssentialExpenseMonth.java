@@ -1,6 +1,6 @@
 package com.ssafy.amagetdone.domain.budget.model.entity;
 
-import com.ssafy.amagetdone.domain.asset.model.entity.Category;
+import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.domain.budget.model.vo.SourceProvider;
 import com.ssafy.amagetdone.global.entity.BaseEntity;
 

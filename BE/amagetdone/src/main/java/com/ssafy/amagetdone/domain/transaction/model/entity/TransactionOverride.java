@@ -2,7 +2,7 @@ package com.ssafy.amagetdone.domain.transaction.model.entity;
 
 import java.time.LocalDateTime;
 
-import com.ssafy.amagetdone.domain.asset.model.entity.Category;
+import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.global.entity.BaseEntity;
 
 import jakarta.persistence.Column;
