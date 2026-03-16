@@ -28,3 +28,4 @@ lab/data/
 pytest-cache-files-*/
 lab/finapi/*
 lab/merchant_info
+../docs/*
