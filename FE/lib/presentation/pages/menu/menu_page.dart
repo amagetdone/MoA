@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
+import 'package:more_app/presentation/viewmodels/goal_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/menu_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
@@ -20,15 +21,15 @@ class MenuPage extends ConsumerWidget {
     if (state.isLoading) {
       return const Scaffold(
         backgroundColor: AppColors.bgPrimary,
-        appBar: MoreAppBar(title: '내 정보', showBack: false),
-        body: const SizedBox.shrink(),
+        appBar: MoreAppBar(showBack: false, showNotification: true),
+        body: SizedBox.shrink(),
       );
     }
 
     if (state.errorMessage != null) {
       return Scaffold(
         backgroundColor: AppColors.bgPrimary,
-        appBar: const MoreAppBar(title: '내 정보', showBack: false),
+        appBar: const MoreAppBar(showBack: false, showNotification: true),
         body: Center(
           child: Text(
             '메뉴 정보를 불러오지 못했습니다.\n${state.errorMessage!}',
@@ -40,82 +41,111 @@ class MenuPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: const MoreAppBar(title: '내 정보', showBack: false),
+      appBar: const MoreAppBar(showBack: false, showNotification: true),
       body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Profile card
             MoreCard(
-              onTap: () => context.push(AppRoutes.profileEdit),
               child: Row(
                 children: [
                   CircleAvatar(
                     radius: 24.r,
-                    backgroundColor: AppColors.orange500,
-                    child: Text(
-                      state.userName.isNotEmpty
-                          ? state.userName.substring(0, 1)
-                          : '?',
-                      style: AppTextStyles.headingMd.copyWith(
-                        color: AppColors.white,
-                        fontSize: 18.sp,
-                      ),
+                    backgroundColor: AppColors.gray100,
+                    child: Icon(
+                      Icons.person_outline,
+                      size: 28.w,
+                      color: AppColors.gray500,
                     ),
                   ),
                   SizedBox(width: 14.w),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          state.userName,
-                          style: AppTextStyles.headingMd.copyWith(
-                            color: AppColors.textPrimary,
-                            fontSize: 16.sp,
+                    child: GestureDetector(
+                      onTap: () => context.push(
+                        AppRoutes.profileEdit,
+                        extra: <String, String>{
+                          'nickname': state.userName,
+                          'email': state.userEmail,
+                          if (state.profileImageUrl != null)
+                            'profileImageUrl': state.profileImageUrl!,
+                        },
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            state.userName,
+                            style: AppTextStyles.headingMd.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 2.h),
-                        Text(
-                          '내 정보 수정하기',
-                          style: AppTextStyles.bodySm.copyWith(
-                            color: AppColors.textTertiary,
-                            fontSize: 12.sp,
+                          SizedBox(height: 2.h),
+                          Row(
+                            children: [
+                              Text(
+                                '내 정보 수정하기',
+                                style: AppTextStyles.bodySm.copyWith(
+                                  color: AppColors.textTertiary,
+                                ),
+                              ),
+                              SizedBox(width: 2.w),
+                              Icon(
+                                Icons.chevron_right,
+                                size: 16.w,
+                                color: AppColors.textTertiary,
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                  Icon(
-                    Icons.chevron_right,
-                    size: 20.w,
-                    color: AppColors.textTertiary,
-                  ),
-                  SizedBox(width: 4.w),
                   GestureDetector(
                     onTap: () => context.push(AppRoutes.settings),
                     child: Icon(
-                      Icons.settings,
-                      size: 22.w,
+                      Icons.settings_outlined,
+                      size: 24.w,
                       color: AppColors.textSecondary,
                     ),
                   ),
                 ],
               ),
             ),
-            SizedBox(height: 16.h),
+            SizedBox(height: 14.h),
 
             // Stats row
             Row(
               children: [
-                _StatBox(label: '진행중 목표', value: '${state.activeGoalCount}개'),
+                _StatBox(
+                  label: '진행중 목표',
+                  value: '${state.activeGoalCount}개',
+                  backgroundColor: const Color(0xFFFFF8E1),
+                  borderColor: const Color(0xFFFFECB3),
+                  onTap: () {
+                    ref.read(goalViewModelProvider.notifier).toggleFilter(false);
+                    context.go(AppRoutes.goalTab);
+                  },
+                ),
                 SizedBox(width: 8.w),
-                _StatBox(label: '달성한 목표', value: '${state.achievedGoalCount}개'),
+                _StatBox(
+                  label: '달성한 목표',
+                  value: '${state.achievedGoalCount}개',
+                  backgroundColor: const Color(0xFFFFF0E0),
+                  borderColor: const Color(0xFFFFD9B3),
+                  onTap: () {
+                    ref.read(goalViewModelProvider.notifier).toggleFilter(true);
+                    context.go(AppRoutes.goalTab);
+                  },
+                ),
                 SizedBox(width: 8.w),
                 _StatBox(
                   label: '누적 저축액',
                   value: CurrencyFormatter.formatKRW(state.totalSaved),
+                  backgroundColor: const Color(0xFFE8F5E9),
+                  borderColor: const Color(0xFFC8E6C9),
                 ),
               ],
             ),
@@ -128,52 +158,45 @@ class MenuPage extends ConsumerWidget {
                 '전체 메뉴',
                 style: AppTextStyles.headingMd.copyWith(
                   color: AppColors.textPrimary,
-                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
 
-            // Menu list
-            MoreCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  _MenuListTile(
-                    icon: Icons.account_balance_wallet,
-                    title: '내 자산',
-                    subtitle: '자산 현황을 확인해보세요',
-                    onTap: () => context.push(AppRoutes.asset),
-                  ),
-                  Divider(height: 1, color: AppColors.borderDefault),
-                  _MenuListTile(
-                    icon: Icons.credit_card,
-                    title: '계좌 관리',
-                    subtitle: '연결된 계좌를 관리합니다',
-                    onTap: () => context.push(AppRoutes.accountManage),
-                  ),
-                  Divider(height: 1, color: AppColors.borderDefault),
-                  _MenuListTile(
-                    icon: Icons.pie_chart,
-                    title: '소비패턴 분석',
-                    subtitle: '소비 습관을 분석해보세요',
-                    onTap: () => context.go(AppRoutes.spendingTab),
-                  ),
-                  Divider(height: 1, color: AppColors.borderDefault),
-                  _MenuListTile(
-                    icon: Icons.tune,
-                    title: '주간 예산',
-                    subtitle: '주간 예산을 설정합니다',
-                    onTap: () => context.push(AppRoutes.spendingBudget),
-                  ),
-                  Divider(height: 1, color: AppColors.borderDefault),
-                  _MenuListTile(
-                    icon: Icons.sort,
-                    title: '목표 우선순위',
-                    subtitle: '목표의 우선순위를 조정합니다',
-                    onTap: () => context.push(AppRoutes.goalPriority),
-                  ),
-                ],
-              ),
+            // Menu items as individual cards
+            _MenuCard(
+              icon: Icons.account_balance_wallet_outlined,
+              title: '내 자산',
+              subtitle: '총 자산·거래내역',
+              onTap: () => context.push(AppRoutes.asset),
+            ),
+            SizedBox(height: 10.h),
+            _MenuCard(
+              icon: Icons.credit_card_outlined,
+              title: '계좌 관리',
+              subtitle: '연결된 계좌 목록·계좌 추가·계좌 삭제',
+              onTap: () => context.push(AppRoutes.accountManage),
+            ),
+            SizedBox(height: 10.h),
+            _MenuCard(
+              icon: Icons.pie_chart_outline,
+              title: '소비패턴 분석',
+              subtitle: '지난 3개월 간 소비패턴 분석',
+              onTap: () => context.go(AppRoutes.spendingTab),
+            ),
+            SizedBox(height: 10.h),
+            _MenuCard(
+              icon: Icons.tune_outlined,
+              title: '주간 예산',
+              subtitle: '주간 예산 설정',
+              onTap: () => context.push(AppRoutes.spendingBudget),
+            ),
+            SizedBox(height: 10.h),
+            _MenuCard(
+              icon: Icons.sort,
+              title: '목표 우선순위',
+              subtitle: '목표 우선순위 설정',
+              onTap: () => context.push(AppRoutes.goalPriority),
             ),
             SizedBox(height: 24.h),
           ],
@@ -186,18 +209,29 @@ class MenuPage extends ConsumerWidget {
 class _StatBox extends StatelessWidget {
   final String label;
   final String value;
+  final Color backgroundColor;
+  final Color borderColor;
+  final VoidCallback? onTap;
 
-  const _StatBox({required this.label, required this.value});
+  const _StatBox({
+    required this.label,
+    required this.value,
+    required this.backgroundColor,
+    required this.borderColor,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Container(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
         padding: EdgeInsets.symmetric(vertical: 14.h, horizontal: 10.w),
         decoration: BoxDecoration(
-          color: AppColors.bgSurface,
+          color: backgroundColor,
           borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: AppColors.borderDefault),
+          border: Border.all(color: borderColor),
         ),
         child: Column(
           children: [
@@ -205,7 +239,7 @@ class _StatBox extends StatelessWidget {
               label,
               style: AppTextStyles.caption.copyWith(
                 color: AppColors.textTertiary,
-                fontSize: 11.sp,
+                fontSize: 12.5.sp,
               ),
             ),
             SizedBox(height: 4.h),
@@ -222,50 +256,66 @@ class _StatBox extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
 
-class _MenuListTile extends StatelessWidget {
+class _MenuCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
 
-  const _MenuListTile({
+  const _MenuCard({
     required this.icon,
     required this.title,
+    required this.subtitle,
     required this.onTap,
-    this.subtitle = '',
   });
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.textSecondary, size: 22.w),
-      title: Text(
-        title,
-        style: AppTextStyles.bodyMd.copyWith(
-          color: AppColors.textPrimary,
-          fontSize: 14.sp,
-        ),
-      ),
-      subtitle: subtitle.isNotEmpty
-          ? Text(
-              subtitle,
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.textTertiary,
-                fontSize: 11.sp,
-              ),
-            )
-          : null,
-      trailing: Icon(
-        Icons.chevron_right,
-        color: AppColors.textTertiary,
-        size: 20.w,
-      ),
+    return MoreCard(
       onTap: onTap,
-      contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 2.h),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+      child: Row(
+        children: [
+          Container(
+            width: 40.w,
+            height: 40.w,
+            decoration: BoxDecoration(
+              color: AppColors.gray50,
+              borderRadius: BorderRadius.circular(10.r),
+              border: Border.all(color: AppColors.borderDefault),
+            ),
+            child: Icon(icon, size: 20.w, color: AppColors.gray500),
+          ),
+          SizedBox(width: 14.w),
+          Expanded(
+            child: Text(
+              title,
+              style: AppTextStyles.bodyMd.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Text(
+            subtitle,
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textTertiary,
+              fontSize: 11.sp,
+            ),
+          ),
+          SizedBox(width: 4.w),
+          Icon(
+            Icons.chevron_right,
+            size: 18.w,
+            color: AppColors.textTertiary,
+          ),
+        ],
+      ),
     );
   }
 }

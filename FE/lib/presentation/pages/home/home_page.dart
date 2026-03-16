@@ -99,7 +99,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 24.w),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
             Text(
               '계좌를 연결해주세요.',
@@ -200,57 +200,62 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _buildNoGoal(BuildContext context) {
-    return Column(
-      children: [
-        SizedBox(height: 24.h),
-        Text(
-          '첫 번째 저축 목표를 세워보세요.',
-          style: AppTextStyles.headingLg.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        SizedBox(height: 12.h),
-        Text(
-          '목표에 도달할 수 있게 제가 도와드릴게요!',
-          textAlign: TextAlign.center,
-          style: AppTextStyles.bodyMd.copyWith(
-            color: AppColors.textTertiary,
-          ),
-        ),
-        SizedBox(height: 32.h),
-        GestureDetector(
-          onTap: () => context.push(AppRoutes.goalCreate),
-          child: MoreCard(
-            child: Column(
-              children: [
-                Container(
-                  width: 48.w,
-                  height: 48.w,
-                  decoration: BoxDecoration(
-                    color: AppColors.orange500,
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Icon(Icons.add, color: Colors.white, size: 28.w),
-                ),
-                SizedBox(height: 12.h),
-                Text(
-                  '첫 목표 세우러 가기',
-                  style: AppTextStyles.bodyMd.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  '목표를 세우고, 돈을 모아봐요!',
-                  style: AppTextStyles.bodySm.copyWith(
-                    color: AppColors.textTertiary,
-                  ),
-                ),
-              ],
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 24.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            Text(
+              '첫 번째 저축 목표를 세워보세요.',
+              style: AppTextStyles.headingLg.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
-          ),
+            SizedBox(height: 12.h),
+            Text(
+              '목표에 도달할 수 있게 제가 도와드릴게요!',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodyMd.copyWith(
+                color: AppColors.textTertiary,
+              ),
+            ),
+            SizedBox(height: 32.h),
+            GestureDetector(
+              onTap: () => context.push(AppRoutes.goalCreate),
+              child: MoreCard(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 48.w,
+                      height: 48.w,
+                      decoration: BoxDecoration(
+                        color: AppColors.orange500,
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Icon(Icons.add, color: Colors.white, size: 28.w),
+                    ),
+                    SizedBox(height: 12.h),
+                    Text(
+                      '첫 목표 세우러 가기',
+                      style: AppTextStyles.bodyMd.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      '목표를 세우고, 돈을 모아봐요!',
+                      style: AppTextStyles.bodySm.copyWith(
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 

@@ -139,7 +139,10 @@ final appRouter = GoRouter(
       ],
     ),
 
-    GoRoute(path: AppRoutes.profileEdit, builder: (context, state) => const ProfileSetupPage(isOnboarding: false)),
+    GoRoute(path: AppRoutes.profileEdit, builder: (context, state) {
+      final extra = state.extra as Map<String, String>?;
+      return ProfileSetupPage(isOnboarding: false, initialData: extra);
+    }),
     GoRoute(path: AppRoutes.accountAdd, builder: (context, state) => const AccountAddPage(isOnboarding: false)),
     GoRoute(path: AppRoutes.accountSelect, builder: (context, state) => const AccountSelectPage(isOnboarding: false)),
     GoRoute(path: AppRoutes.accountVerify, builder: (context, state) {
