@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -62,8 +63,9 @@ class AuthControllerTest {
 					}
 					"""))
 			.andExpect(status().isOk())
+			.andExpect(content().encoding("UTF-8"))
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.message").value("소셜 로그인에 성공했습니다."))
+			.andExpect(jsonPath("$.message").value("\uC18C\uC15C \uB85C\uADF8\uC778\uC5D0 \uC131\uACF5\uD588\uC2B5\uB2C8\uB2E4."))
 			.andExpect(jsonPath("$.data.status").value("TEMP"))
 			.andExpect(jsonPath("$.data.profile").doesNotExist())
 			.andExpect(jsonPath("$.data.account").value(false))
@@ -85,8 +87,9 @@ class AuthControllerTest {
 
 		mockMvc.perform(apiPost("/v1/auth/social/test"))
 			.andExpect(status().isOk())
+			.andExpect(content().encoding("UTF-8"))
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.message").value("테스트 소셜 로그인에 성공했습니다."))
+			.andExpect(jsonPath("$.message").value("\uD14C\uC2A4\uD2B8 \uC18C\uC15C \uB85C\uADF8\uC778\uC5D0 \uC131\uACF5\uD588\uC2B5\uB2C8\uB2E4."))
 			.andExpect(jsonPath("$.data.status").value("TEMP"))
 			.andExpect(jsonPath("$.data.account").value(false))
 			.andExpect(jsonPath("$.data.plan").value(false))
@@ -100,8 +103,9 @@ class AuthControllerTest {
 
 		mockMvc.perform(apiPost("/v1/auth/social/test/reset"))
 			.andExpect(status().isOk())
+			.andExpect(content().encoding("UTF-8"))
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.message").value("테스트 소셜 사용자를 초기화했습니다."))
+			.andExpect(jsonPath("$.message").value("\uD14C\uC2A4\uD2B8 \uC18C\uC15C \uC0AC\uC6A9\uC790\uB97C \uCD08\uAE30\uD654\uD588\uC2B5\uB2C8\uB2E4."))
 			.andExpect(jsonPath("$.data.success").value(true));
 	}
 
@@ -115,6 +119,7 @@ class AuthControllerTest {
 					}
 					"""))
 			.andExpect(status().isBadRequest())
+			.andExpect(content().encoding("UTF-8"))
 			.andExpect(jsonPath("$.status").value("error"))
 			.andExpect(jsonPath("$.errorCode").value(MemberErrorCode.UNSUPPORTED_SOCIAL_PROVIDER.code()))
 			.andExpect(jsonPath("$.message").value(MemberErrorCode.UNSUPPORTED_SOCIAL_PROVIDER.message()));
@@ -133,8 +138,9 @@ class AuthControllerTest {
 					}
 					"""))
 			.andExpect(status().isOk())
+			.andExpect(content().encoding("UTF-8"))
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.message").value("토큰 재발급에 성공했습니다."))
+			.andExpect(jsonPath("$.message").value("\uD1A0\uD070 \uC7AC\uBC1C\uAE09\uC5D0 \uC131\uACF5\uD588\uC2B5\uB2C8\uB2E4."))
 			.andExpect(jsonPath("$.data.status").value("ACTIVE"))
 			.andExpect(jsonPath("$.data.account").value(true))
 			.andExpect(jsonPath("$.data.plan").value(false))
@@ -155,8 +161,9 @@ class AuthControllerTest {
 					}
 					"""))
 			.andExpect(status().isOk())
+			.andExpect(content().encoding("UTF-8"))
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.message").value("로그아웃에 성공했습니다."))
+			.andExpect(jsonPath("$.message").value("\uB85C\uADF8\uC544\uC6C3\uC5D0 \uC131\uACF5\uD588\uC2B5\uB2C8\uB2E4."))
 			.andExpect(jsonPath("$.data.success").value(true));
 	}
 

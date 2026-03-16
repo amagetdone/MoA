@@ -9,17 +9,13 @@ import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysi
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisJobDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionListDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
-import com.ssafy.amagetdone.domain.transaction.application.usecase.GetExpenseSummaryUseCase;
-import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyExpenseUseCase;
-import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyTransactionAnalysisUseCase;
-import com.ssafy.amagetdone.domain.transaction.application.usecase.GetTransactionAnalysisJobUseCase;
-import com.ssafy.amagetdone.domain.transaction.application.usecase.GetWeeklyTransactionAnalysisUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.ListTransactionsUseCase;
-import com.ssafy.amagetdone.domain.transaction.application.usecase.StartTransactionAnalysisJobUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.TransactionAnalysisResponseFacade;
 import com.ssafy.amagetdone.global.docs.controller.TransactionDocsController;
 import com.ssafy.amagetdone.global.response.ApiResponse;
 import com.ssafy.amagetdone.global.security.AuthenticatedMember;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.HttpStatus;
@@ -36,15 +32,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/transactions")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
 public class TransactionController implements TransactionDocsController {
 
-	private final GetExpenseSummaryUseCase getExpenseSummaryUseCase;
-	private final GetMonthlyExpenseUseCase getMonthlyExpenseUseCase;
+	private final TransactionAnalysisResponseFacade transactionAnalysisResponseFacade;
 	private final ListTransactionsUseCase listTransactionsUseCase;
-	private final StartTransactionAnalysisJobUseCase startTransactionAnalysisJobUseCase;
-	private final GetTransactionAnalysisJobUseCase getTransactionAnalysisJobUseCase;
-	private final GetWeeklyTransactionAnalysisUseCase getWeeklyTransactionAnalysisUseCase;
-	private final GetMonthlyTransactionAnalysisUseCase getMonthlyTransactionAnalysisUseCase;
 
 	@GetMapping("/expenses/summary")
 	public ApiResponse<ExpenseSummaryDto.Response> getExpenseSummary(
@@ -54,8 +46,8 @@ public class TransactionController implements TransactionDocsController {
 		@RequestParam(name = "bucket", required = false) String bucket
 	) {
 		return ApiResponse.ok(
-			"吏異??붿빟??議고쉶?덉뒿?덈떎.",
-			getExpenseSummaryUseCase.execute(
+			"지출 요약을 조회했습니다.",
+			transactionAnalysisResponseFacade.getExpenseSummary(
 				authenticatedMember.userId(),
 				parseYearMonth(fromMonth),
 				parseYearMonth(toMonth),
@@ -70,8 +62,8 @@ public class TransactionController implements TransactionDocsController {
 		@RequestParam(name = "month", required = false) String month
 	) {
 		return ApiResponse.ok(
-			"?붾퀎 ?뚮퉬 湲덉븸??議고쉶?덉뒿?덈떎.",
-			getMonthlyExpenseUseCase.execute(authenticatedMember.userId(), parseYearMonth(month))
+			"월 지출을 조회했습니다.",
+			transactionAnalysisResponseFacade.getMonthlyExpense(authenticatedMember.userId(), parseYearMonth(month))
 		);
 	}
 
@@ -80,17 +72,15 @@ public class TransactionController implements TransactionDocsController {
 		@AuthenticationPrincipal AuthenticatedMember authenticatedMember,
 		@RequestParam(name = "fromDate", required = false) LocalDate fromDate,
 		@RequestParam(name = "toDate", required = false) LocalDate toDate,
-		@RequestParam(name = "sourceType", required = false) String sourceType,
 		@RequestParam(name = "analysisInclusion", required = false) String analysisInclusion,
 		@RequestParam(name = "page", required = false) Integer page,
 		@RequestParam(name = "size", required = false) Integer size
 	) {
 		return ApiResponse.ok(
-			"嫄곕옒?댁뿭??議고쉶?덉뒿?덈떎.",
+			"거래 내역을 조회했습니다.",
 			listTransactionsUseCase.execute(authenticatedMember.userId(), new TransactionListDto.Query(
 				fromDate,
 				toDate,
-				sourceType,
 				analysisInclusion,
 				page,
 				size
@@ -105,9 +95,9 @@ public class TransactionController implements TransactionDocsController {
 	) {
 		return ResponseEntity.status(HttpStatus.ACCEPTED)
 			.body(ApiResponse.ok(
-				"?뚮퉬 遺꾩꽍 ?묒뾽???쒖옉?덉뒿?덈떎.",
+				"분석 작업을 접수했습니다.",
 				TransactionAnalysisJobDto.CreateResponse.from(
-					startTransactionAnalysisJobUseCase.execute(
+					transactionAnalysisResponseFacade.createAnalysisJob(
 						authenticatedMember.userId(),
 						request.months(),
 						Boolean.TRUE.equals(request.forceFullSync())
@@ -121,10 +111,9 @@ public class TransactionController implements TransactionDocsController {
 		@AuthenticationPrincipal AuthenticatedMember authenticatedMember,
 		@PathVariable("jobId") String jobId
 	) {
-		authenticatedMember.userId();
 		return ApiResponse.ok(
-			"?뚮퉬 遺꾩꽍 ?묒뾽 ?곹깭瑜?議고쉶?덉뒿?덈떎.",
-			TransactionAnalysisJobDto.StatusResponse.from(getTransactionAnalysisJobUseCase.execute(jobId))
+			"분석 작업 상태를 조회했습니다.",
+			transactionAnalysisResponseFacade.getAnalysisJobStatus(authenticatedMember.userId(), jobId)
 		);
 	}
 
@@ -134,8 +123,8 @@ public class TransactionController implements TransactionDocsController {
 		@PathVariable("yearWeek") String yearWeek
 	) {
 		return ApiResponse.ok(
-			"二쇨컙 ?뚮퉬 遺꾩꽍??議고쉶?덉뒿?덈떎.",
-			getWeeklyTransactionAnalysisUseCase.execute(authenticatedMember.userId(), yearWeek)
+			"주간 분석을 조회했습니다.",
+			transactionAnalysisResponseFacade.getWeeklyAnalysis(authenticatedMember.userId(), yearWeek)
 		);
 	}
 
@@ -145,8 +134,8 @@ public class TransactionController implements TransactionDocsController {
 		@PathVariable("yearMonth") String yearMonth
 	) {
 		return ApiResponse.ok(
-			"?붽컙 ?뚮퉬 遺꾩꽍??議고쉶?덉뒿?덈떎.",
-			getMonthlyTransactionAnalysisUseCase.execute(authenticatedMember.userId(), yearMonth)
+			"월간 분석을 조회했습니다.",
+			transactionAnalysisResponseFacade.getMonthlyAnalysis(authenticatedMember.userId(), yearMonth)
 		);
 	}
 

@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springframework.http.MediaType;
@@ -21,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Tag(name = "S3 테스트", description = "S3 업로드와 삭제 흐름을 수동으로 확인하는 로컬 테스트 API")
 @RestController
 @RequestMapping("/test/s3")
+@SecurityRequirement(name = "bearerAuth")
 public class S3TestController {
 
 	private final S3StorageService s3StorageService;

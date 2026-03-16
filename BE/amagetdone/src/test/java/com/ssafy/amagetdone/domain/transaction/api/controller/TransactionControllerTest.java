@@ -24,13 +24,8 @@ import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysi
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisJobDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionListDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
-import com.ssafy.amagetdone.domain.transaction.application.usecase.GetExpenseSummaryUseCase;
-import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyExpenseUseCase;
-import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyTransactionAnalysisUseCase;
-import com.ssafy.amagetdone.domain.transaction.application.usecase.GetTransactionAnalysisJobUseCase;
-import com.ssafy.amagetdone.domain.transaction.application.usecase.GetWeeklyTransactionAnalysisUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.ListTransactionsUseCase;
-import com.ssafy.amagetdone.domain.transaction.application.usecase.StartTransactionAnalysisJobUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.TransactionAnalysisResponseFacade;
 import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisJob;
 import com.ssafy.amagetdone.domain.transaction.model.vo.TransactionAnalysisJobStatus;
 import com.ssafy.amagetdone.domain.transaction.model.vo.TransactionAnalysisStep;
@@ -57,29 +52,14 @@ class TransactionControllerTest {
 	private JwtAccessTokenReader jwtAccessTokenReader;
 
 	@MockitoBean
-	private GetExpenseSummaryUseCase getExpenseSummaryUseCase;
-
-	@MockitoBean
-	private GetMonthlyExpenseUseCase getMonthlyExpenseUseCase;
+	private TransactionAnalysisResponseFacade transactionAnalysisResponseFacade;
 
 	@MockitoBean
 	private ListTransactionsUseCase listTransactionsUseCase;
 
-	@MockitoBean
-	private StartTransactionAnalysisJobUseCase startTransactionAnalysisJobUseCase;
-
-	@MockitoBean
-	private GetTransactionAnalysisJobUseCase getTransactionAnalysisJobUseCase;
-
-	@MockitoBean
-	private GetWeeklyTransactionAnalysisUseCase getWeeklyTransactionAnalysisUseCase;
-
-	@MockitoBean
-	private GetMonthlyTransactionAnalysisUseCase getMonthlyTransactionAnalysisUseCase;
-
 	@Test
 	void getExpenseSummaryReadsAuthorizationAndReturnsApiResponse() throws Exception {
-		given(getExpenseSummaryUseCase.execute(1, YearMonth.of(2025, 10), YearMonth.of(2026, 3), "MONTH"))
+		given(transactionAnalysisResponseFacade.getExpenseSummary(1, YearMonth.of(2025, 10), YearMonth.of(2026, 3), "MONTH"))
 			.willReturn(new ExpenseSummaryDto.Response(
 				new ExpenseSummaryDto.Range("2025-10", "2026-03", "MONTH"),
 				List.of(new ExpenseSummaryDto.Point("2026-03", 1900000L, 650000L, 1250000L)),
@@ -89,7 +69,7 @@ class TransactionControllerTest {
 
 		mockMvc.perform(apiGet("/transactions/expenses/summary")
 				.with(authentication(
-					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
 				))
 				.param("fromMonth", "2025-10")
 				.param("toMonth", "2026-03")
@@ -103,7 +83,7 @@ class TransactionControllerTest {
 
 	@Test
 	void getMonthlyExpenseReadsAuthorizationAndReturnsApiResponse() throws Exception {
-		given(getMonthlyExpenseUseCase.execute(1, YearMonth.of(2026, 3)))
+		given(transactionAnalysisResponseFacade.getMonthlyExpense(1, YearMonth.of(2026, 3)))
 			.willReturn(new MonthlyExpenseDto.Response(
 				"2026-03",
 				1900000L,
@@ -117,7 +97,7 @@ class TransactionControllerTest {
 
 		mockMvc.perform(apiGet("/transactions/expenses/monthly")
 				.with(authentication(
-					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
 				))
 				.param("month", "2026-03"))
 			.andExpect(status().isOk())
@@ -137,8 +117,6 @@ class TransactionControllerTest {
 				143L,
 				List.of(new TransactionListDto.Item(
 					10231,
-					"CARD",
-					"5544332211",
 					LocalDateTime.of(2026, 3, 12, 13, 22, 11),
 					"Coffee Shop",
 					6100L,
@@ -152,11 +130,10 @@ class TransactionControllerTest {
 
 		mockMvc.perform(apiGet("/transactions")
 				.with(authentication(
-					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
 				))
 				.param("fromDate", "2026-03-01")
 				.param("toDate", "2026-03-13")
-				.param("sourceType", "CARD")
 				.param("analysisInclusion", "ALL")
 				.param("page", "0")
 				.param("size", "20"))
@@ -177,11 +154,11 @@ class TransactionControllerTest {
 			.currentStep(TransactionAnalysisStep.SYNCING)
 			.requestedAt(LocalDateTime.of(2026, 3, 13, 15, 19))
 			.build();
-		given(startTransactionAnalysisJobUseCase.execute(1, 6, false)).willReturn(job);
+		given(transactionAnalysisResponseFacade.createAnalysisJob(1, 6, false)).willReturn(job);
 
 		mockMvc.perform(apiPost("/transactions/analysis-jobs")
 				.with(authentication(
-					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
 				))
 				.contentType(APPLICATION_JSON)
 				.content("""
@@ -199,32 +176,84 @@ class TransactionControllerTest {
 	}
 
 	@Test
-	void getAnalysisJobStatusReturnsApiResponse() throws Exception {
-		TransactionAnalysisJob job = TransactionAnalysisJob.builder()
-			.id("txn-analysis-20260313-001")
-			.user(user(1))
-			.requestedMonths(6)
-			.status(TransactionAnalysisJobStatus.RUNNING)
-			.currentStep(TransactionAnalysisStep.CATEGORY_LABELING)
-			.requestedAt(LocalDateTime.of(2026, 3, 13, 15, 19))
-			.startedAt(LocalDateTime.of(2026, 3, 13, 15, 19, 2))
-			.build();
-		given(getTransactionAnalysisJobUseCase.execute("txn-analysis-20260313-001")).willReturn(job);
+	void getAnalysisJobStatusReturnsNullOnboardingResultWhileRunning() throws Exception {
+		given(transactionAnalysisResponseFacade.getAnalysisJobStatus(1, "txn-analysis-20260313-001"))
+			.willReturn(new TransactionAnalysisJobDto.StatusResponse(
+				"txn-analysis-20260313-001",
+				"RUNNING",
+				new TransactionAnalysisJobDto.Progress("CATEGORY_LABELING", 3, 4),
+				6,
+				LocalDateTime.of(2026, 3, 13, 15, 19),
+				LocalDateTime.of(2026, 3, 13, 15, 19, 2),
+				null,
+				null,
+				null,
+				null
+			));
 
 		mockMvc.perform(apiGet("/transactions/analysis-jobs/txn-analysis-20260313-001")
 				.with(authentication(
-					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
 				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.data.jobId").value("txn-analysis-20260313-001"))
 			.andExpect(jsonPath("$.data.status").value("RUNNING"))
-			.andExpect(jsonPath("$.data.progress.step").value("CATEGORY_LABELING"));
+			.andExpect(jsonPath("$.data.progress.step").value("CATEGORY_LABELING"))
+			.andExpect(jsonPath("$.data.onboardingResult").doesNotExist());
+	}
+
+	@Test
+	void getAnalysisJobStatusReturnsOnboardingResultWhenSucceeded() throws Exception {
+		given(transactionAnalysisResponseFacade.getAnalysisJobStatus(1, "txn-analysis-20260313-001"))
+			.willReturn(new TransactionAnalysisJobDto.StatusResponse(
+				"txn-analysis-20260313-001",
+				"SUCCEEDED",
+				new TransactionAnalysisJobDto.Progress("COMPLETED", 4, 4),
+				6,
+				LocalDateTime.of(2026, 3, 13, 15, 19),
+				LocalDateTime.of(2026, 3, 13, 15, 19, 2),
+				LocalDateTime.of(2026, 3, 13, 15, 24, 10),
+				null,
+				null,
+				new TransactionAnalysisJobDto.OnboardingResult(
+					"3개월 간 소비패턴을 분석했어요.",
+					3_000_000L,
+					1_900_000L,
+					1_100_000L,
+					65.0,
+					35.0,
+					"소비 여유가 있어요. 목표 저축도 고려해 보세요.",
+					List.of(
+						new TransactionAnalysisJobDto.CategoryExpense(10, "식비", 750_000L),
+						new TransactionAnalysisJobDto.CategoryExpense(20, "주거", 550_000L),
+						new TransactionAnalysisJobDto.CategoryExpense(30, "교통", 150_000L)
+					)
+				)
+			));
+
+		mockMvc.perform(apiGet("/transactions/analysis-jobs/txn-analysis-20260313-001")
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
+				)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.data.jobId").value("txn-analysis-20260313-001"))
+			.andExpect(jsonPath("$.data.status").value("SUCCEEDED"))
+			.andExpect(jsonPath("$.data.onboardingResult.summaryText").value("3개월 간 소비패턴을 분석했어요."))
+			.andExpect(jsonPath("$.data.onboardingResult.averageIncome").value(3_000_000))
+			.andExpect(jsonPath("$.data.onboardingResult.averageExpense").value(1_900_000))
+			.andExpect(jsonPath("$.data.onboardingResult.remainingAmount").value(1_100_000))
+			.andExpect(jsonPath("$.data.onboardingResult.fixedExpenseRatio").value(65.0))
+			.andExpect(jsonPath("$.data.onboardingResult.variableExpenseRatio").value(35.0))
+			.andExpect(jsonPath("$.data.onboardingResult.insightMessage").value("소비 여유가 있어요. 목표 저축도 고려해 보세요."))
+			.andExpect(jsonPath("$.data.onboardingResult.categoryExpenses[0].categoryName").value("식비"))
+			.andExpect(jsonPath("$.data.onboardingResult.categoryExpenses[0].amount").value(750_000));
 	}
 
 	@Test
 	void getWeeklyAnalysisReturnsEssentialBreakdownAndCategoryExpenses() throws Exception {
-		given(getWeeklyTransactionAnalysisUseCase.execute(1, "2026-W10"))
+		given(transactionAnalysisResponseFacade.getWeeklyAnalysis(1, "2026-W10"))
 			.willReturn(new WeeklyTransactionAnalysisDto.Response(
 				"2026-W10",
 				LocalDate.of(2026, 3, 2),
@@ -243,7 +272,7 @@ class TransactionControllerTest {
 
 		mockMvc.perform(apiGet("/transactions/analysis/weeks/2026-W10")
 				.with(authentication(
-					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
 				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
@@ -257,7 +286,7 @@ class TransactionControllerTest {
 
 	@Test
 	void getMonthlyAnalysisReturnsMonthlyEssentialAmountDerivedFromWeeklySnapshots() throws Exception {
-		given(getMonthlyTransactionAnalysisUseCase.execute(1, "2026-03"))
+		given(transactionAnalysisResponseFacade.getMonthlyAnalysis(1, "2026-03"))
 			.willReturn(new MonthlyTransactionAnalysisDto.Response(
 				"2026-03",
 				1900000L,
@@ -273,7 +302,7 @@ class TransactionControllerTest {
 
 		mockMvc.perform(apiGet("/transactions/analysis/months/2026-03")
 				.with(authentication(
-					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
 				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
