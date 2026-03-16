@@ -130,7 +130,18 @@ final appRouter = GoRouter(
         ),
         StatefulShellBranch(
           navigatorKey: _shellNavigatorGoalKey,
-          routes: [GoRoute(path: AppRoutes.goalTab, builder: (context, state) => const GoalListPage())],
+          routes: [
+            GoRoute(
+              path: AppRoutes.goalTab,
+              builder: (context, state) => const GoalListPage(),
+              routes: [
+                GoRoute(
+                  path: 'detail',
+                  builder: (context, state) => GoalDetailPage(goalId: state.uri.queryParameters['id'] ?? ''),
+                ),
+              ],
+            ),
+          ],
         ),
         StatefulShellBranch(
           navigatorKey: _shellNavigatorMenuKey,
@@ -155,7 +166,6 @@ final appRouter = GoRouter(
       return AccountCompletePage(isOnboarding: false, bankName: extra?['bankName'] ?? '', accountNumber: extra?['accountNumber'] ?? '');
     }),
     GoRoute(path: AppRoutes.goalCreate, builder: (context, state) => const GoalCreatePage(isOnboarding: false)),
-    GoRoute(path: AppRoutes.goalDetail, builder: (context, state) => GoalDetailPage(goalId: state.uri.queryParameters['id'] ?? '')),
     GoRoute(path: AppRoutes.goalPriority, builder: (context, state) => const GoalPriorityPage()),
     GoRoute(path: AppRoutes.spendingBudget, builder: (context, state) => const SpendingBudgetPage()),
     GoRoute(path: AppRoutes.settings, builder: (context, state) => const SettingsPage()),
