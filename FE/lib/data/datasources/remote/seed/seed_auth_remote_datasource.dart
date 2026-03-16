@@ -34,9 +34,9 @@ class SeedAuthRemoteDataSource implements AuthRemoteDataSource {
     return TokenRefreshResponseDto(
       accessToken: 'seed_access_token_${DateTime.now().millisecondsSinceEpoch}',
       refreshToken: 'seed_refresh_token_${DateTime.now().millisecondsSinceEpoch}',
-      status: 'TEMP',
-      account: false,
-      plan: false,
+      status: 'ACTIVE',
+      account: true,
+      plan: true,
     );
   }
 

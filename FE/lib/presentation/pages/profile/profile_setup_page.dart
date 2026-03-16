@@ -38,6 +38,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
   String? _selectedIncome;
   bool _isSubmitting = false;
   File? _selectedImage;
+  String? _existingImageUrl;
 
   // Validation errors
   String? _nicknameError;
@@ -63,6 +64,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
       text: widget.initialData?['birthDate'] ?? '',
     );
     _selectedIncome = widget.initialData?['income'] ?? '있어요';
+    _existingImageUrl = widget.initialData?['profileImageUrl'];
   }
 
   @override
@@ -405,7 +407,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: MoreAppBar(title: '', showBack: false),
+      appBar: MoreAppBar(title: '', showBack: !widget.isOnboarding),
       body: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
         child: Column(
@@ -436,9 +438,14 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                                 image: FileImage(_selectedImage!),
                                 fit: BoxFit.cover,
                               )
-                            : null,
+                            : _existingImageUrl != null
+                                ? DecorationImage(
+                                    image: NetworkImage(_existingImageUrl!),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
                       ),
-                      child: _selectedImage == null
+                      child: _selectedImage == null && _existingImageUrl == null
                           ? Icon(
                               Icons.camera_alt_outlined,
                               size: 32.w,
@@ -448,7 +455,24 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                     ),
                   ),
                   SizedBox(height: 12.h),
-                  Text('등록하지 않으면 기본 이미지로 설정돼요.', style: AppTextStyles.bodySm),
+                  if (widget.isOnboarding)
+                    Text('등록하지 않으면 기본 이미지로 설정돼요.', style: AppTextStyles.bodySm)
+                  else
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedImage = null;
+                          _existingImageUrl = null;
+                        });
+                      },
+                      child: Text(
+                        '기본 이미지로 변경하기',
+                        style: AppTextStyles.bodySm.copyWith(
+                          color: AppColors.textTertiary,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
