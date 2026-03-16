@@ -56,6 +56,13 @@ class SwaggerConfigIntegrationTest {
 	void apiDocsDescribeProfileAndPlanImageUploadEndpoints() throws Exception {
 		mockMvc.perform(apiGet("/v3/api-docs"))
 			.andExpect(status().isOk())
+			.andExpect(jsonPath(
+				"$.paths['/v1/members/me/profile'].patch.requestBody.content['application/json'].schema['$ref']"
+			).value("#/components/schemas/ProfileCompletionRequest"))
+			.andExpect(jsonPath("$.components.schemas.ProfileCompletionRequest.properties.nickname.type").value("string"))
+			.andExpect(jsonPath("$.components.schemas.ProfileCompletionRequest.properties.email.type").value("string"))
+			.andExpect(jsonPath("$.components.schemas.ProfileCompletionRequest.properties.birthDate.type").value("string"))
+			.andExpect(jsonPath("$.components.schemas.ProfileCompletionRequest.properties.hasFixedIncome.type").value("boolean"))
 			.andExpect(jsonPath("$.paths['/v1/members/me/profile-image'].patch.summary").value("프로필 이미지 업로드"))
 			.andExpect(jsonPath("$.paths['/v1/members/me/profile-image'].patch.tags[0]").value("회원 프로필 API"))
 			.andExpect(jsonPath(
