@@ -164,35 +164,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 ),
               ),
             ),
-            // Bottom button with progress
+            // Progress bar
             Padding(
               padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 12.h),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56.h,
-                child: ElevatedButton(
-                  onPressed: _onNext,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.orange500,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16.r),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    '다음',
-                    style: AppTextStyles.bodyMd.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16.sp,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 16.h),
               child: SizedBox(
                 height: 6.h,
                 width: double.infinity,
@@ -207,7 +181,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         ),
                       ),
                       FractionallySizedBox(
-                        widthFactor: 1 / 6,
+                        widthFactor: (_currentPage + 1) / 7,
                         child: Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(4.r),
@@ -222,6 +196,38 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         ),
                       ),
                     ],
+                  ),
+                ),
+              ),
+            ),
+            // Bottom button
+            Padding(
+              padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 16.h),
+              child: SizedBox(
+                width: double.infinity,
+                height: 56.h,
+                child: ElevatedButton(
+                  onPressed: _onNext,
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.pressed)) return AppColors.orange600;
+                      return AppColors.orange500;
+                    }),
+                    foregroundColor: WidgetStateProperty.all(Colors.white),
+                    shape: WidgetStateProperty.all(
+                      RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16.r),
+                      ),
+                    ),
+                    elevation: WidgetStateProperty.all(0),
+                  ),
+                  child: Text(
+                    '다음',
+                    style: AppTextStyles.bodyMd.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16.sp,
+                    ),
                   ),
                 ),
               ),

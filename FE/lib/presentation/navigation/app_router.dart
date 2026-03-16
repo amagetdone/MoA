@@ -81,26 +81,26 @@ final appRouter = GoRouter(
   routes: [
     GoRoute(path: AppRoutes.splash, builder: (context, state) => const SplashPage()),
     GoRoute(path: AppRoutes.login, builder: (context, state) => const LoginPage()),
-    GoRoute(path: AppRoutes.onboarding, builder: (context, state) => const OnboardingPage()),
-    GoRoute(path: AppRoutes.onboardingProfile, builder: (context, state) => const ProfileSetupPage(isOnboarding: true)),
-    GoRoute(path: AppRoutes.onboardingAccount, builder: (context, state) => const AccountAddPage(isOnboarding: true)),
-    GoRoute(path: AppRoutes.onboardingAccountSelect, builder: (context, state) => const AccountSelectPage(isOnboarding: true)),
-    GoRoute(path: AppRoutes.onboardingAccountVerify, builder: (context, state) {
+    GoRoute(path: AppRoutes.onboarding, pageBuilder: (context, state) => _fadeTransitionPage(state, const OnboardingPage())),
+    GoRoute(path: AppRoutes.onboardingProfile, pageBuilder: (context, state) => _fadeTransitionPage(state, const ProfileSetupPage(isOnboarding: true))),
+    GoRoute(path: AppRoutes.onboardingAccount, pageBuilder: (context, state) => _fadeTransitionPage(state, const AccountManagePage(isOnboarding: true))),
+    GoRoute(path: AppRoutes.onboardingAccountSelect, pageBuilder: (context, state) => _fadeTransitionPage(state, const AccountSelectPage(isOnboarding: true))),
+    GoRoute(path: AppRoutes.onboardingAccountVerify, pageBuilder: (context, state) {
       final extra = state.extra as Map?;
-      return AccountVerifyPage(isOnboarding: true, bankName: extra?['bankName'] ?? '', accountNumber: extra?['accountNumber'] ?? '');
+      return _fadeTransitionPage(state, AccountVerifyPage(isOnboarding: true, bankName: extra?['bankName'] ?? '', accountNumber: extra?['accountNumber'] ?? ''));
     }),
-    GoRoute(path: AppRoutes.onboardingAccountComplete, builder: (context, state) {
+    GoRoute(path: AppRoutes.onboardingAccountComplete, pageBuilder: (context, state) {
       final extra = state.extra as Map?;
-      return AccountCompletePage(isOnboarding: true, bankName: extra?['bankName'] ?? '', accountNumber: extra?['accountNumber'] ?? '');
+      return _fadeTransitionPage(state, AccountCompletePage(isOnboarding: true, bankName: extra?['bankName'] ?? '', accountNumber: extra?['accountNumber'] ?? ''));
     }),
-    GoRoute(path: AppRoutes.onboardingGoal, builder: (context, state) => const GoalCreatePage(isOnboarding: true)),
-    GoRoute(path: AppRoutes.onboardingLoading, builder: (context, state) {
+    GoRoute(path: AppRoutes.onboardingGoal, pageBuilder: (context, state) => _fadeTransitionPage(state, const GoalCreatePage(isOnboarding: true))),
+    GoRoute(path: AppRoutes.onboardingLoading, pageBuilder: (context, state) {
       final extra = state.extra as Map<String, dynamic>? ?? const {};
-      return OnboardingLoadingPage(nextRoute: extra['nextRoute'] as String?);
+      return _fadeTransitionPage(state, OnboardingLoadingPage(nextRoute: extra['nextRoute'] as String?));
     }),
-    GoRoute(path: AppRoutes.onboardingIncome, builder: (context, state) => const OnboardingIncomePage()),
-    GoRoute(path: AppRoutes.onboardingAnalysis, builder: (context, state) => const OnboardingAnalysisPage()),
-    GoRoute(path: AppRoutes.onboardingPlan, builder: (context, state) => const OnboardingPlanPage()),
+    GoRoute(path: AppRoutes.onboardingIncome, pageBuilder: (context, state) => _fadeTransitionPage(state, const OnboardingIncomePage())),
+    GoRoute(path: AppRoutes.onboardingAnalysis, pageBuilder: (context, state) => _fadeTransitionPage(state, const OnboardingAnalysisPage())),
+    GoRoute(path: AppRoutes.onboardingPlan, pageBuilder: (context, state) => _fadeTransitionPage(state, const OnboardingPlanPage())),
 
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) => MainShellPage(navigationShell: navigationShell),
@@ -162,3 +162,17 @@ final appRouter = GoRouter(
     GoRoute(path: AppRoutes.settings, builder: (context, state) => const SettingsPage()),
   ],
 );
+
+CustomTransitionPage<void> _fadeTransitionPage(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: Duration.zero,
+    reverseTransitionDuration: Duration.zero,
+    opaque: false,
+    barrierColor: null,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return child;
+    },
+  );
+}

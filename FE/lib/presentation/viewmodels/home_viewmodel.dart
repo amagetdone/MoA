@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:more_app/domain/entities/account.dart';
+import 'package:more_app/domain/entities/auth_result.dart';
 import 'package:more_app/domain/entities/goal.dart';
 import 'package:more_app/domain/repositories/home_repository.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
+import 'package:more_app/presentation/viewmodels/auth_viewmodel.dart';
 
 enum HomeStatus { noAccount, noGoal, ready }
 
@@ -58,11 +60,14 @@ class HomeState {
 }
 
 class HomeViewModel extends StateNotifier<HomeState> {
-  HomeViewModel(this._repository) : super(const HomeState(isLoading: true)) {
+  HomeViewModel(this._repository, this._hasAccount, this._hasPlan)
+      : super(const HomeState(isLoading: true)) {
     loadData();
   }
 
   final HomeRepository _repository;
+  final bool _hasAccount;
+  final bool _hasPlan;
 
   Future<void> loadData() async {
     state = state.copyWith(isLoading: true, clearErrorMessage: true);
@@ -71,9 +76,9 @@ class HomeViewModel extends StateNotifier<HomeState> {
       final dashboard = await _repository.fetchHomeDashboard();
 
       HomeStatus status;
-      if (dashboard.accounts.isEmpty) {
+      if (!_hasAccount) {
         status = HomeStatus.noAccount;
-      } else if (dashboard.activeGoals.isEmpty) {
+      } else if (!_hasPlan) {
         status = HomeStatus.noGoal;
       } else {
         status = HomeStatus.ready;
@@ -98,5 +103,17 @@ class HomeViewModel extends StateNotifier<HomeState> {
 final homeViewModelProvider = StateNotifierProvider<HomeViewModel, HomeState>((
   ref,
 ) {
-  return HomeViewModel(ref.read(homeRepositoryProvider));
+  final authState = ref.read(authViewModelProvider);
+  bool hasAccount = true;
+  bool hasPlan = true;
+
+  if (authState is AuthAuthenticated) {
+    hasAccount = authState.authResult.account;
+    hasPlan = authState.authResult.plan;
+  } else if (authState is AuthAutoLoginSuccess) {
+    hasAccount = authState.authResult.account;
+    hasPlan = authState.authResult.plan;
+  }
+
+  return HomeViewModel(ref.read(homeRepositoryProvider), hasAccount, hasPlan);
 });

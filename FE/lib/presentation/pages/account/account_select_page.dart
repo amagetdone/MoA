@@ -61,14 +61,32 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: MoreAppBar(
-        title: '계좌 연동',
+        title: widget.isOnboarding ? '' : '계좌 연동',
         showBack: true,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(24.w),
+        padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (widget.isOnboarding) ...[
+              Text(
+                '계좌 연동',
+                style: AppTextStyles.headingLg.copyWith(
+                  fontSize: 24.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 6.h),
+              Text(
+                '은행을 선택하고 계좌번호를 입력해주세요.',
+                style: AppTextStyles.bodySm.copyWith(
+                  color: AppColors.textTertiary,
+                  fontSize: 14.sp,
+                ),
+              ),
+              SizedBox(height: 24.h),
+            ],
             // Bank selection
             Text(
               '은행 선택',
@@ -77,9 +95,9 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
                 fontSize: 18.sp,
               ),
             ),
-            SizedBox(height: 20.h),
+            SizedBox(height: 12.h),
             if (state.isLoading)
-              const Center(child: CircularProgressIndicator())
+              const SizedBox.shrink()
             else if (state.errorMessage != null)
               Text(
                 '은행 목록을 불러오지 못했습니다.\n${state.errorMessage!}',
@@ -168,7 +186,7 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
             ],
 
             if (_selectedBank != null) ...[
-              SizedBox(height: 32.h),
+              SizedBox(height: 24.h),
               MoreTextField(
                 label: '계좌번호',
                 hint: '계좌번호를 입력해주세요',
@@ -184,6 +202,7 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
         text: '다음',
         onPressed: _onNext,
         enabled: _isFormValid,
+        progress: widget.isOnboarding ? 4 / 7 : null,
       ),
     );
   }

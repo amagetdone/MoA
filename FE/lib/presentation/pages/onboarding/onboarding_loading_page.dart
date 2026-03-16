@@ -199,6 +199,40 @@ class _OnboardingLoadingPageState extends State<OnboardingLoadingPage>
             ],
           ),
         ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 16.h),
+            child: SizedBox(
+              height: 6.h,
+              width: double.infinity,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4.r),
+                child: Stack(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.gray100,
+                        borderRadius: BorderRadius.circular(4.r),
+                      ),
+                    ),
+                    FractionallySizedBox(
+                      widthFactor: widget.nextRoute == AppRoutes.onboardingPlan ? 6 / 7 : 4 / 7,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(4.r),
+                          gradient: const LinearGradient(
+                            colors: [AppColors.white, AppColors.orange500],
+                            stops: [0.0, 0.7],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

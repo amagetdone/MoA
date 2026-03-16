@@ -21,7 +21,7 @@ class MenuPage extends ConsumerWidget {
       return const Scaffold(
         backgroundColor: AppColors.bgPrimary,
         appBar: MoreAppBar(title: '내 정보', showBack: false),
-        body: Center(child: CircularProgressIndicator()),
+        body: const SizedBox.shrink(),
       );
     }
 

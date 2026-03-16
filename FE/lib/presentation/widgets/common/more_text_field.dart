@@ -17,6 +17,7 @@ class MoreTextField extends StatelessWidget {
   final VoidCallback? onTap;
   final int maxLines;
   final String? errorText;
+  final FocusNode? focusNode;
 
   const MoreTextField({
     super.key,
@@ -32,6 +33,7 @@ class MoreTextField extends StatelessWidget {
     this.onTap,
     this.maxLines = 1,
     this.errorText,
+    this.focusNode,
   });
 
   @override
@@ -55,6 +57,7 @@ class MoreTextField extends StatelessWidget {
           ),
           child: TextField(
             controller: controller,
+            focusNode: focusNode,
             readOnly: readOnly,
             keyboardType: keyboardType,
             inputFormatters: inputFormatters,

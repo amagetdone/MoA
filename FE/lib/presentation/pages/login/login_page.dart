@@ -14,16 +14,14 @@ class LoginPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.listen<AuthState>(authViewModelProvider, (prev, next) {
       if (next is AuthAuthenticated) {
-        final result = next.authResult;
-        if (result.status == 'TEMP') {
-          context.go(AppRoutes.onboardingProfile);
-        } else if (!result.account) {
-          context.go(AppRoutes.onboardingAccount);
-        } else if (!result.plan) {
-          context.go(AppRoutes.onboardingGoal);
-        } else {
-          context.go(AppRoutes.home);
-        }
+        // TODO: 테스트용 - 원복 필요
+        context.go(AppRoutes.onboardingProfile);
+        // final result = next.authResult;
+        // if (result.status == 'TEMP') {
+        //   context.go(AppRoutes.onboardingProfile);
+        // } else {
+        //   context.go(AppRoutes.home);
+        // }
       } else if (next is AuthError) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(next.message)),
@@ -46,8 +44,8 @@ class LoginPage extends ConsumerWidget {
               // 로고
               Image.asset(
                 'assets/images/logo/applogo.png',
-                width: 100.w,
-                height: 100.w,
+                width: 80.w,
+                height: 80.w,
               ),
               SizedBox(height: 16.h),
 
@@ -92,8 +90,7 @@ class LoginPage extends ConsumerWidget {
                 iconPath: 'assets/images/logo/googlelogo.png',
                 borderColor: AppColors.borderDefault,
               ),
-
-              SizedBox(height: 40.h),
+              Spacer(flex: 3),
             ],
           ),
         ),
