@@ -25,82 +25,38 @@ class GoalSummaryCard extends StatelessWidget {
     final weekText = '${_currentWeek(goal)}주차 ($dDayText)';
     final percentText = (goal.progressRate * 100).toStringAsFixed(1);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isCompact = constraints.maxWidth < 360;
-
-        return MoreCard(
-          onTap: () => context.push(AppRoutes.goalDetailLocation(goal.id)),
-          padding: EdgeInsets.fromLTRB(22.w, 22.h, 22.w, 20.h),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return MoreCard(
+      onTap: () => context.push(AppRoutes.goalDetailLocation(goal.id)),
+      padding: EdgeInsets.fromLTRB(22.w, 22.h, 22.w, 20.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              if (isCompact)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        _GoalHeaderIcon(),
-                        SizedBox(width: 14.w),
-                        Expanded(child: _GoalHeaderText(goalName: goal.name)),
-                      ],
-                    ),
-                    SizedBox(height: 10.h),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: _ViewAllButton(onPressed: onViewAll),
-                    ),
-                  ],
-                )
-              else
-                Row(
-                  children: [
-                    _GoalHeaderIcon(),
-                    SizedBox(width: 14.w),
-                    Expanded(child: _GoalHeaderText(goalName: goal.name)),
-                    _ViewAllButton(onPressed: onViewAll),
-                  ],
-                ),
-              SizedBox(height: 18.h),
-              if (isCompact)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: _GoalIllustration(
-                        assetPath: _illustrationAssetPath,
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
-                    _GoalProgressContent(
-                      weekText: weekText,
-                      amountText:
-                          '${CurrencyFormatter.formatKRW(goal.currentAmount)} / ${CurrencyFormatter.formatKRW(goal.targetAmount)} ($percentText%)',
-                      progressRate: goal.progressRate,
-                    ),
-                  ],
-                )
-              else
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _GoalIllustration(assetPath: _illustrationAssetPath),
-                    SizedBox(width: 18.w),
-                    Expanded(
-                      child: _GoalProgressContent(
-                        weekText: weekText,
-                        amountText:
-                            '${CurrencyFormatter.formatKRW(goal.currentAmount)} / ${CurrencyFormatter.formatKRW(goal.targetAmount)} ($percentText%)',
-                        progressRate: goal.progressRate,
-                      ),
-                    ),
-                  ],
-                ),
+              _GoalHeaderIcon(),
+              SizedBox(width: 14.w),
+              Expanded(child: _GoalHeaderText(goalName: goal.name)),
+              _ViewAllButton(onPressed: onViewAll),
             ],
           ),
-        );
-      },
+          SizedBox(height: 18.h),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _GoalIllustration(assetPath: _illustrationAssetPath),
+              SizedBox(width: 18.w),
+              Expanded(
+                child: _GoalProgressContent(
+                  weekText: weekText,
+                  amountText:
+                      '${CurrencyFormatter.formatKRW(goal.currentAmount)} / ${CurrencyFormatter.formatKRW(goal.targetAmount)} ($percentText%)',
+                  progressRate: goal.progressRate,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
