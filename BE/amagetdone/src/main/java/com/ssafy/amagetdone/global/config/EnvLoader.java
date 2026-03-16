@@ -1,4 +1,4 @@
-package com.ssafy.amagetdone.config;
+package com.ssafy.amagetdone.global.config;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

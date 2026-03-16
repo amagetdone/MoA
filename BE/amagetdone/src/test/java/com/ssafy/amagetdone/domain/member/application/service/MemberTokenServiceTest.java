@@ -7,7 +7,7 @@ import static org.mockito.Mockito.verify;
 import java.lang.reflect.Field;
 import java.util.Optional;
 
-import com.ssafy.amagetdone.config.JwtProperties;
+import com.ssafy.amagetdone.global.config.JwtProperties;
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.member.api.dto.LogoutDto;
 import com.ssafy.amagetdone.domain.member.api.dto.RefreshTokenDto;

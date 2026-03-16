@@ -1,6 +1,6 @@
 package com.ssafy.amagetdone.domain.member.application.usecase;
 
-import com.ssafy.amagetdone.config.JwtProperties;
+import com.ssafy.amagetdone.global.config.JwtProperties;
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;

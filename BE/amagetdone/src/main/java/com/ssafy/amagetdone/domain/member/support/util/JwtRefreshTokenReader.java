@@ -4,7 +4,7 @@ import java.nio.charset.StandardCharsets;
 
 import javax.crypto.SecretKey;
 
-import com.ssafy.amagetdone.config.JwtProperties;
+import com.ssafy.amagetdone.global.config.JwtProperties;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
 import com.ssafy.amagetdone.domain.member.model.repository.RefreshTokenStore;

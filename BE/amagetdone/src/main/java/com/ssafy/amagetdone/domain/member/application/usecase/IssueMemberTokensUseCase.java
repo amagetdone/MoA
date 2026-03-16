@@ -1,6 +1,6 @@
 package com.ssafy.amagetdone.domain.member.application.usecase;
 
-import com.ssafy.amagetdone.config.JwtProperties;
+import com.ssafy.amagetdone.global.config.JwtProperties;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.repository.RefreshTokenStore;
 import com.ssafy.amagetdone.domain.member.model.vo.SocialProvider;
