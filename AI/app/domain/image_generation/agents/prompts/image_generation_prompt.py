@@ -11,7 +11,9 @@ _IMAGE_GENERATION_PROMPT = ChatPromptTemplate.from_messages(
                 "Preserve the core subject unless the user asks to replace it, and make "
                 "the requested visual style, composition, lighting, materials, camera "
                 "feel, and output intent explicit. Always target a square 1:1 composition "
-                "and explicitly request a 512x512-style output."
+                "and explicitly request a 512x512-style output. Always generate a single "
+                "final image. Do not create grids, collages, contact sheets, multi-panel "
+                "layouts, or multiple variations in one frame."
             ),
         ),
         (

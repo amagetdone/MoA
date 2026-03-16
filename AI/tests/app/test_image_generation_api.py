@@ -27,14 +27,12 @@ class _FakeImageGenerationService:
         self,
         *,
         user_prompt: str,
-        image_base64: str,
-        mime_type: str,
+        image_url: str,
     ) -> dict[str, str]:
         self.calls.append(
             {
                 "user_prompt": user_prompt,
-                "image_base64": image_base64,
-                "mime_type": mime_type,
+                "image_url": image_url,
             }
         )
         if self.error is not None:
@@ -51,8 +49,7 @@ def test_image_generation_endpoint_returns_base64_payload() -> None:
             "/v1/image-generation",
             json={
                 "user_prompt": "Turn the reference image into a polished cyberpunk banana poster.",
-                "image_base64": "reference-image",
-                "mime_type": "image/jpeg",
+                "image_url": "https://bucket.s3.ap-northeast-2.amazonaws.com/reference-image.jpg",
             },
         )
 
@@ -66,13 +63,12 @@ def test_image_generation_endpoint_returns_base64_payload() -> None:
     assert service.calls == [
         {
             "user_prompt": "Turn the reference image into a polished cyberpunk banana poster.",
-            "image_base64": "reference-image",
-            "mime_type": "image/jpeg",
+            "image_url": "https://bucket.s3.ap-northeast-2.amazonaws.com/reference-image.jpg",
         }
     ]
 
 
-def test_image_generation_endpoint_rejects_blank_fields() -> None:
+def test_image_generation_endpoint_rejects_blank_or_invalid_fields() -> None:
     app = create_app(
         classifier=object(),
         image_generation_service=_FakeImageGenerationService(),
@@ -83,8 +79,7 @@ def test_image_generation_endpoint_rejects_blank_fields() -> None:
             "/v1/image-generation",
             json={
                 "user_prompt": "   ",
-                "image_base64": "   ",
-                "mime_type": "   ",
+                "image_url": "not-a-url",
             },
         )
 
@@ -104,8 +99,7 @@ def test_image_generation_endpoint_maps_upstream_errors_to_bad_gateway() -> None
             "/v1/image-generation",
             json={
                 "user_prompt": "Turn the reference image into a polished cyberpunk banana poster.",
-                "image_base64": "reference-image",
-                "mime_type": "image/jpeg",
+                "image_url": "https://bucket.s3.ap-northeast-2.amazonaws.com/reference-image.jpg",
             },
         )
 
@@ -113,7 +107,7 @@ def test_image_generation_endpoint_maps_upstream_errors_to_bad_gateway() -> None
     assert response.json() == {"detail": "missing generated image"}
 
 
-def test_image_generation_openapi_describes_supported_mime_types_in_korean() -> None:
+def test_image_generation_openapi_describes_public_image_url_requirement_in_korean() -> None:
     app = create_app(
         classifier=object(),
         image_generation_service=_FakeImageGenerationService(),
@@ -124,14 +118,15 @@ def test_image_generation_openapi_describes_supported_mime_types_in_korean() -> 
 
     assert response.status_code == 200
     request_schema = response.json()["components"]["schemas"]["ImageGenerationRequest"]
-    mime_type_schema = request_schema["properties"]["mime_type"]
+    image_url_schema = request_schema["properties"]["image_url"]
     operation = response.json()["paths"]["/v1/image-generation"]["post"]
 
-    assert "입력 이미지의 MIME 타입" in mime_type_schema["description"]
-    assert "image/jpeg" in mime_type_schema["description"]
-    assert "image/png" in mime_type_schema["description"]
-    assert "image/webp" in mime_type_schema["description"]
-    assert "mime_type에는 입력 이미지의 MIME 타입을 넣습니다" in operation["description"]
-    assert "image/jpeg" in operation["description"]
-    assert "image/png" in operation["description"]
-    assert "image/webp" in operation["description"]
+    assert "공개적으로 접근 가능한 입력 이미지 URL" in image_url_schema["description"]
+    assert "서버가 이 URL에서 이미지를 내려받아 Gemini로 전달합니다" in image_url_schema[
+        "description"
+    ]
+    assert "https://" in image_url_schema["description"]
+    assert "image_url에는 공개적으로 접근 가능한 입력 이미지 URL을 넣습니다" in operation[
+        "description"
+    ]
+    assert "S3" in operation["description"]

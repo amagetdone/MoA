@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+
 import pytest
 
 from app.core.config import Settings
@@ -10,25 +12,59 @@ from app.domain.image_generation.service.image_generation_service import (
 
 
 USER_PROMPT = "Turn the reference image into a polished cyberpunk banana poster."
-INPUT_IMAGE_BASE64 = "reference-image"
-INPUT_MIME_TYPE = "image/jpeg"
+INPUT_IMAGE_URL = "https://bucket.s3.ap-northeast-2.amazonaws.com/reference-image.jpg"
+DOWNLOADED_IMAGE_BYTES = b"reference-image"
+DOWNLOADED_IMAGE_BASE64 = base64.b64encode(DOWNLOADED_IMAGE_BYTES).decode("ascii")
 
 
 class _FakeResponse:
-    def __init__(self, payload: dict) -> None:
+    def __init__(
+        self,
+        *,
+        payload: dict | None = None,
+        content: bytes = b"",
+        headers: dict[str, str] | None = None,
+    ) -> None:
         self.payload = payload
+        self.content = content
+        self.headers = headers or {}
 
     def raise_for_status(self) -> None:
         return None
 
     def json(self) -> dict:
+        if self.payload is None:
+            raise AssertionError("json() should not be called for this fake response")
         return self.payload
 
 
 class _FakeHttpClient:
-    def __init__(self, payload: dict) -> None:
-        self.payload = payload
-        self.calls: list[dict[str, object]] = []
+    def __init__(
+        self,
+        *,
+        get_response: _FakeResponse | None = None,
+        post_response: _FakeResponse | None = None,
+    ) -> None:
+        self.get_response = get_response or _FakeResponse()
+        self.post_response = post_response or _FakeResponse(payload={})
+        self.get_calls: list[dict[str, object]] = []
+        self.post_calls: list[dict[str, object]] = []
+
+    def get(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str] | None = None,
+        timeout: float | None = None,
+    ) -> _FakeResponse:
+        self.get_calls.append(
+            {
+                "url": url,
+                "headers": headers or {},
+                "timeout": timeout,
+            }
+        )
+        return self.get_response
 
     def post(
         self,
@@ -38,7 +74,7 @@ class _FakeHttpClient:
         json: dict[str, object] | None = None,
         timeout: float | None = None,
     ) -> _FakeResponse:
-        self.calls.append(
+        self.post_calls.append(
             {
                 "path": path,
                 "headers": headers or {},
@@ -46,7 +82,7 @@ class _FakeHttpClient:
                 "timeout": timeout,
             }
         )
-        return _FakeResponse(self.payload)
+        return self.post_response
 
 
 class _CapturingSpan:
@@ -113,30 +149,36 @@ class _CapturingTracer:
         )
 
 
-def test_service_uses_configured_payload_and_extracts_generated_inline_data() -> None:
+def test_service_downloads_reference_image_and_extracts_generated_inline_data() -> None:
     settings = Settings(
         _env_file=None,
         AI_API_KEY="relay-key",
         OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
     )
     http_client = _FakeHttpClient(
-        {
-            "candidates": [
-                {
-                    "content": {
-                        "parts": [
-                            {"text": "Edited successfully."},
-                            {
-                                "inline_data": {
-                                    "mime_type": "image/png",
-                                    "data": "encoded-image",
-                                }
-                            },
-                        ]
+        get_response=_FakeResponse(
+            content=DOWNLOADED_IMAGE_BYTES,
+            headers={"Content-Type": "image/jpeg; charset=binary"},
+        ),
+        post_response=_FakeResponse(
+            payload={
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {"text": "Edited successfully."},
+                                {
+                                    "inline_data": {
+                                        "mime_type": "image/png",
+                                        "data": "encoded-image",
+                                    }
+                                },
+                            ]
+                        }
                     }
-                }
-            ]
-        }
+                ]
+            }
+        ),
     )
     tracer = _CapturingTracer()
 
@@ -148,8 +190,7 @@ def test_service_uses_configured_payload_and_extracts_generated_inline_data() ->
 
     result = service.generate(
         user_prompt=USER_PROMPT,
-        image_base64=INPUT_IMAGE_BASE64,
-        mime_type=INPUT_MIME_TYPE,
+        image_url=INPUT_IMAGE_URL,
     )
 
     assert result == {
@@ -160,7 +201,16 @@ def test_service_uses_configured_payload_and_extracts_generated_inline_data() ->
     }
     assert USER_PROMPT in result["prompt"]
     assert "512x512" in result["prompt"]
-    assert http_client.calls == [
+    assert http_client.get_calls == [
+        {
+            "url": INPUT_IMAGE_URL,
+            "headers": {
+                "Accept": "image/*",
+            },
+            "timeout": 30.0,
+        }
+    ]
+    assert http_client.post_calls == [
         {
             "path": "/models/gemini-2.5-flash-image:generateContent",
             "headers": {
@@ -175,7 +225,7 @@ def test_service_uses_configured_payload_and_extracts_generated_inline_data() ->
                             {
                                 "inline_data": {
                                     "mime_type": "image/jpeg",
-                                    "data": "reference-image",
+                                    "data": DOWNLOADED_IMAGE_BASE64,
                                 }
                             },
                         ]
@@ -190,7 +240,7 @@ def test_service_uses_configured_payload_and_extracts_generated_inline_data() ->
             "timeout": 60.0,
         }
     ]
-    assert all(INPUT_IMAGE_BASE64 not in str(event) for event in tracer.events)
+    assert all(DOWNLOADED_IMAGE_BASE64 not in str(event) for event in tracer.events)
     assert all("encoded-image" not in str(event) for event in tracer.events)
 
 
@@ -203,36 +253,71 @@ def test_service_accepts_camel_case_inline_data_from_upstream() -> None:
     service = ImageGenerationService(
         settings=settings,
         http_client=_FakeHttpClient(
-            {
-                "candidates": [
-                    {
-                        "content": {
-                            "parts": [
-                                {"text": "Edited successfully."},
-                                {
-                                    "inlineData": {
-                                        "mimeType": "image/png",
-                                        "data": "camel-case-image",
-                                    }
-                                },
-                            ]
+            get_response=_FakeResponse(
+                content=DOWNLOADED_IMAGE_BYTES,
+                headers={"Content-Type": "image/jpeg"},
+            ),
+            post_response=_FakeResponse(
+                payload={
+                    "candidates": [
+                        {
+                            "content": {
+                                "parts": [
+                                    {"text": "Edited successfully."},
+                                    {
+                                        "inlineData": {
+                                            "mimeType": "image/png",
+                                            "data": "camel-case-image",
+                                        }
+                                    },
+                                ]
+                            }
                         }
-                    }
-                ]
-            }
+                    ]
+                }
+            ),
         ),
         tracer=_CapturingTracer(),
     )
 
     result = service.generate(
         user_prompt=USER_PROMPT,
-        image_base64=INPUT_IMAGE_BASE64,
-        mime_type=INPUT_MIME_TYPE,
+        image_url=INPUT_IMAGE_URL,
     )
 
     assert result["image_base64"] == "camel-case-image"
     assert result["mime_type"] == "image/png"
     assert result["model"] == "gemini-2.5-flash-image"
+
+
+def test_service_raises_when_reference_url_does_not_return_image_content_type() -> None:
+    settings = Settings(
+        _env_file=None,
+        AI_API_KEY="relay-key",
+        OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
+    )
+    http_client = _FakeHttpClient(
+        get_response=_FakeResponse(
+            content=b"<html>not an image</html>",
+            headers={"Content-Type": "text/html"},
+        ),
+    )
+    service = ImageGenerationService(
+        settings=settings,
+        http_client=http_client,
+        tracer=_CapturingTracer(),
+    )
+
+    with pytest.raises(UpstreamImageGenerationError) as exc_info:
+        service.generate(
+            user_prompt=USER_PROMPT,
+            image_url=INPUT_IMAGE_URL,
+        )
+
+    assert "Reference image URL did not return an image content type" in str(
+        exc_info.value
+    )
+    assert http_client.post_calls == []
 
 
 def test_service_raises_when_generated_inline_data_is_missing() -> None:
@@ -244,7 +329,17 @@ def test_service_raises_when_generated_inline_data_is_missing() -> None:
     service = ImageGenerationService(
         settings=settings,
         http_client=_FakeHttpClient(
-            {"candidates": [{"content": {"parts": [{"text": "No image generated."}]}}]}
+            get_response=_FakeResponse(
+                content=DOWNLOADED_IMAGE_BYTES,
+                headers={"Content-Type": "image/jpeg"},
+            ),
+            post_response=_FakeResponse(
+                payload={
+                    "candidates": [
+                        {"content": {"parts": [{"text": "No image generated."}]}}
+                    ]
+                }
+            ),
         ),
         tracer=_CapturingTracer(),
     )
@@ -252,8 +347,7 @@ def test_service_raises_when_generated_inline_data_is_missing() -> None:
     with pytest.raises(UpstreamImageGenerationError):
         service.generate(
             user_prompt=USER_PROMPT,
-            image_base64=INPUT_IMAGE_BASE64,
-            mime_type=INPUT_MIME_TYPE,
+            image_url=INPUT_IMAGE_URL,
         )
 
 
@@ -267,18 +361,24 @@ def test_service_reports_available_upstream_part_types_for_schema_debugging() ->
     service = ImageGenerationService(
         settings=settings,
         http_client=_FakeHttpClient(
-            {
-                "candidates": [
-                    {
-                        "content": {
-                            "parts": [
-                                {"text": "Model returned only a textual description."}
-                            ]
+            get_response=_FakeResponse(
+                content=DOWNLOADED_IMAGE_BYTES,
+                headers={"Content-Type": "image/jpeg"},
+            ),
+            post_response=_FakeResponse(
+                payload={
+                    "candidates": [
+                        {
+                            "content": {
+                                "parts": [
+                                    {"text": "Model returned only a textual description."}
+                                ]
+                            }
                         }
-                    }
-                ],
-                "usageMetadata": {"promptTokenCount": 42},
-            }
+                    ],
+                    "usageMetadata": {"promptTokenCount": 42},
+                }
+            ),
         ),
         tracer=tracer,
     )
@@ -286,8 +386,7 @@ def test_service_reports_available_upstream_part_types_for_schema_debugging() ->
     with pytest.raises(UpstreamImageGenerationError) as exc_info:
         service.generate(
             user_prompt=USER_PROMPT,
-            image_base64=INPUT_IMAGE_BASE64,
-            mime_type=INPUT_MIME_TYPE,
+            image_url=INPUT_IMAGE_URL,
         )
 
     assert "available part types: ['text']" in str(exc_info.value)

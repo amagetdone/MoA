@@ -13,6 +13,8 @@ def test_build_image_generation_prompt_expands_user_edit_goal() -> None:
     assert "cyberpunk banana poster" in prompt
     assert "reference image" in prompt
     assert "512x512" in prompt
+    assert "single final image" in prompt
+    assert "Do not create grids" in prompt
     assert prompt != "Turn the reference image into a polished cyberpunk banana poster."
 
 

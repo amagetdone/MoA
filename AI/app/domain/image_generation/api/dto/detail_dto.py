@@ -1,22 +1,25 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import AnyHttpUrl, BaseModel, Field, field_validator
 
 
 class ImageGenerationRequest(BaseModel):
     user_prompt: str
-    image_base64: str
-    mime_type: str = Field(
+    image_url: AnyHttpUrl = Field(
         description=(
-            "입력 이미지의 MIME 타입입니다. 예: image/jpeg, image/png, image/webp"
+            "공개적으로 접근 가능한 입력 이미지 URL입니다. "
+            "서버가 이 URL에서 이미지를 내려받아 Gemini로 전달합니다. "
+            "예: https://bucket.s3.ap-northeast-2.amazonaws.com/reference-image.jpg"
         ),
-        examples=["image/jpeg"],
+        examples=[
+            "https://bucket.s3.ap-northeast-2.amazonaws.com/reference-image.jpg"
+        ],
     )
 
-    @field_validator("user_prompt", "image_base64", "mime_type")
+    @field_validator("user_prompt")
     @classmethod
-    def validate_non_blank_field(cls, value: str) -> str:
+    def validate_non_blank_user_prompt(cls, value: str) -> str:
         normalized = value.strip()
         if not normalized:
-            raise ValueError("field must not be blank")
+            raise ValueError("user_prompt must not be blank")
         return normalized
 
 
