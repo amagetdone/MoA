@@ -56,6 +56,14 @@ class SavingsCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Text(
+                          '이번 주 저축액',
+                          style: AppTextStyles.bodyLg.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        SizedBox(height: 4.h),
                         FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
@@ -65,13 +73,6 @@ class SavingsCard extends StatelessWidget {
                               color: const Color(0xFF53A65A),
                               fontWeight: FontWeight.w800,
                             ),
-                          ),
-                        ),
-                        SizedBox(height: isCompact ? 4.h : 2.h),
-                        Text(
-                          '이번 주 저축액',
-                          style: AppTextStyles.headingMd.copyWith(
-                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],

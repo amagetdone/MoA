@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -11,11 +13,12 @@ class MainShellPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       body: navigationShell,
       bottomNavigationBar: Container(
-        height: 88.h,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: AppColors.bgSurface,
@@ -23,47 +26,52 @@ class MainShellPage extends StatelessWidget {
             topLeft: Radius.circular(16.r),
             topRight: Radius.circular(16.r),
           ),
-          border: const Border(top: BorderSide(color: AppColors.borderDefault, width: 0.5)),
+          border: const Border(
+            top: BorderSide(color: AppColors.borderDefault, width: 0.5),
+          ),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Spacer(),
+            SizedBox(height: 6.h),
             NavigationBar(
               backgroundColor: AppColors.bgSurface,
               indicatorColor: AppColors.orange50,
               elevation: 0,
               height: 58.h,
-          selectedIndex: navigationShell.currentIndex,
-          onDestinationSelected: (index) {
-            navigationShell.goBranch(
-              index,
-              initialLocation: index == navigationShell.currentIndex,
-            );
-          },
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          destinations: [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined, size: 24.r),
-              selectedIcon: Icon(Icons.home, color: AppColors.orange500, size: 24.r),
-              label: '홈',
+              selectedIndex: navigationShell.currentIndex,
+              onDestinationSelected: (index) {
+                navigationShell.goBranch(
+                  index,
+                  initialLocation: index == navigationShell.currentIndex,
+                );
+              },
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              destinations: [
+                NavigationDestination(
+                  icon: Icon(Icons.home_outlined, size: 24.r),
+                  selectedIcon: Icon(Icons.home, color: AppColors.orange500, size: 24.r),
+                  label: '홈',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.bar_chart_outlined, size: 24.r),
+                  selectedIcon: Icon(Icons.bar_chart, color: AppColors.orange500, size: 24.r),
+                  label: '분석',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.flag_outlined, size: 24.r),
+                  selectedIcon: Icon(Icons.flag, color: AppColors.orange500, size: 24.r),
+                  label: '목표',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.person_outline, size: 24.r),
+                  selectedIcon: Icon(Icons.person, color: AppColors.orange500, size: 24.r),
+                  label: '내 정보',
+                ),
+              ],
             ),
-            NavigationDestination(
-              icon: Icon(Icons.bar_chart_outlined, size: 24.r),
-              selectedIcon: Icon(Icons.bar_chart, color: AppColors.orange500, size: 24.r),
-              label: '분석',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.flag_outlined, size: 24.r),
-              selectedIcon: Icon(Icons.flag, color: AppColors.orange500, size: 24.r),
-              label: '목표',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outline, size: 24.r),
-              selectedIcon: Icon(Icons.person, color: AppColors.orange500, size: 24.r),
-              label: '내 정보',
-            ),
-          ],
-        ),
+            // 제스처 내비(스와이프): ~34dp / 버튼 내비·웹: 최소 8h 보장
+            SizedBox(height: math.max(bottomInset, 8.h)),
           ],
         ),
       ),

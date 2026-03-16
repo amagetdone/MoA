@@ -9,7 +9,7 @@ import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/widgets/common/bank_icon.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 
-class AssetCard extends StatelessWidget {
+class AssetCard extends StatefulWidget {
   const AssetCard({
     super.key,
     required this.totalAsset,
@@ -20,8 +20,22 @@ class AssetCard extends StatelessWidget {
   final List<Account> accounts;
 
   @override
+  State<AssetCard> createState() => _AssetCardState();
+}
+
+class _AssetCardState extends State<AssetCard> {
+  final _pageController = PageController();
+  int _currentPage = 0;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final hasAccounts = accounts.isNotEmpty;
+    final hasAccounts = widget.accounts.isNotEmpty;
 
     return MoreCard(
       padding: EdgeInsets.fromLTRB(22.w, 22.h, 22.w, 16.h),
@@ -48,21 +62,22 @@ class AssetCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        CurrencyFormatter.formatKRW(totalAsset),
-                        style: AppTextStyles.headingLg.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
                     Text(
                       '총 자산',
                       style: AppTextStyles.bodyLg.copyWith(
                         color: AppColors.textSecondary,
                         fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        CurrencyFormatter.formatKRW(widget.totalAsset),
+                        style: AppTextStyles.headingLg.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ],
@@ -72,14 +87,45 @@ class AssetCard extends StatelessWidget {
           ),
           SizedBox(height: 16.h),
           if (hasAccounts) ...[
-            Column(
-              children: [
-                for (var index = 0; index < accounts.length; index++) ...[
-                  _AccountPanel(account: accounts[index]),
-                  if (index != accounts.length - 1) SizedBox(height: 10.h),
-                ],
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final panelHeight = constraints.maxWidth * 0.24;
+                return SizedBox(
+                  height: panelHeight,
+                  child: PageView.builder(
+                    controller: _pageController,
+                    itemCount: widget.accounts.length,
+                    onPageChanged: (index) =>
+                        setState(() => _currentPage = index),
+                    itemBuilder: (context, index) => Padding(
+                      padding: EdgeInsets.only(right: 10.w),
+                      child: _AccountPanel(account: widget.accounts[index]),
+                    ),
+                  ),
+                );
+              },
             ),
+            if (widget.accounts.length > 1) ...[
+              SizedBox(height: 10.h),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(widget.accounts.length, (index) {
+                  final isActive = index == _currentPage;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: EdgeInsets.symmetric(horizontal: 3.w),
+                    width: isActive ? 16.w : 6.w,
+                    height: 6.h,
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? AppColors.textPrimary
+                          : AppColors.gray500.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(999.r),
+                    ),
+                  );
+                }),
+              ),
+            ],
           ] else
             Text(
               '대표 계좌를 연결하면 여기서 바로 확인할 수 있어요.',
@@ -118,70 +164,40 @@ class _AccountPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isCompact = constraints.maxWidth < 340;
-
-        return Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF7F7F7),
-            borderRadius: BorderRadius.circular(20.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 16.r,
-                offset: Offset(0, 4.h),
-              ),
-            ],
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.w),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F7F7),
+        borderRadius: BorderRadius.circular(20.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16.r,
+            offset: Offset(0, 4.h),
           ),
-          child: isCompact
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        BankIcon(bankName: account.bankName, size: 44.w),
-                        SizedBox(width: 14.w),
-                        Expanded(child: _AccountMeta(account: account)),
-                      ],
-                    ),
-                    SizedBox(height: 12.h),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        CurrencyFormatter.formatKRW(account.balance),
-                        style: AppTextStyles.headingLg.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-              : Row(
-                  children: [
-                    BankIcon(bankName: account.bankName, size: 44.w),
-                    SizedBox(width: 14.w),
-                    Expanded(child: _AccountMeta(account: account)),
-                    SizedBox(width: 12.w),
-                    Flexible(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          CurrencyFormatter.formatKRW(account.balance),
-                          style: AppTextStyles.headingLg.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+        ],
+      ),
+      child: Row(
+        children: [
+          BankIcon(bankName: account.bankName, size: 44.w),
+          SizedBox(width: 14.w),
+          Expanded(child: _AccountMeta(account: account)),
+          SizedBox(width: 12.w),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(
+                CurrencyFormatter.formatKRW(account.balance),
+                style: AppTextStyles.headingLg.copyWith(
+                  fontWeight: FontWeight.w800,
                 ),
-        );
-      },
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

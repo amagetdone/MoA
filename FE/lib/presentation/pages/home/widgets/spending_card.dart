@@ -22,171 +22,133 @@ class SpendingCard extends StatelessWidget {
     final remaining = math.max(weeklyBudget - weeklySpent, 0);
     final daysLeft = _remainingWeekDays;
     final dailyAvailable = remaining > 0 ? remaining ~/ daysLeft : 0;
+    final progress = weeklyBudget > 0
+        ? (weeklySpent / weeklyBudget).clamp(0.0, 1.0)
+        : 0.0;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isCompact = constraints.maxWidth < 360;
-
-        return MoreCard(
-          color: const Color(0xFFF7ECDD),
-          padding: EdgeInsets.fromLTRB(22.w, 22.h, 22.w, 24.h),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return MoreCard(
+      color: const Color(0xFFF7ECDD),
+      padding: EdgeInsets.fromLTRB(22.w, 22.h, 22.w, 24.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── 헤더 ──
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _HomeGlyph(
-                    icon: Icons.account_balance_wallet_outlined,
-                    backgroundColor: const Color(0xFFE8AF74),
-                    iconColor: AppColors.textPrimary,
-                  ),
-                  SizedBox(width: 14.w),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          spacing: 10.w,
-                          runSpacing: 6.h,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Text(
-                              '자유소비',
-                              style: AppTextStyles.headingMd.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            _DayBadge(daysLeft: daysLeft),
-                          ],
-                        ),
-                        SizedBox(height: 4.h),
-                        Text(
-                          '이번 주 목표 달성을 위해',
-                          style: AppTextStyles.bodySm.copyWith(
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              _HomeGlyph(
+                icon: Icons.account_balance_wallet_outlined,
+                backgroundColor: const Color(0xFFE8AF74),
+                iconColor: AppColors.textPrimary,
               ),
-              SizedBox(height: 18.h),
-              if (isCompact) ...[
-                _AmountSummary(
-                  alignment: Alignment.centerLeft,
-                  child: Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: CurrencyFormatter.formatKRW(weeklySpent),
-                          style: AppTextStyles.headingLg.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                              ' / ${CurrencyFormatter.formatKRW(weeklyBudget)}',
-                          style: AppTextStyles.bodyLg.copyWith(
-                            color: AppColors.textTertiary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                SizedBox(height: 8.h),
-                _AmountSummary(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    '${CurrencyFormatter.formatKRW(remaining)} 남음',
+              SizedBox(width: 14.w),
+              Wrap(
+                spacing: 10.w,
+                runSpacing: 6.h,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    '자유소비',
                     style: AppTextStyles.headingMd.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                ),
-              ] else
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _AmountSummary(
-                        alignment: Alignment.centerLeft,
-                        child: Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: CurrencyFormatter.formatKRW(weeklySpent),
-                                style: AppTextStyles.headingLg.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              TextSpan(
-                                text:
-                                    ' / ${CurrencyFormatter.formatKRW(weeklyBudget)}',
-                                style: AppTextStyles.bodyLg.copyWith(
-                                  color: AppColors.textTertiary,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 16.w),
-                    Expanded(
-                      child: _AmountSummary(
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          '${CurrencyFormatter.formatKRW(remaining)} 남음',
-                          style: AppTextStyles.headingMd.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                          textAlign: TextAlign.right,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              SizedBox(height: 16.h),
-              Container(
-                height: 1.h,
-                color: AppColors.gray500.withValues(alpha: 0.4),
+                  _DayBadge(daysLeft: daysLeft),
+                ],
               ),
-              SizedBox(height: 18.h),
-              Center(
-                child: Column(
+            ],
+          ),
+
+          SizedBox(height: 18.h),
+
+          // ── 프로그레스 바 ──
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999.r),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 7.h,
+              backgroundColor: AppColors.gray500.withValues(alpha: 0.2),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                progress >= 0.9
+                    ? Colors.redAccent
+                    : const Color(0xFFD98235),
+              ),
+            ),
+          ),
+
+          SizedBox(height: 10.h),
+
+          // ── 예산 현황 ──
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              RichText(
+                text: TextSpan(
                   children: [
-                    Text(
-                      '금일 사용 가능한 금액 (남은 금액 ÷ $daysLeft일)',
-                      textAlign: TextAlign.center,
+                    TextSpan(
+                      text: CurrencyFormatter.formatKRW(weeklySpent),
+                      style: AppTextStyles.bodySm.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    TextSpan(
+                      text: ' / ${CurrencyFormatter.formatKRW(weeklyBudget)}',
                       style: AppTextStyles.bodySm.copyWith(
                         color: AppColors.textTertiary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    SizedBox(height: 8.h),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        CurrencyFormatter.formatKRW(dailyAvailable),
-                        style: AppTextStyles.headingXl.copyWith(
-                          color: AppColors.orange500,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
                   ],
+                ),
+              ),
+              Text(
+                '${CurrencyFormatter.formatKRW(remaining)} 남음',
+                style: AppTextStyles.bodySm.copyWith(
+                  color: AppColors.textTertiary,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
           ),
-        );
-      },
+
+          SizedBox(height: 16.h),
+
+          // ── 구분선 ──
+          Container(
+            height: 1.h,
+            color: AppColors.gray500.withValues(alpha: 0.4),
+          ),
+
+          SizedBox(height: 14.h),
+
+          // ── 오늘 사용 가능 금액 ──
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                '오늘 사용 가능한 금액',
+                style: AppTextStyles.bodySm.copyWith(
+                  color: AppColors.textTertiary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  CurrencyFormatter.formatKRW(dailyAvailable),
+                  style: AppTextStyles.headingMd.copyWith(
+                    color: AppColors.orange500,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -194,18 +156,6 @@ class SpendingCard extends StatelessWidget {
     final weekday = DateTime.now().weekday;
     final daysUntilSunday = DateTime.sunday - weekday;
     return math.max(daysUntilSunday, 1);
-  }
-}
-
-class _AmountSummary extends StatelessWidget {
-  const _AmountSummary({required this.alignment, required this.child});
-
-  final Alignment alignment;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return FittedBox(fit: BoxFit.scaleDown, alignment: alignment, child: child);
   }
 }
 
