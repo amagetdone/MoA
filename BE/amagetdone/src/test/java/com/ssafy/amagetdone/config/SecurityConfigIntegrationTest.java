@@ -24,8 +24,8 @@ import com.ssafy.amagetdone.domain.member.application.service.MemberProfileServi
 import com.ssafy.amagetdone.domain.member.application.service.MemberTokenService;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
-import com.ssafy.amagetdone.domain.member.model.vo.SocialProvider;
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
+import com.ssafy.amagetdone.global.config.SecurityConfig;
 import com.ssafy.amagetdone.global.controller.GlobalHealthCheckController;
 
 import org.junit.jupiter.api.Test;

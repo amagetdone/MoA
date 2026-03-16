@@ -4,7 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.ssafy.amagetdone.config.SecurityConfig;
+import com.ssafy.amagetdone.global.config.SecurityConfig;
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
 
 import org.junit.jupiter.api.Test;

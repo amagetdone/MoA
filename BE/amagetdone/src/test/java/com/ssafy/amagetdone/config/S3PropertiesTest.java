@@ -2,6 +2,7 @@ package com.ssafy.amagetdone.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.ssafy.amagetdone.global.config.S3Properties;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;

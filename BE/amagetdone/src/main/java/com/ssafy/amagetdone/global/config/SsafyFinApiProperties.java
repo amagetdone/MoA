@@ -1,4 +1,4 @@
-package com.ssafy.amagetdone.config;
+package com.ssafy.amagetdone.global.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

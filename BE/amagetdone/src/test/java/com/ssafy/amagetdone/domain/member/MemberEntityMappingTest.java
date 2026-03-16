@@ -14,7 +14,7 @@ import com.ssafy.amagetdone.domain.member.model.entity.SocialAccount;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.repository.SocialAccountRepository;
 import com.ssafy.amagetdone.domain.member.model.vo.SocialProvider;
-import com.ssafy.amagetdone.config.EnvLoader;
+import com.ssafy.amagetdone.global.config.EnvLoader;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;

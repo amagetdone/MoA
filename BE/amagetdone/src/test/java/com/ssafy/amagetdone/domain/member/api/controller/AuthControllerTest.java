@@ -17,7 +17,7 @@ import com.ssafy.amagetdone.domain.member.application.service.MemberTokenService
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.model.vo.SocialProvider;
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
-import com.ssafy.amagetdone.config.SecurityConfig;
+import com.ssafy.amagetdone.global.config.SecurityConfig;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
