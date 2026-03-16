@@ -36,7 +36,7 @@ class SpendingAnalysisPage extends ConsumerWidget {
         ],
       ),
       body: state.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const SizedBox.shrink()
           : SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
               padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),

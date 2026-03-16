@@ -11,6 +11,7 @@ import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 import 'package:more_app/presentation/widgets/common/more_date_field.dart';
+import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:more_app/presentation/widgets/common/more_text_field.dart';
 
 class GoalCreatePage extends ConsumerStatefulWidget {
@@ -81,7 +82,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: MoreAppBar(
-        title: widget.isOnboarding ? '첫 번째 목표 설정' : '새 목표 만들기',
+        title: widget.isOnboarding ? '' : '새 목표 만들기',
         showBack: true,
         onBack: widget.isOnboarding
             ? () => context.go(AppRoutes.onboardingAnalysis)
@@ -92,10 +93,28 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
             : null,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(24.w),
+        padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (widget.isOnboarding) ...[
+              Text(
+                '첫 번째 목표 설정',
+                style: AppTextStyles.headingLg.copyWith(
+                  fontSize: 24.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 6.h),
+              Text(
+                '달성하고 싶은 목표를 설정해주세요.',
+                style: AppTextStyles.bodySm.copyWith(
+                  color: AppColors.textTertiary,
+                  fontSize: 14.sp,
+                ),
+              ),
+              SizedBox(height: 24.h),
+            ],
             // Goal name
             MoreTextField(
               label: '목표 이름',
@@ -167,6 +186,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
               hint: '0',
               controller: _amountController,
               keyboardType: TextInputType.number,
+              inputFormatters: [CurrencyInputFormatter()],
               suffix: '원',
               onChanged: (_) => setState(() {}),
             ),
@@ -179,9 +199,13 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
                   child: MoreDateField(
                     label: '시작일',
                     value: _startDate,
+                    firstDate: DateTime.now(),
                     onChanged: (date) {
                       setState(() {
                         _startDate = date;
+                        if (_endDate != null && _endDate!.isBefore(date)) {
+                          _endDate = null;
+                        }
                       });
                     },
                   ),
@@ -191,6 +215,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
                   child: MoreDateField(
                     label: '종료일',
                     value: _endDate,
+                    firstDate: _startDate ?? DateTime.now(),
                     onChanged: (date) {
                       setState(() {
                         _endDate = date;
@@ -207,7 +232,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
         text: widget.isOnboarding ? '다음' : '생성하기',
         onPressed: _onSubmit,
         enabled: _isFormValid,
-        progress: widget.isOnboarding ? 3 / 6 : null,
+        progress: widget.isOnboarding ? 6 / 7 : null,
       ),
     );
   }

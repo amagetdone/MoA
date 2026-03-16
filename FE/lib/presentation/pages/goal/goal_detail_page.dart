@@ -53,7 +53,7 @@ class GoalDetailPage extends ConsumerWidget {
       return const Scaffold(
         backgroundColor: AppColors.bgPrimary,
         appBar: MoreAppBar(title: '목표 상세'),
-        body: Center(child: CircularProgressIndicator()),
+        body: const SizedBox.shrink(),
       );
     }
 

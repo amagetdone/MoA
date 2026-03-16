@@ -19,17 +19,22 @@ class OnboardingPlanPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: MoreAppBar(title: '목표 계획 수립', showBack: true),
+      appBar: MoreAppBar(title: '', showBack: true),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(24.w),
+        padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              '목표 계획 수립',
+              style: AppTextStyles.headingLg.copyWith(
+                fontSize: 24.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 6.h),
             if (state.isLoading)
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: 48.h),
-                child: const Center(child: CircularProgressIndicator()),
-              )
+              const SizedBox.shrink()
             else if (state.errorMessage != null)
               Padding(
                 padding: EdgeInsets.only(bottom: 24.h),
@@ -46,7 +51,7 @@ class OnboardingPlanPage extends ConsumerWidget {
                 fontSize: 14.sp,
               ),
             ),
-            SizedBox(height: 20.h),
+            SizedBox(height: 24.h),
 
             // 주간 미션 card
             MoreCard(
@@ -199,7 +204,7 @@ class OnboardingPlanPage extends ConsumerWidget {
       ),
       bottomNavigationBar: MoreBottomButton(
         text: '다음',
-        progress: 6 / 6,
+        progress: 7 / 7,
         onPressed: () => context.go(AppRoutes.home),
       ),
     );

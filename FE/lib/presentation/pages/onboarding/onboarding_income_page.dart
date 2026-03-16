@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
@@ -82,6 +84,9 @@ class _OnboardingIncomePageState extends State<OnboardingIncomePage> {
               controller: _incomeController,
               keyboardType: TextInputType.number,
               readOnly: !_isEditing,
+              inputFormatters: [
+                CurrencyInputFormatter(),
+              ],
               style: AppTextStyles.headingLg.copyWith(
                 color: AppColors.gray900,
                 fontSize: 24.sp,

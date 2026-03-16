@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
@@ -30,8 +33,11 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
   late final TextEditingController _nicknameController;
   late final TextEditingController _emailController;
   late final TextEditingController _birthDateController;
+  final FocusNode _nicknameFocusNode = FocusNode();
+  final FocusNode _emailFocusNode = FocusNode();
   String? _selectedIncome;
   bool _isSubmitting = false;
+  File? _selectedImage;
 
   // Validation errors
   String? _nicknameError;
@@ -64,11 +70,41 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
     _nicknameController.dispose();
     _emailController.dispose();
     _birthDateController.dispose();
+    _nicknameFocusNode.dispose();
+    _emailFocusNode.dispose();
     super.dispose();
   }
 
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+    if (picked != null) {
+      setState(() => _selectedImage = File(picked.path));
+    }
+  }
+
+  Future<void> _uploadProfileImage() async {
+    if (_selectedImage == null) return;
+    final dio = ref.read(apiClientProvider).dio;
+    final formData = FormData.fromMap({
+      'image': await MultipartFile.fromFile(
+        _selectedImage!.path,
+        filename: _selectedImage!.path.split('/').last,
+      ),
+    });
+    await dio.patch(
+      'v1/members/me/profile-image',
+      data: formData,
+      options: Options(contentType: 'multipart/form-data'),
+    );
+  }
+
   bool get _isFormValid {
-    final hasBasicInfo = _nicknameController.text.trim().isNotEmpty &&
+    final hasBasicInfo =
+        _nicknameController.text.trim().isNotEmpty &&
         _emailController.text.trim().isNotEmpty &&
         _birthDateController.text.isNotEmpty &&
         _selectedIncome != null;
@@ -76,7 +112,8 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
     if (widget.isOnboarding) {
       return hasBasicInfo && _agreeTerms && _agreePrivacy;
     }
-    return _nicknameController.text.trim().isNotEmpty && _emailController.text.trim().isNotEmpty;
+    return _nicknameController.text.trim().isNotEmpty &&
+        _emailController.text.trim().isNotEmpty;
   }
 
   String? _validateNickname(String value) {
@@ -104,6 +141,13 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
       _emailError = emailErr;
       _birthDateError = birthErr;
     });
+
+    // 첫 번째 에러 필드에 포커스
+    if (nicknameErr != null) {
+      _nicknameFocusNode.requestFocus();
+    } else if (emailErr != null) {
+      _emailFocusNode.requestFocus();
+    }
 
     return nicknameErr == null && emailErr == null && birthErr == null;
   }
@@ -144,13 +188,15 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
           },
         );
 
+        await _uploadProfileImage();
+
         if (!mounted) return;
         context.go(AppRoutes.onboarding);
       } on DioException catch (e) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message ?? '프로필 저장에 실패했습니다.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message ?? '프로필 저장에 실패했습니다.')));
       } finally {
         if (mounted) setState(() => _isSubmitting = false);
       }
@@ -176,8 +222,18 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
     }
 
     const months = [
-      '1월', '2월', '3월', '4월', '5월', '6월',
-      '7월', '8월', '9월', '10월', '11월', '12월',
+      '1월',
+      '2월',
+      '3월',
+      '4월',
+      '5월',
+      '6월',
+      '7월',
+      '8월',
+      '9월',
+      '10월',
+      '11월',
+      '12월',
     ];
     final years = List.generate(now.year - 1950 + 1, (i) => 1950 + i);
 
@@ -186,11 +242,14 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
     int yearIndex = years.indexOf(selectedYear);
     if (yearIndex < 0) yearIndex = years.indexOf(2000);
 
-    final monthController = FixedExtentScrollController(initialItem: monthIndex);
+    final monthController = FixedExtentScrollController(
+      initialItem: monthIndex,
+    );
     final dayController = FixedExtentScrollController(initialItem: dayIndex);
     final yearController = FixedExtentScrollController(initialItem: yearIndex);
 
-    int daysInMonth(int year, int month) => DateUtils.getDaysInMonth(year, month);
+    int daysInMonth(int year, int month) =>
+        DateUtils.getDaysInMonth(year, month);
 
     await showModalBottomSheet(
       context: context,
@@ -212,13 +271,21 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                 children: [
                   // 상단 바
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 12.h,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         GestureDetector(
                           onTap: () => Navigator.pop(ctx),
-                          child: Text('취소', style: AppTextStyles.bodyMd.copyWith(color: AppColors.textTertiary)),
+                          child: Text(
+                            '취소',
+                            style: AppTextStyles.bodyMd.copyWith(
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
                         ),
                         GestureDetector(
                           onTap: () {
@@ -229,7 +296,13 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                             });
                             Navigator.pop(ctx);
                           },
-                          child: Text('확인', style: AppTextStyles.bodyMd.copyWith(color: AppColors.orange500, fontWeight: FontWeight.w600)),
+                          child: Text(
+                            '확인',
+                            style: AppTextStyles.bodyMd.copyWith(
+                              color: AppColors.orange500,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -244,11 +317,25 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                           child: CupertinoPicker(
                             scrollController: yearController,
                             itemExtent: 44.h,
-                            selectionOverlay: const CupertinoPickerDefaultSelectionOverlay(background: Colors.transparent),
-                            onSelectedItemChanged: (i) => setModalState(() => yearIndex = i),
-                            children: years.map((y) => Center(
-                              child: Text('$y', style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.w500)),
-                            )).toList(),
+                            selectionOverlay:
+                                const CupertinoPickerDefaultSelectionOverlay(
+                                  background: Colors.transparent,
+                                ),
+                            onSelectedItemChanged: (i) =>
+                                setModalState(() => yearIndex = i),
+                            children: years
+                                .map(
+                                  (y) => Center(
+                                    child: Text(
+                                      '$y',
+                                      style: TextStyle(
+                                        fontSize: 22.sp,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
                           ),
                         ),
                         // 월
@@ -256,11 +343,25 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                           child: CupertinoPicker(
                             scrollController: monthController,
                             itemExtent: 44.h,
-                            selectionOverlay: const CupertinoPickerDefaultSelectionOverlay(background: Colors.transparent),
-                            onSelectedItemChanged: (i) => setModalState(() => monthIndex = i),
-                            children: months.map((m) => Center(
-                              child: Text(m, style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.w500)),
-                            )).toList(),
+                            selectionOverlay:
+                                const CupertinoPickerDefaultSelectionOverlay(
+                                  background: Colors.transparent,
+                                ),
+                            onSelectedItemChanged: (i) =>
+                                setModalState(() => monthIndex = i),
+                            children: months
+                                .map(
+                                  (m) => Center(
+                                    child: Text(
+                                      m,
+                                      style: TextStyle(
+                                        fontSize: 22.sp,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
                           ),
                         ),
                         // 일
@@ -268,11 +369,24 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                           child: CupertinoPicker(
                             scrollController: dayController,
                             itemExtent: 44.h,
-                            selectionOverlay: const CupertinoPickerDefaultSelectionOverlay(background: Colors.transparent),
-                            onSelectedItemChanged: (i) => setModalState(() => dayIndex = i),
-                            children: List.generate(maxDay, (i) => Center(
-                              child: Text('${i + 1}', style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.w500)),
-                            )),
+                            selectionOverlay:
+                                const CupertinoPickerDefaultSelectionOverlay(
+                                  background: Colors.transparent,
+                                ),
+                            onSelectedItemChanged: (i) =>
+                                setModalState(() => dayIndex = i),
+                            children: List.generate(
+                              maxDay,
+                              (i) => Center(
+                                child: Text(
+                                  '${i + 1}',
+                                  style: TextStyle(
+                                    fontSize: 22.sp,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -291,34 +405,51 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: MoreAppBar(
-        title: widget.isOnboarding ? '프로필 설정' : '내 정보 수정',
-        showBack: !widget.isOnboarding,
-      ),
+      appBar: MoreAppBar(title: '', showBack: false),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(24.w),
+        padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              '프로필 설정',
+              style: AppTextStyles.headingLg.copyWith(
+                fontSize: 24.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 24.h),
             // Profile photo
             Center(
-              child: GestureDetector(
-                onTap: () {
-                  // TODO: pick profile image
-                },
-                child: Container(
-                  width: 88.w,
-                  height: 88.w,
-                  decoration: BoxDecoration(
-                    color: AppColors.gray100,
-                    borderRadius: BorderRadius.circular(16.r)
+              child: Column(
+                children: [
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Container(
+                      width: 88.w,
+                      height: 88.w,
+                      decoration: BoxDecoration(
+                        color: AppColors.gray100,
+                        borderRadius: BorderRadius.circular(16.r),
+                        image: _selectedImage != null
+                            ? DecorationImage(
+                                image: FileImage(_selectedImage!),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
+                      ),
+                      child: _selectedImage == null
+                          ? Icon(
+                              Icons.camera_alt_outlined,
+                              size: 32.w,
+                              color: AppColors.gray500,
+                            )
+                          : null,
+                    ),
                   ),
-                  child: Icon(
-                    Icons.camera_alt_outlined,
-                    size: 32.w,
-                    color: AppColors.gray500,
-                  ),
-                ),
+                  SizedBox(height: 12.h),
+                  Text('등록하지 않으면 기본 이미지로 설정돼요.', style: AppTextStyles.bodySm),
+                ],
               ),
             ),
             SizedBox(height: 24.h),
@@ -328,6 +459,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
               label: '닉네임',
               hint: '닉네임을 입력해주세요',
               controller: _nicknameController,
+              focusNode: _nicknameFocusNode,
               errorText: _nicknameError,
               onChanged: (value) => setState(() {
                 _nicknameError = _validateNickname(value);
@@ -340,6 +472,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
               label: '이메일',
               hint: '이메일을 입력해주세요',
               controller: _emailController,
+              focusNode: _emailFocusNode,
               keyboardType: TextInputType.emailAddress,
               errorText: _emailError,
               onChanged: (value) => setState(() {
@@ -363,7 +496,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                 },
                 errorText: _birthDateError,
                 suffixIcon: Icon(
-                  Icons.calendar_today_outlined,
+                  Icons.calendar_today,
                   size: 20.w,
                   color: AppColors.textTertiary,
                 ),
@@ -384,21 +517,49 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                   borderRadius: BorderRadius.circular(16.r),
                   border: Border.all(color: AppColors.borderDefault),
                 ),
-                child: Row(
-                  children: [
-                    _ToggleOption(
-                      label: '있어요',
-                      selected: _selectedIncome == '있어요',
-                      onTap: () => setState(() => _selectedIncome = '있어요'),
-                      isFirst: true,
-                    ),
-                    _ToggleOption(
-                      label: '없어요',
-                      selected: _selectedIncome == '없어요',
-                      onTap: () => setState(() => _selectedIncome = '없어요'),
-                      isFirst: false,
-                    ),
-                  ],
+                child: IntrinsicHeight(
+                  child: Stack(
+                    children: [
+                      // 슬라이딩 배경
+                      AnimatedAlign(
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeInOut,
+                        alignment: _selectedIncome == '있어요'
+                            ? Alignment.centerLeft
+                            : Alignment.centerRight,
+                        child: FractionallySizedBox(
+                          widthFactor: 0.5,
+                          heightFactor: 1.0,
+                          child: Padding(
+                            padding: EdgeInsets.all(4.w),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: AppColors.bgSurface,
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // 텍스트 레이어
+                      Row(
+                        children: [
+                          _ToggleOption(
+                            label: '있어요',
+                            selected: _selectedIncome == '있어요',
+                            onTap: () =>
+                                setState(() => _selectedIncome = '있어요'),
+                          ),
+                          _ToggleOption(
+                            label: '없어요',
+                            selected: _selectedIncome == '없어요',
+                            onTap: () =>
+                                setState(() => _selectedIncome = '없어요'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
@@ -467,7 +628,9 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
         ),
       ),
       bottomNavigationBar: MoreBottomButton(
-        text: _isSubmitting ? '저장 중...' : (widget.isOnboarding ? '프로필 설정 완료' : '저장'),
+        text: _isSubmitting
+            ? '저장 중...'
+            : (widget.isOnboarding ? '프로필 설정 완료' : '저장'),
         onPressed: _onSubmit,
         enabled: _isFormValid && !_isSubmitting,
         progress: null,
@@ -525,11 +688,7 @@ class _AgreementCheckbox extends StatelessWidget {
             ),
           ),
           if (showArrow)
-            Icon(
-              Icons.chevron_right,
-              size: 20.w,
-              color: AppColors.gray500,
-            ),
+            Icon(Icons.chevron_right, size: 20.w, color: AppColors.gray500),
         ],
       ),
     );
@@ -540,13 +699,11 @@ class _ToggleOption extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  final bool isFirst;
 
   const _ToggleOption({
     required this.label,
     required this.selected,
     required this.onTap,
-    required this.isFirst,
   });
 
   @override
@@ -559,16 +716,17 @@ class _ToggleOption extends StatelessWidget {
           child: Container(
             padding: EdgeInsets.symmetric(vertical: 10.h),
             decoration: BoxDecoration(
-              color: selected ? AppColors.bgSurface : Colors.transparent,
+              color: Colors.transparent,
               borderRadius: BorderRadius.circular(12.r),
             ),
             alignment: Alignment.center,
-            child: Text(
-              label,
+            child: AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 250),
               style: AppTextStyles.bodyMd.copyWith(
                 color: selected ? AppColors.gray900 : AppColors.textTertiary,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
               ),
+              child: Text(label),
             ),
           ),
         ),

@@ -34,7 +34,7 @@ class GoalListPage extends ConsumerWidget {
         ],
       ),
       body: goalState.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const SizedBox.shrink()
           : goalState.errorMessage != null
           ? Center(
               child: Padding(

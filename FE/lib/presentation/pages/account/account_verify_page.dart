@@ -99,14 +99,32 @@ class _AccountVerifyPageState extends State<AccountVerifyPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: MoreAppBar(title: '계좌인증', showBack: true),
+      backgroundColor: AppColors.bgPrimary,
+      appBar: MoreAppBar(title: widget.isOnboarding ? '' : '계좌인증', showBack: true),
       body: Padding(
-        padding: EdgeInsets.all(24.w),
+        padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: widget.isOnboarding ? CrossAxisAlignment.start : CrossAxisAlignment.center,
           children: [
-            SizedBox(height: 24.h),
+            if (widget.isOnboarding) ...[
+              Text(
+                '계좌인증',
+                style: AppTextStyles.headingLg.copyWith(
+                  fontSize: 24.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 6.h),
+              Text(
+                '1원을 보내드렸어요.',
+                style: AppTextStyles.bodySm.copyWith(
+                  color: AppColors.textTertiary,
+                  fontSize: 14.sp,
+                ),
+              ),
+              SizedBox(height: 24.h),
+            ] else
+              SizedBox(height: 24.h),
             Text(
               '입금자 명에 표기된 숫자를 입력하세요',
               style: AppTextStyles.headingMd.copyWith(
@@ -115,7 +133,7 @@ class _AccountVerifyPageState extends State<AccountVerifyPage> {
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 40.h),
+            SizedBox(height: 24.h),
 
             // 4 digit input boxes
             Row(
@@ -158,7 +176,7 @@ class _AccountVerifyPageState extends State<AccountVerifyPage> {
                 );
               }),
             ),
-            SizedBox(height: 24.h),
+            SizedBox(height: 12.h),
 
             // Timer
             Row(
@@ -175,17 +193,19 @@ class _AccountVerifyPageState extends State<AccountVerifyPage> {
                 ),
               ],
             ),
-            SizedBox(height: 16.h),
+            SizedBox(height: 6.h),
 
             // Resend link
-            GestureDetector(
-              onTap: _onResend,
-              child: Text(
-                '인증번호 재전송',
-                style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.orange500,
-                  fontSize: 13.sp,
-                  decoration: TextDecoration.underline,
+            Center(
+              child: GestureDetector(
+                onTap: _onResend,
+                child: Text(
+                  '인증번호 재전송',
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.orange500,
+                    fontSize: 13.sp,
+                    decoration: TextDecoration.underline,
+                  ),
                 ),
               ),
             ),
@@ -196,6 +216,7 @@ class _AccountVerifyPageState extends State<AccountVerifyPage> {
         text: '인증하기',
         onPressed: _onVerify,
         enabled: _isCodeComplete,
+        progress: widget.isOnboarding ? 4 / 7 : null,
       ),
     );
   }

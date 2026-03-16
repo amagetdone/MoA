@@ -27,6 +27,8 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
   String? selectedBank;
   bool isExpanded = false;
   final TextEditingController _accountController = TextEditingController();
+  final FocusNode _accountFocusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
 
   final List<BankInfo> allBanks = [
     BankInfo('국민은행', 'assets/images/logo/KB_logo.png'),
@@ -57,6 +59,7 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
         children: [
           Expanded(
             child: SingleChildScrollView(
+              controller: _scrollController,
               physics: const ClampingScrollPhysics(),
               padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
               child: Column(
@@ -81,7 +84,17 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                       final bank = displayBanks[index];
                       final isSelected = selectedBank == bank.name;
                       return GestureDetector(
-                        onTap: () => setState(() => selectedBank = bank.name),
+                        onTap: () {
+                          setState(() => selectedBank = bank.name);
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            _accountFocusNode.requestFocus();
+                            _scrollController.animateTo(
+                              _scrollController.position.maxScrollExtent,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeOut,
+                            );
+                          });
+                        },
                         child: Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
@@ -150,6 +163,7 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                   SizedBox(height: 12.h),
                   TextField(
                     controller: _accountController,
+                    focusNode: _accountFocusNode,
                     keyboardType: TextInputType.number,
                     style: TextStyle(fontSize: 14.sp),
                     decoration: InputDecoration(
