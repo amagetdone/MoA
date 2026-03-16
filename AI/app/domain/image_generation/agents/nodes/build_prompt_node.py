@@ -6,5 +6,5 @@ from app.domain.image_generation.agents.states.state import ImageGenerationState
 
 def build_prompt_node(state: ImageGenerationState) -> ImageGenerationState:
     return {
-        "final_prompt": build_image_generation_prompt(state["prompt_goal"]),
+        "final_prompt": build_image_generation_prompt(state["user_prompt"]),
     }

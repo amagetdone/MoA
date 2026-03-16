@@ -9,22 +9,44 @@ from app.domain.image_generation.service.image_generation_service import (
 )
 
 
-PROMPT_GOAL = "surreal cat in space illustration"
+USER_PROMPT = "Turn the reference image into a polished cyberpunk banana poster."
+INPUT_IMAGE_BASE64 = "reference-image"
+INPUT_MIME_TYPE = "image/jpeg"
 
 
-class _FakeImagesClient:
-    def __init__(self, response: dict) -> None:
-        self.response = response
-        self.calls: list[dict[str, str]] = []
+class _FakeResponse:
+    def __init__(self, payload: dict) -> None:
+        self.payload = payload
 
-    def generate(self, **kwargs) -> dict:
-        self.calls.append(kwargs)
-        return self.response
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self) -> dict:
+        return self.payload
 
 
-class _FakeOpenAIClient:
-    def __init__(self, response: dict) -> None:
-        self.images = _FakeImagesClient(response)
+class _FakeHttpClient:
+    def __init__(self, payload: dict) -> None:
+        self.payload = payload
+        self.calls: list[dict[str, object]] = []
+
+    def post(
+        self,
+        path: str,
+        *,
+        headers: dict[str, str] | None = None,
+        json: dict[str, object] | None = None,
+        timeout: float | None = None,
+    ) -> _FakeResponse:
+        self.calls.append(
+            {
+                "path": path,
+                "headers": headers or {},
+                "json": json or {},
+                "timeout": timeout,
+            }
+        )
+        return _FakeResponse(self.payload)
 
 
 class _CapturingSpan:
@@ -91,72 +113,186 @@ class _CapturingTracer:
         )
 
 
-def test_service_uses_configured_payload_and_extracts_b64_json() -> None:
+def test_service_uses_configured_payload_and_extracts_generated_inline_data() -> None:
     settings = Settings(
+        _env_file=None,
         AI_API_KEY="relay-key",
-        OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/api.openai.com/v1",
+        OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
     )
-    openai_client = _FakeOpenAIClient({"data": [{"b64_json": "encoded-image"}]})
+    http_client = _FakeHttpClient(
+        {
+            "candidates": [
+                {
+                    "content": {
+                        "parts": [
+                            {"text": "Edited successfully."},
+                            {
+                                "inline_data": {
+                                    "mime_type": "image/png",
+                                    "data": "encoded-image",
+                                }
+                            },
+                        ]
+                    }
+                }
+            ]
+        }
+    )
     tracer = _CapturingTracer()
 
     service = ImageGenerationService(
         settings=settings,
-        openai_client=openai_client,
+        http_client=http_client,
         tracer=tracer,
     )
 
-    result = service.generate(PROMPT_GOAL)
+    result = service.generate(
+        user_prompt=USER_PROMPT,
+        image_base64=INPUT_IMAGE_BASE64,
+        mime_type=INPUT_MIME_TYPE,
+    )
 
-    assert result["image_base64"] == "encoded-image"
-    assert result["mime_type"] == "image/png"
-    assert result["model"] == "dall-e-3"
-    assert PROMPT_GOAL in result["prompt"]
-    assert openai_client.images.calls == [
+    assert result == {
+        "image_base64": "encoded-image",
+        "mime_type": "image/png",
+        "model": "gemini-2.5-flash-image",
+        "prompt": result["prompt"],
+    }
+    assert USER_PROMPT in result["prompt"]
+    assert "512x512" in result["prompt"]
+    assert http_client.calls == [
         {
-            "model": "dall-e-3",
-            "prompt": result["prompt"],
-            "response_format": "b64_json",
-            "size": "1024x1024",
+            "path": "/models/gemini-2.5-flash-image:generateContent",
+            "headers": {
+                "Content-Type": "application/json",
+                "x-goog-api-key": "relay-key",
+            },
+            "json": {
+                "contents": [
+                    {
+                        "parts": [
+                            {"text": result["prompt"]},
+                            {
+                                "inline_data": {
+                                    "mime_type": "image/jpeg",
+                                    "data": "reference-image",
+                                }
+                            },
+                        ]
+                    }
+                ],
+                "generationConfig": {
+                    "imageConfig": {
+                        "aspectRatio": "1:1",
+                    }
+                },
+            },
+            "timeout": 60.0,
         }
     ]
-    assert all("image_base64" not in str(event) for event in tracer.events)
+    assert all(INPUT_IMAGE_BASE64 not in str(event) for event in tracer.events)
+    assert all("encoded-image" not in str(event) for event in tracer.events)
 
 
-def test_service_raises_when_upstream_b64_json_is_missing() -> None:
+def test_service_accepts_camel_case_inline_data_from_upstream() -> None:
     settings = Settings(
+        _env_file=None,
         AI_API_KEY="relay-key",
-        OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/api.openai.com/v1",
+        OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
     )
     service = ImageGenerationService(
         settings=settings,
-        openai_client=_FakeOpenAIClient({"data": [{}]}),
+        http_client=_FakeHttpClient(
+            {
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {"text": "Edited successfully."},
+                                {
+                                    "inlineData": {
+                                        "mimeType": "image/png",
+                                        "data": "camel-case-image",
+                                    }
+                                },
+                            ]
+                        }
+                    }
+                ]
+            }
+        ),
+        tracer=_CapturingTracer(),
+    )
+
+    result = service.generate(
+        user_prompt=USER_PROMPT,
+        image_base64=INPUT_IMAGE_BASE64,
+        mime_type=INPUT_MIME_TYPE,
+    )
+
+    assert result["image_base64"] == "camel-case-image"
+    assert result["mime_type"] == "image/png"
+    assert result["model"] == "gemini-2.5-flash-image"
+
+
+def test_service_raises_when_generated_inline_data_is_missing() -> None:
+    settings = Settings(
+        _env_file=None,
+        AI_API_KEY="relay-key",
+        OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
+    )
+    service = ImageGenerationService(
+        settings=settings,
+        http_client=_FakeHttpClient(
+            {"candidates": [{"content": {"parts": [{"text": "No image generated."}]}}]}
+        ),
         tracer=_CapturingTracer(),
     )
 
     with pytest.raises(UpstreamImageGenerationError):
-        service.generate(PROMPT_GOAL)
+        service.generate(
+            user_prompt=USER_PROMPT,
+            image_base64=INPUT_IMAGE_BASE64,
+            mime_type=INPUT_MIME_TYPE,
+        )
 
 
-def test_service_reports_available_upstream_keys_for_schema_debugging() -> None:
+def test_service_reports_available_upstream_part_types_for_schema_debugging() -> None:
     settings = Settings(
+        _env_file=None,
         AI_API_KEY="relay-key",
-        OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/api.openai.com/v1",
+        OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
     )
     tracer = _CapturingTracer()
     service = ImageGenerationService(
         settings=settings,
-        openai_client=_FakeOpenAIClient(
-            {"created": 123, "data": [{"url": "https://example.com/image.png"}]}
+        http_client=_FakeHttpClient(
+            {
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {"text": "Model returned only a textual description."}
+                            ]
+                        }
+                    }
+                ],
+                "usageMetadata": {"promptTokenCount": 42},
+            }
         ),
         tracer=tracer,
     )
 
     with pytest.raises(UpstreamImageGenerationError) as exc_info:
-        service.generate(PROMPT_GOAL)
+        service.generate(
+            user_prompt=USER_PROMPT,
+            image_base64=INPUT_IMAGE_BASE64,
+            mime_type=INPUT_MIME_TYPE,
+        )
 
-    assert "available keys: ['url']" in str(exc_info.value)
+    assert "available part types: ['text']" in str(exc_info.value)
     assert any(
-        event.get("metadata", {}).get("first_data_item_keys") == ["url"]
+        event.get("metadata", {}).get("first_candidate_part_types") == ["text"]
         for event in tracer.events
         if event.get("event") == "update"
     )

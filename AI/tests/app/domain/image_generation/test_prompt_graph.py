@@ -5,30 +5,42 @@ from app.domain.image_generation.agents.prompts.image_generation_prompt import (
 )
 
 
-def test_build_image_generation_prompt_expands_goal_into_renderable_prompt() -> None:
-    prompt = build_image_generation_prompt("우주 배경의 초현실적인 고양이 일러스트")
+def test_build_image_generation_prompt_expands_user_edit_goal() -> None:
+    prompt = build_image_generation_prompt(
+        "Turn the reference image into a polished cyberpunk banana poster."
+    )
 
-    assert "우주 배경의 초현실적인 고양이 일러스트" in prompt
-    assert prompt != "우주 배경의 초현실적인 고양이 일러스트"
+    assert "cyberpunk banana poster" in prompt
+    assert "reference image" in prompt
+    assert "512x512" in prompt
+    assert prompt != "Turn the reference image into a polished cyberpunk banana poster."
 
 
 def test_image_generation_graph_builds_prompt_and_delegates_generation() -> None:
     settings = Settings(
+        _env_file=None,
         AI_API_KEY="relay-key",
-        OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/api.openai.com/v1",
+        OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
     )
     upstream_calls: list[dict[str, str]] = []
 
-    def fake_image_generator(*, prompt: str, model: str, size: str) -> dict[str, str]:
+    def fake_image_generator(
+        *,
+        prompt: str,
+        model: str,
+        image_base64: str,
+        mime_type: str,
+    ) -> dict[str, str]:
         upstream_calls.append(
             {
                 "prompt": prompt,
                 "model": model,
-                "size": size,
+                "image_base64": image_base64,
+                "mime_type": mime_type,
             }
         )
         return {
-            "image_base64": "base64-image",
+            "generated_image_base64": "base64-image",
             "mime_type": "image/png",
             "model": model,
         }
@@ -38,16 +50,23 @@ def test_image_generation_graph_builds_prompt_and_delegates_generation() -> None
         image_generator=fake_image_generator,
     )
 
-    result = graph.invoke({"prompt_goal": "우주 배경의 초현실적인 고양이 일러스트"})
+    result = graph.invoke(
+        {
+            "user_prompt": "Turn the reference image into a polished cyberpunk banana poster.",
+            "input_image_base64": "reference-image",
+            "input_mime_type": "image/jpeg",
+        }
+    )
 
-    assert result["image_base64"] == "base64-image"
-    assert result["mime_type"] == "image/png"
-    assert result["model"] == "dall-e-3"
-    assert "우주 배경의 초현실적인 고양이 일러스트" in result["final_prompt"]
+    assert result["generated_image_base64"] == "base64-image"
+    assert result["output_mime_type"] == "image/png"
+    assert result["model"] == "gemini-2.5-flash-image"
+    assert "cyberpunk banana poster" in result["final_prompt"]
     assert upstream_calls == [
         {
             "prompt": result["final_prompt"],
-            "model": "dall-e-3",
-            "size": "1024x1024",
+            "model": "gemini-2.5-flash-image",
+            "image_base64": "reference-image",
+            "mime_type": "image/jpeg",
         }
     ]

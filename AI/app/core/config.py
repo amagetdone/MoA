@@ -20,12 +20,8 @@ class Settings(BaseSettings):
     ai_api_key: str = Field(default="", alias="AI_API_KEY")
     openai_base_url: str = Field(default="", alias="OPENAI_BASE_URL")
     image_generation_model: str = Field(
-        default="dall-e-3",
+        default="gemini-2.5-flash-image",
         alias="IMAGE_GENERATION_MODEL",
-    )
-    image_generation_size: str = Field(
-        default="1024x1024",
-        alias="IMAGE_GENERATION_SIZE",
     )
     langfuse_public_key: str | None = Field(default=None, alias="LANGFUSE_PUBLIC_KEY")
     langfuse_secret_key: str | None = Field(default=None, alias="LANGFUSE_SECRET_KEY")

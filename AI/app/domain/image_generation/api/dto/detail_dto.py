@@ -1,15 +1,22 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class ImageGenerationRequest(BaseModel):
-    prompt_goal: str
+    user_prompt: str
+    image_base64: str
+    mime_type: str = Field(
+        description=(
+            "입력 이미지의 MIME 타입입니다. 예: image/jpeg, image/png, image/webp"
+        ),
+        examples=["image/jpeg"],
+    )
 
-    @field_validator("prompt_goal")
+    @field_validator("user_prompt", "image_base64", "mime_type")
     @classmethod
-    def validate_prompt_goal(cls, value: str) -> str:
+    def validate_non_blank_field(cls, value: str) -> str:
         normalized = value.strip()
         if not normalized:
-            raise ValueError("prompt_goal must not be blank")
+            raise ValueError("field must not be blank")
         return normalized
 
 

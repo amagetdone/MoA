@@ -28,22 +28,40 @@ def _is_sensitive_key(key: str) -> bool:
 def sanitize_langfuse_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
     if not metadata:
         return {}
+    return _sanitize_langfuse_mapping(metadata)
 
+
+def _sanitize_langfuse_mapping(
+    mapping: dict[str, Any],
+    *,
+    parent_key: str | None = None,
+) -> dict[str, Any]:
     sanitized: dict[str, Any] = {}
-    for key, value in metadata.items():
-        if _is_sensitive_key(key):
+    for key, value in mapping.items():
+        if _should_drop_langfuse_key(key=key, parent_key=parent_key):
             continue
-        sanitized[key] = _sanitize_langfuse_value(value)
+        sanitized[key] = _sanitize_langfuse_value(value, parent_key=key)
     return sanitized
 
 
-def _sanitize_langfuse_value(value: Any) -> Any:
+def _should_drop_langfuse_key(*, key: str, parent_key: str | None) -> bool:
+    if _is_sensitive_key(key):
+        return True
+
+    lowered_key = key.casefold()
+    lowered_parent = parent_key.casefold() if parent_key else None
+    return lowered_key == "data" and lowered_parent in {"inline_data", "inlinedata"}
+
+
+def _sanitize_langfuse_value(value: Any, *, parent_key: str | None = None) -> Any:
     if isinstance(value, dict):
-        return sanitize_langfuse_metadata(value)
+        return _sanitize_langfuse_mapping(value, parent_key=parent_key)
     if isinstance(value, list):
-        return [_sanitize_langfuse_value(item) for item in value]
+        return [_sanitize_langfuse_value(item, parent_key=parent_key) for item in value]
     if isinstance(value, tuple):
-        return tuple(_sanitize_langfuse_value(item) for item in value)
+        return tuple(
+            _sanitize_langfuse_value(item, parent_key=parent_key) for item in value
+        )
     return value
 
 

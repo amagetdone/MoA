@@ -15,11 +15,12 @@ def build_generate_image_node(
         image_result = image_generator(
             prompt=state["final_prompt"],
             model=settings.image_generation_model,
-            size=settings.image_generation_size,
+            image_base64=state["input_image_base64"],
+            mime_type=state["input_mime_type"],
         )
         return {
-            "image_base64": image_result["image_base64"],
-            "mime_type": image_result["mime_type"],
+            "generated_image_base64": image_result["generated_image_base64"],
+            "output_mime_type": image_result["mime_type"],
             "model": image_result["model"],
         }
 
