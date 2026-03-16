@@ -14,7 +14,18 @@ import jakarta.persistence.InheritanceType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@SuperBuilder
 @Entity
 @Table(name = "transaction_override")
 @Inheritance(strategy = InheritanceType.JOINED)
@@ -36,7 +47,4 @@ public class TransactionOverride extends BaseEntity {
 
 	@Column(name = "transactionMemo", nullable = false, columnDefinition = "TEXT")
 	private String transactionMemo;
-
-	protected TransactionOverride() {
-	}
 }

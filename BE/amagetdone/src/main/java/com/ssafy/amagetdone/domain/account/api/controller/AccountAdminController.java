@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Account Admin API")
+@Tag(name = "계좌 관리자 API")
 @RestController
 @RequestMapping("/v1/admin/accounts")
 public class AccountAdminController {
@@ -29,7 +29,7 @@ public class AccountAdminController {
 	@Operation(summary = "수시입출금 상품 등록")
 	@PostMapping("/products")
 	public ApiResponse<AccountAdminDto.ProductResponse> registerProduct(@RequestBody AccountAdminDto.ProductCreateRequest request) {
-		return ApiResponse.ok("수시입출금 상품이 등록되었습니다.", accountService.registerProduct(request));
+		return ApiResponse.ok("수시입출금 상품을 등록했습니다.", accountService.registerProduct(request));
 	}
 
 	@Operation(summary = "수시입출금 상품 목록 조회")
@@ -41,6 +41,6 @@ public class AccountAdminController {
 	@Operation(summary = "수시입출금 계좌 생성")
 	@PostMapping
 	public ApiResponse<AccountAdminDto.AccountCreateResponse> createAccount(@RequestBody AccountAdminDto.AccountCreateRequest request) {
-		return ApiResponse.ok("수시입출금 계좌가 생성되었습니다.", accountService.createAccount(request));
+		return ApiResponse.ok("수시입출금 계좌를 생성했습니다.", accountService.createAccount(request));
 	}
 }

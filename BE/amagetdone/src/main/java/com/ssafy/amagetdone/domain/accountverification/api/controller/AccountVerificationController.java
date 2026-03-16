@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Account Verification User API")
+@Tag(name = "계좌 인증 사용자 API")
 @RestController
 @RequestMapping("/v1/accounts/verification")
 public class AccountVerificationController {
@@ -38,7 +38,7 @@ public class AccountVerificationController {
 	) {
 		int userId = jwtAccessTokenReader.readUserId(authorization);
 		return ApiResponse.ok(
-			"1원 인증 요청이 생성되었습니다.",
+			"1원 인증 요청을 생성했습니다.",
 			accountVerificationService.requestVerification(userId, request)
 		);
 	}

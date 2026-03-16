@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-@Tag(name = "S3 Test", description = "Local manual test endpoints for S3 upload and delete flows")
+@Tag(name = "S3 테스트", description = "S3 업로드와 삭제 흐름을 수동으로 확인하는 로컬 테스트 API")
 @RestController
 @RequestMapping("/test/s3")
 public class S3TestController {
@@ -30,13 +30,13 @@ public class S3TestController {
 	}
 
 	@Operation(
-		summary = "Upload a file to S3",
-		description = "Uploads a multipart file to the profile prefix in S3 and returns the stored object key."
+		summary = "S3 파일 업로드 테스트",
+		description = "멀티파트 파일을 S3의 프로필 경로에 업로드하고 저장된 객체 키를 반환합니다."
 	)
 	@PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ApiResponse<String> upload(
 		@Parameter(
-			description = "File to upload",
+			description = "업로드할 파일",
 			content = @Content(
 				mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE,
 				schema = @Schema(type = "string", format = "binary")
@@ -45,22 +45,22 @@ public class S3TestController {
 		@RequestParam("file") MultipartFile file
 	) {
 		String objectKey = s3StorageService.upload(file, ImageCategory.PROFILE);
-		return ApiResponse.ok("S3 upload test succeeded.", objectKey);
+		return ApiResponse.ok("S3 업로드 테스트에 성공했습니다.", objectKey);
 	}
 
 	@Operation(
-		summary = "Delete an uploaded S3 file",
-		description = "Deletes an S3 object by using the object key returned from the upload test API."
+		summary = "S3 업로드 파일 삭제 테스트",
+		description = "업로드 테스트 API가 반환한 객체 키로 S3 객체를 삭제합니다."
 	)
 	@DeleteMapping
 	public ApiResponse<Boolean> delete(
 		@Parameter(
-			description = "S3 object key returned by the upload API",
+			description = "업로드 API가 반환한 S3 객체 키",
 			example = "profile/test.png"
 		)
 		@RequestParam("objectKey") String objectKey
 	) {
 		s3StorageService.delete(objectKey);
-		return ApiResponse.ok("S3 delete test succeeded.", true);
+		return ApiResponse.ok("S3 삭제 테스트에 성공했습니다.", true);
 	}
 }

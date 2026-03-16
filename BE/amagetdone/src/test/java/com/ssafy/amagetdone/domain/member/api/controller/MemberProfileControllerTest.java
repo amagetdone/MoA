@@ -70,7 +70,7 @@ class MemberProfileControllerTest {
 					"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.message").value("프로필 입력이 완료되었습니다."))
+			.andExpect(jsonPath("$.message").value("프로필 입력을 완료했습니다."))
 			.andExpect(jsonPath("$.data.status").value("ACTIVE"));
 	}
 
@@ -94,7 +94,7 @@ class MemberProfileControllerTest {
 					"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.message").value("프로필 입력이 완료되었습니다."))
+			.andExpect(jsonPath("$.message").value("프로필 입력을 완료했습니다."))
 			.andExpect(jsonPath("$.data.status").value("ACTIVE"))
 			.andExpect(jsonPath("$.data.userId").doesNotExist())
 			.andExpect(jsonPath("$.data.profileCompleted").doesNotExist())

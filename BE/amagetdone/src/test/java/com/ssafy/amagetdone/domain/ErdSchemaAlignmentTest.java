@@ -15,6 +15,8 @@ import com.ssafy.amagetdone.domain.budget.model.entity.BudgetMonth;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetRollover;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseMonth;
+import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeek;
+import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeekCategory;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialWeekAllocation;
 import com.ssafy.amagetdone.domain.member.model.entity.Setting;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
@@ -22,6 +24,8 @@ import com.ssafy.amagetdone.global.entity.BaseEntity;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
 import com.ssafy.amagetdone.domain.transaction.model.entity.CardTransactionOverride;
+import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisJob;
+import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisResult;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.junit.jupiter.api.Test;
@@ -47,6 +51,11 @@ class ErdSchemaAlignmentTest {
 		assertEnumerated(BudgetAdjustment.class, "adjustmentType", true);
 		assertEnumerated(BudgetRollover.class, "status", true);
 		assertEnumerated(EssentialExpenseMonth.class, "sourceProvider", true);
+		assertEnumerated(TransactionAnalysisJob.class, "status", true);
+		assertEnumerated(TransactionAnalysisJob.class, "currentStep", true);
+		assertEnumerated(TransactionAnalysisResult.class, "excludedReason", true);
+		assertEnumerated(TransactionAnalysisResult.class, "expenseScope", true);
+		assertEnumerated(EssentialExpenseSnapshotWeekCategory.class, "expenseScope", true);
 	}
 
 	@Test
@@ -86,6 +95,12 @@ class ErdSchemaAlignmentTest {
 		assertColumnDefault(EssentialExpenseMonth.class, "sourceProvider", "'ANALYZER'");
 		assertColumnDefault(EssentialWeekAllocation.class, "plannedAmount", "0");
 		assertColumnDefault(EssentialWeekAllocation.class, "actualSpentAmount", "0");
+		assertColumnDefault(TransactionAnalysisJob.class, "status", "'PENDING'");
+		assertColumnDefault(TransactionAnalysisJob.class, "currentStep", "'SYNCING'");
+		assertColumnDefault(EssentialExpenseSnapshotWeek.class, "essentialAmount", "0");
+		assertColumnDefault(EssentialExpenseSnapshotWeek.class, "fixedEssentialAmount", "0");
+		assertColumnDefault(EssentialExpenseSnapshotWeek.class, "variableEssentialAmount", "0");
+		assertColumnDefault(EssentialExpenseSnapshotWeekCategory.class, "amount", "0");
 		assertColumnDefault(BudgetRollover.class, "status", "'APPLIED'");
 		assertColumnDefault(CardTransactionOverride.class, "billStatementsStatus", "'미결제'");
 	}

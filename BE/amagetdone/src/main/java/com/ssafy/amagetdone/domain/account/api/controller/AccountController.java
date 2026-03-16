@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Account User API")
+@Tag(name = "계좌 사용자 API")
 @RestController
 @RequestMapping("/v1/accounts")
 public class AccountController {
@@ -67,7 +67,7 @@ public class AccountController {
 		@RequestBody AccountDto.DepositRequest request
 	) {
 		int userId = jwtAccessTokenReader.readUserId(authorization);
-		return ApiResponse.ok("계좌 입금이 완료되었습니다.", accountService.deposit(userId, request));
+		return ApiResponse.ok("계좌 입금을 완료했습니다.", accountService.deposit(userId, request));
 	}
 
 	@Operation(summary = "계좌 이체")
@@ -77,7 +77,7 @@ public class AccountController {
 		@RequestBody AccountDto.TransferRequest request
 	) {
 		int userId = jwtAccessTokenReader.readUserId(authorization);
-		return ApiResponse.ok("계좌 이체가 완료되었습니다.", accountService.transfer(userId, request));
+		return ApiResponse.ok("계좌 이체를 완료했습니다.", accountService.transfer(userId, request));
 	}
 
 	@Operation(summary = "계좌 거래내역 목록 조회")

@@ -17,7 +17,19 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@SuperBuilder
 @Entity
 @Table(name = "budget_month")
 public class BudgetMonth extends BaseEntity {
@@ -33,26 +45,27 @@ public class BudgetMonth extends BaseEntity {
 	@Column(name = "base_date", nullable = false)
 	private LocalDate baseDate;
 
+	@Builder.Default
 	@ColumnDefault("'OPEN'")
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
 	private BudgetMonthStatus status = BudgetMonthStatus.OPEN;
 
+	@Builder.Default
 	@ColumnDefault("0")
 	@Column(name = "total_income_amount", nullable = false)
 	private Long totalIncomeAmount = 0L;
 
+	@Builder.Default
 	@ColumnDefault("0")
 	@Column(name = "total_fixed_essential_amount", nullable = false)
 	private Long totalFixedEssentialAmount = 0L;
 
+	@Builder.Default
 	@ColumnDefault("0")
 	@Column(name = "total_variable_essential_amount", nullable = false)
 	private Long totalVariableEssentialAmount = 0L;
 
 	@Column(name = "memo", length = 255)
 	private String memo;
-
-	protected BudgetMonth() {
-	}
 }
