@@ -80,13 +80,13 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<bool> isLoggedIn() => localDataSource.hasTokens();
 
   @override
-  Future<bool> autoLogin() async {
+  Future<AuthResult?> autoLogin() async {
     final hasTokens = await localDataSource.hasTokens();
-    if (!hasTokens) return false;
+    if (!hasTokens) return null;
 
     try {
       final refreshTokenValue = await localDataSource.getRefreshToken();
-      if (refreshTokenValue == null) return false;
+      if (refreshTokenValue == null) return null;
 
       final result = await remoteDataSource.refreshToken(
         refreshToken: refreshTokenValue,
@@ -95,10 +95,14 @@ class AuthRepositoryImpl implements AuthRepository {
       await localDataSource.saveAccessToken(result.accessToken);
       await localDataSource.saveRefreshToken(result.refreshToken);
 
-      return true;
+      return AuthResult(
+        status: result.status,
+        account: result.account,
+        plan: result.plan,
+      );
     } catch (_) {
       await localDataSource.deleteTokens();
-      return false;
+      return null;
     }
   }
 }

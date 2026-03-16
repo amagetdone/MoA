@@ -31,7 +31,16 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
     final state = ref.read(authViewModelProvider);
     if (state is AuthAutoLoginSuccess) {
-      context.go(AppRoutes.home);
+      final result = state.authResult;
+      if (result.status == 'TEMP') {
+        context.go(AppRoutes.onboardingProfile);
+      } else if (!result.account) {
+        context.go(AppRoutes.onboardingAccount);
+      } else if (!result.plan) {
+        context.go(AppRoutes.onboardingGoal);
+      } else {
+        context.go(AppRoutes.home);
+      }
     } else {
       context.go(AppRoutes.login);
     }

@@ -94,11 +94,14 @@ final appRouter = GoRouter(
       return AccountCompletePage(isOnboarding: true, bankName: extra?['bankName'] ?? '', accountNumber: extra?['accountNumber'] ?? '');
     }),
     GoRoute(path: AppRoutes.onboardingGoal, builder: (context, state) => const GoalCreatePage(isOnboarding: true)),
-    GoRoute(path: AppRoutes.onboardingLoading, builder: (context, state) => const OnboardingLoadingPage()),
+    GoRoute(path: AppRoutes.onboardingLoading, builder: (context, state) {
+      final extra = state.extra as Map<String, dynamic>? ?? const {};
+      return OnboardingLoadingPage(nextRoute: extra['nextRoute'] as String?);
+    }),
     GoRoute(path: AppRoutes.onboardingIncome, builder: (context, state) => const OnboardingIncomePage()),
     GoRoute(path: AppRoutes.onboardingAnalysis, builder: (context, state) => const OnboardingAnalysisPage()),
     GoRoute(path: AppRoutes.onboardingPlan, builder: (context, state) => const OnboardingPlanPage()),
-    
+
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) => MainShellPage(navigationShell: navigationShell),
       branches: [

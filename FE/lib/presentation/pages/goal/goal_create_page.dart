@@ -70,7 +70,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
     if (!mounted) return;
 
     if (widget.isOnboarding) {
-      context.go(AppRoutes.onboardingLoading);
+      context.go(AppRoutes.onboardingLoading, extra: {'nextRoute': AppRoutes.onboardingPlan});
     } else {
       context.pop();
     }
@@ -84,11 +84,11 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
         title: widget.isOnboarding ? '첫 번째 목표 설정' : '새 목표 만들기',
         showBack: true,
         onBack: widget.isOnboarding
-            ? () => context.go(AppRoutes.onboardingAccount)
+            ? () => context.go(AppRoutes.onboardingAnalysis)
             : null,
         skipText: widget.isOnboarding ? '건너뛰기' : null,
         onSkip: widget.isOnboarding
-            ? () => context.go(AppRoutes.onboardingLoading)
+            ? () => context.go(AppRoutes.home)
             : null,
       ),
       body: SingleChildScrollView(
