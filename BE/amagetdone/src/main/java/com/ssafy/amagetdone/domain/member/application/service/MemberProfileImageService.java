@@ -45,6 +45,15 @@ public class MemberProfileImageService {
 		return storageService.loadBytes(user.getProfileUrl());
 	}
 
+	public String loadProfileImageUrl(Integer userId) {
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new MemberException(MemberErrorCode.USER_NOT_FOUND));
+		if (!hasText(user.getProfileUrl())) {
+			throw new IllegalArgumentException("Profile image is missing.");
+		}
+		return storageService.getUrl(user.getProfileUrl());
+	}
+
 	private boolean hasText(String value) {
 		return value != null && !value.isBlank();
 	}

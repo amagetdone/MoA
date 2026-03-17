@@ -89,6 +89,18 @@ class MemberProfileImageServiceTest {
 		verify(storageService).loadBytes("profile/current.png");
 	}
 
+	@Test
+	void loadProfileImageUrlResolvesStoredKeyToS3Url() {
+		User user = newUser(1, "profile/current.png");
+		given(userRepository.findById(1)).willReturn(Optional.of(user));
+		given(storageService.getUrl("profile/current.png")).willReturn("https://bucket.s3.ap-northeast-2.amazonaws.com/profile/current.png");
+
+		String url = memberProfileImageService.loadProfileImageUrl(1);
+
+		assertEquals("https://bucket.s3.ap-northeast-2.amazonaws.com/profile/current.png", url);
+		verify(storageService).getUrl("profile/current.png");
+	}
+
 	private User newUser(int id, String profileUrl) {
 		User user = User.createPendingSocialUser();
 		ReflectionTestUtils.setField(user, "id", id);
