@@ -1,5 +1,6 @@
 package com.ssafy.amagetdone.domain.accountverification.application.usecase;
 
+import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.accountverification.api.dto.AccountVerificationDto;
 import com.ssafy.amagetdone.domain.accountverification.exception.AccountVerificationErrorCode;
 import com.ssafy.amagetdone.domain.accountverification.exception.AccountVerificationException;
@@ -12,21 +13,30 @@ import org.springframework.stereotype.Component;
 public class GetAccountVerificationStatusUseCase {
 
 	private final AccountVerificationRepository accountVerificationRepository;
+	private final AccountRepository accountRepository;
 
-	public GetAccountVerificationStatusUseCase(AccountVerificationRepository accountVerificationRepository) {
+	public GetAccountVerificationStatusUseCase(
+		AccountVerificationRepository accountVerificationRepository,
+		AccountRepository accountRepository
+	) {
 		this.accountVerificationRepository = accountVerificationRepository;
+		this.accountRepository = accountRepository;
 	}
 
 	public AccountVerificationDto.VerificationStatusResponse execute(Integer userId, String accountNo) {
 		AccountVerification verification = accountVerificationRepository
-			.findTopByAccount_User_IdAndAccount_AccountNoOrderByCreatedAtDesc(userId, accountNo)
+			.findTopByUser_IdAndAccountNoOrderByCreatedAtDesc(userId, accountNo)
 			.orElseThrow(() -> new AccountVerificationException(AccountVerificationErrorCode.VERIFICATION_REQUEST_NOT_FOUND));
+
+		boolean verified = accountRepository.findByUserIdAndAccountNo(userId, accountNo)
+			.map(account -> account.isVerified())
+			.orElse(false);
 
 		return new AccountVerificationDto.VerificationStatusResponse(
 			verification.getId(),
-			verification.getAccount().getAccountNo(),
+			verification.getAccountNo(),
 			verification.getStatus().name(),
-			verification.getAccount().isVerified(),
+			verified,
 			verification.getAuthText(),
 			verification.getRequestTransactionUniqueNo(),
 			verification.getRequestedAt().toString(),

@@ -8,5 +8,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AccountVerificationRepository extends JpaRepository<AccountVerification, Long> {
 
-	Optional<AccountVerification> findTopByAccount_User_IdAndAccount_AccountNoOrderByCreatedAtDesc(Integer userId, String accountNo);
+	Optional<AccountVerification> findTopByUser_IdAndAccountNoOrderByCreatedAtDesc(Integer userId, String accountNo);
 }

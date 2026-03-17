@@ -2,7 +2,7 @@ package com.ssafy.amagetdone.domain.accountverification.model.entity;
 
 import java.time.LocalDateTime;
 
-import com.ssafy.amagetdone.domain.account.model.entity.Account;
+import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.global.entity.BaseEntity;
 
 import org.hibernate.annotations.ColumnDefault;
@@ -29,8 +29,11 @@ public class AccountVerification extends BaseEntity {
 	private Long id;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "account_id", nullable = false)
-	private Account account;
+	@JoinColumn(name = "users_id", nullable = false)
+	private User user;
+
+	@Column(name = "account_no", nullable = false, length = 20)
+	private String accountNo;
 
 	@Column(name = "auth_text", nullable = false, length = 20)
 	private String authText;
@@ -56,17 +59,19 @@ public class AccountVerification extends BaseEntity {
 	}
 
 	public static AccountVerification createRequested(
-		Account account,
+		User user,
+		String accountNo,
 		String authText,
 		Long requestTransactionUniqueNo,
 		LocalDateTime requestedAt
 	) {
-		AccountVerification accountVerification = new AccountVerification();
-		accountVerification.account = account;
-		accountVerification.authText = authText;
-		accountVerification.requestTransactionUniqueNo = requestTransactionUniqueNo;
-		accountVerification.requestedAt = requestedAt;
-		return accountVerification;
+		AccountVerification verification = new AccountVerification();
+		verification.user = user;
+		verification.accountNo = accountNo;
+		verification.authText = authText;
+		verification.requestTransactionUniqueNo = requestTransactionUniqueNo;
+		verification.requestedAt = requestedAt;
+		return verification;
 	}
 
 	public void markSuccess(LocalDateTime verifiedAt) {
@@ -85,8 +90,12 @@ public class AccountVerification extends BaseEntity {
 		return id;
 	}
 
-	public Account getAccount() {
-		return account;
+	public User getUser() {
+		return user;
+	}
+
+	public String getAccountNo() {
+		return accountNo;
 	}
 
 	public String getAuthText() {

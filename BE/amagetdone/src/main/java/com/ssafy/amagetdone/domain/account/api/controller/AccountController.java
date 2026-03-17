@@ -35,15 +35,14 @@ public class AccountController {
 		this.jwtAccessTokenReader = jwtAccessTokenReader;
 	}
 
-	@Operation(summary = "계좌 등록 (은행코드 + 계좌번호)")
-	@PostMapping("/register")
-	public ApiResponse<AccountDto.AccountSummaryResponse> registerAccount(
+	@Operation(summary = "Ssafy 은행 계좌 목록 조회 (연동 전)")
+	@GetMapping("/bank")
+	public ApiResponse<List<AccountDto.BankAccountResponse>> getBankAccounts(
 		@Parameter(hidden = true)
-		@RequestHeader(name = "Authorization", required = false) String authorization,
-		@RequestBody AccountDto.RegisterAccountRequest request
+		@RequestHeader(name = "Authorization", required = false) String authorization
 	) {
 		int userId = jwtAccessTokenReader.readUserId(authorization);
-		return ApiResponse.ok("계좌를 등록했습니다.", accountService.registerAccount(userId, request));
+		return ApiResponse.ok("은행 계좌 목록을 조회했습니다.", accountService.getBankAccounts(userId));
 	}
 
 	@Operation(summary = "내 계좌 연동 동기화")
