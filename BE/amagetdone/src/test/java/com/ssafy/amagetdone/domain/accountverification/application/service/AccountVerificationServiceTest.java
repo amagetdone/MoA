@@ -6,7 +6,6 @@ import static org.mockito.Mockito.when;
 
 import com.ssafy.amagetdone.domain.accountverification.api.dto.AccountVerificationDto;
 import com.ssafy.amagetdone.domain.accountverification.application.usecase.CheckAccountVerificationUseCase;
-import com.ssafy.amagetdone.domain.accountverification.application.usecase.GetAccountVerificationStatusUseCase;
 import com.ssafy.amagetdone.domain.accountverification.application.usecase.RequestAccountVerificationUseCase;
 
 import org.junit.jupiter.api.Test;
@@ -23,9 +22,6 @@ class AccountVerificationServiceTest {
 
 	@Mock
 	private CheckAccountVerificationUseCase checkAccountVerificationUseCase;
-
-	@Mock
-	private GetAccountVerificationStatusUseCase getAccountVerificationStatusUseCase;
 
 	@InjectMocks
 	private AccountVerificationService accountVerificationService;
@@ -54,28 +50,13 @@ class AccountVerificationServiceTest {
 				88L,
 				"2026-03-13T09:03:00Z"
 			);
-		AccountVerificationDto.VerificationStatusResponse statusResponse =
-			new AccountVerificationDto.VerificationStatusResponse(
-				12L,
-				"0011234567890123",
-				"SUCCESS",
-				true,
-				"AMAGETDONE",
-				88L,
-				"2026-03-13T09:00:00Z",
-				"2026-03-13T09:03:00Z",
-				null
-			);
 
 		when(requestAccountVerificationUseCase.execute(7, request)).thenReturn(requestResponse);
 		when(checkAccountVerificationUseCase.execute(7, checkRequest)).thenReturn(checkResponse);
-		when(getAccountVerificationStatusUseCase.execute(7, "0011234567890123")).thenReturn(statusResponse);
 
 		assertThat(accountVerificationService.requestVerification(7, request)).isEqualTo(requestResponse);
 		assertThat(accountVerificationService.checkVerification(7, checkRequest)).isEqualTo(checkResponse);
-		assertThat(accountVerificationService.getVerificationStatus(7, "0011234567890123")).isEqualTo(statusResponse);
 		verify(requestAccountVerificationUseCase).execute(7, request);
 		verify(checkAccountVerificationUseCase).execute(7, checkRequest);
-		verify(getAccountVerificationStatusUseCase).execute(7, "0011234567890123");
 	}
 }

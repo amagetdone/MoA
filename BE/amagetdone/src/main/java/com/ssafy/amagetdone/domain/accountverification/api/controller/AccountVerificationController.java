@@ -10,8 +10,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -63,17 +61,4 @@ public class AccountVerificationController {
 		);
 	}
 
-	@Operation(summary = "1원 인증 상태 조회")
-	@GetMapping("/{accountNo}")
-	public ApiResponse<AccountVerificationDto.VerificationStatusResponse> getVerificationStatus(
-		@Parameter(hidden = true)
-		@RequestHeader(name = "Authorization", required = false) String authorization,
-		@PathVariable String accountNo
-	) {
-		int userId = jwtAccessTokenReader.readUserId(authorization);
-		return ApiResponse.ok(
-			"1원 인증 상태를 조회했습니다.",
-			accountVerificationService.getVerificationStatus(userId, accountNo)
-		);
-	}
 }
