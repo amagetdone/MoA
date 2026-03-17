@@ -6,6 +6,7 @@ import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/viewmodels/auth_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
+import 'package:more_app/presentation/widgets/common/more_card.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -16,106 +17,53 @@ class SettingsPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: const MoreAppBar(title: '설정'),
-      body: ListView(
-        children: [
-          SizedBox(height: 8.h),
-
-          // Notification
-          Container(
-            color: AppColors.bgSurface,
-            child: ListTile(
-              title: Text(
-                '알림',
-                style: AppTextStyles.bodyMd.copyWith(
-                  color: AppColors.textPrimary,
-                  fontSize: 14.sp,
-                ),
-              ),
-              trailing: Icon(
-                Icons.chevron_right,
-                color: AppColors.textTertiary,
-                size: 20.w,
-              ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Notification
+            _SettingsCard(
+              icon: Icons.notifications_outlined,
+              title: '알림',
+              subtitle: '알림 설정',
               onTap: () {
                 // TODO: navigate to notification settings
               },
-              contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 2.h),
             ),
-          ),
+            SizedBox(height: 10.h),
 
-          Divider(height: 1, color: AppColors.borderDefault),
-
-          // Security
-          Container(
-            color: AppColors.bgSurface,
-            child: ListTile(
-              title: Text(
-                '보안',
-                style: AppTextStyles.bodyMd.copyWith(
-                  color: AppColors.textPrimary,
-                  fontSize: 14.sp,
-                ),
-              ),
-              trailing: Icon(
-                Icons.chevron_right,
-                color: AppColors.textTertiary,
-                size: 20.w,
-              ),
+            // Security
+            _SettingsCard(
+              icon: Icons.lock_outline,
+              title: '보안',
+              subtitle: '보안 설정',
               onTap: () {
                 // TODO: navigate to security settings
               },
-              contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 2.h),
             ),
-          ),
+            SizedBox(height: 10.h),
 
-          Divider(height: 1, color: AppColors.borderDefault),
-          SizedBox(height: 16.h),
-          Divider(height: 1, color: AppColors.borderDefault),
-
-          // Logout
-          Container(
-            color: AppColors.bgSurface,
-            child: ListTile(
-              title: Text(
-                '로그아웃',
-                style: AppTextStyles.bodyMd.copyWith(
-                  color: AppColors.red500,
-                  fontSize: 14.sp,
-                ),
-              ),
-              trailing: Icon(
-                Icons.chevron_right,
-                color: AppColors.textTertiary,
-                size: 20.w,
-              ),
+            // Logout
+            _SettingsCard(
+              icon: Icons.logout,
+              title: '로그아웃',
+              subtitle: '',
+              titleColor: AppColors.red500,
               onTap: () => _showLogoutDialog(context, ref),
-              contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 2.h),
             ),
-          ),
+            SizedBox(height: 10.h),
 
-          Divider(height: 1, color: AppColors.borderDefault),
-
-          // Delete account
-          Container(
-            color: AppColors.bgSurface,
-            child: ListTile(
-              title: Text(
-                '회원탈퇴',
-                style: AppTextStyles.bodyMd.copyWith(
-                  color: AppColors.textTertiary,
-                  fontSize: 14.sp,
-                ),
-              ),
-              trailing: Icon(
-                Icons.chevron_right,
-                color: AppColors.textTertiary,
-                size: 20.w,
-              ),
+            // Delete account
+            _SettingsCard(
+              icon: Icons.person_remove_outlined,
+              title: '회원탈퇴',
+              subtitle: '',
+              titleColor: AppColors.textTertiary,
               onTap: () => _showDeleteAccountDialog(context),
-              contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 2.h),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -209,6 +157,68 @@ class SettingsPage extends ConsumerWidget {
                 fontSize: 14.sp,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final Color? titleColor;
+
+  const _SettingsCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.titleColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return MoreCard(
+      onTap: onTap,
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+      child: Row(
+        children: [
+          Container(
+            width: 40.w,
+            height: 40.w,
+            decoration: BoxDecoration(
+              color: AppColors.gray50,
+              borderRadius: BorderRadius.circular(10.r),
+              border: Border.all(color: AppColors.borderDefault),
+            ),
+            child: Icon(icon, size: 20.w, color: AppColors.gray500),
+          ),
+          SizedBox(width: 14.w),
+          Expanded(
+            child: Text(
+              title,
+              style: AppTextStyles.bodyMd.copyWith(
+                color: titleColor ?? AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          if (subtitle.isNotEmpty)
+            Text(
+              subtitle,
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.textTertiary,
+                fontSize: 11.sp,
+              ),
+            ),
+          SizedBox(width: 4.w),
+          Icon(
+            Icons.chevron_right,
+            size: 18.w,
+            color: AppColors.textTertiary,
           ),
         ],
       ),

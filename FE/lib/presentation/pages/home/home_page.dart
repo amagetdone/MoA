@@ -68,7 +68,7 @@ class HomePage extends ConsumerWidget {
       case HomeStatus.noAccount:
         return _buildNoAccount(context);
       case HomeStatus.noGoal:
-        return _buildDashboard(context, state, showGoalEmptyState: true);
+        return _buildNoGoal(context);
       case HomeStatus.ready:
         return _buildDashboard(context, state, showGoalEmptyState: false);
     }
