@@ -42,9 +42,11 @@ out/
 .venv/
 .worktrees/
 docs/plans/
+docs/api/
+docs/finapi/
+docs/kanban/
 AGENTS.md
 JIRA.md
 GIT.md
 docs/*.md
 docs/superpowers/
-
