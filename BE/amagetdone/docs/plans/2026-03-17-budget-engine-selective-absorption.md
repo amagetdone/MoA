@@ -103,3 +103,57 @@ Expected: one commit created with only the selected scope.
 
 Run: `git status --short --branch`
 Expected: clean worktree.
+
+---
+
+## Execution Result
+
+**Status:** Completed on `2026-03-17`
+
+**Commit:** `d7e2c6c` - `feat: absorb budget engine working tree changes`
+
+### What Was Absorbed
+
+- Budget working tree changes were selectively absorbed into the branch.
+- Unrelated working tree changes were removed instead of being swept into the commit.
+- Required support changes were kept in:
+  - `domain/plan` repository/entity support for budget reads and allocations
+  - `domain/transaction` query/analysis support for budget detail views and spent updates
+  - `global/docs/controller/BudgetDocsController.java`
+  - shared test helper `src/test/java/com/ssafy/amagetdone/support/TestSystemPropertySupport.java`
+
+### Actual Verification Performed
+
+1. Targeted budget service tests passed:
+
+```bash
+./gradlew test --no-daemon \
+  --tests 'com.ssafy.amagetdone.domain.budget.application.service.BudgetAllocationServiceTest' \
+  --tests 'com.ssafy.amagetdone.domain.budget.application.service.BudgetRolloverServiceTest' \
+  --tests 'com.ssafy.amagetdone.domain.budget.application.service.BudgetSpentUpdateServiceTest'
+```
+
+2. Budget controller test passed with JUnit XML reporting disabled through a temporary init script:
+
+```bash
+./gradlew test --no-daemon -I /tmp/disable-junit-xml.init.gradle \
+  --tests 'com.ssafy.amagetdone.domain.budget.api.controller.BudgetControllerTest'
+```
+
+3. Packaging build succeeded with tests skipped:
+
+```bash
+./gradlew build -x test --no-daemon -I /tmp/disable-junit-xml.init.gradle
+```
+
+### Deviation From Original Plan
+
+- The original plan expected a plain `./gradlew build --no-daemon`.
+- In this workspace, Gradle test execution under the WSL-mounted path hit unstable JUnit XML report writes for `BudgetControllerTest`.
+- To complete verification reliably, a temporary init script disabled JUnit XML report generation, and packaging was validated separately with `build -x test`.
+
+### Final State
+
+- The selected budget-engine scope is committed.
+- `git status --short --branch` was clean immediately after commit.
+- Branch state after the commit: `feat/back/auth...origin/feat/back/auth [ahead 38]`
