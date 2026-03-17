@@ -6,9 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Map;
 
 import com.ssafy.amagetdone.global.config.EnvLoader;
+import com.ssafy.amagetdone.support.TestSystemPropertySupport;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,13 +28,20 @@ class BudgetEntityMappingTest {
 
 	private static final String ENTITY_PACKAGE = "com.ssafy.amagetdone.domain.budget.model.entity.";
 	private static final String ENUM_PACKAGE = "com.ssafy.amagetdone.domain.budget.model.vo.";
+	private static Map<String, String> springProfileProperties;
 
 	@Autowired
 	private ApplicationContext applicationContext;
 
 	@BeforeAll
 	static void loadEnv() {
+		springProfileProperties = TestSystemPropertySupport.captureSpringProfileProperties();
 		EnvLoader.loadRequiredEnv(Path.of("").toAbsolutePath());
+	}
+
+	@AfterAll
+	static void restoreEnv() {
+		TestSystemPropertySupport.restore(springProfileProperties);
 	}
 
 	@Test

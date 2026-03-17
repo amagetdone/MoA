@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -24,6 +25,7 @@ import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.domain.account.model.entity.Merchant;
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.account.model.repository.CategoryRepository;
+import com.ssafy.amagetdone.domain.budget.application.usecase.UpdateBudgetSpentUseCase;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeek;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeekCategory;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekCategoryRepository;
@@ -93,6 +95,9 @@ class TransactionAnalysisServiceTest {
 	@Mock
 	private TransactionSyncService transactionSyncService;
 
+	@Mock
+	private UpdateBudgetSpentUseCase updateBudgetSpentUseCase;
+
 	@Test
 	void createJobRejectsDuplicateRunningAnalysis() {
 		TransactionAnalysisService service = new TransactionAnalysisService(
@@ -107,6 +112,7 @@ class TransactionAnalysisServiceTest {
 			essentialExpenseSnapshotWeekCategoryRepository,
 			merchantInferenceApiClient,
 			transactionSyncService,
+			updateBudgetSpentUseCase,
 			new TransactionExclusionPolicy(),
 			new FixedExpenseClassifier(),
 			new WeeklyEssentialAllocator()
@@ -131,6 +137,7 @@ class TransactionAnalysisServiceTest {
 			essentialExpenseSnapshotWeekCategoryRepository,
 			merchantInferenceApiClient,
 			transactionSyncService,
+			updateBudgetSpentUseCase,
 			new TransactionExclusionPolicy(),
 			new FixedExpenseClassifier(),
 			new WeeklyEssentialAllocator()
@@ -317,6 +324,10 @@ class TransactionAnalysisServiceTest {
 		assertEquals(17000L, marchCategoryAmounts.get("FIXED:구독료"));
 		assertEquals(55000L, marchCategoryAmounts.get("FIXED:주거/통신"));
 		assertEquals(83000L, marchCategoryAmounts.get("VARIABLE:식비"));
+
+		ArgumentCaptor<List<TransactionAnalysisResult>> spentUpdateCaptor = listCaptor();
+		verify(updateBudgetSpentUseCase).execute(same(user), spentUpdateCaptor.capture());
+		assertEquals(analysisCaptor.getValue(), spentUpdateCaptor.getValue());
 
 		assertEquals(TransactionAnalysisJobStatus.SUCCEEDED, completedJob.getStatus());
 		assertEquals(TransactionAnalysisStep.COMPLETED, completedJob.getCurrentStep());
