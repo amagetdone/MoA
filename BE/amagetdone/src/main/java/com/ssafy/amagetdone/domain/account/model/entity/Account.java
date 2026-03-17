@@ -44,6 +44,10 @@ public class Account extends BaseEntity {
 	@Column(name = "is_verified", nullable = false)
 	private boolean verified;
 
+	@ColumnDefault("TRUE")
+	@Column(name = "is_active", nullable = false)
+	private boolean active;
+
 	@Column(name = "alias", length = 30)
 	private String alias;
 
@@ -77,6 +81,7 @@ public class Account extends BaseEntity {
 		account.bankName = bankName;
 		account.currency = currency;
 		account.verified = false;
+		account.active = true;
 		return account;
 	}
 
@@ -112,6 +117,14 @@ public class Account extends BaseEntity {
 		this.verified = true;
 	}
 
+	public void markActive() {
+		this.active = true;
+	}
+
+	public void markInactive() {
+		this.active = false;
+	}
+
 	public String getId() {
 		return id;
 	}
@@ -142,6 +155,10 @@ public class Account extends BaseEntity {
 
 	public boolean isVerified() {
 		return verified;
+	}
+
+	public boolean isActive() {
+		return active;
 	}
 
 	public String getAlias() {

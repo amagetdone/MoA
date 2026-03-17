@@ -15,22 +15,21 @@ import org.junit.jupiter.api.Test;
 class AccountControllerTest {
 
 	@Test
-	void syncAccountsReadsUserIdFromAuthorizationHeader() {
+	void confirmReadsUserIdFromAuthorizationHeader() {
 		AccountService accountService = mock(AccountService.class);
 		JwtAccessTokenReader jwtAccessTokenReader = mock(JwtAccessTokenReader.class);
 		AccountController controller = new AccountController(accountService, jwtAccessTokenReader);
-		List<AccountDto.AccountSummaryResponse> responses = List.of(
-			new AccountDto.AccountSummaryResponse("0011234567890123", "001", "한국은행", "데모 수시입출금", null, true)
-		);
+		AccountDto.ConfirmAccountRequest request = new AccountDto.ConfirmAccountRequest("0011234567890123");
+		AccountDto.ConfirmAccountResponse response = new AccountDto.ConfirmAccountResponse(true);
 
 		when(jwtAccessTokenReader.readUserId("Bearer access-token")).thenReturn(7);
-		when(accountService.syncAccounts(7)).thenReturn(responses);
+		when(accountService.confirmAccount(7, request)).thenReturn(response);
 
-		ApiResponse<List<AccountDto.AccountSummaryResponse>> result = controller.syncAccounts("Bearer access-token");
+		ApiResponse<AccountDto.ConfirmAccountResponse> result = controller.confirmAccount("Bearer access-token", request);
 
 		assertThat(result.status()).isEqualTo("ok");
-		assertThat(result.data()).containsExactlyElementsOf(responses);
+		assertThat(result.data()).isEqualTo(response);
 		verify(jwtAccessTokenReader).readUserId("Bearer access-token");
-		verify(accountService).syncAccounts(7);
+		verify(accountService).confirmAccount(7, request);
 	}
 }

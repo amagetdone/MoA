@@ -25,6 +25,7 @@ class AccountTest {
 		);
 
 		assertFalse(account.isVerified());
+		assertTrue(account.isActive());
 
 		account.markVerified();
 
@@ -55,5 +56,26 @@ class AccountTest {
 		);
 
 		assertFalse(account.isVerified());
+	}
+
+	@Test
+	void inactiveAccountCanBeReactivatedWhenLinkedAgain() {
+		User user = User.createPendingSocialUser();
+		Account account = Account.create(
+			user,
+			"0011234567890123",
+			"001-1-abc",
+			"데모 계좌",
+			"수시입출금",
+			"001",
+			"한국은행",
+			"KRW"
+		);
+
+		account.markInactive();
+		assertFalse(account.isActive());
+
+		account.markActive();
+		assertTrue(account.isActive());
 	}
 }

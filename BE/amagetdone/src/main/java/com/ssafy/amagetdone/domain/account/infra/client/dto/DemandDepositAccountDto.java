@@ -39,8 +39,31 @@ public final class DemandDepositAccountDto {
 	) {
 	}
 
+	public record AccountDetailRequest(
+		String userKey,
+		String accountNo
+	) {
+	}
+
 	public record AccountListResponse(
 		List<AccountItem> accounts
+	) {
+	}
+
+	public record AccountDetailResponse(
+		String bankCode,
+		String bankName,
+		String userName,
+		String accountNo,
+		String accountName,
+		String accountTypeCode,
+		String accountTypeName,
+		String accountCreatedDate,
+		String accountExpiryDate,
+		Long dailyTransferLimit,
+		Long oneTimeTransferLimit,
+		Long accountBalance,
+		String currency
 	) {
 	}
 

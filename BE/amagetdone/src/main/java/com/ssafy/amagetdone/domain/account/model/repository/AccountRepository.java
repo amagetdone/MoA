@@ -14,13 +14,45 @@ public interface AccountRepository extends JpaRepository<Account, String> {
 	@Query("select a from Account a where a.user.id = :userId and a.accountNo = :accountNo")
 	Optional<Account> findByUserIdAndAccountNo(@Param("userId") Integer userId, @Param("accountNo") String accountNo);
 
+	@Query("""
+		select a
+		from Account a
+		where a.user.id = :userId
+			and a.accountNo = :accountNo
+			and a.verified = true
+			and a.active = true
+		""")
+	Optional<Account> findActiveLinkedAccountByUserIdAndAccountNo(
+		@Param("userId") Integer userId,
+		@Param("accountNo") String accountNo
+	);
+
 	@Query("select a from Account a where a.user.id = :userId order by a.accountNo asc")
 	List<Account> findAllByUserId(@Param("userId") Integer userId);
+
+	@Query("""
+		select a
+		from Account a
+		where a.user.id = :userId
+			and a.verified = true
+			and a.active = true
+		order by a.accountNo asc
+		""")
+	List<Account> findAllLinkedAccountsByUserId(@Param("userId") Integer userId);
 
 	List<Account> findAllByUser_Id(Integer userId);
 
 	@Query("select case when count(a) > 0 then true else false end from Account a where a.user.id = :userId")
 	boolean existsByUserId(@Param("userId") Integer userId);
+
+	@Query("""
+		select case when count(a) > 0 then true else false end
+		from Account a
+		where a.user.id = :userId
+			and a.verified = true
+			and a.active = true
+		""")
+	boolean existsLinkedAccountByUserId(@Param("userId") Integer userId);
 
 	@Query("delete from Account a where a.user.id = :userId")
 	@org.springframework.data.jpa.repository.Modifying

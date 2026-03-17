@@ -61,6 +61,7 @@ class ErdSchemaAlignmentTest {
 	@Test
 	void booleanColumnsUsePostgresBooleanDefaults() throws Exception {
 		assertColumnDefault(BaseEntity.class, "deleted", "FALSE");
+		assertColumnDefault(Account.class, "active", "TRUE");
 		assertColumnDefault(Account.class, "verified", "FALSE");
 		assertColumnDefault(AccountVerification.class, "status", "'REQUESTED'");
 		assertColumnDefault(Setting.class, "alarm", "FALSE");
@@ -68,6 +69,7 @@ class ErdSchemaAlignmentTest {
 
 	@Test
 	void erdDefaultsAreDeclaredOnEntityMappings() throws Exception {
+		assertColumnDefault(Account.class, "active", "TRUE");
 		assertColumnDefault(Account.class, "verified", "FALSE");
 		assertColumnDefault(AccountVerification.class, "status", "'REQUESTED'");
 		assertColumnDefault(Setting.class, "alarm", "FALSE");
