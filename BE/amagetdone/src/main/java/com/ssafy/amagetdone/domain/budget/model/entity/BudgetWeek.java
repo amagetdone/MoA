@@ -6,6 +6,8 @@ import com.ssafy.amagetdone.domain.budget.model.vo.BudgetWeekStatus;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.global.entity.BaseEntity;
 
+import lombok.Getter;
+
 import org.hibernate.annotations.ColumnDefault;
 
 import jakarta.persistence.Column;
@@ -19,6 +21,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity
+@Getter
 @Table(name = "budget_week")
 public class BudgetWeek extends BaseEntity {
 
@@ -81,5 +84,22 @@ public class BudgetWeek extends BaseEntity {
 	private Long actualSpentAmount = 0L;
 
 	protected BudgetWeek() {
+	}
+
+	public static BudgetWeek create(
+		Integer id,
+		User user,
+		Integer weekSequence,
+		LocalDate weekStartDate,
+		LocalDate weekEndDate
+	) {
+		BudgetWeek budgetWeek = new BudgetWeek();
+		budgetWeek.id = id;
+		budgetWeek.user = user;
+		budgetWeek.weekSequence = weekSequence;
+		budgetWeek.weekStartDate = weekStartDate;
+		budgetWeek.weekEndDate = weekEndDate;
+		budgetWeek.partial = false;
+		return budgetWeek;
 	}
 }
