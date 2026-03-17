@@ -6,8 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.ssafy.amagetdone.domain.account.model.entity.Account;
-import com.ssafy.amagetdone.domain.account.application.usecase.FindUserAccountUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.FindAccountUserUseCase;
 import com.ssafy.amagetdone.domain.accountverification.api.dto.AccountVerificationDto;
 import com.ssafy.amagetdone.domain.accountverification.infra.client.SsafyAccountVerificationApiClient;
 import com.ssafy.amagetdone.domain.accountverification.infra.client.dto.AccountVerificationClientDto;
@@ -27,7 +26,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 class RequestAccountVerificationUseCaseTest {
 
 	@Mock
-	private FindUserAccountUseCase findUserAccountUseCase;
+	private FindAccountUserUseCase findAccountUserUseCase;
 
 	@Mock
 	private AccountVerificationRepository accountVerificationRepository;
@@ -40,21 +39,22 @@ class RequestAccountVerificationUseCaseTest {
 
 	@Test
 	void requestVerificationStoresRequestedHistory() {
-		Account account = mock(Account.class);
 		User user = mock(User.class);
+		when(user.getUserKey()).thenReturn("user-key");
+
 		AccountVerification savedVerification = AccountVerification.createRequested(
-			account,
+			user,
+			"0011234567890123",
 			"AMAGETDONE",
 			88L,
 			java.time.LocalDateTime.of(2026, 3, 13, 9, 0)
 		);
 		ReflectionTestUtils.setField(savedVerification, "id", 12L);
+
 		AccountVerificationDto.RequestVerificationRequest request =
 			new AccountVerificationDto.RequestVerificationRequest("0011234567890123");
 
-		when(findUserAccountUseCase.execute(7, "0011234567890123")).thenReturn(account);
-		when(account.getUser()).thenReturn(user);
-		when(user.getUserKey()).thenReturn("user-key");
+		when(findAccountUserUseCase.execute(7)).thenReturn(user);
 		when(ssafyAccountVerificationApiClient.requestVerification(any()))
 			.thenReturn(new AccountVerificationClientDto.RequestVerificationResponse(88L, "0011234567890123"));
 		when(accountVerificationRepository.save(any(AccountVerification.class))).thenReturn(savedVerification);
