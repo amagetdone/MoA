@@ -36,16 +36,4 @@ public final class AccountVerificationDto {
 	) {
 	}
 
-	public record VerificationStatusResponse(
-		Long verificationId,
-		String accountNo,
-		String status,
-		boolean verified,
-		String authText,
-		Long requestTransactionUniqueNo,
-		String requestedAt,
-		String verifiedAt,
-		String failureReason
-	) {
-	}
 }
