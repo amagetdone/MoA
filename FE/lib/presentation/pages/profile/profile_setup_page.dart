@@ -174,34 +174,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
     if (!_validateAll() || !_isFormValid) return;
 
     if (widget.isOnboarding) {
-      setState(() => _isSubmitting = true);
-      try {
-        // birthDate: "2000.01.17" → "2000-01-17"
-        final birthDate = _birthDateController.text.replaceAll('.', '-');
-        final dio = ref.read(apiClientProvider).dio;
-
-        await dio.patch(
-          'v1/members/me/profile',
-          data: {
-            'nickname': _nicknameController.text,
-            'email': _emailController.text,
-            'birthDate': birthDate,
-            'hasFixedIncome': _selectedIncome == '있어요',
-          },
-        );
-
-        await _uploadProfileImage();
-
-        if (!mounted) return;
-        context.go(AppRoutes.onboarding);
-      } on DioException catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.message ?? '프로필 저장에 실패했습니다.')));
-      } finally {
-        if (mounted) setState(() => _isSubmitting = false);
-      }
+      context.go(AppRoutes.onboarding);
     } else {
       context.pop();
     }

@@ -27,6 +27,7 @@ class AccountAddPage extends ConsumerStatefulWidget {
 class _AccountAddPageState extends ConsumerState<AccountAddPage> {
   BankInfo? selectedBank;
   bool isExpanded = false;
+  bool _isAccountVerified = false;
   final TextEditingController _accountController = TextEditingController();
   final FocusNode _accountFocusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
@@ -188,8 +189,38 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                         borderRadius: BorderRadius.circular(12.r),
                         borderSide: const BorderSide(color: AppColors.orange500, width: 1.2),
                       ),
+                      suffixIcon: Padding(
+                        padding: EdgeInsets.only(right: 8.w),
+                        child: TextButton(
+                          onPressed: _accountController.text.isNotEmpty
+                              ? () {
+                                  setState(() => _isAccountVerified = true);
+                                  FocusScope.of(context).unfocus();
+                                }
+                              : null,
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.symmetric(horizontal: 12.w),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                            _isAccountVerified ? '확인완료' : '확인하기',
+                            style: AppTextStyles.bodySm.copyWith(
+                              color: _isAccountVerified
+                                  ? AppColors.green500
+                                  : (_accountController.text.isNotEmpty
+                                      ? AppColors.orange500
+                                      : AppColors.textTertiary),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13.sp,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                    onChanged: (_) => setState(() {}),
+                    onChanged: (_) => setState(() {
+                      _isAccountVerified = false;
+                    }),
                   ),
                   SizedBox(height: 20.h),
                 ],
@@ -211,7 +242,7 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                 });
               }
             },
-            enabled: selectedBank != null && _accountController.text.isNotEmpty,
+            enabled: selectedBank != null && _accountController.text.isNotEmpty && _isAccountVerified,
           ),
         ],
       ),

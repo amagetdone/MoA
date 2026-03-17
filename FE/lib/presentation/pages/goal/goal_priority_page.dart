@@ -88,29 +88,18 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
                         child: MoreCard(
                           child: Row(
                             children: [
-                              ReorderableDragStartListener(
-                                index: index,
-                                child: Padding(
-                                  padding: EdgeInsets.only(right: 12.w),
-                                  child: Icon(
-                                    Icons.drag_handle,
-                                    color: AppColors.textTertiary,
-                                    size: 24.w,
-                                  ),
-                                ),
-                              ),
                               Container(
                                 width: 28.w,
                                 height: 28.w,
                                 decoration: BoxDecoration(
-                                  color: AppColors.orange500,
+                                  color: index == 0 ? AppColors.orange500 : AppColors.gray100,
                                   borderRadius: BorderRadius.circular(8.r),
                                 ),
                                 child: Center(
                                   child: Text(
                                     '${index + 1}',
                                     style: AppTextStyles.bodySm.copyWith(
-                                      color: Colors.white,
+                                      color: index == 0 ? Colors.white : AppColors.textPrimary,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
@@ -138,6 +127,14 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
                                       ),
                                     ),
                                   ],
+                                ),
+                              ),
+                              ReorderableDragStartListener(
+                                index: index,
+                                child: Icon(
+                                  Icons.drag_handle,
+                                  color: AppColors.textTertiary,
+                                  size: 24.w,
                                 ),
                               ),
                             ],

@@ -29,17 +29,25 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
     if (!mounted) return;
 
+    // TODO: TEMP 하드코딩 - 무조건 온보딩 프로필로 이동 (테스트용)
     final state = ref.read(authViewModelProvider);
-    if (state is AuthAutoLoginSuccess) {
-      final result = state.authResult;
-      if (result.status == 'TEMP') {
-        context.go(AppRoutes.onboardingProfile);
-      } else {
-        context.go(AppRoutes.home);
-      }
+    if (state is AuthAutoLoginSuccess || state is AuthUnauthenticated) {
+      context.go(AppRoutes.onboardingProfile);
     } else {
-      context.go(AppRoutes.login);
+      context.go(AppRoutes.onboardingProfile);
     }
+    // 원복 코드:
+    // final state = ref.read(authViewModelProvider);
+    // if (state is AuthAutoLoginSuccess) {
+    //   final result = state.authResult;
+    //   if (result.status == 'TEMP') {
+    //     context.go(AppRoutes.onboardingProfile);
+    //   } else {
+    //     context.go(AppRoutes.home);
+    //   }
+    // } else {
+    //   context.go(AppRoutes.login);
+    // }
   }
 
   @override

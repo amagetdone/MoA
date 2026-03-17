@@ -7,6 +7,7 @@ import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/viewmodels/goal_viewmodel.dart';
 import 'package:more_app/presentation/pages/goal/widgets/goal_card.dart';
+import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 
 class GoalListPage extends ConsumerWidget {
   const GoalListPage({super.key});
@@ -20,48 +21,14 @@ class GoalListPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
+      appBar: const MoreAppBar(showBack: false, showLogo: true, showNotification: true),
       body: goalState.isLoading
           ? const SizedBox.shrink()
           : goalState.errorMessage != null
               ? _buildError(context, goalState.errorMessage!, viewModel)
-              : SafeArea(
-                  child: Column(
+              : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ── 상단 내비 바 ──────────────────────────────────
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 4.w,
-                          vertical: 4.h,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            // 뒤로가기 (탭에서는 숨김, push로 들어올 때만 표시)
-                            if (Navigator.of(context).canPop())
-                              IconButton(
-                                icon: Icon(
-                                  Icons.chevron_left,
-                                  size: 28.r,
-                                  color: AppColors.textPrimary,
-                                ),
-                                onPressed: () => context.pop(),
-                              )
-                            else
-                              SizedBox(width: 48.w),
-                            // 알림
-                            IconButton(
-                              icon: Icon(
-                                Icons.notifications_outlined,
-                                size: 24.r,
-                                color: AppColors.textPrimary,
-                              ),
-                              onPressed: () {},
-                            ),
-                          ],
-                        ),
-                      ),
-
                       // ── 타이틀 + 서브타이틀 ─────────────────────────
                       Padding(
                         padding: EdgeInsets.fromLTRB(24.w, 4.h, 24.w, 0),
