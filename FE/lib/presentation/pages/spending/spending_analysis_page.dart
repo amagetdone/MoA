@@ -27,13 +27,9 @@ class SpendingAnalysisPage extends ConsumerWidget {
       backgroundColor: AppColors.bgPrimary,
       appBar: MoreAppBar(
         title: '',
-        showBack: true,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.notifications_none_outlined, size: 24.w),
-            onPressed: () {},
-          ),
-        ],
+        showBack: false,
+        showLogo: true,
+        showNotification: true,
       ),
       body: state.isLoading
           ? const SizedBox.shrink()

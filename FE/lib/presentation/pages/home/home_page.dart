@@ -25,7 +25,7 @@ class HomePage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: const MoreAppBar(showBack: false, showNotification: true),
+      appBar: const MoreAppBar(showBack: false, showLogo: true, showNotification: true),
       body: _buildBody(context, ref, state),
     );
   }

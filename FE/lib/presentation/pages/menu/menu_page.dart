@@ -21,7 +21,7 @@ class MenuPage extends ConsumerWidget {
     if (state.isLoading) {
       return const Scaffold(
         backgroundColor: AppColors.bgPrimary,
-        appBar: MoreAppBar(showBack: false, showNotification: true),
+        appBar: MoreAppBar(showBack: false, showLogo: true, showNotification: true),
         body: SizedBox.shrink(),
       );
     }
@@ -29,7 +29,7 @@ class MenuPage extends ConsumerWidget {
     if (state.errorMessage != null) {
       return Scaffold(
         backgroundColor: AppColors.bgPrimary,
-        appBar: const MoreAppBar(showBack: false, showNotification: true),
+        appBar: const MoreAppBar(showBack: false, showLogo: true, showNotification: true),
         body: Center(
           child: Text(
             '메뉴 정보를 불러오지 못했습니다.\n${state.errorMessage!}',
@@ -41,7 +41,7 @@ class MenuPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: const MoreAppBar(showBack: false, showNotification: true),
+      appBar: const MoreAppBar(showBack: false, showLogo: true, showNotification: true),
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
         child: Column(

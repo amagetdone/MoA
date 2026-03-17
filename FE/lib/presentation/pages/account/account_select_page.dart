@@ -9,9 +9,10 @@ import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 
 class _BankInfo {
+  final String code;
   final String name;
   final String logoPath;
-  _BankInfo(this.name, this.logoPath);
+  _BankInfo(this.code, this.name, this.logoPath);
 }
 
 class AccountSelectPage extends ConsumerStatefulWidget {
@@ -24,7 +25,7 @@ class AccountSelectPage extends ConsumerStatefulWidget {
 }
 
 class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
-  String? _selectedBank;
+  _BankInfo? _selectedBank;
   final TextEditingController _accountNumberController =
       TextEditingController();
   final FocusNode _accountFocusNode = FocusNode();
@@ -32,21 +33,24 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
   bool _showAllBanks = false;
 
   final List<_BankInfo> _allBanks = [
-    _BankInfo('국민은행', 'assets/images/logo/KB_logo.png'),
-    _BankInfo('신한은행', 'assets/images/logo/shinhan_logo.png'),
-    _BankInfo('우리은행', 'assets/images/logo/woori_logo.png'),
-    _BankInfo('하나은행', 'assets/images/logo/KEB_hana_logo.png'),
-    _BankInfo('기업은행', 'assets/images/logo/ibk_logo.png'),
-    _BankInfo('iM뱅크', 'assets/images/logo/iM_logo.png'),
-    _BankInfo('카카오뱅크', 'assets/images/logo/kakaobank.png'),
-    _BankInfo('농협은행', 'assets/images/logo/nonghyup_logo.png'),
-    _BankInfo('새마을금고', 'assets/images/logo/mg_logo.png'),
-    _BankInfo('SC제일은행', 'assets/images/logo/sc_jeil_logo.png'),
-    _BankInfo('씨티은행', 'assets/images/logo/citi_logo.png'),
-    _BankInfo('KDB산업은행', 'assets/images/logo/industry_logo.png'),
-    _BankInfo('경남은행', 'assets/images/logo/kyung_nam_logo.png'),
-    _BankInfo('전북은행', 'assets/images/logo/gwangju_logo.jpg'),
-    _BankInfo('수협은행', 'assets/images/logo/suhyup_logo.png'),
+    _BankInfo('004', '국민은행', 'assets/images/logo/KB_logo.png'),
+    _BankInfo('088', '신한은행', 'assets/images/logo/shinhan_logo.png'),
+    _BankInfo('020', '우리은행', 'assets/images/logo/woori_logo.png'),
+    _BankInfo('081', 'KEB하나은행', 'assets/images/logo/KEB_hana_logo.png'),
+    _BankInfo('003', '기업은행', 'assets/images/logo/ibk_logo.png'),
+    _BankInfo('090', '카카오뱅크', 'assets/images/logo/kakaobank.png'),
+    _BankInfo('011', '농협은행', 'assets/images/logo/nonghyup_logo.png'),
+    _BankInfo('045', '새마을금고', 'assets/images/logo/mg_logo.png'),
+    _BankInfo('023', 'SC제일은행', 'assets/images/logo/sc_jeil_logo.png'),
+    _BankInfo('027', '시티은행', 'assets/images/logo/citi_logo.png'),
+    _BankInfo('002', '산업은행', 'assets/images/logo/industry_logo.png'),
+    _BankInfo('039', '경남은행', 'assets/images/logo/kyung_nam_logo.png'),
+    _BankInfo('037', '전북은행', 'assets/images/logo/gwangju_logo.jpg'),
+    _BankInfo('032', '대구은행', ''),
+    _BankInfo('034', '광주은행', ''),
+    _BankInfo('035', '제주은행', ''),
+    _BankInfo('001', '한국은행', ''),
+    _BankInfo('999', '싸피은행', ''),
   ];
 
   @override
@@ -62,6 +66,9 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
   bool get _isFormValid =>
       _selectedBank != null && _accountNumberController.text.isNotEmpty && _isAccountVerified;
 
+  String? get _selectedBankCode => _selectedBank?.code;
+  String? get _selectedBankName => _selectedBank?.name;
+
   void _onNext() {
     if (!_isFormValid) return;
 
@@ -72,7 +79,8 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
     context.push(
       route,
       extra: {
-        'bankName': _selectedBank,
+        'bankCode': _selectedBankCode,
+        'bankName': _selectedBankName,
         'accountNumber': _accountNumberController.text,
         'isOnboarding': widget.isOnboarding,
       },
@@ -135,10 +143,10 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
               itemCount: displayBanks.length,
               itemBuilder: (context, index) {
                 final bank = displayBanks[index];
-                final isSelected = _selectedBank == bank.name;
+                final isSelected = _selectedBank?.code == bank.code;
                 return GestureDetector(
                   onTap: () {
-                    setState(() => _selectedBank = bank.name);
+                    setState(() => _selectedBank = bank);
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       _accountFocusNode.requestFocus();
                       _scrollController.animateTo(

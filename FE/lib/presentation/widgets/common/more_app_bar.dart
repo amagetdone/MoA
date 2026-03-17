@@ -7,6 +7,7 @@ import 'package:more_app/core/theme/app_text_styles.dart';
 class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
   final bool showBack;
+  final bool showLogo;
   final bool showNotification;
   final String? skipText;
   final VoidCallback? onSkip;
@@ -18,6 +19,7 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
     super.key,
     this.title,
     this.showBack = true,
+    this.showLogo = false,
     this.showNotification = false,
     this.skipText,
     this.onSkip,
@@ -54,6 +56,7 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
       scrolledUnderElevation: 0,
       centerTitle: true,
       automaticallyImplyLeading: false,
+      leadingWidth: showLogo ? 48.w : null,
       leading: showBack
           ? IconButton(
               icon: Icon(Icons.arrow_back_ios, size: 20.w, color: AppColors.textPrimary),
@@ -63,7 +66,16 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
                 }
               },
             )
-          : null,
+          : showLogo
+              ? Padding(
+                  padding: EdgeInsets.only(left: 16.w),
+                  child: Image.asset(
+                    'assets/images/logo/applogo.png',
+                    width: 24.w,
+                    height: 24.w,
+                  ),
+                )
+              : null,
       title: title != null
           ? Text(title!, style: AppTextStyles.headingMd)
           : null,

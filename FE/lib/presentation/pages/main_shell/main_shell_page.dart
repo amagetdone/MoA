@@ -70,8 +70,7 @@ class MainShellPage extends StatelessWidget {
                 ),
               ],
             ),
-            // 제스처 내비(스와이프): ~34dp / 버튼 내비·웹: 최소 8h 보장
-            SizedBox(height: math.max(bottomInset, 8.h)),
+            SizedBox(height: bottomInset > 0 ? 0 : 8.h),
           ],
         ),
       ),
