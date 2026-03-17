@@ -5,21 +5,6 @@ public final class AccountVerificationDto {
 	private AccountVerificationDto() {
 	}
 
-	public record CheckVerificationRequest(
-		String accountNo,
-		String authCode
-	) {
-	}
-
-	public record CheckVerificationResponse(
-		Long verificationId,
-		String accountNo,
-		String status,
-		boolean verified,
-		String verifiedAt
-	) {
-	}
-
 	public record RequestVerificationRequest(
 		String accountNo
 	) {
@@ -32,6 +17,35 @@ public final class AccountVerificationDto {
 		Long transactionUniqueNo,
 		String requestedAt,
 		String status
+	) {
+	}
+
+	public record CheckVerificationRequest(
+		String accountNo,
+		String authCode
+	) {
+	}
+
+	public record CheckVerificationResponse(
+		Long verificationId,
+		String accountNo,
+		String status,
+		boolean verified,
+		Long transactionUniqueNo,
+		String verifiedAt
+	) {
+	}
+
+	public record VerificationStatusResponse(
+		Long verificationId,
+		String accountNo,
+		String status,
+		boolean verified,
+		String authText,
+		Long requestTransactionUniqueNo,
+		String requestedAt,
+		String verifiedAt,
+		String failureReason
 	) {
 	}
 }

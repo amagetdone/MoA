@@ -1,6 +1,6 @@
 package com.ssafy.amagetdone.domain.accountverification.application.usecase;
 
-import com.ssafy.amagetdone.domain.accountverification.api.dto.AccountVerificationAdminDto;
+import com.ssafy.amagetdone.domain.accountverification.api.dto.AccountVerificationDto;
 import com.ssafy.amagetdone.domain.accountverification.exception.AccountVerificationErrorCode;
 import com.ssafy.amagetdone.domain.accountverification.exception.AccountVerificationException;
 import com.ssafy.amagetdone.domain.accountverification.model.entity.AccountVerification;
@@ -17,14 +17,13 @@ public class GetAccountVerificationStatusUseCase {
 		this.accountVerificationRepository = accountVerificationRepository;
 	}
 
-	public AccountVerificationAdminDto.VerificationStatusResponse execute(Integer userId, String accountNo) {
+	public AccountVerificationDto.VerificationStatusResponse execute(Integer userId, String accountNo) {
 		AccountVerification verification = accountVerificationRepository
 			.findTopByAccount_User_IdAndAccount_AccountNoOrderByCreatedAtDesc(userId, accountNo)
 			.orElseThrow(() -> new AccountVerificationException(AccountVerificationErrorCode.VERIFICATION_REQUEST_NOT_FOUND));
 
-		return new AccountVerificationAdminDto.VerificationStatusResponse(
+		return new AccountVerificationDto.VerificationStatusResponse(
 			verification.getId(),
-			verification.getAccount().getUser().getId(),
 			verification.getAccount().getAccountNo(),
 			verification.getStatus().name(),
 			verification.getAccount().isVerified(),

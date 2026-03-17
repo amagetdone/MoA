@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.ssafy.amagetdone.domain.account.api.dto.AccountAdminDto;
 import com.ssafy.amagetdone.domain.account.api.dto.AccountDto;
+import com.ssafy.amagetdone.domain.account.application.usecase.FindUserAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.RegisterAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.CreateDemandDepositAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.DepositAccountUseCase;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class AccountService {
 
+	private final FindUserAccountUseCase findUserAccountUseCase;
 	private final RegisterAccountUseCase registerAccountUseCase;
 	private final RegisterDemandDepositProductUseCase registerDemandDepositProductUseCase;
 	private final ListDemandDepositProductsUseCase listDemandDepositProductsUseCase;
@@ -36,6 +38,7 @@ public class AccountService {
 	private final ListAccountTransactionsUseCase listAccountTransactionsUseCase;
 
 	public AccountService(
+		FindUserAccountUseCase findUserAccountUseCase,
 		RegisterAccountUseCase registerAccountUseCase,
 		RegisterDemandDepositProductUseCase registerDemandDepositProductUseCase,
 		ListDemandDepositProductsUseCase listDemandDepositProductsUseCase,
@@ -47,6 +50,7 @@ public class AccountService {
 		TransferAccountUseCase transferAccountUseCase,
 		ListAccountTransactionsUseCase listAccountTransactionsUseCase
 	) {
+		this.findUserAccountUseCase = findUserAccountUseCase;
 		this.registerAccountUseCase = registerAccountUseCase;
 		this.registerDemandDepositProductUseCase = registerDemandDepositProductUseCase;
 		this.listDemandDepositProductsUseCase = listDemandDepositProductsUseCase;
@@ -78,6 +82,18 @@ public class AccountService {
 	public List<AccountDto.AccountSummaryResponse> syncAccounts(Integer userId) {
 		List<Account> accounts = syncAccountsUseCase.execute(userId);
 		return listAccountsUseCase.toResponses(accounts);
+	}
+
+	public AccountDto.AccountSummaryResponse getAccount(Integer userId, String accountNo) {
+		Account account = findUserAccountUseCase.execute(userId, accountNo);
+		return new AccountDto.AccountSummaryResponse(
+			account.getAccountNo(),
+			account.getBankCode(),
+			account.getBankName(),
+			account.getAccountName(),
+			account.getAlias(),
+			account.isVerified()
+		);
 	}
 
 	public List<AccountDto.AccountSummaryResponse> getAccounts(Integer userId) {

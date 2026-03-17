@@ -56,6 +56,17 @@ public class AccountController {
 		return ApiResponse.ok("내 계좌 목록을 동기화했습니다.", accountService.syncAccounts(userId));
 	}
 
+	@Operation(summary = "단일 계좌 조회")
+	@GetMapping("/{accountNo}")
+	public ApiResponse<AccountDto.AccountSummaryResponse> getAccount(
+		@Parameter(hidden = true)
+		@RequestHeader(name = "Authorization", required = false) String authorization,
+		@PathVariable String accountNo
+	) {
+		int userId = jwtAccessTokenReader.readUserId(authorization);
+		return ApiResponse.ok("계좌를 조회했습니다.", accountService.getAccount(userId, accountNo));
+	}
+
 	@Operation(summary = "내 계좌 목록 조회")
 	@GetMapping("/me")
 	public ApiResponse<List<AccountDto.AccountSummaryResponse>> getAccounts(

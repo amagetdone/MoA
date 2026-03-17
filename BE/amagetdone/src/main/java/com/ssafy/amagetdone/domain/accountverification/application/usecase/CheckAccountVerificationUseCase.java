@@ -3,7 +3,7 @@ package com.ssafy.amagetdone.domain.accountverification.application.usecase;
 import java.time.LocalDateTime;
 
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
-import com.ssafy.amagetdone.domain.accountverification.api.dto.AccountVerificationAdminDto;
+import com.ssafy.amagetdone.domain.accountverification.api.dto.AccountVerificationDto;
 import com.ssafy.amagetdone.domain.accountverification.exception.AccountVerificationErrorCode;
 import com.ssafy.amagetdone.domain.accountverification.exception.AccountVerificationException;
 import com.ssafy.amagetdone.domain.accountverification.infra.client.SsafyAccountVerificationApiClient;
@@ -29,11 +29,12 @@ public class CheckAccountVerificationUseCase {
 	}
 
 	@Transactional
-	public AccountVerificationAdminDto.CheckVerificationResponse execute(
-		AccountVerificationAdminDto.CheckVerificationRequest request
+	public AccountVerificationDto.CheckVerificationResponse execute(
+		Integer userId,
+		AccountVerificationDto.CheckVerificationRequest request
 	) {
 		AccountVerification verification = accountVerificationRepository
-			.findTopByAccount_User_IdAndAccount_AccountNoOrderByCreatedAtDesc(request.userId(), request.accountNo())
+			.findTopByAccount_User_IdAndAccount_AccountNoOrderByCreatedAtDesc(userId, request.accountNo())
 			.orElseThrow(() -> new AccountVerificationException(AccountVerificationErrorCode.VERIFICATION_REQUEST_NOT_FOUND));
 		Account account = verification.getAccount();
 
@@ -50,7 +51,7 @@ public class CheckAccountVerificationUseCase {
 			verification.markSuccess(LocalDateTime.now());
 			account.markVerified();
 			accountVerificationRepository.save(verification);
-			return new AccountVerificationAdminDto.CheckVerificationResponse(
+			return new AccountVerificationDto.CheckVerificationResponse(
 				verification.getId(),
 				response.accountNo(),
 				response.status(),
