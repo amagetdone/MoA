@@ -96,6 +96,12 @@ public class User extends BaseEntity {
 		this.userKey = userKey;
 	}
 
+	public void applyTestSocialProfile(String nickname, String email, String userKey) {
+		this.nickname = nickname;
+		this.email = email;
+		this.userKey = userKey;
+	}
+
 	public void updateProfileUrl(String profileUrl) {
 		this.profileUrl = profileUrl;
 	}
