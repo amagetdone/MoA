@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 @Tag(name = "Plan Image API")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/v1/plans")
 public class PlanImageController {
@@ -34,6 +36,7 @@ public class PlanImageController {
 		summary = "목표 이미지 업로드",
 		description = "로그인한 사용자의 특정 목표 이미지를 업로드하고 기존 이미지가 있으면 교체합니다."
 	)
+	@SecurityRequirement(name = "bearerAuth")
 	@PatchMapping(value = "/{planId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ApiResponse<String> uploadPlanImage(
 		@AuthenticationPrincipal AuthenticatedMember authenticatedMember,
