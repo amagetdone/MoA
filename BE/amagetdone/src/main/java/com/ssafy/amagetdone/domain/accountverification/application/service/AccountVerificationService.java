@@ -1,6 +1,5 @@
 package com.ssafy.amagetdone.domain.accountverification.application.service;
 
-import com.ssafy.amagetdone.domain.accountverification.api.dto.AccountVerificationAdminDto;
 import com.ssafy.amagetdone.domain.accountverification.api.dto.AccountVerificationDto;
 import com.ssafy.amagetdone.domain.accountverification.application.usecase.CheckAccountVerificationUseCase;
 import com.ssafy.amagetdone.domain.accountverification.application.usecase.GetAccountVerificationStatusUseCase;
@@ -32,29 +31,14 @@ public class AccountVerificationService {
 		return requestAccountVerificationUseCase.execute(userId, request);
 	}
 
-	public AccountVerificationAdminDto.CheckVerificationResponse checkVerification(
-		AccountVerificationAdminDto.CheckVerificationRequest request
-	) {
-		return checkAccountVerificationUseCase.execute(request);
-	}
-
-	public AccountVerificationDto.CheckVerificationResponse checkVerificationByUser(
+	public AccountVerificationDto.CheckVerificationResponse checkVerification(
 		Integer userId,
 		AccountVerificationDto.CheckVerificationRequest request
 	) {
-		AccountVerificationAdminDto.CheckVerificationResponse result = checkAccountVerificationUseCase.execute(
-			new AccountVerificationAdminDto.CheckVerificationRequest(userId, request.accountNo(), request.authCode())
-		);
-		return new AccountVerificationDto.CheckVerificationResponse(
-			result.verificationId(),
-			result.accountNo(),
-			result.status(),
-			result.verified(),
-			result.verifiedAt()
-		);
+		return checkAccountVerificationUseCase.execute(userId, request);
 	}
 
-	public AccountVerificationAdminDto.VerificationStatusResponse getVerificationStatus(Integer userId, String accountNo) {
+	public AccountVerificationDto.VerificationStatusResponse getVerificationStatus(Integer userId, String accountNo) {
 		return getAccountVerificationStatusUseCase.execute(userId, accountNo);
 	}
 }

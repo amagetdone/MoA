@@ -10,13 +10,15 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "계좌 인증 사용자 API")
+@Tag(name = "계좌 인증 API")
 @RestController
 @RequestMapping("/v1/accounts/verification")
 @SecurityRequirement(name = "bearerAuth")
@@ -57,7 +59,21 @@ public class AccountVerificationController {
 		int userId = jwtAccessTokenReader.readUserId(authorization);
 		return ApiResponse.ok(
 			"1원 인증을 완료했습니다.",
-			accountVerificationService.checkVerificationByUser(userId, request)
+			accountVerificationService.checkVerification(userId, request)
+		);
+	}
+
+	@Operation(summary = "1원 인증 상태 조회")
+	@GetMapping("/{accountNo}")
+	public ApiResponse<AccountVerificationDto.VerificationStatusResponse> getVerificationStatus(
+		@Parameter(hidden = true)
+		@RequestHeader(name = "Authorization", required = false) String authorization,
+		@PathVariable String accountNo
+	) {
+		int userId = jwtAccessTokenReader.readUserId(authorization);
+		return ApiResponse.ok(
+			"1원 인증 상태를 조회했습니다.",
+			accountVerificationService.getVerificationStatus(userId, accountNo)
 		);
 	}
 }

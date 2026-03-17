@@ -1,6 +1,7 @@
 package com.ssafy.amagetdone.domain.accountverification.application.usecase;
 
-import com.ssafy.amagetdone.domain.accountverification.api.dto.AccountVerificationAdminDto;
+import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
+import com.ssafy.amagetdone.domain.accountverification.api.dto.AccountVerificationDto;
 import com.ssafy.amagetdone.domain.accountverification.exception.AccountVerificationErrorCode;
 import com.ssafy.amagetdone.domain.accountverification.exception.AccountVerificationException;
 import com.ssafy.amagetdone.domain.accountverification.model.entity.AccountVerification;
@@ -12,22 +13,30 @@ import org.springframework.stereotype.Component;
 public class GetAccountVerificationStatusUseCase {
 
 	private final AccountVerificationRepository accountVerificationRepository;
+	private final AccountRepository accountRepository;
 
-	public GetAccountVerificationStatusUseCase(AccountVerificationRepository accountVerificationRepository) {
+	public GetAccountVerificationStatusUseCase(
+		AccountVerificationRepository accountVerificationRepository,
+		AccountRepository accountRepository
+	) {
 		this.accountVerificationRepository = accountVerificationRepository;
+		this.accountRepository = accountRepository;
 	}
 
-	public AccountVerificationAdminDto.VerificationStatusResponse execute(Integer userId, String accountNo) {
+	public AccountVerificationDto.VerificationStatusResponse execute(Integer userId, String accountNo) {
 		AccountVerification verification = accountVerificationRepository
-			.findTopByAccount_User_IdAndAccount_AccountNoOrderByCreatedAtDesc(userId, accountNo)
+			.findTopByUser_IdAndAccountNoOrderByCreatedAtDesc(userId, accountNo)
 			.orElseThrow(() -> new AccountVerificationException(AccountVerificationErrorCode.VERIFICATION_REQUEST_NOT_FOUND));
 
-		return new AccountVerificationAdminDto.VerificationStatusResponse(
+		boolean verified = accountRepository.findByUserIdAndAccountNo(userId, accountNo)
+			.map(account -> account.isVerified())
+			.orElse(false);
+
+		return new AccountVerificationDto.VerificationStatusResponse(
 			verification.getId(),
-			verification.getAccount().getUser().getId(),
-			verification.getAccount().getAccountNo(),
+			verification.getAccountNo(),
 			verification.getStatus().name(),
-			verification.getAccount().isVerified(),
+			verified,
 			verification.getAuthText(),
 			verification.getRequestTransactionUniqueNo(),
 			verification.getRequestedAt().toString(),

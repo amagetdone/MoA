@@ -4,7 +4,8 @@ import java.util.List;
 
 import com.ssafy.amagetdone.domain.account.api.dto.AccountAdminDto;
 import com.ssafy.amagetdone.domain.account.api.dto.AccountDto;
-import com.ssafy.amagetdone.domain.account.application.usecase.RegisterAccountUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.FindAccountUserUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.FindUserAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.CreateDemandDepositAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.DepositAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.InquireAccountBalanceUseCase;
@@ -14,8 +15,11 @@ import com.ssafy.amagetdone.domain.account.application.usecase.ListDemandDeposit
 import com.ssafy.amagetdone.domain.account.application.usecase.RegisterDemandDepositProductUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.SyncAccountsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.TransferAccountUseCase;
+import com.ssafy.amagetdone.domain.account.infra.client.SsafyDemandDepositAccountApiClient;
+import com.ssafy.amagetdone.domain.account.infra.client.dto.DemandDepositAccountDto;
 import com.ssafy.amagetdone.domain.account.infra.client.dto.DemandDepositBalanceDto;
 import com.ssafy.amagetdone.domain.account.infra.client.dto.DemandDepositTransferDto;
+import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
 import com.ssafy.amagetdone.domain.transaction.infra.client.dto.DemandDepositTransactionDto;
 
@@ -24,7 +28,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class AccountService {
 
-	private final RegisterAccountUseCase registerAccountUseCase;
+	private final FindAccountUserUseCase findAccountUserUseCase;
+	private final FindUserAccountUseCase findUserAccountUseCase;
+	private final SsafyDemandDepositAccountApiClient ssafyDemandDepositAccountApiClient;
 	private final RegisterDemandDepositProductUseCase registerDemandDepositProductUseCase;
 	private final ListDemandDepositProductsUseCase listDemandDepositProductsUseCase;
 	private final CreateDemandDepositAccountUseCase createDemandDepositAccountUseCase;
@@ -36,7 +42,9 @@ public class AccountService {
 	private final ListAccountTransactionsUseCase listAccountTransactionsUseCase;
 
 	public AccountService(
-		RegisterAccountUseCase registerAccountUseCase,
+		FindAccountUserUseCase findAccountUserUseCase,
+		FindUserAccountUseCase findUserAccountUseCase,
+		SsafyDemandDepositAccountApiClient ssafyDemandDepositAccountApiClient,
 		RegisterDemandDepositProductUseCase registerDemandDepositProductUseCase,
 		ListDemandDepositProductsUseCase listDemandDepositProductsUseCase,
 		CreateDemandDepositAccountUseCase createDemandDepositAccountUseCase,
@@ -47,7 +55,9 @@ public class AccountService {
 		TransferAccountUseCase transferAccountUseCase,
 		ListAccountTransactionsUseCase listAccountTransactionsUseCase
 	) {
-		this.registerAccountUseCase = registerAccountUseCase;
+		this.findAccountUserUseCase = findAccountUserUseCase;
+		this.findUserAccountUseCase = findUserAccountUseCase;
+		this.ssafyDemandDepositAccountApiClient = ssafyDemandDepositAccountApiClient;
 		this.registerDemandDepositProductUseCase = registerDemandDepositProductUseCase;
 		this.listDemandDepositProductsUseCase = listDemandDepositProductsUseCase;
 		this.createDemandDepositAccountUseCase = createDemandDepositAccountUseCase;
@@ -59,8 +69,22 @@ public class AccountService {
 		this.listAccountTransactionsUseCase = listAccountTransactionsUseCase;
 	}
 
-	public AccountDto.AccountSummaryResponse registerAccount(Integer userId, AccountDto.RegisterAccountRequest request) {
-		return registerAccountUseCase.execute(userId, request);
+	public List<AccountDto.BankAccountResponse> getBankAccounts(Integer userId) {
+		User user = findAccountUserUseCase.execute(userId);
+		DemandDepositAccountDto.AccountListResponse response = ssafyDemandDepositAccountApiClient.inquireAccounts(
+			new DemandDepositAccountDto.AccountListRequest(user.getUserKey())
+		);
+		return response.accounts().stream()
+			.map(item -> new AccountDto.BankAccountResponse(
+				item.bankCode(),
+				item.bankName(),
+				item.accountNo(),
+				item.accountName(),
+				item.accountTypeName(),
+				item.accountBalance(),
+				item.currency()
+			))
+			.toList();
 	}
 
 	public AccountAdminDto.ProductResponse registerProduct(AccountAdminDto.ProductCreateRequest request) {
@@ -78,6 +102,18 @@ public class AccountService {
 	public List<AccountDto.AccountSummaryResponse> syncAccounts(Integer userId) {
 		List<Account> accounts = syncAccountsUseCase.execute(userId);
 		return listAccountsUseCase.toResponses(accounts);
+	}
+
+	public AccountDto.AccountSummaryResponse getAccount(Integer userId, String accountNo) {
+		Account account = findUserAccountUseCase.execute(userId, accountNo);
+		return new AccountDto.AccountSummaryResponse(
+			account.getAccountNo(),
+			account.getBankCode(),
+			account.getBankName(),
+			account.getAccountName(),
+			account.getAlias(),
+			account.isVerified()
+		);
 	}
 
 	public List<AccountDto.AccountSummaryResponse> getAccounts(Integer userId) {
