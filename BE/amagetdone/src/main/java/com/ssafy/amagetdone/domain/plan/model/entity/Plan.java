@@ -87,11 +87,13 @@ public class Plan extends BaseEntity {
 	private String videoUrl;
 
 	@ColumnDefault("'PENDING'")
+	@Builder.Default
 	@Enumerated(EnumType.STRING)
 	@Column(name = "ai_pipeline_status", nullable = false, length = 30)
 	private PlanAiPipelineStatus aiPipelineStatus = PlanAiPipelineStatus.PENDING;
 
 	@ColumnDefault("0")
+	@Builder.Default
 	@Column(name = "ai_retry_count", nullable = false)
 	private Integer aiRetryCount = 0;
 
