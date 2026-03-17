@@ -53,10 +53,15 @@ public class TransactionSyncService {
 	private final TransactionDateRangeFactory dateRangeFactory;
 
 	public SyncResult syncLatest(Integer userId, int months, boolean forceFullSync) {
-		int insertedAccountCount = accountRepository.findAllByUser_Id(userId).stream()
+		List<Account> linkedAccounts = accountRepository.findAllLinkedAccountsByUserId(userId).stream()
+			.filter(Account::isActive)
+			.toList();
+		int insertedAccountCount = linkedAccounts.stream()
 			.mapToInt(account -> syncAccount(account, months, forceFullSync))
 			.sum();
-		int insertedCardCount = cardRepository.findAllByWithdrawalAccount_User_Id(userId).stream()
+		int insertedCardCount = cardRepository
+			.findAllByWithdrawalAccount_User_IdAndWithdrawalAccount_VerifiedTrueAndWithdrawalAccount_ActiveTrue(userId)
+			.stream()
 			.mapToInt(card -> syncCard(card, months, forceFullSync))
 			.sum();
 		return new SyncResult(insertedAccountCount, insertedCardCount);

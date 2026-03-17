@@ -91,7 +91,7 @@ class MemberAuthServiceTest {
 		given(kakaoSocialAuthClient.fetchIdentity(request)).willReturn(identity);
 		given(findOrCreateSocialUserUseCase.execute(identity)).willReturn(new FindOrCreateSocialUserUseCase.Result(user, socialAccount, true));
 		given(issueMemberTokensUseCase.execute(user, SocialProvider.KAKAO)).willReturn(tokenPair);
-		given(accountRepository.existsByUserId(1)).willReturn(false);
+		given(accountRepository.existsLinkedAccountByUserId(1)).willReturn(false);
 		given(planRepository.existsByUserId(1)).willReturn(false);
 
 		SocialAuthDto.Response response = memberAuthService.authenticate(SocialProvider.KAKAO, request);
@@ -131,7 +131,7 @@ class MemberAuthServiceTest {
 		given(googleSocialAuthClient.fetchIdentity(request)).willReturn(identity);
 		given(findOrCreateSocialUserUseCase.execute(identity)).willReturn(new FindOrCreateSocialUserUseCase.Result(user, socialAccount, false));
 		given(issueMemberTokensUseCase.execute(user, SocialProvider.GOOGLE)).willReturn(tokenPair);
-		given(accountRepository.existsByUserId(2)).willReturn(false);
+		given(accountRepository.existsLinkedAccountByUserId(2)).willReturn(false);
 		given(planRepository.existsByUserId(2)).willReturn(true);
 
 		SocialAuthDto.Response response = memberAuthService.authenticate(SocialProvider.GOOGLE, request);
@@ -179,7 +179,7 @@ class MemberAuthServiceTest {
 			.willReturn(new FindOrCreateSocialUserUseCase.Result(user, socialAccount, true));
 		given(ensureFinMemberLinkedUseCase.execute(10, "test@test.com")).willReturn("ssafy-user-key");
 		given(issueMemberTokensUseCase.execute(user, SocialProvider.TEST)).willReturn(tokenPair);
-		given(accountRepository.existsByUserId(10)).willReturn(false);
+		given(accountRepository.existsLinkedAccountByUserId(10)).willReturn(false);
 		given(planRepository.existsByUserId(10)).willReturn(false);
 
 		SocialAuthDto.Response response = memberAuthService.authenticateTest();

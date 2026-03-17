@@ -83,7 +83,7 @@ public class MemberAuthService {
 			User user = result.user();
 			linkTestFinancialMemberIfNeeded(provider, user);
 			MemberTokenPair tokenPair = issueMemberTokensUseCase.execute(user, provider);
-			boolean hasAccount = accountRepository.existsByUserId(user.getId());
+			boolean hasAccount = accountRepository.existsLinkedAccountByUserId(user.getId());
 			boolean hasPlan = planRepository.existsByUserId(user.getId());
 
 			log.info(

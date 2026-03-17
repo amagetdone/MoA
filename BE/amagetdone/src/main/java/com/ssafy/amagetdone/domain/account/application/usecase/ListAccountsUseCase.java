@@ -18,7 +18,7 @@ public class ListAccountsUseCase {
 	}
 
 	public List<Account> execute(Integer userId) {
-		return accountRepository.findAllByUserId(userId);
+		return accountRepository.findAllLinkedAccountsByUserId(userId);
 	}
 
 	public List<AccountDto.AccountSummaryResponse> toResponses(List<Account> accounts) {

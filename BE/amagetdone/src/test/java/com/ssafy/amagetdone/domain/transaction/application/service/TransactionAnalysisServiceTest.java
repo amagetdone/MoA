@@ -242,7 +242,7 @@ class TransactionAnalysisServiceTest {
 		given(transactionAnalysisJobRepository.findById("job-1")).willReturn(Optional.of(job));
 		given(transactionAnalysisJobRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
 		given(transactionSyncService.syncLatest(1, 3, false)).willReturn(new TransactionSyncService.SyncResult(0, 0));
-		given(accountRepository.findAllByUser_Id(1)).willReturn(List.of(mainAccount, internalTargetAccount));
+		given(accountRepository.findAllLinkedAccountsByUserId(1)).willReturn(List.of(mainAccount, internalTargetAccount));
 		given(accountTransactionOverrideRepository.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(
 			any(),
 			any(),

@@ -81,30 +81,30 @@ public class CheckAccountVerificationUseCase {
 
 	// Fetches account details from Ssafy API and saves to local DB as verified.
 	private Account registerVerifiedAccount(User user, String accountNo) {
+		DemandDepositAccountDto.AccountDetailResponse matched = ssafyDemandDepositAccountApiClient.inquireAccount(
+			new DemandDepositAccountDto.AccountDetailRequest(user.getUserKey(), accountNo)
+		);
 		Account account = accountRepository.findByUserIdAndAccountNo(user.getId(), accountNo)
-			.orElseGet(() -> {
-				DemandDepositAccountDto.AccountListResponse accountList =
-					ssafyDemandDepositAccountApiClient.inquireAccounts(
-						new DemandDepositAccountDto.AccountListRequest(user.getUserKey())
-					);
-				DemandDepositAccountDto.AccountItem matched = accountList.accounts().stream()
-					.filter(item -> item.accountNo().equals(accountNo))
-					.findFirst()
-					.orElseThrow(() -> new AccountVerificationException(
-						AccountVerificationErrorCode.VERIFICATION_REQUEST_NOT_FOUND));
-
-				return Account.create(
-					user,
-					matched.accountNo(),
-					null,
-					matched.accountName(),
-					matched.accountTypeName(),
-					matched.bankCode(),
-					matched.bankName(),
-					matched.currency()
-				);
-			});
+			.orElseGet(() -> Account.create(
+				user,
+				matched.accountNo(),
+				null,
+				matched.accountName(),
+				matched.accountTypeName(),
+				matched.bankCode(),
+				matched.bankName(),
+				matched.currency()
+			));
+		account.sync(
+			null,
+			matched.accountName(),
+			matched.accountTypeName(),
+			matched.bankCode(),
+			matched.bankName(),
+			matched.currency()
+		);
 		account.markVerified();
+		account.markActive();
 		return accountRepository.save(account);
 	}
 }
