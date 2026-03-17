@@ -9,9 +9,10 @@ import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 
 class BankInfo {
+  final String code;
   final String name;
   final String logoPath;
-  BankInfo(this.name, this.logoPath);
+  BankInfo(this.code, this.name, this.logoPath);
 }
 
 class AccountAddPage extends ConsumerStatefulWidget {
@@ -24,28 +25,31 @@ class AccountAddPage extends ConsumerStatefulWidget {
 }
 
 class _AccountAddPageState extends ConsumerState<AccountAddPage> {
-  String? selectedBank;
+  BankInfo? selectedBank;
   bool isExpanded = false;
   final TextEditingController _accountController = TextEditingController();
   final FocusNode _accountFocusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
 
   final List<BankInfo> allBanks = [
-    BankInfo('국민은행', 'assets/images/logo/KB_logo.png'),
-    BankInfo('신한은행', 'assets/images/logo/shinhan_logo.png'),
-    BankInfo('우리은행', 'assets/images/logo/woori_logo.png'),
-    BankInfo('하나은행', 'assets/images/logo/KEB_hana_logo.png'),
-    BankInfo('기업은행', 'assets/images/logo/ibk_logo.png'),
-    BankInfo('iM뱅크', 'assets/images/logo/iM_logo.png'),
-    BankInfo('카카오뱅크', 'assets/images/logo/kakaobank.png'),
-    BankInfo('농협은행', 'assets/images/logo/nonghyup_logo.png'),
-    BankInfo('새마을금고', 'assets/images/logo/mg_logo.png'),
-    BankInfo('SC제일은행', 'assets/images/logo/sc_jeil_logo.png'),
-    BankInfo('씨티은행', 'assets/images/logo/citi_logo.png'),
-    BankInfo('KDB산업은행', 'assets/images/logo/industry_logo.png'),
-    BankInfo('경남은행', 'assets/images/logo/kyung_nam_logo.png'),
-    BankInfo('전북은행', 'assets/images/logo/gwangju_logo.jpg'),
-    BankInfo('제주은행', 'assets/images/logo/shinhan_logo.png'),
+    BankInfo('004', '국민은행', 'assets/images/logo/KB_logo.png'),
+    BankInfo('088', '신한은행', 'assets/images/logo/shinhan_logo.png'),
+    BankInfo('020', '우리은행', 'assets/images/logo/woori_logo.png'),
+    BankInfo('081', 'KEB하나은행', 'assets/images/logo/KEB_hana_logo.png'),
+    BankInfo('003', '기업은행', 'assets/images/logo/ibk_logo.png'),
+    BankInfo('090', '카카오뱅크', 'assets/images/logo/kakaobank.png'),
+    BankInfo('011', '농협은행', 'assets/images/logo/nonghyup_logo.png'),
+    BankInfo('045', '새마을금고', 'assets/images/logo/mg_logo.png'),
+    BankInfo('023', 'SC제일은행', 'assets/images/logo/sc_jeil_logo.png'),
+    BankInfo('027', '시티은행', 'assets/images/logo/citi_logo.png'),
+    BankInfo('002', '산업은행', 'assets/images/logo/industry_logo.png'),
+    BankInfo('039', '경남은행', 'assets/images/logo/kyung_nam_logo.png'),
+    BankInfo('037', '전북은행', 'assets/images/logo/gwangju_logo.jpg'),
+    BankInfo('032', '대구은행', ''),
+    BankInfo('034', '광주은행', ''),
+    BankInfo('035', '제주은행', ''),
+    BankInfo('001', '한국은행', ''),
+    BankInfo('999', '싸피은행', ''),
   ];
 
   @override
@@ -82,10 +86,10 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                     itemCount: displayBanks.length,
                     itemBuilder: (context, index) {
                       final bank = displayBanks[index];
-                      final isSelected = selectedBank == bank.name;
+                      final isSelected = selectedBank?.code == bank.code;
                       return GestureDetector(
                         onTap: () {
-                          setState(() => selectedBank = bank.name);
+                          setState(() => selectedBank = bank);
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             _accountFocusNode.requestFocus();
                             _scrollController.animateTo(
@@ -200,7 +204,8 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                     ? AppRoutes.onboardingAccountVerify
                     : AppRoutes.accountVerify;
                 context.push(route, extra: {
-                  'bankName': selectedBank,
+                  'bankCode': selectedBank!.code,
+                  'bankName': selectedBank!.name,
                   'accountNumber': _accountController.text,
                   'isOnboarding': widget.isOnboarding,
                 });
