@@ -46,4 +46,18 @@ public class AccountVerificationController {
 			accountVerificationService.requestVerification(userId, request)
 		);
 	}
+
+	@Operation(summary = "1원 인증 코드 확인")
+	@PostMapping("/check")
+	public ApiResponse<AccountVerificationDto.CheckVerificationResponse> checkVerification(
+		@Parameter(hidden = true)
+		@RequestHeader(name = "Authorization", required = false) String authorization,
+		@RequestBody AccountVerificationDto.CheckVerificationRequest request
+	) {
+		int userId = jwtAccessTokenReader.readUserId(authorization);
+		return ApiResponse.ok(
+			"1원 인증을 완료했습니다.",
+			accountVerificationService.checkVerificationByUser(userId, request)
+		);
+	}
 }

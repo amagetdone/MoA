@@ -38,6 +38,22 @@ public class AccountVerificationService {
 		return checkAccountVerificationUseCase.execute(request);
 	}
 
+	public AccountVerificationDto.CheckVerificationResponse checkVerificationByUser(
+		Integer userId,
+		AccountVerificationDto.CheckVerificationRequest request
+	) {
+		AccountVerificationAdminDto.CheckVerificationResponse result = checkAccountVerificationUseCase.execute(
+			new AccountVerificationAdminDto.CheckVerificationRequest(userId, request.accountNo(), request.authCode())
+		);
+		return new AccountVerificationDto.CheckVerificationResponse(
+			result.verificationId(),
+			result.accountNo(),
+			result.status(),
+			result.verified(),
+			result.verifiedAt()
+		);
+	}
+
 	public AccountVerificationAdminDto.VerificationStatusResponse getVerificationStatus(Integer userId, String accountNo) {
 		return getAccountVerificationStatusUseCase.execute(userId, accountNo);
 	}

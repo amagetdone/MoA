@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.ssafy.amagetdone.domain.account.api.dto.AccountAdminDto;
 import com.ssafy.amagetdone.domain.account.api.dto.AccountDto;
+import com.ssafy.amagetdone.domain.account.application.usecase.RegisterAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.CreateDemandDepositAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.DepositAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.InquireAccountBalanceUseCase;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class AccountService {
 
+	private final RegisterAccountUseCase registerAccountUseCase;
 	private final RegisterDemandDepositProductUseCase registerDemandDepositProductUseCase;
 	private final ListDemandDepositProductsUseCase listDemandDepositProductsUseCase;
 	private final CreateDemandDepositAccountUseCase createDemandDepositAccountUseCase;
@@ -34,6 +36,7 @@ public class AccountService {
 	private final ListAccountTransactionsUseCase listAccountTransactionsUseCase;
 
 	public AccountService(
+		RegisterAccountUseCase registerAccountUseCase,
 		RegisterDemandDepositProductUseCase registerDemandDepositProductUseCase,
 		ListDemandDepositProductsUseCase listDemandDepositProductsUseCase,
 		CreateDemandDepositAccountUseCase createDemandDepositAccountUseCase,
@@ -44,6 +47,7 @@ public class AccountService {
 		TransferAccountUseCase transferAccountUseCase,
 		ListAccountTransactionsUseCase listAccountTransactionsUseCase
 	) {
+		this.registerAccountUseCase = registerAccountUseCase;
 		this.registerDemandDepositProductUseCase = registerDemandDepositProductUseCase;
 		this.listDemandDepositProductsUseCase = listDemandDepositProductsUseCase;
 		this.createDemandDepositAccountUseCase = createDemandDepositAccountUseCase;
@@ -53,6 +57,10 @@ public class AccountService {
 		this.depositAccountUseCase = depositAccountUseCase;
 		this.transferAccountUseCase = transferAccountUseCase;
 		this.listAccountTransactionsUseCase = listAccountTransactionsUseCase;
+	}
+
+	public AccountDto.AccountSummaryResponse registerAccount(Integer userId, AccountDto.RegisterAccountRequest request) {
+		return registerAccountUseCase.execute(userId, request);
 	}
 
 	public AccountAdminDto.ProductResponse registerProduct(AccountAdminDto.ProductCreateRequest request) {
