@@ -9,7 +9,7 @@ from app.schemas import (
     MerchantInferenceResponse,
 )
 
-router = APIRouter(prefix="/v1/inference", tags=["inference"])
+router = APIRouter(prefix="/v1", tags=["inference"])
 
 
 @router.post("/merchant", response_model=MerchantInferenceResponse)
