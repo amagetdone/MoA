@@ -14,14 +14,16 @@ public class SwaggerConfig {
 	@Bean
 	public OpenAPI moreOpenApi() {
 		return new OpenAPI()
-			.components(new Components()
-				.addSecuritySchemes("bearerAuth", new SecurityScheme()
+			.components(new Components().addSecuritySchemes(
+				"bearerAuth",
+				new SecurityScheme()
 					.type(SecurityScheme.Type.HTTP)
 					.scheme("bearer")
-					.bearerFormat("JWT")))
+					.bearerFormat("JWT")
+			))
 			.info(new Info()
-				.title("more API")
-				.description("more backend API documentation")
+				.title("\uBAA8\uC544 API")
+				.description("\uBAA8\uC544 \uBC31\uC5D4\uB4DC API \uBB38\uC11C")
 				.version("v1"));
 	}
 }

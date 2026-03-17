@@ -1,11 +1,10 @@
 package com.ssafy.amagetdone.global.config;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-
-import io.github.cdimascio.dotenv.Dotenv;
 
 public final class EnvLoader {
 
@@ -18,17 +17,52 @@ public final class EnvLoader {
 			throw new IllegalStateException(".env file is required at " + baseDirectory.toAbsolutePath().resolve(".env"));
 		}
 
-		Dotenv dotenv = Dotenv.configure()
-			.directory(envDirectory.toString())
-			.filename(".env")
-			.load();
+		loadEntries(envDirectory.resolve(".env"));
+	}
 
-		dotenv.entries().forEach(entry -> {
-			System.setProperty(entry.getKey(), entry.getValue());
-			if ("SPRING_PROFILES_ACTIVE".equals(entry.getKey())) {
-				System.setProperty("spring.profiles.active", entry.getValue());
-			}
-		});
+	private static void loadEntries(Path envFile) {
+		try {
+			Files.readAllLines(envFile).forEach(EnvLoader::applyEntry);
+		} catch (IOException exception) {
+			throw new IllegalStateException(".env file could not be read at " + envFile, exception);
+		}
+	}
+
+	private static void applyEntry(String rawLine) {
+		String line = rawLine.trim();
+		if (line.isEmpty() || line.startsWith("#")) {
+			return;
+		}
+
+		String normalizedLine = line.startsWith("export ") ? line.substring("export ".length()).trim() : line;
+		int separatorIndex = normalizedLine.indexOf('=');
+		if (separatorIndex <= 0) {
+			return;
+		}
+
+		String key = normalizedLine.substring(0, separatorIndex).trim();
+		if (key.isEmpty()) {
+			return;
+		}
+
+		String value = stripMatchingQuotes(normalizedLine.substring(separatorIndex + 1).trim());
+		System.setProperty(key, value);
+		if ("SPRING_PROFILES_ACTIVE".equals(key)) {
+			System.setProperty("spring.profiles.active", value);
+		}
+	}
+
+	private static String stripMatchingQuotes(String value) {
+		if (value.length() < 2) {
+			return value;
+		}
+
+		char first = value.charAt(0);
+		char last = value.charAt(value.length() - 1);
+		if ((first == '"' && last == '"') || (first == '\'' && last == '\'')) {
+			return value.substring(1, value.length() - 1);
+		}
+		return value;
 	}
 
 	private static Path findEnvDirectory(Path directory) {

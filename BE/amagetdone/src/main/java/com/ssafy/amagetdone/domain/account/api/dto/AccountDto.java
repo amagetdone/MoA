@@ -7,6 +7,17 @@ public final class AccountDto {
 	private AccountDto() {
 	}
 
+	public record BankAccountResponse(
+		String bankCode,
+		String bankName,
+		String accountNo,
+		String accountName,
+		String accountTypeName,
+		Long accountBalance,
+		String currency
+	) {
+	}
+
 	public record AccountSummaryResponse(
 		String accountNo,
 		String bankCode,

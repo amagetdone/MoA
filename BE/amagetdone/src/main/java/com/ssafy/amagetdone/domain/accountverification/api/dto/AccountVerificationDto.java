@@ -19,4 +19,21 @@ public final class AccountVerificationDto {
 		String status
 	) {
 	}
+
+	public record CheckVerificationRequest(
+		String accountNo,
+		String authCode
+	) {
+	}
+
+	public record CheckVerificationResponse(
+		Long verificationId,
+		String accountNo,
+		String status,
+		boolean verified,
+		Long transactionUniqueNo,
+		String verifiedAt
+	) {
+	}
+
 }

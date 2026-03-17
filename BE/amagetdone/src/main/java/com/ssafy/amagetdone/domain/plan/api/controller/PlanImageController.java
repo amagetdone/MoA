@@ -11,8 +11,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,10 +20,10 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-@Tag(name = "Plan Image API")
-@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "목표 이미지 API")
 @RestController
 @RequestMapping("/v1/plans")
+@SecurityRequirement(name = "bearerAuth")
 public class PlanImageController {
 
 	private final PlanImageService planImageService;

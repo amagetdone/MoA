@@ -17,6 +17,8 @@ public interface AccountRepository extends JpaRepository<Account, String> {
 	@Query("select a from Account a where a.user.id = :userId order by a.accountNo asc")
 	List<Account> findAllByUserId(@Param("userId") Integer userId);
 
+	List<Account> findAllByUser_Id(Integer userId);
+
 	@Query("select case when count(a) > 0 then true else false end from Account a where a.user.id = :userId")
 	boolean existsByUserId(@Param("userId") Integer userId);
 

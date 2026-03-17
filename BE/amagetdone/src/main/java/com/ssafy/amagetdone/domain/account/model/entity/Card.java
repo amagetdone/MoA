@@ -11,7 +11,18 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@SuperBuilder
 @Entity
 @Table(name = "card")
 public class Card extends BaseEntity {
@@ -53,7 +64,4 @@ public class Card extends BaseEntity {
 
 	@Column(name = "maxBenefitLimit", nullable = false)
 	private Long maxBenefitLimit;
-
-	protected Card() {
-	}
 }

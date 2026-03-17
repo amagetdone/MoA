@@ -13,8 +13,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,10 +22,10 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-@Tag(name = "Member Profile API")
-@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "회원 프로필 API")
 @RestController
 @RequestMapping("/v1/members")
+@SecurityRequirement(name = "bearerAuth")
 public class MemberProfileController {
 
 	private final MemberProfileService memberProfileService;
@@ -46,7 +46,7 @@ public class MemberProfileController {
 		@RequestBody ProfileCompletionDto.Request request
 	) {
 		return ApiResponse.ok(
-			"프로필 입력이 완료되었습니다.",
+			"프로필 입력을 완료했습니다.",
 			memberProfileService.completeProfile(authenticatedMember.userId(), request)
 		);
 	}

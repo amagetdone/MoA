@@ -5,20 +5,19 @@ import com.ssafy.amagetdone.domain.member.application.usecase.CompleteMemberProf
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.support.log.MemberLogHelper;
 
+import lombok.RequiredArgsConstructor;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class MemberProfileService {
 
 	private static final Logger log = LoggerFactory.getLogger(MemberProfileService.class);
 
 	private final CompleteMemberProfileUseCase completeMemberProfileUseCase;
-
-	public MemberProfileService(CompleteMemberProfileUseCase completeMemberProfileUseCase) {
-		this.completeMemberProfileUseCase = completeMemberProfileUseCase;
-	}
 
 	public ProfileCompletionDto.Response completeProfile(Integer userId, ProfileCompletionDto.Request request) {
 		String requestId = MemberLogHelper.requestId();

@@ -11,16 +11,33 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@SuperBuilder
 @Entity
 @Table(name = "budget_adjustment")
 public class BudgetAdjustment extends BaseEntity {
 
 	@Id
+	@SequenceGenerator(name = "budget_adjustment_seq_gen", sequenceName = "budget_adjustment_seq", allocationSize = 1)
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "budget_adjustment_seq_gen")
 	@Column(name = "id", nullable = false)
 	private Integer id;
 
@@ -36,13 +53,11 @@ public class BudgetAdjustment extends BaseEntity {
 	@Column(name = "adjustment_type", nullable = false)
 	private BudgetAdjustmentType adjustmentType;
 
+	@Builder.Default
 	@ColumnDefault("0")
 	@Column(name = "adjustment_amount", nullable = false)
 	private Long adjustmentAmount = 0L;
 
 	@Column(name = "reason", length = 255)
 	private String reason;
-
-	protected BudgetAdjustment() {
-	}
 }
