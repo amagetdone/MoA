@@ -13,7 +13,6 @@ pipeline {
         REMOTE_PORT = '22'
         REMOTE_USER = 'ubuntu'
         REMOTE_APP_DIR = '/home/ubuntu/front'
-        REMOTE_DEPLOY_SCRIPT = '/home/ubuntu/front/deploy.sh'
         DEPLOY_KEY_PATH = '/var/jenkins_home/.ssh/id_ed25519_front_deploy'
     }
 
@@ -95,22 +94,8 @@ pipeline {
 
                     ssh -i "${DEPLOY_KEY_PATH}" -p "${REMOTE_PORT}" "${REMOTE_USER}@${REMOTE_HOST}" "
                       set -eu
-                      mkdir -p '${REMOTE_APP_DIR}/current' '${REMOTE_APP_DIR}/nginx' '${REMOTE_APP_DIR}/certbot/www'
+                      mkdir -p '${REMOTE_APP_DIR}/current'
                     "
-
-                    rsync -az \
-                      -e "ssh -i ${DEPLOY_KEY_PATH} -p ${REMOTE_PORT}" \
-                      "${APP_DIR}/deploy/web/docker-compose.yml" \
-                      "${APP_DIR}/deploy/web/deploy.sh" \
-                      "${APP_DIR}/deploy/web/enable_https.sh" \
-                      "${APP_DIR}/deploy/web/renew_https.sh" \
-                      "${APP_DIR}/deploy/web/README.md" \
-                      "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_APP_DIR}/"
-
-                    rsync -az --delete \
-                      -e "ssh -i ${DEPLOY_KEY_PATH} -p ${REMOTE_PORT}" \
-                      "${APP_DIR}/deploy/web/nginx/" \
-                      "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_APP_DIR}/nginx/"
 
                     rsync -az --delete \
                       -e "ssh -i ${DEPLOY_KEY_PATH} -p ${REMOTE_PORT}" \
@@ -119,7 +104,7 @@ pipeline {
 
                     ssh -i "${DEPLOY_KEY_PATH}" -p "${REMOTE_PORT}" "${REMOTE_USER}@${REMOTE_HOST}" "
                       set -eu
-                      bash '${REMOTE_DEPLOY_SCRIPT}'
+                      test -f '${REMOTE_APP_DIR}/current/index.html'
                     "
                 '''
             }
