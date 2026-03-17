@@ -10,7 +10,9 @@ import java.util.Map;
 
 import com.ssafy.amagetdone.global.config.EnvLoader;
 import com.ssafy.amagetdone.support.TestSystemPropertySupport;
+import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -59,11 +61,19 @@ class PlanEntityMappingTest {
 	}
 
 	@Test
-	void planWeekAllocationIdUsesIdentityGeneration() throws Exception {
+	void planWeekAllocationIdUsesSequenceGeneration() throws Exception {
 		Field idField = PlanWeekAllocation.class.getDeclaredField("id");
 		GeneratedValue generatedValue = idField.getAnnotation(GeneratedValue.class);
 		assertNotNull(generatedValue);
-		assertSame(GenerationType.IDENTITY, generatedValue.strategy());
+		assertSame(GenerationType.SEQUENCE, generatedValue.strategy());
+	}
+
+	@Test
+	void planBuilderUsesAiPipelineDefaults() {
+		Plan plan = Plan.builder().build();
+
+		assertSame(PlanAiPipelineStatus.PENDING, plan.getAiPipelineStatus());
+		assertSame(0, plan.getAiRetryCount());
 	}
 
 	private void assertEntityClass(String simpleName, String tableName) throws ClassNotFoundException {
