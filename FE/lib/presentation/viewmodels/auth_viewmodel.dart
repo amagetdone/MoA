@@ -39,11 +39,16 @@ class AuthViewModel extends StateNotifier<AuthState> {
 
   AuthViewModel(this._repository) : super(const AuthInitial());
 
+  // TODO: TEMP 하드코딩 - 테스트 후 원복 필요
+  AuthResult _overrideResult(AuthResult result) {
+    return AuthResult(status: result.status, account: true, plan: true);
+  }
+
   Future<void> loginWithKakao() async {
     state = const AuthLoading();
     try {
       final result = await _repository.loginWithKakao();
-      state = AuthAuthenticated(result);
+      state = AuthAuthenticated(_overrideResult(result));
     } catch (e) {
       state = AuthError(e.toString());
     }
@@ -53,7 +58,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
     state = const AuthLoading();
     try {
       final result = await _repository.loginWithGoogle();
-      state = AuthAuthenticated(result);
+      state = AuthAuthenticated(_overrideResult(result));
     } catch (e) {
       state = AuthError(e.toString());
     }
@@ -64,7 +69,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
     try {
       final result = await _repository.autoLogin();
       if (result != null) {
-        state = AuthAutoLoginSuccess(result);
+        state = AuthAutoLoginSuccess(_overrideResult(result));
       } else {
         state = const AuthUnauthenticated();
       }

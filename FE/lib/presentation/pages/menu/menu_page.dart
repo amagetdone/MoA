@@ -163,36 +163,32 @@ class MenuPage extends ConsumerWidget {
               ),
             ),
 
-            // Menu items as individual cards
-            _MenuCard(
+            // Menu items
+            _MenuListItem(
               icon: Icons.account_balance_wallet_outlined,
               title: '내 자산',
               subtitle: '총 자산·거래내역',
               onTap: () => context.push(AppRoutes.asset),
             ),
-            SizedBox(height: 10.h),
-            _MenuCard(
+            _MenuListItem(
               icon: Icons.credit_card_outlined,
               title: '계좌 관리',
               subtitle: '연결된 계좌 목록·계좌 추가·계좌 삭제',
               onTap: () => context.push(AppRoutes.accountManage),
             ),
-            SizedBox(height: 10.h),
-            _MenuCard(
+            _MenuListItem(
               icon: Icons.pie_chart_outline,
               title: '소비패턴 분석',
               subtitle: '지난 3개월 간 소비패턴 분석',
               onTap: () => context.go(AppRoutes.spendingTab),
             ),
-            SizedBox(height: 10.h),
-            _MenuCard(
+            _MenuListItem(
               icon: Icons.tune_outlined,
               title: '주간 예산',
               subtitle: '주간 예산 설정',
               onTap: () => context.push(AppRoutes.spendingBudget),
             ),
-            SizedBox(height: 10.h),
-            _MenuCard(
+            _MenuListItem(
               icon: Icons.sort,
               title: '목표 우선순위',
               subtitle: '목표 우선순위 설정',
@@ -261,13 +257,13 @@ class _StatBox extends StatelessWidget {
   }
 }
 
-class _MenuCard extends StatelessWidget {
+class _MenuListItem extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
 
-  const _MenuCard({
+  const _MenuListItem({
     required this.icon,
     required this.title,
     required this.subtitle,
@@ -276,45 +272,46 @@ class _MenuCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MoreCard(
+    return GestureDetector(
       onTap: onTap,
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-      child: Row(
-        children: [
-          Container(
-            width: 40.w,
-            height: 40.w,
-            decoration: BoxDecoration(
-              color: AppColors.gray50,
-              borderRadius: BorderRadius.circular(10.r),
-              border: Border.all(color: AppColors.borderDefault),
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 8.h),
+        child: Row(
+          children: [
+            Container(
+              width: 40.w,
+              height: 40.w,
+              decoration: BoxDecoration(
+                color: AppColors.gray100,
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              child: Icon(icon, size: 20.w, color: Colors.white),
             ),
-            child: Icon(icon, size: 20.w, color: AppColors.gray500),
-          ),
-          SizedBox(width: 14.w),
-          Expanded(
-            child: Text(
-              title,
-              style: AppTextStyles.bodyMd.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
+            SizedBox(width: 14.w),
+            Expanded(
+              child: Text(
+                title,
+                style: AppTextStyles.bodyMd.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-          Text(
-            subtitle,
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.textTertiary,
-              fontSize: 11.sp,
+            Text(
+              subtitle,
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.textTertiary,
+                fontSize: 11.sp,
+              ),
             ),
-          ),
-          SizedBox(width: 4.w),
-          Icon(
-            Icons.chevron_right,
-            size: 18.w,
-            color: AppColors.textTertiary,
-          ),
-        ],
+            SizedBox(width: 4.w),
+            Icon(
+              Icons.chevron_right,
+              size: 18.w,
+              color: AppColors.textTertiary,
+            ),
+          ],
+        ),
       ),
     );
   }

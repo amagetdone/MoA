@@ -57,8 +57,10 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
     super.dispose();
   }
 
+  bool _isAccountVerified = false;
+
   bool get _isFormValid =>
-      _selectedBank != null && _accountNumberController.text.isNotEmpty;
+      _selectedBank != null && _accountNumberController.text.isNotEmpty && _isAccountVerified;
 
   void _onNext() {
     if (!_isFormValid) return;
@@ -236,8 +238,38 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
                     borderRadius: BorderRadius.circular(12.r),
                     borderSide: const BorderSide(color: AppColors.orange500, width: 1.2),
                   ),
+                  suffixIcon: Padding(
+                    padding: EdgeInsets.only(right: 8.w),
+                    child: TextButton(
+                      onPressed: _accountNumberController.text.isNotEmpty
+                          ? () {
+                              setState(() => _isAccountVerified = true);
+                              FocusScope.of(context).unfocus();
+                            }
+                          : null,
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.symmetric(horizontal: 12.w),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        _isAccountVerified ? '확인완료' : '확인하기',
+                        style: AppTextStyles.bodySm.copyWith(
+                          color: _isAccountVerified
+                              ? AppColors.green500
+                              : (_accountNumberController.text.isNotEmpty
+                                  ? AppColors.orange500
+                                  : AppColors.textTertiary),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13.sp,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-                onChanged: (_) => setState(() {}),
+                onChanged: (_) => setState(() {
+                  _isAccountVerified = false;
+                }),
               ),
             ],
           ],
