@@ -215,6 +215,28 @@ public class TransactionQueryService {
 		);
 	}
 
+	public List<TransactionListDto.Item> listExpenseTransactions(
+		Integer userId,
+		LocalDate fromDate,
+		LocalDate toDate
+	) {
+		return loadProjections(userId, fromDate.atStartOfDay(), toDate.atTime(23, 59, 59)).stream()
+			.filter(this::isPureExpense)
+			.map(this::toTransactionListItem)
+			.toList();
+	}
+
+	public List<TransactionListDto.Item> listNonEssentialFreeSpendingTransactions(
+		Integer userId,
+		LocalDate fromDate,
+		LocalDate toDate
+	) {
+		return loadProjections(userId, fromDate.atStartOfDay(), toDate.atTime(23, 59, 59)).stream()
+			.filter(this::isNonEssentialFreeSpending)
+			.map(this::toTransactionListItem)
+			.toList();
+	}
+
 	public WeeklyTransactionAnalysisDto.Response getWeeklyTransactionAnalysis(Integer userId, String yearWeek) {
 		EssentialExpenseSnapshotWeek snapshotWeek = essentialExpenseSnapshotWeekRepository.findByUser_IdAndYearWeek(userId, yearWeek)
 			.orElseThrow(() -> new IllegalArgumentException("Weekly analysis not found"));
@@ -406,6 +428,20 @@ public class TransactionQueryService {
 		return projection.analysisResult() != null && projection.analysisResult().getExcludedReason() == excludedReason;
 	}
 
+	private boolean isNonEssentialFreeSpending(Projection projection) {
+		TransactionAnalysisResult analysisResult = projection.analysisResult();
+		if (analysisResult == null || analysisResult.isAnalysisIncluded()) {
+			return false;
+		}
+
+		TransactionExcludedReason excludedReason = analysisResult.getExcludedReason();
+		if (excludedReason == null) {
+			return false;
+		}
+
+		return excludedReason == TransactionExcludedReason.NON_ESSENTIAL;
+	}
+
 	private ExpenseScope resolveExpenseScope(Projection projection) {
 		if (projection.analysisResult() != null && projection.analysisResult().getExpenseScope() != null) {
 			return projection.analysisResult().getExpenseScope();
@@ -440,6 +476,8 @@ public class TransactionQueryService {
 		Category category = analysisResult != null ? analysisResult.getCategory() : transaction.getCategory();
 		return new TransactionListDto.Item(
 			transaction.getId(),
+			sourceTypeOf(transaction),
+			sourceIdOf(transaction),
 			transaction.getTransactionDateTime(),
 			merchantTextOf(transaction),
 			transaction.getTransactionBalance(),
@@ -449,6 +487,18 @@ public class TransactionQueryService {
 			analysisResult != null && analysisResult.isAnalysisIncluded(),
 			analysisResult != null && analysisResult.getExcludedReason() != null ? analysisResult.getExcludedReason().name() : null
 		);
+	}
+
+	private String sourceTypeOf(TransactionOverride transaction) {
+		return transaction instanceof CardTransactionOverride ? "CARD" : "ACCOUNT";
+	}
+
+	private String sourceIdOf(TransactionOverride transaction) {
+		if (transaction instanceof CardTransactionOverride cardTransaction) {
+			return String.valueOf(cardTransaction.getCard().getCardUniqueNo());
+		}
+		AccountTransactionOverride accountTransaction = (AccountTransactionOverride) transaction;
+		return accountTransaction.getAccount().getId();
 	}
 
 	private String merchantTextOf(TransactionOverride transaction) {

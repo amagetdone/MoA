@@ -6,12 +6,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Field;
 import java.nio.file.Path;
+import java.util.Map;
 
 import com.ssafy.amagetdone.global.config.EnvLoader;
+import com.ssafy.amagetdone.support.TestSystemPropertySupport;
 import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionOverride;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,13 +32,20 @@ import jakarta.persistence.Table;
 class TransactionAnalysisEntityMappingTest {
 
 	private static final String ENTITY_PACKAGE = "com.ssafy.amagetdone.domain.transaction.model.entity.";
+	private static Map<String, String> springProfileProperties;
 
 	@Autowired
 	private ApplicationContext applicationContext;
 
 	@BeforeAll
 	static void loadEnv() {
+		springProfileProperties = TestSystemPropertySupport.captureSpringProfileProperties();
 		EnvLoader.loadRequiredEnv(Path.of("").toAbsolutePath());
+	}
+
+	@AfterAll
+	static void restoreEnv() {
+		TestSystemPropertySupport.restore(springProfileProperties);
 	}
 
 	@Test

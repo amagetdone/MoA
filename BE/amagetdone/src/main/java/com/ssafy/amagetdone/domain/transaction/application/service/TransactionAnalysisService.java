@@ -16,6 +16,7 @@ import com.ssafy.amagetdone.domain.account.model.entity.Account;
 import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.account.model.repository.CategoryRepository;
+import com.ssafy.amagetdone.domain.budget.application.usecase.UpdateBudgetSpentUseCase;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeek;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeekCategory;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekCategoryRepository;
@@ -70,6 +71,7 @@ public class TransactionAnalysisService {
 	private final EssentialExpenseSnapshotWeekCategoryRepository essentialExpenseSnapshotWeekCategoryRepository;
 	private final MerchantInferenceApiClient merchantInferenceApiClient;
 	private final TransactionSyncService transactionSyncService;
+	private final UpdateBudgetSpentUseCase updateBudgetSpentUseCase;
 	private final TransactionExclusionPolicy transactionExclusionPolicy;
 	private final FixedExpenseClassifier fixedExpenseClassifier;
 	private final WeeklyEssentialAllocator weeklyEssentialAllocator;
@@ -179,6 +181,7 @@ public class TransactionAnalysisService {
 			job.setCurrentStep(TransactionAnalysisStep.BUILDING_SNAPSHOTS);
 			transactionAnalysisJobRepository.save(job);
 			persistWeeklySnapshots(job.getUser(), analysisResults, analyzedAt);
+			updateBudgetSpentUseCase.execute(job.getUser(), analysisResults);
 
 			job.setStatus(TransactionAnalysisJobStatus.SUCCEEDED);
 			job.setCurrentStep(TransactionAnalysisStep.COMPLETED);

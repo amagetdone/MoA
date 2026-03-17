@@ -19,6 +19,7 @@ import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.application.usecase.FindOrCreateSocialUserUseCase;
 import com.ssafy.amagetdone.domain.member.application.usecase.IssueMemberTokensUseCase;
 import com.ssafy.amagetdone.domain.member.application.usecase.ResetTestSocialUserUseCase;
+import com.ssafy.amagetdone.domain.member.application.usecase.EnsureFinMemberLinkedUseCase;
 import com.ssafy.amagetdone.domain.member.infra.client.SocialAuthClient;
 import com.ssafy.amagetdone.domain.member.infra.client.SocialUserIdentity;
 import com.ssafy.amagetdone.domain.member.model.entity.SocialAccount;
@@ -59,6 +60,9 @@ class MemberAuthServiceTest {
 	private ResetTestSocialUserUseCase resetTestSocialUserUseCase;
 
 	@Mock
+	private EnsureFinMemberLinkedUseCase ensureFinMemberLinkedUseCase;
+
+	@Mock
 	private AccountRepository accountRepository;
 
 	@Mock
@@ -72,6 +76,7 @@ class MemberAuthServiceTest {
 			findOrCreateSocialUserUseCase,
 			issueMemberTokensUseCase,
 			resetTestSocialUserUseCase,
+			ensureFinMemberLinkedUseCase,
 			accountRepository,
 			planRepository
 		);
@@ -109,6 +114,7 @@ class MemberAuthServiceTest {
 			findOrCreateSocialUserUseCase,
 			issueMemberTokensUseCase,
 			resetTestSocialUserUseCase,
+			ensureFinMemberLinkedUseCase,
 			accountRepository,
 			planRepository
 		);
@@ -156,12 +162,14 @@ class MemberAuthServiceTest {
 			findOrCreateSocialUserUseCase,
 			issueMemberTokensUseCase,
 			resetTestSocialUserUseCase,
+			ensureFinMemberLinkedUseCase,
 			accountRepository,
 			planRepository
 		);
 		SocialUserIdentity identity = new SocialUserIdentity(SocialProvider.TEST, "test-social-user-001");
 		User user = User.createPendingSocialUser();
 		setUserId(user, 10);
+		user.applyTestSocialProfile("tester", "test@test.com");
 		SocialAccount socialAccount = SocialAccount.create(user, SocialProvider.TEST, "test-social-user-001");
 		MemberTokenPair tokenPair = new MemberTokenPair("access-token", "refresh-token");
 
@@ -169,6 +177,7 @@ class MemberAuthServiceTest {
 		given(testSocialAuthClient.fetchIdentity(any())).willReturn(identity);
 		given(findOrCreateSocialUserUseCase.execute(identity))
 			.willReturn(new FindOrCreateSocialUserUseCase.Result(user, socialAccount, true));
+		given(ensureFinMemberLinkedUseCase.execute(10, "test@test.com")).willReturn("ssafy-user-key");
 		given(issueMemberTokensUseCase.execute(user, SocialProvider.TEST)).willReturn(tokenPair);
 		given(accountRepository.existsByUserId(10)).willReturn(false);
 		given(planRepository.existsByUserId(10)).willReturn(false);
@@ -177,8 +186,11 @@ class MemberAuthServiceTest {
 
 		assertEquals("TEMP", response.status());
 		assertEquals("access-token", response.accessToken());
+		assertEquals("test@test.com", user.getEmail());
+		assertEquals("ssafy-user-key", user.getUserKey());
 		assertTrue(containsLog(appender, "provider=TEST"));
 		verify(findOrCreateSocialUserUseCase).execute(identity);
+		verify(ensureFinMemberLinkedUseCase).execute(10, "test@test.com");
 	}
 
 	@Test
@@ -189,6 +201,7 @@ class MemberAuthServiceTest {
 			findOrCreateSocialUserUseCase,
 			issueMemberTokensUseCase,
 			resetTestSocialUserUseCase,
+			ensureFinMemberLinkedUseCase,
 			accountRepository,
 			planRepository
 		);
