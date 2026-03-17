@@ -103,7 +103,7 @@ class HomeViewModel extends StateNotifier<HomeState> {
 final homeViewModelProvider = StateNotifierProvider<HomeViewModel, HomeState>((
   ref,
 ) {
-  final authState = ref.read(authViewModelProvider);
+  final authState = ref.watch(authViewModelProvider);
   bool hasAccount = true;
   bool hasPlan = true;
 
