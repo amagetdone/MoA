@@ -7,6 +7,13 @@ public final class AccountDto {
 	private AccountDto() {
 	}
 
+	public record RegisterAccountRequest(
+		String accountNo,
+		String bankCode,
+		String bankName
+	) {
+	}
+
 	public record AccountSummaryResponse(
 		String accountNo,
 		String bankCode,

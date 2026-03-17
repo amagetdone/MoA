@@ -35,6 +35,17 @@ public class AccountController {
 		this.jwtAccessTokenReader = jwtAccessTokenReader;
 	}
 
+	@Operation(summary = "계좌 등록 (은행코드 + 계좌번호)")
+	@PostMapping("/register")
+	public ApiResponse<AccountDto.AccountSummaryResponse> registerAccount(
+		@Parameter(hidden = true)
+		@RequestHeader(name = "Authorization", required = false) String authorization,
+		@RequestBody AccountDto.RegisterAccountRequest request
+	) {
+		int userId = jwtAccessTokenReader.readUserId(authorization);
+		return ApiResponse.ok("계좌를 등록했습니다.", accountService.registerAccount(userId, request));
+	}
+
 	@Operation(summary = "내 계좌 연동 동기화")
 	@PostMapping("/me/sync")
 	public ApiResponse<List<AccountDto.AccountSummaryResponse>> syncAccounts(
