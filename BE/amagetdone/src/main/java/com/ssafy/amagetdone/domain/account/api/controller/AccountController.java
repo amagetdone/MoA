@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "계좌 사용자 API")
@@ -45,14 +44,15 @@ public class AccountController {
 		return ApiResponse.ok("은행 계좌 목록을 조회했습니다.", accountService.getBankAccounts(userId));
 	}
 
-	@Operation(summary = "내 계좌 연동 동기화")
-	@PostMapping("/me/sync")
-	public ApiResponse<List<AccountDto.AccountSummaryResponse>> syncAccounts(
+	@Operation(summary = "계좌 실소유 확인")
+	@PostMapping("/confirm")
+	public ApiResponse<AccountDto.ConfirmAccountResponse> confirmAccount(
 		@Parameter(hidden = true)
-		@RequestHeader(name = "Authorization", required = false) String authorization
+		@RequestHeader(name = "Authorization", required = false) String authorization,
+		@RequestBody AccountDto.ConfirmAccountRequest request
 	) {
 		int userId = jwtAccessTokenReader.readUserId(authorization);
-		return ApiResponse.ok("내 계좌 목록을 동기화했습니다.", accountService.syncAccounts(userId));
+		return ApiResponse.ok("계좌 실소유를 확인했습니다.", accountService.confirmAccount(userId, request));
 	}
 
 	@Operation(summary = "단일 계좌 조회")
@@ -74,56 +74,5 @@ public class AccountController {
 	) {
 		int userId = jwtAccessTokenReader.readUserId(authorization);
 		return ApiResponse.ok("내 계좌 목록을 조회했습니다.", accountService.getAccounts(userId));
-	}
-
-	@Operation(summary = "계좌 잔액 조회")
-	@GetMapping("/{accountNo}/balance")
-	public ApiResponse<AccountDto.AccountBalanceResponse> getBalance(
-		@Parameter(hidden = true)
-		@RequestHeader(name = "Authorization", required = false) String authorization,
-		@PathVariable String accountNo
-	) {
-		int userId = jwtAccessTokenReader.readUserId(authorization);
-		return ApiResponse.ok("계좌 잔액을 조회했습니다.", accountService.getBalance(userId, accountNo));
-	}
-
-	@Operation(summary = "계좌 입금")
-	@PostMapping("/deposit")
-	public ApiResponse<AccountDto.DepositResponse> deposit(
-		@Parameter(hidden = true)
-		@RequestHeader(name = "Authorization", required = false) String authorization,
-		@RequestBody AccountDto.DepositRequest request
-	) {
-		int userId = jwtAccessTokenReader.readUserId(authorization);
-		return ApiResponse.ok("계좌 입금을 완료했습니다.", accountService.deposit(userId, request));
-	}
-
-	@Operation(summary = "계좌 이체")
-	@PostMapping("/transfer")
-	public ApiResponse<AccountDto.TransferResponse> transfer(
-		@Parameter(hidden = true)
-		@RequestHeader(name = "Authorization", required = false) String authorization,
-		@RequestBody AccountDto.TransferRequest request
-	) {
-		int userId = jwtAccessTokenReader.readUserId(authorization);
-		return ApiResponse.ok("계좌 이체를 완료했습니다.", accountService.transfer(userId, request));
-	}
-
-	@Operation(summary = "계좌 거래내역 목록 조회")
-	@GetMapping("/{accountNo}/transactions")
-	public ApiResponse<AccountDto.TransactionHistoryResponse> getTransactions(
-		@Parameter(hidden = true)
-		@RequestHeader(name = "Authorization", required = false) String authorization,
-		@PathVariable String accountNo,
-		@RequestParam String startDate,
-		@RequestParam String endDate,
-		@RequestParam(defaultValue = "A") String transactionType,
-		@RequestParam(defaultValue = "ASC") String orderByType
-	) {
-		int userId = jwtAccessTokenReader.readUserId(authorization);
-		return ApiResponse.ok(
-			"계좌 거래내역을 조회했습니다.",
-			accountService.getTransactions(userId, accountNo, startDate, endDate, transactionType, orderByType)
-		);
 	}
 }

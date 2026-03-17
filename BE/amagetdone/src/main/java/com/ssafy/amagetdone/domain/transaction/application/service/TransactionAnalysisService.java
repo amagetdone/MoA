@@ -109,11 +109,12 @@ public class TransactionAnalysisService {
 			LocalDateTime analyzedAt = LocalDateTime.now(clock);
 			LocalDateTime fromDateTime = analyzedAt.minusMonths(job.getRequestedMonths());
 			LocalDateTime toDateTime = analyzedAt;
-			Set<String> registeredAccountNos = accountRepository.findAllByUser_Id(userId).stream()
-				.map(Account::getAccountNo)
-				.filter(this::hasText)
-				.map(String::trim)
-				.collect(Collectors.toSet());
+		Set<String> registeredAccountNos = accountRepository.findAllLinkedAccountsByUserId(userId).stream()
+			.filter(Account::isActive)
+			.map(Account::getAccountNo)
+			.filter(this::hasText)
+			.map(String::trim)
+			.collect(Collectors.toSet());
 			Map<String, Category> categoriesByName = categoryRepository.findAll().stream()
 				.collect(Collectors.toMap(Category::getName, Function.identity(), (left, right) -> left, LinkedHashMap::new));
 			Category defaultCategory = Optional.ofNullable(categoriesByName.get(DEFAULT_CATEGORY_NAME))
@@ -219,7 +220,9 @@ public class TransactionAnalysisService {
 				userId,
 				fromDateTime,
 				toDateTime
-			));
+			).stream()
+			.filter(transaction -> transaction.getCard().getWithdrawalAccount().isActive())
+			.toList());
 		transactions.sort((left, right) -> right.getTransactionDateTime().compareTo(left.getTransactionDateTime()));
 		return transactions;
 	}

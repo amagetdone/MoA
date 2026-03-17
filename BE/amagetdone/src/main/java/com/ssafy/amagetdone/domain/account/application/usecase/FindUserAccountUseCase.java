@@ -17,7 +17,7 @@ public class FindUserAccountUseCase {
 	}
 
 	public Account execute(Integer userId, String accountNo) {
-		return accountRepository.findByUserIdAndAccountNo(userId, accountNo)
+		return accountRepository.findActiveLinkedAccountByUserIdAndAccountNo(userId, accountNo)
 			.orElseThrow(() -> new AccountException(AccountErrorCode.ACCOUNT_NOT_FOUND));
 	}
 }

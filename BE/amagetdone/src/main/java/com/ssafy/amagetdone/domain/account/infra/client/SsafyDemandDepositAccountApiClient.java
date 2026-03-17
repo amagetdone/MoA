@@ -24,6 +24,7 @@ public class SsafyDemandDepositAccountApiClient {
 
 	private static final String CREATE_ACCOUNT_API = "createDemandDepositAccount";
 	private static final String LIST_ACCOUNT_API = "inquireDemandDepositAccountList";
+	private static final String DETAIL_ACCOUNT_API = "inquireDemandDepositAccount";
 	private static final String BALANCE_API = "inquireDemandDepositAccountBalance";
 	private static final String DEPOSIT_API = "updateDemandDepositAccountDeposit";
 	private static final String TRANSFER_API = "updateDemandDepositAccountTransfer";
@@ -34,6 +35,7 @@ public class SsafyDemandDepositAccountApiClient {
 	private final SsafyApiResponseValidator responseValidator;
 	private final ParameterizedTypeReference<SsafyResponseEnvelope<DemandDepositAccountDto.ApiAccountCreateResponse>> createAccountResponseType;
 	private final ParameterizedTypeReference<SsafyResponseEnvelope<List<DemandDepositAccountDto.AccountItem>>> accountListResponseType;
+	private final ParameterizedTypeReference<SsafyResponseEnvelope<DemandDepositAccountDto.AccountDetailResponse>> accountDetailResponseType;
 	private final ParameterizedTypeReference<SsafyResponseEnvelope<DemandDepositBalanceDto.Response>> balanceResponseType;
 	private final ParameterizedTypeReference<SsafyResponseEnvelope<DemandDepositTransferDto.DepositResponse>> depositResponseType;
 	private final ParameterizedTypeReference<SsafyResponseEnvelope<List<DemandDepositTransferDto.TransferItem>>> transferResponseType;
@@ -54,6 +56,8 @@ public class SsafyDemandDepositAccountApiClient {
 		this.createAccountResponseType = new ParameterizedTypeReference<>() {
 		};
 		this.accountListResponseType = new ParameterizedTypeReference<>() {
+		};
+		this.accountDetailResponseType = new ParameterizedTypeReference<>() {
 		};
 		this.balanceResponseType = new ParameterizedTypeReference<>() {
 		};
@@ -98,6 +102,22 @@ public class SsafyDemandDepositAccountApiClient {
 		);
 
 		return new DemandDepositAccountDto.AccountListResponse(payload == null ? List.of() : payload);
+	}
+
+	public DemandDepositAccountDto.AccountDetailResponse inquireAccount(DemandDepositAccountDto.AccountDetailRequest request) {
+		requireUserRequest(request == null ? null : request.userKey());
+		if (request == null || isBlank(request.accountNo())) {
+			throw new AccountException(AccountErrorCode.DEMAND_DEPOSIT_ACCOUNT_API_CALL_FAILED);
+		}
+
+		return post(
+			DETAIL_ACCOUNT_API,
+			request.userKey(),
+			new AccountDetailApiRequest(request.accountNo()),
+			accountDetailResponseType,
+			AccountErrorCode.DEMAND_DEPOSIT_ACCOUNT_API_CALL_FAILED,
+			AccountErrorCode.INVALID_DEMAND_DEPOSIT_ACCOUNT_API_RESPONSE
+		);
 	}
 
 	public DemandDepositBalanceDto.Response inquireBalance(DemandDepositBalanceDto.Request request) {
@@ -233,6 +253,11 @@ public class SsafyDemandDepositAccountApiClient {
 
 	private record CreateAccountApiRequest(
 		String accountTypeUniqueNo
+	) {
+	}
+
+	private record AccountDetailApiRequest(
+		String accountNo
 	) {
 	}
 

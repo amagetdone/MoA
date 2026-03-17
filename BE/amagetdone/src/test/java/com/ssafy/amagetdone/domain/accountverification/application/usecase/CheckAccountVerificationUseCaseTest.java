@@ -8,7 +8,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 import com.ssafy.amagetdone.domain.account.infra.client.SsafyDemandDepositAccountApiClient;
@@ -76,12 +75,11 @@ class CheckAccountVerificationUseCaseTest {
 		when(accountRepository.findByUserIdAndAccountNo(7, "0011234567890123"))
 			.thenReturn(Optional.empty());
 
-		DemandDepositAccountDto.AccountItem accountItem = new DemandDepositAccountDto.AccountItem(
+		DemandDepositAccountDto.AccountDetailResponse accountDetail = new DemandDepositAccountDto.AccountDetailResponse(
 			"001", "싸피은행", "테스트유저", "0011234567890123", "수시입출금", "001", "수시입출금",
 			"20260101", "20290101", 10000000L, 5000000L, 100000L, "KRW"
 		);
-		when(ssafyDemandDepositAccountApiClient.inquireAccounts(any()))
-			.thenReturn(new DemandDepositAccountDto.AccountListResponse(List.of(accountItem)));
+		when(ssafyDemandDepositAccountApiClient.inquireAccount(any())).thenReturn(accountDetail);
 
 		Account savedAccount = mock(Account.class);
 		when(savedAccount.isVerified()).thenReturn(true);
@@ -95,6 +93,65 @@ class CheckAccountVerificationUseCaseTest {
 		assertThat(result.verified()).isTrue();
 		verify(accountVerificationRepository).save(verification);
 		verify(accountRepository).save(any(Account.class));
+	}
+
+	@Test
+	void checkVerificationReactivatesExistingLinkedAccount() {
+		User user = mock(User.class);
+		when(user.getId()).thenReturn(7);
+		when(user.getUserKey()).thenReturn("user-key");
+
+		AccountVerification verification = AccountVerification.createRequested(
+			user,
+			"0011234567890123",
+			"AMAGETDONE",
+			88L,
+			LocalDateTime.of(2026, 3, 13, 9, 0)
+		);
+		ReflectionTestUtils.setField(verification, "id", 12L);
+
+		Account existingAccount = Account.create(
+			user,
+			"0011234567890123",
+			null,
+			"데모 계좌",
+			"수시입출금",
+			"001",
+			"한국은행",
+			"KRW"
+		);
+		existingAccount.markInactive();
+
+		when(accountVerificationRepository.findTopByUser_IdAndAccountNoOrderByCreatedAtDesc(7, "0011234567890123"))
+			.thenReturn(Optional.of(verification));
+		when(ssafyAccountVerificationApiClient.checkVerification(any()))
+			.thenReturn(new AccountVerificationClientDto.CheckVerificationResponse("SUCCESS", 88L, "0011234567890123"));
+		when(accountRepository.findByUserIdAndAccountNo(7, "0011234567890123"))
+			.thenReturn(Optional.of(existingAccount));
+		when(ssafyDemandDepositAccountApiClient.inquireAccount(any())).thenReturn(new DemandDepositAccountDto.AccountDetailResponse(
+			"001",
+			"한국은행",
+			"테스터",
+			"0011234567890123",
+			"데모 계좌",
+			"1",
+			"수시입출금",
+			"20260318",
+			"20300318",
+			100000000L,
+			50000000L,
+			250000L,
+			"KRW"
+		));
+		when(accountRepository.save(existingAccount)).thenReturn(existingAccount);
+
+		AccountVerificationDto.CheckVerificationResponse result = checkAccountVerificationUseCase.execute(
+			7,
+			new AccountVerificationDto.CheckVerificationRequest("0011234567890123", "1234")
+		);
+
+		assertThat(result.verified()).isTrue();
+		assertThat(existingAccount.isActive()).isTrue();
 	}
 
 	@Test

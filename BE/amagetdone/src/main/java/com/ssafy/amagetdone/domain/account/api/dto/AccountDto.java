@@ -18,6 +18,16 @@ public final class AccountDto {
 	) {
 	}
 
+	public record ConfirmAccountRequest(
+		String accountNo
+	) {
+	}
+
+	public record ConfirmAccountResponse(
+		boolean confirmed
+	) {
+	}
+
 	public record AccountSummaryResponse(
 		String accountNo,
 		String bankCode,
