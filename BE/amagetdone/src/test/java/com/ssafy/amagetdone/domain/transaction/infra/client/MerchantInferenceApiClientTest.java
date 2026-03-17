@@ -29,7 +29,7 @@ class MerchantInferenceApiClientTest {
 		properties.setBaseUrl("https://j14d101.p.ssafy.io/inference");
 		MerchantInferenceApiClient client = new MerchantInferenceApiClient(builder, properties);
 
-		server.expect(requestTo("https://j14d101.p.ssafy.io/inference/merchant/batch"))
+		server.expect(requestTo("https://j14d101.p.ssafy.io/inference/v1/merchant/batch"))
 			.andExpect(method(POST))
 			.andExpect(content().contentType(APPLICATION_JSON))
 			.andExpect(content().string(containsString("\"merchant_texts\":[\"스타벅스 강남점\",\"(수시입출금) : 출금\"]")))
@@ -74,7 +74,7 @@ class MerchantInferenceApiClientTest {
 		properties.setBaseUrl("https://j14d101.p.ssafy.io/inference");
 		MerchantInferenceApiClient client = new MerchantInferenceApiClient(builder, properties);
 
-		server.expect(requestTo("https://j14d101.p.ssafy.io/inference/merchant/batch"))
+		server.expect(requestTo("https://j14d101.p.ssafy.io/inference/v1/merchant/batch"))
 			.andExpect(method(POST))
 			.andRespond(withSuccess("""
 				{
@@ -93,7 +93,7 @@ class MerchantInferenceApiClientTest {
 		properties.setBaseUrl("https://j14d101.p.ssafy.io/inference");
 		MerchantInferenceApiClient client = new MerchantInferenceApiClient(builder, properties);
 
-		server.expect(requestTo("https://j14d101.p.ssafy.io/inference/merchant/batch"))
+		server.expect(requestTo("https://j14d101.p.ssafy.io/inference/v1/merchant/batch"))
 			.andExpect(method(POST))
 			.andRespond(withServerError());
 

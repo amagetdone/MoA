@@ -6,17 +6,25 @@ import com.ssafy.amagetdone.global.security.JwtAuthenticationFilter;
 import com.ssafy.amagetdone.global.security.SecurityAccessDeniedHandler;
 import com.ssafy.amagetdone.global.security.SecurityAuthenticationEntryPoint;
 
+import java.util.Arrays;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
@@ -25,6 +33,7 @@ public class SecurityConfig {
 	@Bean
 	public SecurityFilterChain securityFilterChain(
 		HttpSecurity http,
+		CorsConfigurationSource corsConfigurationSource,
 		RequestMatcher publicEndpoints,
 		JwtAuthenticationFilter jwtAuthenticationFilter,
 		SecurityAuthenticationEntryPoint authenticationEntryPoint,
@@ -32,6 +41,7 @@ public class SecurityConfig {
 	) throws Exception {
 		http
 			.csrf(AbstractHttpConfigurer::disable)
+			.cors(cors -> cors.configurationSource(corsConfigurationSource))
 			.formLogin(AbstractHttpConfigurer::disable)
 			.httpBasic(AbstractHttpConfigurer::disable)
 			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -46,6 +56,28 @@ public class SecurityConfig {
 			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
 		return http.build();
+	}
+
+	@Bean
+	public CorsConfigurationSource corsConfigurationSource(
+		@Value("${app.cors.allowed-origins:}") String allowedOriginsValue
+	) {
+		CorsConfiguration configuration = new CorsConfiguration();
+		configuration.setAllowCredentials(true);
+		configuration.setAllowedOrigins(parseAllowedOrigins(allowedOriginsValue));
+		configuration.setAllowedMethods(List.of(
+			HttpMethod.GET.name(),
+			HttpMethod.POST.name(),
+			HttpMethod.PUT.name(),
+			HttpMethod.PATCH.name(),
+			HttpMethod.DELETE.name(),
+			HttpMethod.OPTIONS.name()
+		));
+		configuration.setAllowedHeaders(List.of("*"));
+
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/**", configuration);
+		return source;
 	}
 
 	@Bean
@@ -107,5 +139,16 @@ public class SecurityConfig {
 	@Bean
 	public SecurityAccessDeniedHandler securityAccessDeniedHandler(ObjectMapper objectMapper) {
 		return new SecurityAccessDeniedHandler(objectMapper);
+	}
+
+	private List<String> parseAllowedOrigins(String allowedOriginsValue) {
+		if (allowedOriginsValue == null || allowedOriginsValue.isBlank()) {
+			return List.of();
+		}
+
+		return Arrays.stream(allowedOriginsValue.split(","))
+			.map(String::trim)
+			.filter(origin -> !origin.isBlank())
+			.toList();
 	}
 }

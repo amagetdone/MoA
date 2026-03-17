@@ -12,7 +12,6 @@ import java.util.Optional;
 
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeek;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekRepository;
-import com.ssafy.amagetdone.domain.transaction.model.vo.TransactionAnalysisJobStatus;
 
 import org.junit.jupiter.api.Test;
 
@@ -69,20 +68,19 @@ class TransactionRepositoryQueryTest {
 	}
 
 	@Test
-	void analysisRepositoriesExposeJobAndResultLookups() throws Exception {
+	void analysisRepositoriesExposeMetadataAndResultLookups() throws Exception {
 		assertMethod(
-			TransactionAnalysisJobRepository.class,
-			"findFirstByUser_IdAndStatusOrderByRequestedAtDesc",
+			TransactionAnalysisMetadataRepository.class,
+			"findTopByUser_IdOrderByAnalyzedAtDesc",
 			Optional.class,
-			Integer.class,
-			TransactionAnalysisJobStatus.class
+			Integer.class
 		);
 		assertMethod(
-			TransactionAnalysisJobRepository.class,
-			"existsByUser_IdAndStatus",
-			boolean.class,
+			TransactionAnalysisMetadataRepository.class,
+			"findTopByUser_IdAndRequestedMonthsOrderByAnalyzedAtDesc",
+			Optional.class,
 			Integer.class,
-			TransactionAnalysisJobStatus.class
+			Integer.class
 		);
 		assertMethod(
 			TransactionAnalysisResultRepository.class,
@@ -95,6 +93,13 @@ class TransactionRepositoryQueryTest {
 			"findAllByTransaction_IdIn",
 			List.class,
 			Collection.class
+		);
+		assertMethod(
+			TransactionAnalysisResultRepository.class,
+			"findAllByTransaction_IdInAndAnalyzedAt",
+			List.class,
+			Collection.class,
+			LocalDateTime.class
 		);
 		assertMethod(
 			TransactionAnalysisResultRepository.class,
@@ -117,9 +122,26 @@ class TransactionRepositoryQueryTest {
 		);
 		assertMethod(
 			EssentialExpenseSnapshotWeekRepository.class,
+			"findByUser_IdAndYearWeekAndAnalyzedAt",
+			Optional.class,
+			Integer.class,
+			String.class,
+			LocalDateTime.class
+		);
+		assertMethod(
+			EssentialExpenseSnapshotWeekRepository.class,
 			"findAllByUser_IdAndWeekStartDateBetweenOrderByWeekStartDate",
 			List.class,
 			Integer.class,
+			LocalDate.class,
+			LocalDate.class
+		);
+		assertMethod(
+			EssentialExpenseSnapshotWeekRepository.class,
+			"findAllByUser_IdAndAnalyzedAtAndWeekStartDateBetweenOrderByWeekStartDate",
+			List.class,
+			Integer.class,
+			LocalDateTime.class,
 			LocalDate.class,
 			LocalDate.class
 		);

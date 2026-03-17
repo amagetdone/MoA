@@ -24,7 +24,7 @@ import com.ssafy.amagetdone.global.entity.BaseEntity;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
 import com.ssafy.amagetdone.domain.transaction.model.entity.CardTransactionOverride;
-import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisJob;
+import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisMetadata;
 import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisResult;
 
 import org.hibernate.annotations.ColumnDefault;
@@ -51,8 +51,6 @@ class ErdSchemaAlignmentTest {
 		assertEnumerated(BudgetAdjustment.class, "adjustmentType", true);
 		assertEnumerated(BudgetRollover.class, "status", true);
 		assertEnumerated(EssentialExpenseMonth.class, "sourceProvider", true);
-		assertEnumerated(TransactionAnalysisJob.class, "status", true);
-		assertEnumerated(TransactionAnalysisJob.class, "currentStep", true);
 		assertEnumerated(TransactionAnalysisResult.class, "excludedReason", true);
 		assertEnumerated(TransactionAnalysisResult.class, "expenseScope", true);
 		assertEnumerated(EssentialExpenseSnapshotWeekCategory.class, "expenseScope", true);
@@ -95,8 +93,7 @@ class ErdSchemaAlignmentTest {
 		assertColumnDefault(EssentialExpenseMonth.class, "sourceProvider", "'ANALYZER'");
 		assertColumnDefault(EssentialWeekAllocation.class, "plannedAmount", "0");
 		assertColumnDefault(EssentialWeekAllocation.class, "actualSpentAmount", "0");
-		assertColumnDefault(TransactionAnalysisJob.class, "status", "'PENDING'");
-		assertColumnDefault(TransactionAnalysisJob.class, "currentStep", "'SYNCING'");
+		assertColumnName(TransactionAnalysisMetadata.class, "requestedMonths", "requested_months");
 		assertColumnDefault(EssentialExpenseSnapshotWeek.class, "essentialAmount", "0");
 		assertColumnDefault(EssentialExpenseSnapshotWeek.class, "fixedEssentialAmount", "0");
 		assertColumnDefault(EssentialExpenseSnapshotWeek.class, "variableEssentialAmount", "0");

@@ -26,6 +26,7 @@ Add an authenticated admin endpoint at `/v1/admin/accounts/data-init` that accep
 ## External API Strategy
 - Keep runtime `apiKey` usage isolated to new admin-only SSAFY clients under `domain/account/infra/client`.
 - Use the existing `SsafyApiRequestFactory`, which already supports caller-provided `apiKey` and `userKey`.
+- For demand-deposit transactions, perform the create call first and then immediately query same-day transaction history to recover the detailed fields needed by local override rows.
 - Add admin DTOs for:
   - demand-deposit account creation
   - demand-deposit deposit/transfer transaction creation

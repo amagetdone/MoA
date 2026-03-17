@@ -40,19 +40,19 @@ class TransactionAnalysisEntityMappingTest {
 
 	@Test
 	void transactionAnalysisEntitiesAreDiscoverable() throws ClassNotFoundException {
-		assertEntityClass("TransactionAnalysisJob", "transaction_analysis_job");
+		assertEntityClass("TransactionAnalysisMetadata", "transaction_analysis_metadata");
 		assertEntityClass("TransactionAnalysisResult", "transaction_analysis_result");
 	}
 
 	@Test
 	void transactionAnalysisRepositoriesAreRegistered() {
-		assertTrue(applicationContext.containsBeanDefinition("transactionAnalysisJobRepository"));
+		assertTrue(applicationContext.containsBeanDefinition("transactionAnalysisMetadataRepository"));
 		assertTrue(applicationContext.containsBeanDefinition("transactionAnalysisResultRepository"));
 	}
 
 	@Test
 	void transactionAnalysisRelationshipsUseExpectedForeignKeys() throws NoSuchFieldException {
-		assertManyToOneField("TransactionAnalysisJob", "user", User.class, "users_id");
+		assertManyToOneField("TransactionAnalysisMetadata", "user", User.class, "users_id");
 		assertManyToOneField("TransactionAnalysisResult", "transaction", TransactionOverride.class, "transaction_override_id");
 		assertManyToOneField("TransactionAnalysisResult", "category", Category.class, "category_id");
 	}

@@ -6,6 +6,7 @@ import com.ssafy.amagetdone.domain.account.api.dto.AccountAdminDto;
 import com.ssafy.amagetdone.domain.account.api.dto.AccountDto;
 import com.ssafy.amagetdone.domain.account.application.usecase.CreateDemandDepositAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.DepositAccountUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.InitializeSsafyDummyDataUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.InquireAccountBalanceUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountTransactionsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountsUseCase;
@@ -26,6 +27,7 @@ public class AccountService {
 	private final RegisterDemandDepositProductUseCase registerDemandDepositProductUseCase;
 	private final ListDemandDepositProductsUseCase listDemandDepositProductsUseCase;
 	private final CreateDemandDepositAccountUseCase createDemandDepositAccountUseCase;
+	private final InitializeSsafyDummyDataUseCase initializeSsafyDummyDataUseCase;
 	private final SyncAccountsUseCase syncAccountsUseCase;
 	private final ListAccountsUseCase listAccountsUseCase;
 	private final InquireAccountBalanceUseCase inquireAccountBalanceUseCase;
@@ -37,6 +39,7 @@ public class AccountService {
 		RegisterDemandDepositProductUseCase registerDemandDepositProductUseCase,
 		ListDemandDepositProductsUseCase listDemandDepositProductsUseCase,
 		CreateDemandDepositAccountUseCase createDemandDepositAccountUseCase,
+		InitializeSsafyDummyDataUseCase initializeSsafyDummyDataUseCase,
 		SyncAccountsUseCase syncAccountsUseCase,
 		ListAccountsUseCase listAccountsUseCase,
 		InquireAccountBalanceUseCase inquireAccountBalanceUseCase,
@@ -47,6 +50,7 @@ public class AccountService {
 		this.registerDemandDepositProductUseCase = registerDemandDepositProductUseCase;
 		this.listDemandDepositProductsUseCase = listDemandDepositProductsUseCase;
 		this.createDemandDepositAccountUseCase = createDemandDepositAccountUseCase;
+		this.initializeSsafyDummyDataUseCase = initializeSsafyDummyDataUseCase;
 		this.syncAccountsUseCase = syncAccountsUseCase;
 		this.listAccountsUseCase = listAccountsUseCase;
 		this.inquireAccountBalanceUseCase = inquireAccountBalanceUseCase;
@@ -65,6 +69,10 @@ public class AccountService {
 
 	public AccountAdminDto.AccountCreateResponse createAccount(AccountAdminDto.AccountCreateRequest request) {
 		return createDemandDepositAccountUseCase.execute(request);
+	}
+
+	public AccountAdminDto.DataInitResponse initializeDummyData(AccountAdminDto.DataInitRequest request) {
+		return initializeSsafyDummyDataUseCase.execute(request);
 	}
 
 	public List<AccountDto.AccountSummaryResponse> syncAccounts(Integer userId) {

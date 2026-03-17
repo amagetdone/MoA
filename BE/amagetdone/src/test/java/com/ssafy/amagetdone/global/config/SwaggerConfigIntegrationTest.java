@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -19,6 +20,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@TestPropertySource(properties = "app.external-base-url=https://j14d101.p.ssafy.io/api")
 class SwaggerConfigIntegrationTest {
 
 	@Autowired
@@ -34,6 +36,7 @@ class SwaggerConfigIntegrationTest {
 			.andExpect(content().encoding("UTF-8"))
 			.andExpect(content().contentTypeCompatibleWith("application/json"))
 			.andExpect(jsonPath("$.openapi").exists())
+			.andExpect(jsonPath("$.servers[0].url").value("https://j14d101.p.ssafy.io/api"))
 			.andExpect(jsonPath("$.info.title").value("\uBAA8\uC544 API"))
 			.andExpect(jsonPath("$.info.description").value("\uBAA8\uC544 \uBC31\uC5D4\uB4DC API \uBB38\uC11C"));
 	}

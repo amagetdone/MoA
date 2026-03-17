@@ -14,7 +14,7 @@ import org.springframework.web.client.RestClientException;
 @Component
 public class MerchantInferenceApiClient {
 
-	private static final String BATCH_PATH = "/merchant/batch";
+	private static final String BATCH_PATH = "/v1/merchant/batch";
 
 	private final RestClient restClient;
 	private final MerchantInferenceApiProperties properties;
