@@ -105,4 +105,21 @@ public class BudgetWeek extends BaseEntity {
 	@ColumnDefault("0")
 	@Column(name = "actual_spent_amount", nullable = false)
 	private Long actualSpentAmount = 0L;
+
+	public static BudgetWeek create(
+		Integer id,
+		User user,
+		Integer weekSequence,
+		LocalDate weekStartDate,
+		LocalDate weekEndDate
+	) {
+		BudgetWeek budgetWeek = new BudgetWeek();
+		budgetWeek.id = id;
+		budgetWeek.user = user;
+		budgetWeek.weekSequence = weekSequence;
+		budgetWeek.weekStartDate = weekStartDate;
+		budgetWeek.weekEndDate = weekEndDate;
+		budgetWeek.partial = false;
+		return budgetWeek;
+	}
 }

@@ -11,6 +11,22 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BudgetWeekRepository extends JpaRepository<BudgetWeek, Integer> {
 
+	List<BudgetWeek> findAllByUserIdAndWeekStartDateGreaterThanEqualAndWeekEndDateLessThanEqualOrderByWeekStartDateAsc(
+		Integer userId,
+		LocalDate weekStartDate,
+		LocalDate weekEndDate
+	);
+
+	void deleteAllByUserIdAndWeekEndDateGreaterThanEqualAndWeekStartDateLessThanEqual(
+		Integer userId,
+		LocalDate weekStartDate,
+		LocalDate weekEndDate
+	);
+
+	Optional<BudgetWeek> findTopByOrderByIdDesc();
+
+	Optional<BudgetWeek> findTopByUserIdOrderByWeekSequenceDesc(Integer userId);
+
 	Optional<BudgetWeek> findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(User user, LocalDate date, LocalDate date2);
 
 	List<BudgetWeek> findByUserAndWeekStartDateBetweenOrderByWeekSequence(User user, LocalDate start, LocalDate end);

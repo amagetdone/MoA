@@ -55,6 +55,7 @@ public class MemberProfileController {
 		summary = "프로필 이미지 업로드",
 		description = "로그인한 사용자의 프로필 이미지를 업로드하고 기존 이미지가 있으면 교체합니다."
 	)
+	@SecurityRequirement(name = "bearerAuth")
 	@PatchMapping(value = "/me/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ApiResponse<String> uploadProfileImage(
 		@AuthenticationPrincipal AuthenticatedMember authenticatedMember,

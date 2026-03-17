@@ -1,6 +1,8 @@
 package com.ssafy.amagetdone.domain.plan.model.repository;
 
 import java.util.List;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
@@ -20,6 +22,10 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 
 	@Query("select coalesce(sum(p.savedAmount), 0) from Plan p where p.user.id = :userId")
 	Long sumSavedAmountByUserId(@Param("userId") Integer userId);
+
+	List<Plan> findAllByUserIdAndPriorityGreaterThanEqualOrderByPriorityAsc(Integer userId, Integer priority);
+
+	List<Plan> findAllByStatusAndStartDateLessThanEqual(PlanStatus status, LocalDate date);
 
 	boolean existsByUserId(Integer userId);
 

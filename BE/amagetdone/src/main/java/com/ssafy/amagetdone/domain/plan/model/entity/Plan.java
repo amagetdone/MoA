@@ -3,6 +3,7 @@ package com.ssafy.amagetdone.domain.plan.model.entity;
 import java.time.LocalDate;
 
 import com.ssafy.amagetdone.domain.member.model.entity.User;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
 import com.ssafy.amagetdone.global.entity.BaseEntity;
 
@@ -69,10 +70,10 @@ public class Plan extends BaseEntity {
 	private Integer priority;
 
 	@Builder.Default
-	@ColumnDefault("'ACTIVE'")
+	@ColumnDefault("'WAITING'")
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
-	private PlanStatus status = PlanStatus.ACTIVE;
+	private PlanStatus status = PlanStatus.WAITING;
 
 	@Builder.Default
 	@ColumnDefault("TRUE")
@@ -85,18 +86,66 @@ public class Plan extends BaseEntity {
 	@Column(name = "plan_video_url", length = 255)
 	private String videoUrl;
 
+	@ColumnDefault("'PENDING'")
+	@Enumerated(EnumType.STRING)
+	@Column(name = "ai_pipeline_status", nullable = false, length = 30)
+	private PlanAiPipelineStatus aiPipelineStatus = PlanAiPipelineStatus.PENDING;
+
+	@ColumnDefault("0")
+	@Column(name = "ai_retry_count", nullable = false)
+	private Integer aiRetryCount = 0;
+
 	@Column(name = "end_date", nullable = false)
 	private LocalDate endDate;
 
-	public String getPlanUrl() {
-		return planUrl;
-	}
 
-	public String getTitle() {
-		return title;
+	public static Plan create(
+		User user,
+		String title,
+		String description,
+		Long targetAmount,
+		LocalDate startDate,
+		LocalDate endDate,
+		Integer priority
+	) {
+		Plan plan = new Plan();
+		plan.user = user;
+		plan.title = title;
+		plan.description = description;
+		plan.targetAmount = targetAmount;
+		plan.startDate = startDate;
+		plan.endDate = endDate;
+		plan.priority = priority;
+		plan.targetWeeks = 0;
+		return plan;
 	}
 
 	public void updatePlanUrl(String planUrl) {
 		this.planUrl = planUrl;
+	}
+
+	public void updateVideoUrl(String videoUrl) {
+		this.videoUrl = videoUrl;
+	}
+
+	public void shiftPriority(int delta) {
+		this.priority += delta;
+	}
+
+	public void activate() {
+		this.status = PlanStatus.ACTIVE;
+	}
+
+	public void markAiProcessing() {
+		this.aiPipelineStatus = PlanAiPipelineStatus.PROCESSING;
+	}
+
+	public void markAiSucceeded() {
+		this.aiPipelineStatus = PlanAiPipelineStatus.SUCCEEDED;
+	}
+
+	public void markAiFailed() {
+		this.aiPipelineStatus = PlanAiPipelineStatus.FAILED;
+		this.aiRetryCount++;
 	}
 }

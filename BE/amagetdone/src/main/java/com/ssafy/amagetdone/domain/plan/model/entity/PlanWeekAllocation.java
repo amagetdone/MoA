@@ -63,4 +63,12 @@ public class PlanWeekAllocation extends BaseEntity {
 
 	@Column(name = "note", length = 255)
 	private String note;
+
+	public static PlanWeekAllocation create(Plan plan, BudgetWeek budgetWeek, Long plannedAmount) {
+		PlanWeekAllocation allocation = new PlanWeekAllocation();
+		allocation.plan = plan;
+		allocation.budgetWeek = budgetWeek;
+		allocation.plannedAmount = plannedAmount;
+		return allocation;
+	}
 }

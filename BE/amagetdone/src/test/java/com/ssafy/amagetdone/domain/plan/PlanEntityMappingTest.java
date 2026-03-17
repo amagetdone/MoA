@@ -1,13 +1,16 @@
 package com.ssafy.amagetdone.domain.plan;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.Map;
 
 import com.ssafy.amagetdone.global.config.EnvLoader;
 import com.ssafy.amagetdone.support.TestSystemPropertySupport;
+import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -18,6 +21,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ActiveProfiles;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Table;
 
 @SpringBootTest
@@ -51,6 +56,14 @@ class PlanEntityMappingTest {
 	void planRepositoriesAreRegistered() {
 		assertTrue(applicationContext.containsBeanDefinition("planRepository"));
 		assertTrue(applicationContext.containsBeanDefinition("planWeekAllocationRepository"));
+	}
+
+	@Test
+	void planWeekAllocationIdUsesIdentityGeneration() throws Exception {
+		Field idField = PlanWeekAllocation.class.getDeclaredField("id");
+		GeneratedValue generatedValue = idField.getAnnotation(GeneratedValue.class);
+		assertNotNull(generatedValue);
+		assertSame(GenerationType.IDENTITY, generatedValue.strategy());
 	}
 
 	private void assertEntityClass(String simpleName, String tableName) throws ClassNotFoundException {

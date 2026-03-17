@@ -41,6 +41,11 @@ public class S3ObjectStorageService implements S3StorageService {
 	}
 
 	@Override
+	public String getUrl(String objectKey) {
+		return amazonS3.getUrl(bucket, objectKey).toString();
+	}
+
+	@Override
 	public byte[] loadBytes(String objectKey) {
 		try (var inputStream = amazonS3.getObject(bucket, objectKey).getObjectContent()) {
 			return inputStream.readAllBytes();

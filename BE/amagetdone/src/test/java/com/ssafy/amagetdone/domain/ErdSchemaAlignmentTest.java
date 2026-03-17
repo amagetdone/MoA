@@ -73,7 +73,7 @@ class ErdSchemaAlignmentTest {
 		assertColumnDefault(Setting.class, "alarm", "FALSE");
 		assertColumnDefault(User.class, "status", "'ACTIVE'");
 		assertColumnDefault(Plan.class, "savedAmount", "0");
-		assertColumnDefault(Plan.class, "status", "'ACTIVE'");
+		assertColumnDefault(Plan.class, "status", "'WAITING'");
 		assertColumnDefault(Plan.class, "autoAllocateEnabled", "TRUE");
 		assertColumnDefault(PlanWeekAllocation.class, "allocationType", "'AUTO'");
 		assertColumnDefault(PlanWeekAllocation.class, "plannedAmount", "0");
