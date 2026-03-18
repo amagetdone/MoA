@@ -8,15 +8,10 @@ import java.util.List;
 import com.ssafy.amagetdone.domain.account.api.dto.AccountAdminDto;
 import com.ssafy.amagetdone.domain.account.api.dto.AccountDto;
 import com.ssafy.amagetdone.domain.account.application.usecase.ConfirmAccountOwnershipUseCase;
-import com.ssafy.amagetdone.domain.account.application.usecase.CreateDemandDepositAccountUseCase;
-import com.ssafy.amagetdone.domain.account.application.usecase.DepositAccountUseCase;
-import com.ssafy.amagetdone.domain.account.application.usecase.InquireAccountBalanceUseCase;
-import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountTransactionsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListDemandDepositProductsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ReconcileLinkedAccountsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.RegisterDemandDepositProductUseCase;
-import com.ssafy.amagetdone.domain.account.application.usecase.TransferAccountUseCase;
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
 
 import org.junit.jupiter.api.Test;
@@ -35,9 +30,6 @@ class AccountServiceTest {
 	private ListDemandDepositProductsUseCase listDemandDepositProductsUseCase;
 
 	@Mock
-	private CreateDemandDepositAccountUseCase createDemandDepositAccountUseCase;
-
-	@Mock
 	private ConfirmAccountOwnershipUseCase confirmAccountOwnershipUseCase;
 
 	@Mock
@@ -45,18 +37,6 @@ class AccountServiceTest {
 
 	@Mock
 	private ReconcileLinkedAccountsUseCase reconcileLinkedAccountsUseCase;
-
-	@Mock
-	private InquireAccountBalanceUseCase inquireAccountBalanceUseCase;
-
-	@Mock
-	private DepositAccountUseCase depositAccountUseCase;
-
-	@Mock
-	private TransferAccountUseCase transferAccountUseCase;
-
-	@Mock
-	private ListAccountTransactionsUseCase listAccountTransactionsUseCase;
 
 	@InjectMocks
 	private AccountService accountService;

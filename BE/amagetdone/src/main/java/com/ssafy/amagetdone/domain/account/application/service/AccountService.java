@@ -7,7 +7,6 @@ import com.ssafy.amagetdone.domain.account.api.dto.AccountDto;
 import com.ssafy.amagetdone.domain.account.application.usecase.ConfirmAccountOwnershipUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.FindAccountUserUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.FindUserAccountUseCase;
-import com.ssafy.amagetdone.domain.account.application.usecase.CreateDemandDepositAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListDemandDepositProductsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ReconcileLinkedAccountsUseCase;
@@ -28,7 +27,6 @@ public class AccountService {
 	private final SsafyDemandDepositAccountApiClient ssafyDemandDepositAccountApiClient;
 	private final RegisterDemandDepositProductUseCase registerDemandDepositProductUseCase;
 	private final ListDemandDepositProductsUseCase listDemandDepositProductsUseCase;
-	private final CreateDemandDepositAccountUseCase createDemandDepositAccountUseCase;
 	private final ListAccountsUseCase listAccountsUseCase;
 	private final ReconcileLinkedAccountsUseCase reconcileLinkedAccountsUseCase;
 
@@ -39,7 +37,6 @@ public class AccountService {
 		SsafyDemandDepositAccountApiClient ssafyDemandDepositAccountApiClient,
 		RegisterDemandDepositProductUseCase registerDemandDepositProductUseCase,
 		ListDemandDepositProductsUseCase listDemandDepositProductsUseCase,
-		CreateDemandDepositAccountUseCase createDemandDepositAccountUseCase,
 		ListAccountsUseCase listAccountsUseCase,
 		ReconcileLinkedAccountsUseCase reconcileLinkedAccountsUseCase
 	) {
@@ -49,7 +46,6 @@ public class AccountService {
 		this.ssafyDemandDepositAccountApiClient = ssafyDemandDepositAccountApiClient;
 		this.registerDemandDepositProductUseCase = registerDemandDepositProductUseCase;
 		this.listDemandDepositProductsUseCase = listDemandDepositProductsUseCase;
-		this.createDemandDepositAccountUseCase = createDemandDepositAccountUseCase;
 		this.listAccountsUseCase = listAccountsUseCase;
 		this.reconcileLinkedAccountsUseCase = reconcileLinkedAccountsUseCase;
 	}
@@ -82,10 +78,6 @@ public class AccountService {
 
 	public List<AccountAdminDto.ProductResponse> listProducts() {
 		return listDemandDepositProductsUseCase.execute();
-	}
-
-	public AccountAdminDto.AccountCreateResponse createAccount(AccountAdminDto.AccountCreateRequest request) {
-		return createDemandDepositAccountUseCase.execute(request);
 	}
 
 	public AccountDto.AccountSummaryResponse getAccount(Integer userId, String accountNo) {

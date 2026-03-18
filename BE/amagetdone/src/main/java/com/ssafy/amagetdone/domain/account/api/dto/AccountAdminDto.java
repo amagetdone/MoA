@@ -23,18 +23,4 @@ public final class AccountAdminDto {
 		String accountType
 	) {
 	}
-
-	public record AccountCreateRequest(
-		Integer userId,
-		String accountTypeUniqueNo
-	) {
-	}
-
-	public record AccountCreateResponse(
-		String bankCode,
-		String accountNo,
-		String currency,
-		String currencyName
-	) {
-	}
 }
