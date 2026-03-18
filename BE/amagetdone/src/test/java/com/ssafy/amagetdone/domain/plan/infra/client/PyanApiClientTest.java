@@ -54,10 +54,10 @@ class PyanApiClientTest {
 	}
 
 	@Test
-	void propertiesDefaultPenModeToNo() {
+	void propertiesDefaultPenModeToNone() {
 		PyanProperties properties = new PyanProperties();
 
-		assertEquals("no", properties.getPenMode());
+		assertEquals("none", properties.getPenMode());
 	}
 
 	@Test
