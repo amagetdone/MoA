@@ -114,7 +114,7 @@ class AccountCompletePage extends ConsumerWidget {
           if (isOnboarding) {
             context.go(AppRoutes.onboardingAccount);
           } else {
-            context.go(AppRoutes.accountManage);
+            context.go(AppRoutes.home);
           }
         },
       ),

@@ -188,7 +188,9 @@ class _OnboardingLoadingPageState extends State<OnboardingLoadingPage>
                       Text(
                         _phase == 0
                             ? '소비패턴을 분석중이에요'
-                            : '계획을 수립 중이에요',
+                            : widget.nextRoute == AppRoutes.onboardingPlan
+                                ? '소비패턴 분석을 기반으로\n목표를 수립 중이에요'
+                                : '소비패턴 분석을 마무리 하고 있어요',
                         style: AppTextStyles.headingMd.copyWith(
                           color: AppColors.gray900,
                           fontSize: 18.sp,
