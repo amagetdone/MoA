@@ -63,7 +63,7 @@ public class TransactionController implements TransactionDocsController {
 		@RequestParam(name = "month", required = false) String month
 	) {
 		return ApiResponse.ok(
-			"월 지출을 조회했습니다.",
+			"월간 지출을 조회했습니다.",
 			transactionAnalysisResponseFacade.getMonthlyExpense(authenticatedMember.userId(), parseYearMonth(month))
 		);
 	}
@@ -140,7 +140,7 @@ public class TransactionController implements TransactionDocsController {
 		@PathVariable("yearWeek") String yearWeek
 	) {
 		return ApiResponse.ok(
-			"주간 분석을 조회했습니다.",
+			"주간 분석 결과를 조회했습니다.",
 			transactionAnalysisResponseFacade.getWeeklyAnalysis(authenticatedMember.userId(), yearWeek)
 		);
 	}
@@ -151,7 +151,7 @@ public class TransactionController implements TransactionDocsController {
 		@PathVariable("yearMonth") String yearMonth
 	) {
 		return ApiResponse.ok(
-			"월간 분석을 조회했습니다.",
+			"월간 분석 결과를 조회했습니다.",
 			transactionAnalysisResponseFacade.getMonthlyAnalysis(authenticatedMember.userId(), yearMonth)
 		);
 	}

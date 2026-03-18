@@ -7,27 +7,6 @@ public final class DemandDepositAccountDto {
 	private DemandDepositAccountDto() {
 	}
 
-	public record AccountCreateRequest(
-		String userKey,
-		String accountTypeUniqueNo
-	) {
-	}
-
-	public record AccountCreateResponse(
-		String bankCode,
-		String accountNo,
-		String currency,
-		String currencyName
-	) {
-	}
-
-	public record ApiAccountCreateResponse(
-		String bankCode,
-		String accountNo,
-		ApiCurrency currency
-	) {
-	}
-
 	public record ApiCurrency(
 		String currency,
 		String currencyName

@@ -51,6 +51,7 @@ class TransactionControllerMockModeTest {
 				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("온보딩 분석 결과를 조회했습니다."))
 			.andExpect(jsonPath("$.data.summaryText").exists())
 			.andExpect(jsonPath("$.data.categoryExpenses[0].categoryName").value("주거"));
 	}
@@ -63,6 +64,7 @@ class TransactionControllerMockModeTest {
 				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("월간 분석 결과를 조회했습니다."))
 			.andExpect(jsonPath("$.data.yearMonth").value("2026-03"))
 			.andExpect(jsonPath("$.data.categoryExpenses[0].categoryName").value("식비"));
 	}
@@ -82,6 +84,7 @@ class TransactionControllerMockModeTest {
 					"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("거래 분석을 완료했습니다."))
 			.andExpect(jsonPath("$.data.summaryText").exists())
 			.andExpect(jsonPath("$.data.categoryExpenses[0].categoryName").value("주거"));
 	}

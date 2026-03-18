@@ -141,6 +141,17 @@ class SwaggerConfigIntegrationTest {
 	}
 
 	@Test
+	void apiDocsDescribeTransactionsEndpointsInKorean() throws Exception {
+		mockMvc.perform(apiGet("/v3/api-docs"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.paths['/transactions'].get.tags[0]").value("거래 API"))
+			.andExpect(jsonPath("$.paths['/transactions'].get.summary").value("거래 내역 조회"))
+			.andExpect(jsonPath("$.paths['/transactions'].get.description").value("날짜 범위와 분석 포함 여부 조건으로 거래 내역을 조회합니다."))
+			.andExpect(jsonPath("$.paths['/transactions/analysis'].post.summary").value("거래 분석 실행"))
+			.andExpect(jsonPath("$.paths['/transactions/analysis'].post.description").value("최근 완료된 월 기준으로 거래를 분석하고 온보딩 결과를 반환합니다."));
+	}
+
+	@Test
 	void apiDocsMarkAuthenticatedUploadEndpointsWithBearerSecurity() throws Exception {
 		mockMvc.perform(apiGet("/v3/api-docs"))
 			.andExpect(status().isOk())

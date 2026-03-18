@@ -78,6 +78,7 @@ class TransactionControllerTest {
 				.param("bucket", "MONTH"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("지출 요약을 조회했습니다."))
 			.andExpect(jsonPath("$.data.range.fromMonth").value("2025-10"))
 			.andExpect(jsonPath("$.data.points[0].expenseAmount").value(1900000))
 			.andExpect(jsonPath("$.data.comparison.changeRate").value(10.47));
@@ -104,6 +105,7 @@ class TransactionControllerTest {
 				.param("month", "2026-03"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("월간 지출을 조회했습니다."))
 			.andExpect(jsonPath("$.data.month").value("2026-03"))
 			.andExpect(jsonPath("$.data.totalExpenseAmount").value(1900000))
 			.andExpect(jsonPath("$.data.transactionCount").value(84));
@@ -143,6 +145,7 @@ class TransactionControllerTest {
 				.param("size", "20"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("거래 내역을 조회했습니다."))
 			.andExpect(jsonPath("$.data.sync.triggered").value(true))
 			.andExpect(jsonPath("$.data.totalElements").value(143))
 			.andExpect(jsonPath("$.data.items[0].merchantText").value("Coffee Shop"));
@@ -166,7 +169,8 @@ class TransactionControllerTest {
 					"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.data.summaryText").value("3-month analysis complete"))
+			.andExpect(jsonPath("$.message").value("거래 분석을 완료했습니다."))
+			.andExpect(jsonPath("$.data.summaryText").value("최근 3개월 소비 분석을 완료했어요."))
 			.andExpect(jsonPath("$.data.averageIncome").value(3_000_000))
 			.andExpect(jsonPath("$.data.averageExpense").value(1_900_000))
 			.andExpect(jsonPath("$.data.categoryExpenses[0].categoryName").value("Food"));
@@ -190,6 +194,7 @@ class TransactionControllerTest {
 					"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("거래 동기화를 완료했습니다."))
 			.andExpect(jsonPath("$.data.insertedAccountCount").value(4))
 			.andExpect(jsonPath("$.data.insertedCardCount").value(2));
 	}
@@ -205,7 +210,8 @@ class TransactionControllerTest {
 				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.data.summaryText").value("3-month analysis complete"))
+			.andExpect(jsonPath("$.message").value("온보딩 분석 결과를 조회했습니다."))
+			.andExpect(jsonPath("$.data.summaryText").value("최근 3개월 소비 분석을 완료했어요."))
 			.andExpect(jsonPath("$.data.averageIncome").value(3_000_000))
 			.andExpect(jsonPath("$.data.averageExpense").value(1_900_000))
 			.andExpect(jsonPath("$.data.remainingAmount").value(1_100_000))
@@ -240,6 +246,7 @@ class TransactionControllerTest {
 				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("주간 분석 결과를 조회했습니다."))
 			.andExpect(jsonPath("$.data.yearWeek").value("2026-W10"))
 			.andExpect(jsonPath("$.data.expenseAmount").value(480000))
 			.andExpect(jsonPath("$.data.essentialAmount").value(155000))
@@ -270,6 +277,7 @@ class TransactionControllerTest {
 				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("월간 분석 결과를 조회했습니다."))
 			.andExpect(jsonPath("$.data.yearMonth").value("2026-03"))
 			.andExpect(jsonPath("$.data.expenseAmount").value(1900000))
 			.andExpect(jsonPath("$.data.monthlyEssentialAmount").value(680000))
@@ -280,13 +288,13 @@ class TransactionControllerTest {
 
 	private TransactionAnalysisDto.OnboardingResult sampleOnboardingResult() {
 		return new TransactionAnalysisDto.OnboardingResult(
-			"3-month analysis complete",
+			"최근 3개월 소비 분석을 완료했어요.",
 			3_000_000L,
 			1_900_000L,
 			1_100_000L,
 			65.0,
 			35.0,
-			"You have room to increase savings.",
+			"지금 흐름이면 저축 여력이 있어요.",
 			List.of(
 				new TransactionAnalysisDto.CategoryExpense(10, "Food", 750_000L),
 				new TransactionAnalysisDto.CategoryExpense(20, "Housing", 550_000L)

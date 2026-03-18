@@ -141,13 +141,13 @@ class TransactionQueryServiceTest {
 
 		TransactionAnalysisDto.OnboardingResult result = queryService.getOnboardingAnalysisResult(1);
 
-		assertEquals("3-month analysis complete", result.summaryText());
+		assertEquals("최근 3개월 소비 분석을 완료했어요.", result.summaryText());
 		assertEquals(3_000_000L, result.averageIncome());
 		assertEquals(1_400_000L, result.averageExpense());
 		assertEquals(1_600_000L, result.remainingAmount());
 		assertEquals(57.14, result.fixedExpenseRatio());
 		assertEquals(42.86, result.variableExpenseRatio());
-		assertEquals("Your current spending flow is stable.", result.insightMessage());
+		assertEquals("현재 소비 흐름은 안정적이에요.", result.insightMessage());
 		assertEquals(2, result.categoryExpenses().size());
 		assertEquals("Housing", result.categoryExpenses().get(0).categoryName());
 		assertEquals(2_400_000L, result.categoryExpenses().get(0).amount());

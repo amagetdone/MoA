@@ -22,7 +22,6 @@ import org.springframework.web.client.RestClientException;
 @Component
 public class SsafyDemandDepositAccountApiClient {
 
-	private static final String CREATE_ACCOUNT_API = "createDemandDepositAccount";
 	private static final String LIST_ACCOUNT_API = "inquireDemandDepositAccountList";
 	private static final String DETAIL_ACCOUNT_API = "inquireDemandDepositAccount";
 	private static final String BALANCE_API = "inquireDemandDepositAccountBalance";
@@ -33,7 +32,6 @@ public class SsafyDemandDepositAccountApiClient {
 	private final AccountSsafyApiProperties properties;
 	private final SsafyApiRequestFactory requestFactory;
 	private final SsafyApiResponseValidator responseValidator;
-	private final ParameterizedTypeReference<SsafyResponseEnvelope<DemandDepositAccountDto.ApiAccountCreateResponse>> createAccountResponseType;
 	private final ParameterizedTypeReference<SsafyResponseEnvelope<List<DemandDepositAccountDto.AccountItem>>> accountListResponseType;
 	private final ParameterizedTypeReference<SsafyResponseEnvelope<DemandDepositAccountDto.AccountDetailResponse>> accountDetailResponseType;
 	private final ParameterizedTypeReference<SsafyResponseEnvelope<DemandDepositBalanceDto.Response>> balanceResponseType;
@@ -53,8 +51,6 @@ public class SsafyDemandDepositAccountApiClient {
 		this.properties = properties;
 		this.requestFactory = requestFactory;
 		this.responseValidator = responseValidator;
-		this.createAccountResponseType = new ParameterizedTypeReference<>() {
-		};
 		this.accountListResponseType = new ParameterizedTypeReference<>() {
 		};
 		this.accountDetailResponseType = new ParameterizedTypeReference<>() {
@@ -65,29 +61,6 @@ public class SsafyDemandDepositAccountApiClient {
 		};
 		this.transferResponseType = new ParameterizedTypeReference<>() {
 		};
-	}
-
-	public DemandDepositAccountDto.AccountCreateResponse createAccount(DemandDepositAccountDto.AccountCreateRequest request) {
-		requireUserRequest(request == null ? null : request.userKey());
-		DemandDepositAccountDto.ApiAccountCreateResponse payload = post(
-			CREATE_ACCOUNT_API,
-			request.userKey(),
-			new CreateAccountApiRequest(request.accountTypeUniqueNo()),
-			createAccountResponseType,
-			AccountErrorCode.DEMAND_DEPOSIT_ACCOUNT_API_CALL_FAILED,
-			AccountErrorCode.INVALID_DEMAND_DEPOSIT_ACCOUNT_API_RESPONSE
-		);
-
-		if (payload.currency() == null) {
-			throw new AccountException(AccountErrorCode.INVALID_DEMAND_DEPOSIT_ACCOUNT_API_RESPONSE);
-		}
-
-		return new DemandDepositAccountDto.AccountCreateResponse(
-			payload.bankCode(),
-			payload.accountNo(),
-			payload.currency().currency(),
-			payload.currency().currencyName()
-		);
 	}
 
 	public DemandDepositAccountDto.AccountListResponse inquireAccounts(DemandDepositAccountDto.AccountListRequest request) {
