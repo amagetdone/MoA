@@ -110,4 +110,13 @@ class SeedAccountRemoteDataSource implements AccountRemoteDataSource {
     }
     return null;
   }
+
+  @override
+  Future<List<Transaction>> fetchTransactions(String accountNo) async {
+    await Future.delayed(const Duration(milliseconds: 220));
+    final snapshot = await _dataStore.ensureSessionSnapshot();
+    return snapshot.transactions
+        .where((t) => t.accountId == accountNo)
+        .toList();
+  }
 }

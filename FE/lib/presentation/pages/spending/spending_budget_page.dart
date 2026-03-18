@@ -28,6 +28,8 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
   int variableExpenses = 0;
   List<SpendingCategory> categories = [];
   bool _isInitialized = false;
+  bool _isFixedExpanded = false;
+  bool _isVariableExpanded = false;
 
   void _initializeState(SpendingState state) {
     if (_isInitialized || state.isLoading) return;
@@ -143,7 +145,9 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
           : Column(
               children: [
                 Expanded(
-                  child: SingleChildScrollView(
+                  child: Scrollbar(
+                    thumbVisibility: false,
+                    child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
                     child: Column(
@@ -152,7 +156,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                         Text('주간 예산 설정', style: AppTextStyles.headingLg),
                         SizedBox(height: 12.h),
                         Text(
-                          '주간 예산을 조정할 수 있어요. 조정된 주간 예산에 따라 소비\n분석과 계획 수립을 다시 진행해요.',
+                          '주간 예산에 따라 소비분석과 계획 수립을 진행합니다.',
                           style: AppTextStyles.bodySm.copyWith(
                             color: AppColors.textTertiary,
                             fontSize: 14.sp,
@@ -190,7 +194,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                                               child: Text(
                                                 CurrencyFormatter.formatKRW(totalBudget),
                                                 style: AppTextStyles.headingLg.copyWith(
-                                                  fontSize: 26.sp,
+                                                  fontSize: 20.sp,
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                               ),
@@ -207,7 +211,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                               SizedBox(height: 32.h),
 
                               _BudgetSectionHeader(
-                                label: '저축비',
+                                label: '저축액',
                                 description: '목표를 위해 저축하는 금액',
                                 amount: savings,
                                 color: const Color(0xFF81C784),
@@ -215,17 +219,18 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                               SizedBox(height: 40.h),
 
                               _BudgetSectionHeader(
-                                label: '고정비',
+                                label: '고정지출',
                                 description: '매주 고정으로 나가는 비용',
                                 amount: fixedExpenses,
                                 color: AppColors.orange500,
                                 isExpandable: true,
-                                isExpanded: true,
+                                isExpanded: _isFixedExpanded,
+                                onToggle: () => setState(() => _isFixedExpanded = !_isFixedExpanded),
                                 child: Column(
-                                  children: categories.map((cat) => 
+                                  children: categories.map((cat) =>
                                     _SubCategoryItem(
-                                      label: cat.name, 
-                                      amount: cat.budget, 
+                                      label: cat.name,
+                                      amount: cat.budget,
                                       progress: fixedExpenses > 0 ? cat.budget / fixedExpenses : 0
                                     )
                                   ).toList(),
@@ -234,12 +239,13 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                               SizedBox(height: 40.h),
 
                               _BudgetSectionHeader(
-                                label: '변동비',
+                                label: '변동지출',
                                 description: '매주 변동되는 비용 (병원비 등)',
                                 amount: variableExpenses,
                                 color: const Color(0xFF333333),
                                 isExpandable: true,
-                                isExpanded: true,
+                                isExpanded: _isVariableExpanded,
+                                onToggle: () => setState(() => _isVariableExpanded = !_isVariableExpanded),
                               ),
                               SizedBox(height: 32.h),
                               const Divider(color: Color(0xFF333333), thickness: 1.5),
@@ -282,6 +288,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                         SizedBox(height: 40.h),
                       ],
                     ),
+                    ),
                   ),
                 ),
                 MoreBottomButton(
@@ -310,6 +317,7 @@ class _BudgetSectionHeader extends StatelessWidget {
   final Color color;
   final bool isExpandable;
   final bool isExpanded;
+  final VoidCallback? onToggle;
   final Widget? child;
 
   const _BudgetSectionHeader({
@@ -319,6 +327,7 @@ class _BudgetSectionHeader extends StatelessWidget {
     required this.color,
     this.isExpandable = false,
     this.isExpanded = false,
+    this.onToggle,
     this.child,
   });
 
@@ -327,36 +336,40 @@ class _BudgetSectionHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.arrow_right_alt, color: AppColors.textPrimary, size: 22.w),
-                SizedBox(width: 6.w),
-                Text(
-                  label,
-                  style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold, fontSize: 17.sp),
-                ),
-                if (isExpandable) 
-                  Icon(isExpanded ? Icons.arrow_drop_down : Icons.arrow_right, size: 24.w),
-              ],
-            ),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                CurrencyFormatter.formatKRW(amount),
-                style: AppTextStyles.bodyMd.copyWith(color: color, fontWeight: FontWeight.bold, fontSize: 17.sp),
+        GestureDetector(
+          onTap: isExpandable ? onToggle : null,
+          behavior: HitTestBehavior.opaque,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.arrow_right_alt, color: AppColors.textPrimary, size: 22.w),
+                  SizedBox(width: 6.w),
+                  Text(
+                    label,
+                    style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold, fontSize: 17.sp),
+                  ),
+                  if (isExpandable)
+                    Icon(isExpanded ? Icons.arrow_drop_down : Icons.arrow_right, size: 24.w),
+                ],
               ),
-            ),
-          ],
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  CurrencyFormatter.formatKRW(amount),
+                  style: AppTextStyles.bodyMd.copyWith(color: color, fontWeight: FontWeight.bold, fontSize: 17.sp),
+                ),
+              ),
+            ],
+          ),
         ),
         SizedBox(height: 4.h),
         Text(
           description,
           style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary, fontSize: 12.sp),
         ),
-        if (child != null) ...[
+        if (isExpanded && child != null) ...[
           SizedBox(height: 24.h),
           Padding(
             padding: EdgeInsets.only(left: 16.w),

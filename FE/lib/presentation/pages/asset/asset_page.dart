@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
+import 'package:more_app/domain/entities/account.dart';
 import 'package:more_app/domain/entities/transaction.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/viewmodels/account_viewmodel.dart';
@@ -23,16 +24,64 @@ class AssetPage extends ConsumerStatefulWidget {
 
 class _AssetPageState extends ConsumerState<AssetPage> {
   bool _isCreditExpanded = false;
+  String? _selectedAccountNo;
 
-  void _showFilterBottomSheet() {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final accounts = ref.read(accountViewModelProvider).accounts;
+      _loadPrimaryAccount(accounts);
+    });
+  }
+
+  void _loadPrimaryAccount(List<Account> accounts) {
+    if (accounts.isEmpty) return;
+    final primary = accounts.firstWhere(
+      (a) => a.isPrimary,
+      orElse: () => accounts.first,
+    );
+    setState(() => _selectedAccountNo = primary.accountNumber);
+    ref.read(accountViewModelProvider.notifier).loadTransactions(primary.accountNumber);
+  }
+
+  void _showFilterBottomSheet(List<Account> accounts) {
     MoreBottomSheet.show(
       context: context,
-      child: const _AssetFilterBottomSheet(),
+      child: _AssetFilterBottomSheet(
+        accounts: accounts,
+        selectedAccountNo: _selectedAccountNo,
+        onAccountSelected: (accountNo) {
+          setState(() => _selectedAccountNo = accountNo);
+          ref.read(accountViewModelProvider.notifier).loadTransactions(accountNo);
+        },
+      ),
     );
+  }
+
+  Map<String, List<Transaction>> _groupByDate(List<Transaction> transactions) {
+    final Map<String, List<Transaction>> grouped = {};
+    for (final t in transactions) {
+      final key = DateFormat('MM.dd').format(t.dateTime);
+      grouped.putIfAbsent(key, () => []).add(t);
+    }
+    return grouped;
   }
 
   @override
   Widget build(BuildContext context) {
+    final accountState = ref.watch(accountViewModelProvider);
+    final accounts = accountState.accounts;
+    final transactions = accountState.transactions;
+    final grouped = _groupByDate(transactions);
+
+    // 계좌 목록 로드 후 대표계좌 자동 선택
+    ref.listen(accountViewModelProvider.select((s) => s.accounts), (_, next) {
+      if (_selectedAccountNo == null && next.isNotEmpty) {
+        _loadPrimaryAccount(next);
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: MoreAppBar(
@@ -99,7 +148,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('총 자산', style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary)),
-                                Text(CurrencyFormatter.formatKRW(3250000), style: AppTextStyles.headingLg),
+                                Text(CurrencyFormatter.formatKRW(accountState.totalAsset), style: AppTextStyles.headingLg),
                               ],
                             ),
                             const Spacer(),
@@ -154,7 +203,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                       SizedBox(height: 16.h),
                       GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onTap: _showFilterBottomSheet,
+                        onTap: () => _showFilterBottomSheet(accounts),
                         child: Container(
                           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                           decoration: BoxDecoration(
@@ -172,14 +221,21 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                         ),
                       ),
                       SizedBox(height: 24.h),
-                      _buildDateHeader('03.05'),
-                      _buildTransactionItem('홍길동', '14:00', '카페', '토스뱅크', '-30,000원(신용)', '03.25 결제 예정', isCredit: true, id: 'credit_1'),
-                      _buildTransactionItem('홍길동', '14:00', '카페', '토스뱅크', '90,000원', '3,250,000원', isPlus: true, id: 'income_1'),
-                      _buildTransactionItem('홍길동', '14:00', '카페', '토스뱅크', '-90,000원', '3,160,000원', id: 'expense_1'),
-                      SizedBox(height: 16.h),
-                      _buildDateHeader('03.04'),
-                      _buildTransactionItem('홍길동', '14:00', '카페', '토스뱅크', '90,000원', '3,250,000원', isPlus: true, id: 'income_2'),
-                      _buildTransactionItem('홍길동', '14:00', '카페', '토스뱅크', '-90,000원', '3,160,000원', id: 'expense_2'),
+                      if (accountState.isLoading)
+                        const Center(child: CircularProgressIndicator())
+                      else if (transactions.isEmpty)
+                        Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 40.h),
+                            child: Text('거래내역이 없습니다.', style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary)),
+                          ),
+                        )
+                      else
+                        ...grouped.entries.expand((entry) => [
+                          _buildDateHeader(entry.key),
+                          ...entry.value.map((t) => _buildTransactionItem(t)),
+                          SizedBox(height: 16.h),
+                        ]),
                     ],
                   ),
                 ),
@@ -217,10 +273,15 @@ class _AssetPageState extends ConsumerState<AssetPage> {
     );
   }
 
-  Widget _buildTransactionItem(String name, String time, String category, String bank, String amount, String balance, {bool isPlus = false, bool isCredit = false, required String id}) {
+  Widget _buildTransactionItem(Transaction t) {
+    final isPlus = t.type == TransactionType.income;
+    final amountText = '${isPlus ? '+' : '-'}${CurrencyFormatter.formatKRW(t.amount)}';
+    final balanceText = CurrencyFormatter.formatKRW(t.balanceAfter);
+    final timeText = DateFormat('HH:mm').format(t.dateTime);
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => context.push(AppRoutes.assetDetailLocation(id)),
+      onTap: () => context.push(AppRoutes.assetDetailLocation(t.id)),
       child: Padding(
         padding: EdgeInsets.only(bottom: 20.h),
         child: Row(
@@ -231,9 +292,9 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                 children: [
                   Row(
                     children: [
-                      Text(name, style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold)),
+                      Text(t.title, style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold)),
                       SizedBox(width: 8.w),
-                      Text(time, style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
+                      Text(timeText, style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
                     ],
                   ),
                   SizedBox(height: 4.h),
@@ -242,12 +303,12 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                       Container(
                         padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
                         decoration: BoxDecoration(color: const Color(0xFFFFCC91).withValues(alpha: 0.4), borderRadius: BorderRadius.circular(10.r)),
-                        child: Text(category, style: AppTextStyles.caption.copyWith(color: AppColors.orange500, fontSize: 10.sp)),
+                        child: Text(t.category, style: AppTextStyles.caption.copyWith(color: AppColors.orange500, fontSize: 10.sp)),
                       ),
-                      SizedBox(width: 6.w),
-                      const Icon(Icons.circle, size: 12, color: Colors.blueAccent),
-                      SizedBox(width: 4.w),
-                      Text(bank, style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
+                      if (t.memo != null) ...[
+                        SizedBox(width: 6.w),
+                        Text(t.memo!, style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
+                      ],
                     ],
                   ),
                 ],
@@ -256,11 +317,11 @@ class _AssetPageState extends ConsumerState<AssetPage> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(amount, style: AppTextStyles.bodyMd.copyWith(
+                Text(amountText, style: AppTextStyles.bodyMd.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: isPlus ? const Color(0xFF81C784) : (isCredit ? const Color(0xFF64B5F6) : Colors.black87)
+                  color: isPlus ? const Color(0xFF81C784) : Colors.black87,
                 )),
-                Text(balance, style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
+                Text(balanceText, style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
               ],
             ),
           ],
@@ -271,7 +332,15 @@ class _AssetPageState extends ConsumerState<AssetPage> {
 }
 
 class _AssetFilterBottomSheet extends StatefulWidget {
-  const _AssetFilterBottomSheet();
+  final List<Account> accounts;
+  final String? selectedAccountNo;
+  final void Function(String accountNo) onAccountSelected;
+
+  const _AssetFilterBottomSheet({
+    required this.accounts,
+    required this.selectedAccountNo,
+    required this.onAccountSelected,
+  });
 
   @override
   State<_AssetFilterBottomSheet> createState() => _AssetFilterBottomSheetState();
@@ -281,11 +350,21 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
   int _periodIdx = 1;
   int _typeIdx = 0;
   int _creditIdx = 0;
-  int _accountIdx = 0;
+  String? _selectedAccountNo;
   bool _isAccountExpanded = false;
 
   @override
+  void initState() {
+    super.initState();
+    _selectedAccountNo = widget.selectedAccountNo;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final accounts = widget.accounts;
+    final firstRow = accounts.take(3).toList();
+    final secondRow = accounts.length > 3 ? accounts.skip(3).take(3).toList() : <Account>[];
+
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
       child: SingleChildScrollView(
@@ -303,7 +382,6 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
             SizedBox(height: 24.h),
             Text('거래 계좌', style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold)),
             SizedBox(height: 16.h),
-            
             Container(
               padding: EdgeInsets.all(16.w),
               decoration: BoxDecoration(
@@ -314,40 +392,39 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildAccountItem('토스뱅크', 0),
-                      _buildAccountItem('토스뱅크', 1),
-                      _buildAccountItem('토스뱅크', 2),
-                    ],
+                    children: firstRow.map((a) => _buildAccountItem(a)).toList(),
                   ),
-                  if (_isAccountExpanded) ...[
+                  if (_isAccountExpanded && secondRow.isNotEmpty) ...[
                     SizedBox(height: 16.h),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildAccountItem('토스뱅크', 3),
-                        _buildAccountItem('토스뱅크', 4),
-                        _buildAccountItem('토스뱅크', 5),
-                      ],
+                      children: secondRow.map((a) => _buildAccountItem(a)).toList(),
                     ),
                   ],
-                  SizedBox(height: 12.h),
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => setState(() => _isAccountExpanded = !_isAccountExpanded),
-                    child: Icon(
-                      _isAccountExpanded ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                      size: 32.w,
-                      color: Colors.black54,
+                  if (accounts.length > 3) ...[
+                    SizedBox(height: 12.h),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => setState(() => _isAccountExpanded = !_isAccountExpanded),
+                      child: Icon(
+                        _isAccountExpanded ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                        size: 32.w,
+                        color: Colors.black54,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
             SizedBox(height: 32.h),
             MoreBottomButton(
               text: '완료',
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                if (_selectedAccountNo != null) {
+                  widget.onAccountSelected(_selectedAccountNo!);
+                }
+                Navigator.pop(context);
+              },
             ),
             SizedBox(height: 24.h),
           ],
@@ -419,11 +496,11 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
     );
   }
 
-  Widget _buildAccountItem(String name, int index) {
-    final isSelected = _accountIdx == index;
+  Widget _buildAccountItem(Account account) {
+    final isSelected = _selectedAccountNo == account.accountNumber;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => setState(() => _accountIdx = index),
+      onTap: () => setState(() => _selectedAccountNo = account.accountNumber),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
@@ -437,9 +514,9 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
           children: [
             const Icon(Icons.circle, size: 14, color: Colors.blueAccent),
             SizedBox(width: 6.w),
-            Text(name, style: AppTextStyles.caption.copyWith(
+            Text(account.bankName, style: AppTextStyles.caption.copyWith(
               color: isSelected ? Colors.black87 : Colors.black38,
-              fontSize: 11.sp
+              fontSize: 11.sp,
             )),
           ],
         ),
