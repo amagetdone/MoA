@@ -181,12 +181,14 @@ class _HeroCard extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
                 child: GoalVideoThumb(
+                  key: ValueKey('detail_${goal.id}'),
                   assetPath: goal.sketchVideoAssetPath,
                   iconName: goal.iconName,
                   progressRate: goal.progressRate,
                   size: 200.w,   // height 기준
                   borderRadius: 0,
                   fillWidth: true,
+                  playAnimation: true,
                 ),
               ),
 

@@ -3,11 +3,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:video_player/video_player.dart';
 
-/// 목표 달성률만큼 영상을 재생한 뒤 정지된 프레임을 보여주는 썸네일 위젯.
+/// 목표 달성률에 해당하는 프레임 하나를 정지 상태로 보여주는 썸네일 위젯.
 ///
 /// - [assetPath] : 직접 에셋 경로 지정 (goal.sketchVideoAssetPath). 있으면 우선 사용.
 /// - [iconName]  : assetPath 없을 때 내부 매핑으로 fallback
-/// - [progressRate] : 0.0 ~ 1.0 (예: 0.7 → 전체 길이의 70% 지점에서 정지)
+/// - [progressRate] : 0.0 ~ 1.0 (예: 0.7 → 영상 70% 지점 프레임을 정지 표시)
 /// - [size] : 위젯 너비 & 높이 (정사각형)
 /// - [borderRadius] : 모서리 반경
 class GoalVideoThumb extends StatefulWidget {
@@ -18,7 +18,8 @@ class GoalVideoThumb extends StatefulWidget {
     required this.progressRate,
     required this.size,
     this.borderRadius,
-    this.fillWidth = false, // true면 width: double.infinity, size는 height로 사용
+    this.fillWidth = false,
+    this.playAnimation = false, // true면 0→progressRate까지 재생 후 정지 (상세 페이지용)
   });
 
   final String? assetPath;
@@ -27,6 +28,7 @@ class GoalVideoThumb extends StatefulWidget {
   final double size;
   final double? borderRadius;
   final bool fillWidth;
+  final bool playAnimation;
 
   /// assetPath 우선, 없으면 iconName → 에셋 경로 매핑.
   static String resolveAsset(String? assetPath, String? iconName) {
@@ -48,7 +50,7 @@ class _GoalVideoThumbState extends State<GoalVideoThumb> {
   VideoPlayerController? _controller;
   bool _ready = false;
   bool _error = false;
-  bool _stopped = false; // 목표 지점 도달 후 중복 pause 방지
+  bool _stopped = false;
 
   @override
   void initState() {
@@ -62,43 +64,29 @@ class _GoalVideoThumbState extends State<GoalVideoThumb> {
 
     try {
       await ctrl.initialize();
-
       if (!mounted) { ctrl.dispose(); return; }
 
       final target = ctrl.value.duration * widget.progressRate.clamp(0.0, 1.0);
 
-      // 달성률이 0이면 그냥 첫 프레임 정지
-      if (widget.progressRate <= 0.0) {
+      if (widget.playAnimation && widget.progressRate > 0.0 && widget.progressRate < 1.0) {
+        // 상세 페이지: 0에서 progressRate 지점까지 재생 후 정지
+        ctrl.addListener(() {
+          if (_stopped) return;
+          if (ctrl.value.position >= target) {
+            _stopped = true;
+            ctrl.pause();
+            ctrl.seekTo(target);
+          }
+        });
+        setState(() { _controller = ctrl; _ready = true; });
         await ctrl.seekTo(Duration.zero);
+        await ctrl.play();
+      } else {
+        // 썸네일: 해당 프레임으로 바로 seek 후 정지
+        await ctrl.seekTo(target);
         await ctrl.pause();
         setState(() { _controller = ctrl; _ready = true; });
-        return;
       }
-
-      // 달성률이 100% 이상이면 마지막 프레임으로
-      if (widget.progressRate >= 1.0) {
-        await ctrl.seekTo(ctrl.value.duration);
-        await ctrl.pause();
-        setState(() { _controller = ctrl; _ready = true; });
-        return;
-      }
-
-      // 0 → target 지점까지 재생 후 자동 정지하는 listener 등록
-      ctrl.addListener(() {
-        if (_stopped) return;
-        final pos = ctrl.value.position;
-        if (pos >= target) {
-          _stopped = true;
-          ctrl.pause();
-          ctrl.seekTo(target); // 딱 목표 프레임에 고정
-        }
-      });
-
-      setState(() { _controller = ctrl; _ready = true; });
-
-      // 처음부터 재생 시작
-      await ctrl.seekTo(Duration.zero);
-      await ctrl.play();
     } catch (_) {
       ctrl.dispose();
       if (mounted) setState(() => _error = true);
