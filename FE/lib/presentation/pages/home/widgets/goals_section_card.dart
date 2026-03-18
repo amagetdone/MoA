@@ -66,7 +66,7 @@ class GoalsSectionCard extends StatelessWidget {
 
           // ── 목표 리스트 ──
           for (int i = 0; i < goals.length; i++) ...[
-            _GoalItem(goal: goals[i]),
+            _GoalItem(key: ValueKey(goals[i].id), goal: goals[i]),
             if (i < goals.length - 1) ...[
               SizedBox(height: 12.h),
               Divider(
@@ -84,7 +84,7 @@ class GoalsSectionCard extends StatelessWidget {
 }
 
 class _GoalItem extends StatelessWidget {
-  const _GoalItem({required this.goal});
+  const _GoalItem({super.key, required this.goal});
 
   final Goal goal;
 
