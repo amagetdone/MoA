@@ -14,8 +14,18 @@ def test_build_image_generation_prompt_expands_user_edit_goal() -> None:
     assert "reference image" in prompt
     assert "512x512" in prompt
     assert "single final image" in prompt
-    assert "Do not create grids" in prompt
+    assert "- grids" in prompt
     assert prompt != "Turn the reference image into a polished cyberpunk banana poster."
+
+
+def test_build_image_generation_prompt_supports_title_and_description_format() -> None:
+    prompt = build_image_generation_prompt(
+        "[Title] 노트북 구매 [description] 삼성 노트북 신상 구매"
+    )
+
+    assert "Title metadata: 노트북 구매" in prompt
+    assert "Goal request: 삼성 노트북 신상 구매" in prompt
+    assert "Goal request: [Title] 노트북 구매 [description] 삼성 노트북 신상 구매" not in prompt
 
 
 def test_image_generation_graph_builds_prompt_and_delegates_generation() -> None:

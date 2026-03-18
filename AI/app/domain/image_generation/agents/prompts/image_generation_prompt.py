@@ -29,7 +29,7 @@ _IMAGE_GENERATION_PROMPT = ChatPromptTemplate.from_messages(
                 "\n"
                 "Structured input rules:\n"
                 "- [title]: semantic metadata only, for internal concept understanding\n"
-                "- [Subject]: the actual visual goal request\n"
+                "- [description] or [Subject]: the actual visual goal request\n"
                 "- Never render [title] literally as text in the image\n"
                 "- Never render user-provided words literally unless the user explicitly asks for visible text\n"
                 "\n"
@@ -87,12 +87,12 @@ _IMAGE_GENERATION_PROMPT = ChatPromptTemplate.from_messages(
 
 def parse_structured_user_prompt(user_prompt: str) -> tuple[str, str]:
     title_match = re.search(
-        r"\[title\]\s*(.*?)(?=\s*\[Subject\]|\s*$)",
+        r"\[title\]\s*(.*?)(?=\s*\[(?:description|subject)\]|\s*$)",
         user_prompt,
         re.IGNORECASE | re.DOTALL,
     )
     subject_match = re.search(
-        r"\[Subject\]\s*(.*)$",
+        r"\[(?:description|subject)\]\s*(.*)$",
         user_prompt,
         re.IGNORECASE | re.DOTALL,
     )
