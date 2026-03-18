@@ -226,7 +226,7 @@ public class TransactionQueryService {
 		LocalDate fromDate,
 		LocalDate toDate
 	) {
-		return loadProjections(userId, fromDate.atStartOfDay(), toDate.atTime(23, 59, 59)).stream()
+		return loadProjections(userId, fromDate.atStartOfDay(), toDate.atTime(23, 59, 59), null).stream()
 			.filter(this::isPureExpense)
 			.map(this::toTransactionListItem)
 			.toList();
@@ -237,7 +237,7 @@ public class TransactionQueryService {
 		LocalDate fromDate,
 		LocalDate toDate
 	) {
-		return loadProjections(userId, fromDate.atStartOfDay(), toDate.atTime(23, 59, 59)).stream()
+		return loadProjections(userId, fromDate.atStartOfDay(), toDate.atTime(23, 59, 59), null).stream()
 			.filter(this::isNonEssentialFreeSpending)
 			.map(this::toTransactionListItem)
 			.toList();

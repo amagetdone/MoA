@@ -36,7 +36,6 @@ public class AccountService {
 	private final ListDemandDepositProductsUseCase listDemandDepositProductsUseCase;
 	private final CreateDemandDepositAccountUseCase createDemandDepositAccountUseCase;
 	private final InitializeSsafyDummyDataUseCase initializeSsafyDummyDataUseCase;
-	private final SyncAccountsUseCase syncAccountsUseCase;
 	private final ListAccountsUseCase listAccountsUseCase;
 	private final ReconcileLinkedAccountsUseCase reconcileLinkedAccountsUseCase;
 
@@ -86,14 +85,14 @@ public class AccountService {
 			account.isVerified()
 		);
 	}
-    public AccountAdminDto.DataInitResponse initializeDummyData(AccountAdminDto.DataInitRequest request) {
-        return initializeSsafyDummyDataUseCase.execute(request);
-    }
+	public AccountAdminDto.DataInitResponse initializeDummyData(AccountAdminDto.DataInitRequest request) {
+		return initializeSsafyDummyDataUseCase.execute(request);
+	}
 
-    public List<AccountDto.AccountSummaryResponse> syncAccounts(Integer userId) {
-        List<Account> accounts = syncAccountsUseCase.execute(userId);
-        return listAccountsUseCase.toResponses(accounts);
-    }
+	public List<AccountDto.AccountSummaryResponse> syncAccounts(Integer userId) {
+		List<Account> accounts = reconcileLinkedAccountsUseCase.execute(userId);
+		return listAccountsUseCase.toResponses(accounts);
+	}
 
 	public List<AccountDto.AccountSummaryResponse> getAccounts(Integer userId) {
 		return listAccountsUseCase.toResponses(reconcileLinkedAccountsUseCase.execute(userId));
