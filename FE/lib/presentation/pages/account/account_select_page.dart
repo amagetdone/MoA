@@ -6,6 +6,7 @@ import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
+import 'package:more_app/presentation/providers/app_data_providers.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 
 class _BankInfo {
@@ -62,6 +63,7 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
   }
 
   bool _isAccountVerified = false;
+  bool _isVerifying = false;
 
   bool get _isFormValid =>
       _selectedBank != null && _accountNumberController.text.isNotEmpty && _isAccountVerified;
@@ -69,22 +71,41 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
   String? get _selectedBankCode => _selectedBank?.code;
   String? get _selectedBankName => _selectedBank?.name;
 
-  void _onNext() {
-    if (!_isFormValid) return;
+  bool _isRequesting = false;
 
-    final route = widget.isOnboarding
-        ? AppRoutes.onboardingAccountVerify
-        : AppRoutes.accountVerify;
+  Future<void> _onNext() async {
+    if (!_isFormValid || _isRequesting) return;
 
-    context.push(
-      route,
-      extra: {
-        'bankCode': _selectedBankCode,
-        'bankName': _selectedBankName,
-        'accountNumber': _accountNumberController.text,
-        'isOnboarding': widget.isOnboarding,
-      },
-    );
+    setState(() => _isRequesting = true);
+    try {
+      await ref
+          .read(accountRepositoryProvider)
+          .requestVerification(_accountNumberController.text);
+
+      if (!mounted) return;
+
+      final route = widget.isOnboarding
+          ? AppRoutes.onboardingAccountVerify
+          : AppRoutes.accountVerify;
+
+      context.push(
+        route,
+        extra: {
+          'bankCode': _selectedBankCode,
+          'bankName': _selectedBankName,
+          'accountNumber': _accountNumberController.text,
+          'isOnboarding': widget.isOnboarding,
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('1원 인증 요청에 실패했습니다.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isRequesting = false);
+    }
   }
 
   @override
@@ -249,9 +270,32 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
                   suffixIcon: Padding(
                     padding: EdgeInsets.only(right: 8.w),
                     child: TextButton(
-                      onPressed: _accountNumberController.text.isNotEmpty
-                          ? () {
-                              setState(() => _isAccountVerified = true);
+                      onPressed: _accountNumberController.text.isNotEmpty && !_isVerifying
+                          ? () async {
+                              setState(() => _isVerifying = true);
+                              try {
+                                final confirmed = await ref
+                                    .read(accountRepositoryProvider)
+                                    .confirmAccount(_accountNumberController.text);
+                                if (mounted) {
+                                  setState(() {
+                                    _isAccountVerified = confirmed;
+                                    _isVerifying = false;
+                                  });
+                                  if (!confirmed) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('계좌 실소유 확인에 실패했습니다.')),
+                                    );
+                                  }
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  setState(() => _isVerifying = false);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('계좌 확인 중 오류가 발생했습니다.')),
+                                  );
+                                }
+                              }
                               FocusScope.of(context).unfocus();
                             }
                           : null,
@@ -261,7 +305,7 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       child: Text(
-                        _isAccountVerified ? '확인완료' : '확인하기',
+                        _isVerifying ? '확인중...' : (_isAccountVerified ? '확인완료' : '확인하기'),
                         style: AppTextStyles.bodySm.copyWith(
                           color: _isAccountVerified
                               ? AppColors.green500

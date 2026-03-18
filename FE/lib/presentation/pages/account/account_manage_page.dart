@@ -17,6 +17,9 @@ class AccountManagePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final accountState = ref.watch(accountViewModelProvider);
+    final accounts = accountState.accounts;
+
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: MoreAppBar(
@@ -47,42 +50,77 @@ class AccountManagePage extends ConsumerWidget {
             ),
             SizedBox(height: 6.h),
             Text(
-              '총 1개의 계좌가 연결되었어요.',
+              accounts.isEmpty
+                  ? '연결된 계좌가 없어요.'
+                  : '총 ${accounts.length}개의 계좌가 연결되었어요.',
               style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary, fontSize: 14.sp),
             ),
             SizedBox(height: 24.h),
 
-            Text('연결된 계좌', style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
-            SizedBox(height: 12.h),
-
-            MoreCard(
-              padding: EdgeInsets.all(20.w),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48.w,
-                    height: 48.w,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFE812),
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    child: Center(
-                      child: Text('B', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24.sp, color: Colors.black)),
-                    ),
-                  ),
-                  SizedBox(width: 16.w),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            if (accounts.isNotEmpty) ...[
+              Text('연결된 계좌', style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
+              SizedBox(height: 12.h),
+              ...accounts.map((account) => Padding(
+                padding: EdgeInsets.only(bottom: 12.h),
+                child: MoreCard(
+                  padding: EdgeInsets.all(20.w),
+                  child: Row(
                     children: [
-                      Text('카카오뱅크', style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold)),
-                      SizedBox(height: 4.h),
-                      Text('3333-12-3456789', style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary)),
+                      Container(
+                        width: 48.w,
+                        height: 48.w,
+                        decoration: BoxDecoration(
+                          color: AppColors.orange500,
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: Center(
+                          child: Text(
+                            account.bankName.isNotEmpty ? account.bankName[0] : 'B',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24.sp, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 16.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(account.bankName, style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold)),
+                            SizedBox(height: 4.h),
+                            Text(account.accountNumber, style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary)),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('계좌 삭제'),
+                              content: Text('${account.bankName} 계좌를 삭제하시겠습니까?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(),
+                                  child: const Text('취소'),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(ctx).pop();
+                                    ref.read(accountViewModelProvider.notifier).removeAccount(account.id);
+                                  },
+                                  child: Text('삭제', style: TextStyle(color: Colors.red)),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        child: Icon(Icons.delete_outline, color: AppColors.textTertiary, size: 24.w),
+                      ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            SizedBox(height: 12.h),
+                ),
+              )),
+            ],
 
             // 새로운 계좌 연결하기 카드
             GestureDetector(

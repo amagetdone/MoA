@@ -61,4 +61,19 @@ class AccountRepositoryImpl implements AccountRepository {
       return _localDataSource.getTransactionById(id);
     }
   }
+
+  @override
+  Future<bool> confirmAccount(String accountNo) async {
+    return await _remoteDataSource.confirmAccount(accountNo);
+  }
+
+  @override
+  Future<Map<String, dynamic>> requestVerification(String accountNo) async {
+    return await _remoteDataSource.requestVerification(accountNo);
+  }
+
+  @override
+  Future<bool> checkVerification({required String accountNo, required String authCode}) async {
+    return await _remoteDataSource.checkVerification(accountNo: accountNo, authCode: authCode);
+  }
 }

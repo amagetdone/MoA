@@ -1,14 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/providers/app_data_providers.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 
-class AccountVerifyPage extends StatefulWidget {
+class AccountVerifyPage extends ConsumerStatefulWidget {
   final bool isOnboarding;
   final String bankName;
   final String accountNumber;
@@ -21,10 +23,10 @@ class AccountVerifyPage extends StatefulWidget {
   });
 
   @override
-  State<AccountVerifyPage> createState() => _AccountVerifyPageState();
+  ConsumerState<AccountVerifyPage> createState() => _AccountVerifyPageState();
 }
 
-class _AccountVerifyPageState extends State<AccountVerifyPage> {
+class _AccountVerifyPageState extends ConsumerState<AccountVerifyPage> {
   final List<TextEditingController> _digitControllers = List.generate(
     4,
     (_) => TextEditingController(),
@@ -64,29 +66,63 @@ class _AccountVerifyPageState extends State<AccountVerifyPage> {
     return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
 
+  bool _isVerifying = false;
+
   bool get _isCodeComplete =>
       _digitControllers.every((controller) => controller.text.isNotEmpty);
 
-  void _onVerify() {
-    if (!_isCodeComplete) {
-      return;
+  Future<void> _onVerify() async {
+    if (!_isCodeComplete || _isVerifying) return;
+
+    final authCode = _digitControllers.map((c) => c.text).join();
+    setState(() => _isVerifying = true);
+
+    try {
+      final verified = await ref
+          .read(accountRepositoryProvider)
+          .checkVerification(
+            accountNo: widget.accountNumber,
+            authCode: authCode,
+          );
+
+      if (!mounted) return;
+
+      if (verified) {
+        final route = widget.isOnboarding
+            ? AppRoutes.onboardingAccountComplete
+            : AppRoutes.accountComplete;
+
+        context.push(
+          route,
+          extra: {
+            'bankName': widget.bankName,
+            'accountNumber': widget.accountNumber,
+            'isOnboarding': widget.isOnboarding,
+          },
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('인증번호가 일치하지 않습니다.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('인증 확인 중 오류가 발생했습니다.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isVerifying = false);
     }
-
-    final route = widget.isOnboarding
-        ? AppRoutes.onboardingAccountComplete
-        : AppRoutes.accountComplete;
-
-    context.push(
-      route,
-      extra: {
-        'bankName': widget.bankName,
-        'accountNumber': widget.accountNumber,
-        'isOnboarding': widget.isOnboarding,
-      },
-    );
   }
 
-  void _onResend() {
+  Future<void> _onResend() async {
+    try {
+      await ref
+          .read(accountRepositoryProvider)
+          .requestVerification(widget.accountNumber);
+    } catch (_) {}
+    if (!mounted) return;
     setState(() {
       _remainingSeconds = 292;
       for (final c in _digitControllers) {
@@ -213,9 +249,9 @@ class _AccountVerifyPageState extends State<AccountVerifyPage> {
         ),
       ),
       bottomNavigationBar: MoreBottomButton(
-        text: '인증하기',
+        text: _isVerifying ? '확인 중...' : '인증하기',
         onPressed: _onVerify,
-        enabled: _isCodeComplete,
+        enabled: _isCodeComplete && !_isVerifying,
         progress: widget.isOnboarding ? 4 / 7 : null,
       ),
     );
