@@ -40,9 +40,4 @@ public class AccountAdminController {
 		return ApiResponse.ok("수시입출금 상품 목록을 조회했습니다.", accountService.listProducts());
 	}
 
-	@Operation(summary = "수시입출금 계좌 생성")
-	@PostMapping
-	public ApiResponse<AccountAdminDto.AccountCreateResponse> createAccount(@RequestBody AccountAdminDto.AccountCreateRequest request) {
-		return ApiResponse.ok("수시입출금 계좌를 생성했습니다.", accountService.createAccount(request));
-	}
 }

@@ -75,10 +75,10 @@ class FindOrCreateSocialUserUseCaseTest {
 		FindOrCreateSocialUserUseCase.Result result = useCase.execute(identity);
 
 		assertEquals("tester", result.user().getNickname());
-		assertEquals("ssafy123@tester.com", result.user().getEmail());
-		assertEquals("04fa9ec5-3e42-4847-84ae-34c855cdd1b6", result.user().getUserKey());
+		assertEquals("test@test.com", result.user().getEmail());
+		assertNull(result.user().getUserKey());
 		assertEquals("TEMP", result.user().getStatus().name());
-		assertFalse(result.isNewUser() && result.user().getUserKey() == null);
+		assertFalse(result.isNewUser() && result.user().getUserKey() != null);
 	}
 
 	@Test
@@ -99,15 +99,14 @@ class FindOrCreateSocialUserUseCaseTest {
 
 		assertFalse(result.isNewUser());
 		assertEquals("tester", result.user().getNickname());
-		assertEquals("ssafy123@tester.com", result.user().getEmail());
-		assertEquals("04fa9ec5-3e42-4847-84ae-34c855cdd1b6", result.user().getUserKey());
+		assertEquals("test@test.com", result.user().getEmail());
+		assertNull(result.user().getUserKey());
 	}
 
 	private TestSocialUserProperties testSocialUserProperties() {
 		TestSocialUserProperties properties = new TestSocialUserProperties();
 		properties.setNickname("tester");
-		properties.setEmail("ssafy123@tester.com");
-		properties.setUserApiKey("04fa9ec5-3e42-4847-84ae-34c855cdd1b6");
+		properties.setEmail("test@test.com");
 		return properties;
 	}
 }

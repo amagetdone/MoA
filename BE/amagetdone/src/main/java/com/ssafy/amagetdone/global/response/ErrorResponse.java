@@ -22,4 +22,8 @@ public record ErrorResponse(
 	public static ErrorResponse of(String message, String errorCode) {
 		return new ErrorResponse("error", message, errorCode, null);
 	}
+
+	public static ErrorResponse of(String message, String errorCode, Map<String, Object> detail) {
+		return new ErrorResponse("error", message, errorCode, detail);
+	}
 }

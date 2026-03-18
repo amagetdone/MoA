@@ -59,6 +59,7 @@ class ErdSchemaAlignmentTest {
 	@Test
 	void booleanColumnsUsePostgresBooleanDefaults() throws Exception {
 		assertColumnDefault(BaseEntity.class, "deleted", "FALSE");
+		assertColumnDefault(Account.class, "active", "TRUE");
 		assertColumnDefault(Account.class, "verified", "FALSE");
 		assertColumnDefault(AccountVerification.class, "status", "'REQUESTED'");
 		assertColumnDefault(Setting.class, "alarm", "FALSE");
@@ -66,12 +67,13 @@ class ErdSchemaAlignmentTest {
 
 	@Test
 	void erdDefaultsAreDeclaredOnEntityMappings() throws Exception {
+		assertColumnDefault(Account.class, "active", "TRUE");
 		assertColumnDefault(Account.class, "verified", "FALSE");
 		assertColumnDefault(AccountVerification.class, "status", "'REQUESTED'");
 		assertColumnDefault(Setting.class, "alarm", "FALSE");
 		assertColumnDefault(User.class, "status", "'ACTIVE'");
 		assertColumnDefault(Plan.class, "savedAmount", "0");
-		assertColumnDefault(Plan.class, "status", "'ACTIVE'");
+		assertColumnDefault(Plan.class, "status", "'WAITING'");
 		assertColumnDefault(Plan.class, "autoAllocateEnabled", "TRUE");
 		assertColumnDefault(PlanWeekAllocation.class, "allocationType", "'AUTO'");
 		assertColumnDefault(PlanWeekAllocation.class, "plannedAmount", "0");

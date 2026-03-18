@@ -119,6 +119,8 @@ class TransactionControllerTest {
 				143L,
 				List.of(new TransactionListDto.Item(
 					10231,
+					"CARD",
+					"card-10231",
 					LocalDateTime.of(2026, 3, 12, 13, 22, 11),
 					"Coffee Shop",
 					6100L,

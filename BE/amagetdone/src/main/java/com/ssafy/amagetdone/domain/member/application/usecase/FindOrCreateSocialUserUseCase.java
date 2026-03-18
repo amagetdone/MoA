@@ -57,8 +57,7 @@ public class FindOrCreateSocialUserUseCase {
 		}
 		user.applyTestSocialProfile(
 			testSocialUserProperties.getNickname(),
-			testSocialUserProperties.getEmail(),
-			testSocialUserProperties.getUserApiKey()
+			testSocialUserProperties.getEmail()
 		);
 	}
 

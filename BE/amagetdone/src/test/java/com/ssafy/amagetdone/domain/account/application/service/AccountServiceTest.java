@@ -7,14 +7,15 @@ import java.util.List;
 
 import com.ssafy.amagetdone.domain.account.api.dto.AccountAdminDto;
 import com.ssafy.amagetdone.domain.account.api.dto.AccountDto;
+import com.ssafy.amagetdone.domain.account.application.usecase.ConfirmAccountOwnershipUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.CreateDemandDepositAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.DepositAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.InquireAccountBalanceUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountTransactionsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListDemandDepositProductsUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.ReconcileLinkedAccountsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.RegisterDemandDepositProductUseCase;
-import com.ssafy.amagetdone.domain.account.application.usecase.SyncAccountsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.TransferAccountUseCase;
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
 
@@ -37,10 +38,13 @@ class AccountServiceTest {
 	private CreateDemandDepositAccountUseCase createDemandDepositAccountUseCase;
 
 	@Mock
-	private SyncAccountsUseCase syncAccountsUseCase;
+	private ConfirmAccountOwnershipUseCase confirmAccountOwnershipUseCase;
 
 	@Mock
 	private ListAccountsUseCase listAccountsUseCase;
+
+	@Mock
+	private ReconcileLinkedAccountsUseCase reconcileLinkedAccountsUseCase;
 
 	@Mock
 	private InquireAccountBalanceUseCase inquireAccountBalanceUseCase;
@@ -58,7 +62,20 @@ class AccountServiceTest {
 	private AccountService accountService;
 
 	@Test
-	void syncAccountsDelegatesToSyncAndListUseCases() {
+	void confirmAccountDelegatesToUseCase() {
+		AccountDto.ConfirmAccountRequest request = new AccountDto.ConfirmAccountRequest("0011234567890123");
+		AccountDto.ConfirmAccountResponse response = new AccountDto.ConfirmAccountResponse(true);
+
+		when(confirmAccountOwnershipUseCase.execute(7, request)).thenReturn(response);
+
+		AccountDto.ConfirmAccountResponse result = accountService.confirmAccount(7, request);
+
+		assertThat(result).isEqualTo(response);
+		verify(confirmAccountOwnershipUseCase).execute(7, request);
+	}
+
+	@Test
+	void getAccountsReconcilesLinkedAccountsBeforeMappingResponse() {
 		Account account = mock(Account.class);
 		AccountDto.AccountSummaryResponse response = new AccountDto.AccountSummaryResponse(
 			"0011234567890123",
@@ -68,13 +85,13 @@ class AccountServiceTest {
 			null,
 			true
 		);
-		when(syncAccountsUseCase.execute(7)).thenReturn(List.of(account));
+		when(reconcileLinkedAccountsUseCase.execute(7)).thenReturn(List.of(account));
 		when(listAccountsUseCase.toResponses(List.of(account))).thenReturn(List.of(response));
 
-		List<AccountDto.AccountSummaryResponse> result = accountService.syncAccounts(7);
+		List<AccountDto.AccountSummaryResponse> result = accountService.getAccounts(7);
 
 		assertThat(result).containsExactly(response);
-		verify(syncAccountsUseCase).execute(7);
+		verify(reconcileLinkedAccountsUseCase).execute(7);
 		verify(listAccountsUseCase).toResponses(List.of(account));
 	}
 

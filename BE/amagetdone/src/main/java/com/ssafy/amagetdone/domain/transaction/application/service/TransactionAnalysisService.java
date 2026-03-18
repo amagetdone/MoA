@@ -17,6 +17,7 @@ import com.ssafy.amagetdone.domain.account.model.entity.Account;
 import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.account.model.repository.CategoryRepository;
+import com.ssafy.amagetdone.domain.budget.application.usecase.UpdateBudgetSpentUseCase;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeek;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeekCategory;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekCategoryRepository;
@@ -65,6 +66,8 @@ public class TransactionAnalysisService {
 	private final EssentialExpenseSnapshotWeekRepository essentialExpenseSnapshotWeekRepository;
 	private final EssentialExpenseSnapshotWeekCategoryRepository essentialExpenseSnapshotWeekCategoryRepository;
 	private final MerchantInferenceApiClient merchantInferenceApiClient;
+	private final TransactionSyncService transactionSyncService;
+	private final UpdateBudgetSpentUseCase updateBudgetSpentUseCase;
 	private final TransactionExclusionPolicy transactionExclusionPolicy;
 	private final FixedExpenseClassifier fixedExpenseClassifier;
 	private final WeeklyEssentialAllocator weeklyEssentialAllocator;
@@ -99,6 +102,43 @@ public class TransactionAnalysisService {
 			.collect(Collectors.toMap(Category::getName, Function.identity(), (left, right) -> left, LinkedHashMap::new));
 		Category defaultCategory = Optional.ofNullable(categoriesByName.get(DEFAULT_CATEGORY_NAME))
 			.orElseGet(() -> categoryRepository.getReferenceById(4));
+		TransactionAnalysisJob job = TransactionAnalysisJob.builder()
+			.id(UUID.randomUUID().toString())
+			.user(user)
+			.requestedMonths(normalizeRequestedMonths(months))
+			.status(TransactionAnalysisJobStatus.PENDING)
+			.currentStep(TransactionAnalysisStep.SYNCING)
+			.requestedAt(LocalDateTime.now(clock))
+			.build();
+		return transactionAnalysisJobRepository.save(job);
+	}
+
+	public TransactionAnalysisJob runAnalysis(String jobId, boolean forceFullSync) {
+		TransactionAnalysisJob job = getJob(jobId);
+
+		try {
+			LocalDateTime now = LocalDateTime.now(clock);
+			job.setStatus(TransactionAnalysisJobStatus.RUNNING);
+			job.setStartedAt(now);
+			job.setCurrentStep(TransactionAnalysisStep.SYNCING);
+			transactionAnalysisJobRepository.save(job);
+
+			Integer userId = job.getUser().getId();
+			transactionSyncService.syncLatest(userId, job.getRequestedMonths(), forceFullSync);
+
+			LocalDateTime analyzedAt = LocalDateTime.now(clock);
+			LocalDateTime fromDateTime = analyzedAt.minusMonths(job.getRequestedMonths());
+			LocalDateTime toDateTime = analyzedAt;
+		Set<String> registeredAccountNos = accountRepository.findAllLinkedAccountsByUserId(userId).stream()
+			.filter(Account::isActive)
+			.map(Account::getAccountNo)
+			.filter(this::hasText)
+			.map(String::trim)
+			.collect(Collectors.toSet());
+			Map<String, Category> categoriesByName = categoryRepository.findAll().stream()
+				.collect(Collectors.toMap(Category::getName, Function.identity(), (left, right) -> left, LinkedHashMap::new));
+			Category defaultCategory = Optional.ofNullable(categoriesByName.get(DEFAULT_CATEGORY_NAME))
+				.orElseGet(() -> categoryRepository.getReferenceById(4));
 
 		List<PreparedTransaction> preparedTransactions = sourceTransactions.stream()
 			.map(transaction -> prepareTransaction(transaction, registeredAccountNos))
@@ -153,6 +193,10 @@ public class TransactionAnalysisService {
 		transactionAnalysisResultRepository.saveAll(analysisResults);
 
 		persistWeeklySnapshots(user, analysisResults, analyzedAt);
+			job.setCurrentStep(TransactionAnalysisStep.BUILDING_SNAPSHOTS);
+			transactionAnalysisJobRepository.save(job);
+			persistWeeklySnapshots(job.getUser(), analysisResults, analyzedAt);
+			updateBudgetSpentUseCase.execute(job.getUser(), analysisResults);
 
 		return transactionAnalysisMetadataRepository.save(TransactionAnalysisMetadata.builder()
 			.user(user)
@@ -194,7 +238,9 @@ public class TransactionAnalysisService {
 				userId,
 				fromDateTime,
 				toDateTime
-			));
+			).stream()
+			.filter(transaction -> transaction.getCard().getWithdrawalAccount().isActive())
+			.toList());
 		transactions.sort((left, right) -> right.getTransactionDateTime().compareTo(left.getTransactionDateTime()));
 		return transactions;
 	}

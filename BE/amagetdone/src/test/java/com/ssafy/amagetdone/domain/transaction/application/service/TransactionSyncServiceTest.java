@@ -92,8 +92,9 @@ class TransactionSyncServiceTest {
 			LocalDate.of(2026, 3, 13)
 		);
 
-		given(accountRepository.findAllByUser_Id(1)).willReturn(List.of(account));
-		given(cardRepository.findAllByWithdrawalAccount_User_Id(1)).willReturn(List.of());
+		given(accountRepository.findAllLinkedAccountsByUserId(1)).willReturn(List.of(account));
+		given(cardRepository.findAllByWithdrawalAccount_User_IdAndWithdrawalAccount_VerifiedTrueAndWithdrawalAccount_ActiveTrue(1))
+			.willReturn(List.of());
 		given(dateRangeFactory.resolve(6, null, false)).willReturn(window);
 		given(accountTransactionOverrideRepository.findTopByAccount_IdOrderByTransactionDateTimeDesc("ACC-1"))
 			.willReturn(Optional.empty());
@@ -160,8 +161,9 @@ class TransactionSyncServiceTest {
 			LocalDate.of(2026, 3, 13)
 		);
 
-		given(accountRepository.findAllByUser_Id(1)).willReturn(List.of(account));
-		given(cardRepository.findAllByWithdrawalAccount_User_Id(1)).willReturn(List.of());
+		given(accountRepository.findAllLinkedAccountsByUserId(1)).willReturn(List.of(account));
+		given(cardRepository.findAllByWithdrawalAccount_User_IdAndWithdrawalAccount_VerifiedTrueAndWithdrawalAccount_ActiveTrue(1))
+			.willReturn(List.of());
 		given(dateRangeFactory.resolve(6, LocalDate.of(2026, 3, 12), false)).willReturn(window);
 		given(accountTransactionOverrideRepository.findTopByAccount_IdOrderByTransactionDateTimeDesc("ACC-1"))
 			.willReturn(Optional.of(latestLocal));
@@ -175,6 +177,49 @@ class TransactionSyncServiceTest {
 		service.syncLatest(1, 6, false);
 
 		verify(accountTransactionOverrideRepository, never()).saveAll(anyList());
+	}
+
+	@Test
+	void syncSkipsInactiveLinkedAccounts() {
+		TransactionSyncService service = new TransactionSyncService(
+			accountRepository,
+			cardRepository,
+			categoryRepository,
+			merchantRepository,
+			accountTransactionOverrideRepository,
+			cardTransactionOverrideRepository,
+			demandDepositTransactionApiClient,
+			cardTransactionApiClient,
+			dateRangeFactory
+		);
+		User user = user(1, "user-key-1");
+		Account activeAccount = account(user, "ACC-A", "111-222-333");
+		activeAccount.markVerified();
+		Account inactiveAccount = account(user, "ACC-B", "222-333-444");
+		inactiveAccount.markVerified();
+		inactiveAccount.markInactive();
+		TransactionDateRangeFactory.DateRange window = new TransactionDateRangeFactory.DateRange(
+			LocalDate.of(2025, 11, 1),
+			LocalDate.of(2026, 3, 13)
+		);
+
+		given(accountRepository.findAllLinkedAccountsByUserId(1)).willReturn(List.of(activeAccount, inactiveAccount));
+		given(cardRepository.findAllByWithdrawalAccount_User_IdAndWithdrawalAccount_VerifiedTrueAndWithdrawalAccount_ActiveTrue(1))
+			.willReturn(List.of());
+		given(dateRangeFactory.resolve(6, null, false)).willReturn(window);
+		given(accountTransactionOverrideRepository.findTopByAccount_IdOrderByTransactionDateTimeDesc(any()))
+			.willReturn(Optional.empty());
+		given(demandDepositTransactionApiClient.inquireTransactions(any()))
+			.willReturn(new DemandDepositTransactionDto.Response(0, List.of()));
+
+		service.syncLatest(1, 6, false);
+
+		ArgumentCaptor<DemandDepositTransactionDto.Request> requestCaptor = ArgumentCaptor.forClass(
+			DemandDepositTransactionDto.Request.class
+		);
+		verify(demandDepositTransactionApiClient).inquireTransactions(requestCaptor.capture());
+		assertEquals("111-222-333", requestCaptor.getValue().accountNo());
+		assertEquals("user-key-1", requestCaptor.getValue().userKey());
 	}
 
 	@Test
@@ -208,8 +253,9 @@ class TransactionSyncServiceTest {
 			LocalDate.of(2026, 3, 13)
 		);
 
-		given(accountRepository.findAllByUser_Id(1)).willReturn(List.of(account));
-		given(cardRepository.findAllByWithdrawalAccount_User_Id(1)).willReturn(List.of());
+		given(accountRepository.findAllLinkedAccountsByUserId(1)).willReturn(List.of(account));
+		given(cardRepository.findAllByWithdrawalAccount_User_IdAndWithdrawalAccount_VerifiedTrueAndWithdrawalAccount_ActiveTrue(1))
+			.willReturn(List.of());
 		given(dateRangeFactory.resolve(6, LocalDate.of(2026, 3, 10), false)).willReturn(window);
 		given(accountTransactionOverrideRepository.findTopByAccount_IdOrderByTransactionDateTimeDesc("ACC-1"))
 			.willReturn(Optional.of(latestLocal));
@@ -273,8 +319,9 @@ class TransactionSyncServiceTest {
 			LocalDate.of(2026, 3, 13)
 		);
 
-		given(accountRepository.findAllByUser_Id(1)).willReturn(List.of());
-		given(cardRepository.findAllByWithdrawalAccount_User_Id(1)).willReturn(List.of(card));
+		given(accountRepository.findAllLinkedAccountsByUserId(1)).willReturn(List.of());
+		given(cardRepository.findAllByWithdrawalAccount_User_IdAndWithdrawalAccount_VerifiedTrueAndWithdrawalAccount_ActiveTrue(1))
+			.willReturn(List.of(card));
 		given(dateRangeFactory.resolve(6, LocalDate.of(2026, 3, 10), false)).willReturn(window);
 		given(cardTransactionOverrideRepository.findTopByCard_CardUniqueNoOrderByTransactionDateTimeDesc(9999L))
 			.willReturn(Optional.of(latestLocal));
@@ -314,6 +361,48 @@ class TransactionSyncServiceTest {
 		assertEquals(merchant, saved.getMerchant());
 		assertEquals(card, saved.getCard());
 		assertEquals(defaultCategory, saved.getCategory());
+	}
+
+	@Test
+	void syncSkipsCardsBackedByInactiveLinkedAccounts() {
+		TransactionSyncService service = new TransactionSyncService(
+			accountRepository,
+			cardRepository,
+			categoryRepository,
+			merchantRepository,
+			accountTransactionOverrideRepository,
+			cardTransactionOverrideRepository,
+			demandDepositTransactionApiClient,
+			cardTransactionApiClient,
+			dateRangeFactory
+		);
+		User user = user(1, "user-key-1");
+		Account activeAccount = account(user, "ACC-A", "111-222-333");
+		Card activeCard = card(activeAccount, 1111L, "1111-2222-3333-4444", "123");
+		Account inactiveAccount = account(user, "ACC-B", "999-888-777");
+		inactiveAccount.markInactive();
+		Card inactiveCard = card(inactiveAccount, 2222L, "9999-8888-7777-6666", "321");
+		TransactionDateRangeFactory.DateRange window = new TransactionDateRangeFactory.DateRange(
+			LocalDate.of(2026, 3, 10),
+			LocalDate.of(2026, 3, 13)
+		);
+
+		given(accountRepository.findAllLinkedAccountsByUserId(1)).willReturn(List.of());
+		given(cardRepository.findAllByWithdrawalAccount_User_IdAndWithdrawalAccount_VerifiedTrueAndWithdrawalAccount_ActiveTrue(1))
+			.willReturn(List.of(activeCard));
+		given(dateRangeFactory.resolve(6, null, false)).willReturn(window);
+		given(cardTransactionOverrideRepository.findTopByCard_CardUniqueNoOrderByTransactionDateTimeDesc(1111L))
+			.willReturn(Optional.empty());
+		given(cardTransactionApiClient.inquireTransactions(any()))
+			.willReturn(new CardTransactionDto.Response("ISS", "테스트카드사", "카드", "1111-2222-3333-4444", 0L, List.of()));
+
+		service.syncLatest(1, 6, false);
+
+		ArgumentCaptor<CardTransactionDto.Request> requestCaptor = ArgumentCaptor.forClass(CardTransactionDto.Request.class);
+		verify(cardTransactionApiClient).inquireTransactions(requestCaptor.capture());
+		assertEquals("1111-2222-3333-4444", requestCaptor.getValue().cardNo());
+		assertEquals(1111L, activeCard.getCardUniqueNo());
+		assertEquals(2222L, inactiveCard.getCardUniqueNo());
 	}
 
 	private User user(Integer id, String userKey) {

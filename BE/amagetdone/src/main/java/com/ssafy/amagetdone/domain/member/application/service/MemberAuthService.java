@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
+import com.ssafy.amagetdone.domain.member.application.usecase.EnsureFinMemberLinkedUseCase;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
 import com.ssafy.amagetdone.domain.member.application.usecase.FindOrCreateSocialUserUseCase;
@@ -33,6 +34,7 @@ public class MemberAuthService {
 	private final FindOrCreateSocialUserUseCase findOrCreateSocialUserUseCase;
 	private final IssueMemberTokensUseCase issueMemberTokensUseCase;
 	private final ResetTestSocialUserUseCase resetTestSocialUserUseCase;
+	private final EnsureFinMemberLinkedUseCase ensureFinMemberLinkedUseCase;
 	private final AccountRepository accountRepository;
 	private final PlanRepository planRepository;
 
@@ -79,8 +81,9 @@ public class MemberAuthService {
 
 			FindOrCreateSocialUserUseCase.Result result = findOrCreateSocialUserUseCase.execute(identity);
 			User user = result.user();
+			linkTestFinancialMemberIfNeeded(provider, user);
 			MemberTokenPair tokenPair = issueMemberTokensUseCase.execute(user, provider);
-			boolean hasAccount = accountRepository.existsByUserId(user.getId());
+			boolean hasAccount = accountRepository.existsLinkedAccountByUserId(user.getId());
 			boolean hasPlan = planRepository.existsByUserId(user.getId());
 
 			log.info(
@@ -118,5 +121,13 @@ public class MemberAuthService {
 			);
 			throw exception;
 		}
+	}
+
+	private void linkTestFinancialMemberIfNeeded(SocialProvider provider, User user) {
+		if (provider != SocialProvider.TEST) {
+			return;
+		}
+		String userKey = ensureFinMemberLinkedUseCase.execute(user.getId(), user.getEmail());
+		user.updateUserKey(userKey);
 	}
 }

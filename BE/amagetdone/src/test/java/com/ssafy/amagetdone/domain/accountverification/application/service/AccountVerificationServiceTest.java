@@ -4,10 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.ssafy.amagetdone.domain.accountverification.api.dto.AccountVerificationAdminDto;
 import com.ssafy.amagetdone.domain.accountverification.api.dto.AccountVerificationDto;
 import com.ssafy.amagetdone.domain.accountverification.application.usecase.CheckAccountVerificationUseCase;
-import com.ssafy.amagetdone.domain.accountverification.application.usecase.GetAccountVerificationStatusUseCase;
 import com.ssafy.amagetdone.domain.accountverification.application.usecase.RequestAccountVerificationUseCase;
 
 import org.junit.jupiter.api.Test;
@@ -25,9 +23,6 @@ class AccountVerificationServiceTest {
 	@Mock
 	private CheckAccountVerificationUseCase checkAccountVerificationUseCase;
 
-	@Mock
-	private GetAccountVerificationStatusUseCase getAccountVerificationStatusUseCase;
-
 	@InjectMocks
 	private AccountVerificationService accountVerificationService;
 
@@ -44,10 +39,10 @@ class AccountVerificationServiceTest {
 				"2026-03-13T09:00:00Z",
 				"REQUESTED"
 			);
-		AccountVerificationAdminDto.CheckVerificationRequest checkRequest =
-			new AccountVerificationAdminDto.CheckVerificationRequest(7, "0011234567890123", "1234");
-		AccountVerificationAdminDto.CheckVerificationResponse checkResponse =
-			new AccountVerificationAdminDto.CheckVerificationResponse(
+		AccountVerificationDto.CheckVerificationRequest checkRequest =
+			new AccountVerificationDto.CheckVerificationRequest("0011234567890123", "1234");
+		AccountVerificationDto.CheckVerificationResponse checkResponse =
+			new AccountVerificationDto.CheckVerificationResponse(
 				12L,
 				"0011234567890123",
 				"SUCCESS",
@@ -55,29 +50,13 @@ class AccountVerificationServiceTest {
 				88L,
 				"2026-03-13T09:03:00Z"
 			);
-		AccountVerificationAdminDto.VerificationStatusResponse statusResponse =
-			new AccountVerificationAdminDto.VerificationStatusResponse(
-				12L,
-				7,
-				"0011234567890123",
-				"SUCCESS",
-				true,
-				"AMAGETDONE",
-				88L,
-				"2026-03-13T09:00:00Z",
-				"2026-03-13T09:03:00Z",
-				null
-			);
 
 		when(requestAccountVerificationUseCase.execute(7, request)).thenReturn(requestResponse);
-		when(checkAccountVerificationUseCase.execute(checkRequest)).thenReturn(checkResponse);
-		when(getAccountVerificationStatusUseCase.execute(7, "0011234567890123")).thenReturn(statusResponse);
+		when(checkAccountVerificationUseCase.execute(7, checkRequest)).thenReturn(checkResponse);
 
 		assertThat(accountVerificationService.requestVerification(7, request)).isEqualTo(requestResponse);
-		assertThat(accountVerificationService.checkVerification(checkRequest)).isEqualTo(checkResponse);
-		assertThat(accountVerificationService.getVerificationStatus(7, "0011234567890123")).isEqualTo(statusResponse);
+		assertThat(accountVerificationService.checkVerification(7, checkRequest)).isEqualTo(checkResponse);
 		verify(requestAccountVerificationUseCase).execute(7, request);
-		verify(checkAccountVerificationUseCase).execute(checkRequest);
-		verify(getAccountVerificationStatusUseCase).execute(7, "0011234567890123");
+		verify(checkAccountVerificationUseCase).execute(7, checkRequest);
 	}
 }

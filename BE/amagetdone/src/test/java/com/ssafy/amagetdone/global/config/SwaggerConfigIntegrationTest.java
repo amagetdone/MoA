@@ -56,7 +56,10 @@ class SwaggerConfigIntegrationTest {
 			.andExpect(jsonPath("$.paths['/test/s3/upload'].post.summary").value("S3 \uD30C\uC77C \uC5C5\uB85C\uB4DC \uD14C\uC2A4\uD2B8"))
 			.andExpect(jsonPath("$.paths['/test/s3/upload'].post.tags[0]").value("S3 \uD14C\uC2A4\uD2B8"))
 			.andExpect(jsonPath("$.paths['/test/s3'].delete.summary").value("S3 \uC5C5\uB85C\uB4DC \uD30C\uC77C \uC0AD\uC81C \uD14C\uC2A4\uD2B8"))
-			.andExpect(jsonPath("$.paths['/test/s3'].delete.tags[0]").value("S3 \uD14C\uC2A4\uD2B8"));
+			.andExpect(jsonPath("$.paths['/test/s3'].delete.tags[0]").value("S3 \uD14C\uC2A4\uD2B8"))
+			.andExpect(jsonPath("$.paths['/test/budget/weeks/seed'].post.summary").value("Seed budget weeks"))
+			.andExpect(jsonPath("$.paths['/test/budget/weeks/seed'].post.tags[0]").value("Budget Test"))
+			.andExpect(jsonPath("$.paths['/test/budget/weeks/seed'].post.security[0].bearerAuth").exists());
 	}
 
 	@Test
@@ -114,6 +117,35 @@ class SwaggerConfigIntegrationTest {
 			.andExpect(jsonPath("$.paths['/v1/auth/social/test'].post.summary").exists())
 			.andExpect(jsonPath("$.paths['/v1/auth/social/test'].post.security").doesNotExist())
 			.andExpect(jsonPath("$.paths['/v1/members/me/profile'].patch.security[0].bearerAuth").isArray());
+	}
+
+	@Test
+	void apiDocsDescribePlanCreationEndpoint() throws Exception {
+		mockMvc.perform(apiGet("/v3/api-docs"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.paths['/v1/plans'].post.summary").value("목표 생성"))
+			.andExpect(jsonPath("$.paths['/v1/plans'].post.tags[0]").value("Plan API"))
+			.andExpect(jsonPath("$.paths['/v1/plans'].post.security[0].bearerAuth").exists())
+			.andExpect(jsonPath("$.components.schemas.PlanCreateRequest.properties.dateRangeValid").doesNotExist())
+			.andExpect(jsonPath("$.components.schemas.PlanCreateRequest.example").exists())
+			.andExpect(jsonPath("$.components.schemas.BudgetWeekSeedRequest.example").exists());
+	}
+
+	@Test
+	void apiDocsExposeBearerAuthenticationScheme() throws Exception {
+		mockMvc.perform(apiGet("/v3/api-docs"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.components.securitySchemes.bearerAuth.type").value("http"))
+			.andExpect(jsonPath("$.components.securitySchemes.bearerAuth.scheme").value("bearer"))
+			.andExpect(jsonPath("$.components.securitySchemes.bearerAuth.bearerFormat").value("JWT"));
+	}
+
+	@Test
+	void apiDocsMarkAuthenticatedUploadEndpointsWithBearerSecurity() throws Exception {
+		mockMvc.perform(apiGet("/v3/api-docs"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.paths['/v1/members/me/profile-image'].patch.security[0].bearerAuth").exists())
+			.andExpect(jsonPath("$.paths['/v1/plans/{planId}/image'].patch.security[0].bearerAuth").exists());
 	}
 
 	private MockHttpServletRequestBuilder apiGet(String path) {

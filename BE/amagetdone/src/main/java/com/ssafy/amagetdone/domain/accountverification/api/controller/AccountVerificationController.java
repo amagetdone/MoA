@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "계좌 인증 사용자 API")
+@Tag(name = "계좌 인증 API")
 @RestController
 @RequestMapping("/v1/accounts/verification")
 @SecurityRequirement(name = "bearerAuth")
@@ -46,4 +46,19 @@ public class AccountVerificationController {
 			accountVerificationService.requestVerification(userId, request)
 		);
 	}
+
+	@Operation(summary = "1원 인증 코드 확인")
+	@PostMapping("/check")
+	public ApiResponse<AccountVerificationDto.CheckVerificationResponse> checkVerification(
+		@Parameter(hidden = true)
+		@RequestHeader(name = "Authorization", required = false) String authorization,
+		@RequestBody AccountVerificationDto.CheckVerificationRequest request
+	) {
+		int userId = jwtAccessTokenReader.readUserId(authorization);
+		return ApiResponse.ok(
+			"1원 인증을 완료했습니다.",
+			accountVerificationService.checkVerification(userId, request)
+		);
+	}
+
 }

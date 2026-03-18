@@ -9,4 +9,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface CardRepository extends JpaRepository<Card, Long> {
 
 	List<Card> findAllByWithdrawalAccount_User_Id(Integer userId);
+
+	List<Card> findAllByWithdrawalAccount_User_IdAndWithdrawalAccount_VerifiedTrueAndWithdrawalAccount_ActiveTrue(
+		Integer userId
+	);
 }

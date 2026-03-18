@@ -36,6 +36,8 @@ public final class TransactionListDto {
 
 	public record Item(
 		Integer transactionId,
+		String sourceType,
+		String sourceId,
 		LocalDateTime occurredAt,
 		String merchantText,
 		Long amount,
