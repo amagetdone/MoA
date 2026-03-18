@@ -29,6 +29,9 @@ public final class AccountAdminDto {
 	public record DataInitRequest(
 		String apiKey,
 		String userApiKey
+	) {
+	}
+
 	public record AccountCreateRequest(
 		Integer userId,
 		String accountTypeUniqueNo

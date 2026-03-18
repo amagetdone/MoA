@@ -5,16 +5,14 @@ import java.util.List;
 import com.ssafy.amagetdone.domain.account.api.dto.AccountAdminDto;
 import com.ssafy.amagetdone.domain.account.api.dto.AccountDto;
 import com.ssafy.amagetdone.domain.account.application.usecase.ConfirmAccountOwnershipUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.DepositAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.FindAccountUserUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.FindUserAccountUseCase;
-import com.ssafy.amagetdone.domain.account.application.usecase.CreateDemandDepositAccountUseCase;
-import com.ssafy.amagetdone.domain.account.application.usecase.DepositAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.InitializeAccountTransactionOverridesUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.InitializeCardTransactionOverridesUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.InquireAccountBalanceUseCase;
-import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountTransactionsUseCase;
-import com.ssafy.amagetdone.domain.account.application.usecase.InitializeSsafyDummyDataUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountsUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountTransactionsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListDemandDepositProductsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ReconcileLinkedAccountsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.RegisterDemandDepositProductUseCase;
@@ -36,7 +34,6 @@ public class AccountService {
 	private final SsafyDemandDepositAccountApiClient ssafyDemandDepositAccountApiClient;
 	private final RegisterDemandDepositProductUseCase registerDemandDepositProductUseCase;
 	private final ListDemandDepositProductsUseCase listDemandDepositProductsUseCase;
-	private final CreateDemandDepositAccountUseCase createDemandDepositAccountUseCase;
 	private final InitializeAccountTransactionOverridesUseCase initializeAccountTransactionOverridesUseCase;
 	private final InitializeCardTransactionOverridesUseCase initializeCardTransactionOverridesUseCase;
 	private final ListAccountsUseCase listAccountsUseCase;
@@ -84,9 +81,6 @@ public class AccountService {
 			account.isVerified()
 		);
 	}
-
-	public AccountAdminDto.DataInitResponse initializeDummyData(AccountAdminDto.DataInitRequest request) {
-		return initializeSsafyDummyDataUseCase.execute(request);
 
 	public AccountAdminDto.TransactionInitResponse initializeAccountTransactions(
 		AccountAdminDto.AccountTransactionInitRequest request
