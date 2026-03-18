@@ -7,7 +7,7 @@ public class PyanProperties {
 
 	private String baseUrl;
 	private String apiKey;
-	private String penMode = "pencil";
+	private String penMode = "no";
 	private boolean outputAutocrop = true;
 	private long pollInitialDelayMillis = 3000;
 	private long pollMaxDelayMillis = 30000;
