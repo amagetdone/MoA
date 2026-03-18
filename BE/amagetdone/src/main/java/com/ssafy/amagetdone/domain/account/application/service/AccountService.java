@@ -13,6 +13,7 @@ import com.ssafy.amagetdone.domain.account.application.usecase.InitializeAccount
 import com.ssafy.amagetdone.domain.account.application.usecase.InitializeCardTransactionOverridesUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.InquireAccountBalanceUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountTransactionsUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.InitializeSsafyDummyDataUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListDemandDepositProductsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ReconcileLinkedAccountsUseCase;
@@ -72,10 +73,6 @@ public class AccountService {
 		return listDemandDepositProductsUseCase.execute();
 	}
 
-	public AccountAdminDto.AccountCreateResponse createAccount(AccountAdminDto.AccountCreateRequest request) {
-		return createDemandDepositAccountUseCase.execute(request);
-	}
-
 	public AccountDto.AccountSummaryResponse getAccount(Integer userId, String accountNo) {
 		Account account = findUserAccountUseCase.execute(userId, accountNo);
 		return new AccountDto.AccountSummaryResponse(
@@ -87,6 +84,9 @@ public class AccountService {
 			account.isVerified()
 		);
 	}
+
+	public AccountAdminDto.DataInitResponse initializeDummyData(AccountAdminDto.DataInitRequest request) {
+		return initializeSsafyDummyDataUseCase.execute(request);
 
 	public AccountAdminDto.TransactionInitResponse initializeAccountTransactions(
 		AccountAdminDto.AccountTransactionInitRequest request
