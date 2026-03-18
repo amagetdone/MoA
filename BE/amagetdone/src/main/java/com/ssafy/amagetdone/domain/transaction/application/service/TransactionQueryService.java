@@ -173,7 +173,7 @@ public class TransactionQueryService {
 			.toList();
 
 		return new TransactionAnalysisDto.OnboardingResult(
-			latestMetadata.getRequestedMonths() + "-month analysis complete",
+			"최근 " + latestMetadata.getRequestedMonths() + "개월 소비 분석을 완료했어요.",
 			averageIncome,
 			averageExpense,
 			remainingAmount,
@@ -549,12 +549,12 @@ public class TransactionQueryService {
 
 	private String buildOnboardingInsightMessage(long averageIncome, long averageExpense) {
 		if (averageIncome <= 0L) {
-			return "Not enough analysis data is available yet.";
+			return "아직 분석할 수입 데이터가 충분하지 않아요.";
 		}
 		if (averageExpense >= Math.round(averageIncome * 0.6d)) {
-			return "You should reduce spending.";
+			return "지출을 조금만 줄이면 더 여유가 생겨요.";
 		}
-		return "Your current spending flow is stable.";
+		return "현재 소비 흐름은 안정적이에요.";
 	}
 
 	private double round(double value) {
