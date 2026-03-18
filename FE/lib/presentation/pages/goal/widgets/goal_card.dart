@@ -65,6 +65,7 @@ class GoalCard extends ConsumerWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(15.r),
                 child: GoalVideoThumb(
+                  key: ValueKey('card_${goal.id}'),
                   assetPath: goal.sketchVideoAssetPath,
                   iconName: goal.iconName,
                   progressRate: goal.progressRate,
