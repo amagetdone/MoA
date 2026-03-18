@@ -51,7 +51,7 @@ public class DataInitializer {
 		}
 
 		public void categoryInit() {
-			if (categoryRepository.count() > 0) {
+			if (categoryRepository.count() == 0) {
 				categoryRepository.saveAll(DEFAULT_CATEGORIES);
 			}
 		}

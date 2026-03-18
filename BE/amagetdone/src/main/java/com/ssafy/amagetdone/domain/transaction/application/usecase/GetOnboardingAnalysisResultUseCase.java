@@ -1,8 +1,6 @@
 package com.ssafy.amagetdone.domain.transaction.application.usecase;
 
-import java.time.LocalDateTime;
-
-import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisJobDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.application.service.TransactionQueryService;
 
 import org.springframework.stereotype.Component;
@@ -16,7 +14,7 @@ public class GetOnboardingAnalysisResultUseCase {
 		this.transactionQueryService = transactionQueryService;
 	}
 
-	public TransactionAnalysisJobDto.OnboardingResult execute(Integer userId, LocalDateTime referenceDateTime) {
-		return transactionQueryService.getOnboardingAnalysisResult(userId, referenceDateTime);
+	public TransactionAnalysisDto.OnboardingResult execute(Integer userId) {
+		return transactionQueryService.getOnboardingAnalysisResult(userId);
 	}
 }

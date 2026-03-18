@@ -8,6 +8,10 @@ import com.ssafy.amagetdone.domain.account.application.usecase.ConfirmAccountOwn
 import com.ssafy.amagetdone.domain.account.application.usecase.FindAccountUserUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.FindUserAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.CreateDemandDepositAccountUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.DepositAccountUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.InitializeSsafyDummyDataUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.InquireAccountBalanceUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountTransactionsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListDemandDepositProductsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ReconcileLinkedAccountsUseCase;
@@ -17,9 +21,11 @@ import com.ssafy.amagetdone.domain.account.infra.client.dto.DemandDepositAccount
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class AccountService {
 
 	private final FindAccountUserUseCase findAccountUserUseCase;
@@ -29,30 +35,10 @@ public class AccountService {
 	private final RegisterDemandDepositProductUseCase registerDemandDepositProductUseCase;
 	private final ListDemandDepositProductsUseCase listDemandDepositProductsUseCase;
 	private final CreateDemandDepositAccountUseCase createDemandDepositAccountUseCase;
+	private final InitializeSsafyDummyDataUseCase initializeSsafyDummyDataUseCase;
 	private final ListAccountsUseCase listAccountsUseCase;
 	private final ReconcileLinkedAccountsUseCase reconcileLinkedAccountsUseCase;
 
-	public AccountService(
-		FindAccountUserUseCase findAccountUserUseCase,
-		FindUserAccountUseCase findUserAccountUseCase,
-		ConfirmAccountOwnershipUseCase confirmAccountOwnershipUseCase,
-		SsafyDemandDepositAccountApiClient ssafyDemandDepositAccountApiClient,
-		RegisterDemandDepositProductUseCase registerDemandDepositProductUseCase,
-		ListDemandDepositProductsUseCase listDemandDepositProductsUseCase,
-		CreateDemandDepositAccountUseCase createDemandDepositAccountUseCase,
-		ListAccountsUseCase listAccountsUseCase,
-		ReconcileLinkedAccountsUseCase reconcileLinkedAccountsUseCase
-	) {
-		this.findAccountUserUseCase = findAccountUserUseCase;
-		this.findUserAccountUseCase = findUserAccountUseCase;
-		this.confirmAccountOwnershipUseCase = confirmAccountOwnershipUseCase;
-		this.ssafyDemandDepositAccountApiClient = ssafyDemandDepositAccountApiClient;
-		this.registerDemandDepositProductUseCase = registerDemandDepositProductUseCase;
-		this.listDemandDepositProductsUseCase = listDemandDepositProductsUseCase;
-		this.createDemandDepositAccountUseCase = createDemandDepositAccountUseCase;
-		this.listAccountsUseCase = listAccountsUseCase;
-		this.reconcileLinkedAccountsUseCase = reconcileLinkedAccountsUseCase;
-	}
 
 	public List<AccountDto.BankAccountResponse> getBankAccounts(Integer userId) {
 		User user = findAccountUserUseCase.execute(userId);
@@ -98,6 +84,14 @@ public class AccountService {
 			account.getAlias(),
 			account.isVerified()
 		);
+	}
+	public AccountAdminDto.DataInitResponse initializeDummyData(AccountAdminDto.DataInitRequest request) {
+		return initializeSsafyDummyDataUseCase.execute(request);
+	}
+
+	public List<AccountDto.AccountSummaryResponse> syncAccounts(Integer userId) {
+		List<Account> accounts = reconcileLinkedAccountsUseCase.execute(userId);
+		return listAccountsUseCase.toResponses(accounts);
 	}
 
 	public List<AccountDto.AccountSummaryResponse> getAccounts(Integer userId) {

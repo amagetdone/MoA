@@ -5,8 +5,9 @@ import java.time.LocalDate;
 import com.ssafy.amagetdone.domain.transaction.api.dto.ExpenseSummaryDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysisDto;
-import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisJobDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionListDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionSyncDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
 import com.ssafy.amagetdone.global.response.ApiResponse;
 import com.ssafy.amagetdone.global.security.AuthenticatedMember;
@@ -18,89 +19,107 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-import org.springframework.http.ResponseEntity;
-
-@Tag(name = "거래", description = "거래 조회 및 분석 API")
+@Tag(name = "Transactions", description = "Transaction query and analysis API")
 public interface TransactionDocsController {
 
-	@Operation(summary = "지출 요약 조회", description = "요청한 월 범위의 지출 요약을 반환합니다.")
+	@Operation(summary = "Get expense summary", description = "Returns an expense summary for the requested month range.")
 	@ApiResponses({
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "지출 요약 조회 성공"),
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증이 필요합니다.", content = @Content)
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Expense summary returned"),
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required", content = @Content)
 	})
 	ApiResponse<ExpenseSummaryDto.Response> getExpenseSummary(
 		@Parameter(hidden = true) AuthenticatedMember authenticatedMember,
-		@Parameter(description = "시작 월, yyyy-MM") String fromMonth,
-		@Parameter(description = "종료 월, yyyy-MM") String toMonth,
-		@Parameter(description = "집계 단위, 예: MONTH") String bucket
+		@Parameter(description = "Start month in yyyy-MM") String fromMonth,
+		@Parameter(description = "End month in yyyy-MM") String toMonth,
+		@Parameter(description = "Aggregation bucket such as MONTH") String bucket
 	);
 
-	@Operation(summary = "월 지출 조회", description = "단일 월의 지출 합계를 반환합니다.")
+	@Operation(summary = "Get monthly expense", description = "Returns monthly expense totals for a single month.")
 	@ApiResponses({
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "월 지출 조회 성공"),
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증이 필요합니다.", content = @Content)
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Monthly expense returned"),
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required", content = @Content)
 	})
 	ApiResponse<MonthlyExpenseDto.Response> getMonthlyExpense(
 		@Parameter(hidden = true) AuthenticatedMember authenticatedMember,
-		@Parameter(description = "대상 월, yyyy-MM") String month
+		@Parameter(description = "Target month in yyyy-MM") String month
 	);
 
-	@Operation(summary = "거래 내역 목록 조회", description = "날짜와 분석 옵션으로 필터링한 거래 내역을 반환합니다.")
+	@Operation(summary = "List transactions", description = "Returns filtered transactions by date range and analysis options.")
 	@ApiResponses({
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "거래 내역 조회 성공"),
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증이 필요합니다.", content = @Content)
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Transaction list returned"),
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required", content = @Content)
 	})
 	ApiResponse<TransactionListDto.Response> listTransactions(
 		@Parameter(hidden = true) AuthenticatedMember authenticatedMember,
-		@Parameter(description = "시작 날짜, yyyy-MM-dd") LocalDate fromDate,
-		@Parameter(description = "종료 날짜, yyyy-MM-dd") LocalDate toDate,
-		@Parameter(description = "분석 포함 옵션") String analysisInclusion,
-		@Parameter(description = "페이지 번호") Integer page,
-		@Parameter(description = "페이지 크기") Integer size
+		@Parameter(description = "Start date in yyyy-MM-dd") LocalDate fromDate,
+		@Parameter(description = "End date in yyyy-MM-dd") LocalDate toDate,
+		@Parameter(description = "Analysis inclusion option") String analysisInclusion,
+		@Parameter(description = "Page number") Integer page,
+		@Parameter(description = "Page size") Integer size
 	);
 
-	@Operation(summary = "분석 작업 생성", description = "거래 분석 작업을 생성합니다.")
+	@Operation(
+		summary = "Analyze transactions",
+		description = "Runs synchronous transaction analysis for recently completed months and returns onboarding output."
+	)
 	@ApiResponses({
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "202", description = "분석 작업 접수 성공"),
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증이 필요합니다.", content = @Content)
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Transaction analysis completed"),
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required", content = @Content)
 	})
-	ResponseEntity<ApiResponse<TransactionAnalysisJobDto.CreateResponse>> createAnalysisJob(
+	ApiResponse<TransactionAnalysisDto.Response> analyzeTransactions(
 		@Parameter(hidden = true) AuthenticatedMember authenticatedMember,
 		@io.swagger.v3.oas.annotations.parameters.RequestBody(
 			required = true,
-			description = "분석 작업 생성 요청",
-			content = @Content(schema = @Schema(implementation = TransactionAnalysisJobDto.CreateRequest.class))
+			description = "Transaction analysis request",
+			content = @Content(schema = @Schema(implementation = TransactionAnalysisDto.Request.class))
 		)
-		TransactionAnalysisJobDto.CreateRequest request
+		TransactionAnalysisDto.Request request
 	);
 
-	@Operation(summary = "분석 작업 상태 조회", description = "분석 작업의 상태를 반환합니다.")
+	@Operation(summary = "Sync transactions", description = "Synchronizes SSAFY transactions into the local database.")
 	@ApiResponses({
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "분석 작업 상태 조회 성공"),
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증이 필요합니다.", content = @Content)
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Transaction sync completed"),
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required", content = @Content)
 	})
-	ApiResponse<TransactionAnalysisJobDto.StatusResponse> getAnalysisJobStatus(
+	ApiResponse<TransactionSyncDto.Response> syncTransactions(
 		@Parameter(hidden = true) AuthenticatedMember authenticatedMember,
-		@Parameter(description = "분석 작업 ID") String jobId
+		@io.swagger.v3.oas.annotations.parameters.RequestBody(
+			required = true,
+			description = "Transaction sync request",
+			content = @Content(schema = @Schema(implementation = TransactionSyncDto.Request.class))
+		)
+		TransactionSyncDto.Request request
 	);
 
-	@Operation(summary = "주간 분석 조회", description = "주간 거래 분석 결과를 반환합니다.")
+	@Operation(
+		summary = "Get onboarding analysis",
+		description = "Returns the latest stored onboarding analysis result produced by transaction analysis."
+	)
 	@ApiResponses({
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "주간 분석 조회 성공"),
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증이 필요합니다.", content = @Content)
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Onboarding analysis returned"),
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required", content = @Content)
+	})
+	ApiResponse<TransactionAnalysisDto.Response> getOnboardingAnalysis(
+		@Parameter(hidden = true) AuthenticatedMember authenticatedMember
+	);
+
+	@Operation(summary = "Get weekly analysis", description = "Returns weekly transaction analysis output.")
+	@ApiResponses({
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Weekly analysis returned"),
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required", content = @Content)
 	})
 	ApiResponse<WeeklyTransactionAnalysisDto.Response> getWeeklyAnalysis(
 		@Parameter(hidden = true) AuthenticatedMember authenticatedMember,
-		@Parameter(description = "대상 주차, yyyy-Www") String yearWeek
+		@Parameter(description = "ISO year-week in yyyy-Www") String yearWeek
 	);
 
-	@Operation(summary = "월간 분석 조회", description = "월간 거래 분석 결과를 반환합니다.")
+	@Operation(summary = "Get monthly analysis", description = "Returns monthly transaction analysis output.")
 	@ApiResponses({
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "월간 분석 조회 성공"),
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증이 필요합니다.", content = @Content)
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Monthly analysis returned"),
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required", content = @Content)
 	})
 	ApiResponse<MonthlyTransactionAnalysisDto.Response> getMonthlyAnalysis(
 		@Parameter(hidden = true) AuthenticatedMember authenticatedMember,
-		@Parameter(description = "대상 월, yyyy-MM") String yearMonth
+		@Parameter(description = "Target month in yyyy-MM") String yearMonth
 	);
 }

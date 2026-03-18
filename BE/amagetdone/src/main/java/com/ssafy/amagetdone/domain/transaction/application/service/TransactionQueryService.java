@@ -3,12 +3,10 @@ package com.ssafy.amagetdone.domain.transaction.application.service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
-import java.time.temporal.WeekFields;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
@@ -21,18 +19,22 @@ import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnaps
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.vo.ExpenseScope;
 import com.ssafy.amagetdone.domain.transaction.api.dto.ExpenseSummaryDto;
-import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseDto;
-import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisJobDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysisDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionListDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.SyncLatestTransactionsUseCase;
+import com.ssafy.amagetdone.domain.transaction.exception.TransactionErrorCode;
+import com.ssafy.amagetdone.domain.transaction.exception.TransactionException;
 import com.ssafy.amagetdone.domain.transaction.model.entity.AccountTransactionOverride;
 import com.ssafy.amagetdone.domain.transaction.model.entity.CardTransactionOverride;
+import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisMetadata;
 import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisResult;
 import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionOverride;
 import com.ssafy.amagetdone.domain.transaction.model.repository.AccountTransactionOverrideRepository;
 import com.ssafy.amagetdone.domain.transaction.model.repository.CardTransactionOverrideRepository;
+import com.ssafy.amagetdone.domain.transaction.model.repository.TransactionAnalysisMetadataRepository;
 import com.ssafy.amagetdone.domain.transaction.model.repository.TransactionAnalysisResultRepository;
 import com.ssafy.amagetdone.domain.transaction.model.vo.TransactionExcludedReason;
 
@@ -46,11 +48,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class TransactionQueryService {
 
-	private static final WeekFields ISO_WEEK_FIELDS = WeekFields.of(Locale.UK);
-
 	private final AccountTransactionOverrideRepository accountTransactionOverrideRepository;
 	private final CardTransactionOverrideRepository cardTransactionOverrideRepository;
 	private final TransactionAnalysisResultRepository transactionAnalysisResultRepository;
+	private final TransactionAnalysisMetadataRepository transactionAnalysisMetadataRepository;
 	private final EssentialExpenseSnapshotWeekRepository essentialExpenseSnapshotWeekRepository;
 	private final EssentialExpenseSnapshotWeekCategoryRepository essentialExpenseSnapshotWeekCategoryRepository;
 	private final SyncLatestTransactionsUseCase syncLatestTransactionsUseCase;
@@ -66,7 +67,7 @@ public class TransactionQueryService {
 		String resolvedBucket = "WEEK".equalsIgnoreCase(bucket) ? "WEEK" : "MONTH";
 		LocalDateTime fromDateTime = resolvedFromMonth.atDay(1).atStartOfDay();
 		LocalDateTime toDateTime = resolvedToMonth.atEndOfMonth().atTime(23, 59, 59);
-		List<Projection> projections = loadProjections(userId, fromDateTime, toDateTime);
+		List<Projection> projections = loadProjections(userId, fromDateTime, toDateTime, null);
 		List<ExpenseSummaryDto.Point> points = "WEEK".equals(resolvedBucket)
 			? buildWeeklyPoints(projections, fromDateTime.toLocalDate(), toDateTime.toLocalDate())
 			: buildMonthlyPoints(projections, resolvedFromMonth, resolvedToMonth);
@@ -89,7 +90,7 @@ public class TransactionQueryService {
 		YearMonth targetMonth = month == null ? YearMonth.now() : month;
 		LocalDateTime fromDateTime = targetMonth.atDay(1).atStartOfDay();
 		LocalDateTime toDateTime = targetMonth.atEndOfMonth().atTime(23, 59, 59);
-		List<Projection> projections = loadProjections(userId, fromDateTime, toDateTime);
+		List<Projection> projections = loadProjections(userId, fromDateTime, toDateTime, null);
 		long fixedExpenseAmount = projections.stream()
 			.filter(this::isPureExpense)
 			.filter(projection -> resolveExpenseScope(projection) == ExpenseScope.FIXED)
@@ -122,10 +123,14 @@ public class TransactionQueryService {
 		);
 	}
 
-	public TransactionAnalysisJobDto.OnboardingResult getOnboardingAnalysisResult(Integer userId, LocalDateTime referenceDateTime) {
-		LocalDateTime resolvedReferenceDateTime = referenceDateTime == null ? LocalDateTime.now() : referenceDateTime;
-		LocalDateTime fromDateTime = resolvedReferenceDateTime.minusMonths(3);
-		List<Projection> projections = loadProjections(userId, fromDateTime, resolvedReferenceDateTime);
+	public TransactionAnalysisDto.OnboardingResult getOnboardingAnalysisResult(Integer userId) {
+		TransactionAnalysisMetadata latestMetadata = getLatestMetadata(userId);
+		List<Projection> projections = loadProjections(
+			userId,
+			latestMetadata.getWindowStartAt(),
+			latestMetadata.getWindowEndAt(),
+			latestMetadata.getAnalyzedAt()
+		);
 
 		long totalIncomeAmount = projections.stream()
 			.filter(this::isIncome)
@@ -146,29 +151,29 @@ public class TransactionQueryService {
 			.mapToLong(projection -> projection.transaction().getTransactionBalance())
 			.sum();
 
-		long averageIncome = Math.round(totalIncomeAmount / 3d);
-		long averageExpense = Math.round(totalExpenseAmount / 3d);
+		long averageIncome = Math.round(totalIncomeAmount / (double) latestMetadata.getRequestedMonths());
+		long averageExpense = Math.round(totalExpenseAmount / (double) latestMetadata.getRequestedMonths());
 		long remainingAmount = averageIncome - averageExpense;
 		double fixedExpenseRatio = totalExpenseAmount == 0L ? 0d : round((totalFixedExpenseAmount * 100d) / totalExpenseAmount);
 		double variableExpenseRatio = totalExpenseAmount == 0L ? 0d : round((totalVariableExpenseAmount * 100d) / totalExpenseAmount);
 
-		List<TransactionAnalysisJobDto.CategoryExpense> categoryExpenses = projections.stream()
+		List<TransactionAnalysisDto.CategoryExpense> categoryExpenses = projections.stream()
 			.filter(this::isPureExpense)
 			.collect(Collectors.groupingBy(
-				projection -> resolveCategory(projection),
+				this::resolveCategory,
 				Collectors.summingLong(projection -> projection.transaction().getTransactionBalance())
 			))
 			.entrySet().stream()
 			.sorted((left, right) -> Long.compare(right.getValue(), left.getValue()))
-			.map(entry -> new TransactionAnalysisJobDto.CategoryExpense(
+			.map(entry -> new TransactionAnalysisDto.CategoryExpense(
 				entry.getKey().getId(),
 				entry.getKey().getName(),
 				entry.getValue()
 			))
 			.toList();
 
-		return new TransactionAnalysisJobDto.OnboardingResult(
-			"3개월 간 소비패턴을 분석했어요.",
+		return new TransactionAnalysisDto.OnboardingResult(
+			latestMetadata.getRequestedMonths() + "-month analysis complete",
 			averageIncome,
 			averageExpense,
 			remainingAmount,
@@ -189,7 +194,8 @@ public class TransactionQueryService {
 		List<Projection> filteredProjections = loadProjections(
 			userId,
 			resolvedFromDate.atStartOfDay(),
-			resolvedToDate.atTime(23, 59, 59)
+			resolvedToDate.atTime(23, 59, 59),
+			null
 		).stream()
 			.filter(projection -> matchesAnalysisInclusion(projection, query.analysisInclusion()))
 			.toList();
@@ -220,7 +226,7 @@ public class TransactionQueryService {
 		LocalDate fromDate,
 		LocalDate toDate
 	) {
-		return loadProjections(userId, fromDate.atStartOfDay(), toDate.atTime(23, 59, 59)).stream()
+		return loadProjections(userId, fromDate.atStartOfDay(), toDate.atTime(23, 59, 59), null).stream()
 			.filter(this::isPureExpense)
 			.map(this::toTransactionListItem)
 			.toList();
@@ -231,22 +237,25 @@ public class TransactionQueryService {
 		LocalDate fromDate,
 		LocalDate toDate
 	) {
-		return loadProjections(userId, fromDate.atStartOfDay(), toDate.atTime(23, 59, 59)).stream()
+		return loadProjections(userId, fromDate.atStartOfDay(), toDate.atTime(23, 59, 59), null).stream()
 			.filter(this::isNonEssentialFreeSpending)
 			.map(this::toTransactionListItem)
 			.toList();
 	}
 
 	public WeeklyTransactionAnalysisDto.Response getWeeklyTransactionAnalysis(Integer userId, String yearWeek) {
-		EssentialExpenseSnapshotWeek snapshotWeek = essentialExpenseSnapshotWeekRepository.findByUser_IdAndYearWeek(userId, yearWeek)
-			.orElseThrow(() -> new IllegalArgumentException("Weekly analysis not found"));
+		TransactionAnalysisMetadata latestMetadata = getLatestMetadata(userId);
+		EssentialExpenseSnapshotWeek snapshotWeek = essentialExpenseSnapshotWeekRepository
+			.findByUser_IdAndYearWeekAndAnalyzedAt(userId, yearWeek, latestMetadata.getAnalyzedAt())
+			.orElseThrow(() -> new TransactionException(TransactionErrorCode.TRANSACTION_ANALYSIS_RESULT_NOT_FOUND));
 		List<Projection> projections = loadProjections(
 			userId,
 			snapshotWeek.getWeekStartDate().atStartOfDay(),
-			snapshotWeek.getWeekEndDate().atTime(23, 59, 59)
+			snapshotWeek.getWeekEndDate().atTime(23, 59, 59),
+			latestMetadata.getAnalyzedAt()
 		);
-		List<WeeklyTransactionAnalysisDto.CategoryExpense> categoryExpenses = essentialExpenseSnapshotWeekCategoryRepository.findAll().stream()
-			.filter(item -> item.getSnapshotWeek().getId().equals(snapshotWeek.getId()))
+		List<WeeklyTransactionAnalysisDto.CategoryExpense> categoryExpenses = essentialExpenseSnapshotWeekCategoryRepository
+			.findAllBySnapshotWeek_IdIn(List.of(snapshotWeek.getId())).stream()
 			.map(item -> new WeeklyTransactionAnalysisDto.CategoryExpense(
 				item.getCategory().getId(),
 				item.getCategory().getName(),
@@ -271,27 +280,30 @@ public class TransactionQueryService {
 	}
 
 	public MonthlyTransactionAnalysisDto.Response getMonthlyTransactionAnalysis(Integer userId, String yearMonth) {
+		TransactionAnalysisMetadata latestMetadata = getLatestMetadata(userId);
 		YearMonth targetMonth = YearMonth.parse(yearMonth);
 		LocalDateTime fromDateTime = targetMonth.atDay(1).atStartOfDay();
 		LocalDateTime toDateTime = targetMonth.atEndOfMonth().atTime(23, 59, 59);
-		List<Projection> projections = loadProjections(userId, fromDateTime, toDateTime);
+		List<Projection> projections = loadProjections(userId, fromDateTime, toDateTime, latestMetadata.getAnalyzedAt());
 		List<EssentialExpenseSnapshotWeek> snapshots = essentialExpenseSnapshotWeekRepository
-			.findAllByUser_IdAndWeekStartDateBetweenOrderByWeekStartDate(
+			.findAllByUser_IdAndAnalyzedAtAndWeekStartDateBetweenOrderByWeekStartDate(
 				userId,
+				latestMetadata.getAnalyzedAt(),
 				targetMonth.atDay(1).with(TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY)),
 				targetMonth.atEndOfMonth()
 			);
 		List<Integer> snapshotIds = snapshots.stream()
 			.map(EssentialExpenseSnapshotWeek::getId)
 			.toList();
-		Map<Integer, Long> essentialCategoryAmounts = essentialExpenseSnapshotWeekCategoryRepository.findAll().stream()
-			.filter(item -> snapshotIds.contains(item.getSnapshotWeek().getId()))
+		List<EssentialExpenseSnapshotWeekCategory> snapshotCategories = snapshotIds.isEmpty()
+			? List.of()
+			: essentialExpenseSnapshotWeekCategoryRepository.findAllBySnapshotWeek_IdIn(snapshotIds);
+		Map<Integer, Long> essentialCategoryAmounts = snapshotCategories.stream()
 			.collect(Collectors.groupingBy(
 				item -> item.getCategory().getId(),
 				Collectors.summingLong(EssentialExpenseSnapshotWeekCategory::getAmount)
 			));
-		Map<Integer, Category> categoriesById = essentialExpenseSnapshotWeekCategoryRepository.findAll().stream()
-			.filter(item -> snapshotIds.contains(item.getSnapshotWeek().getId()))
+		Map<Integer, Category> categoriesById = snapshotCategories.stream()
 			.collect(Collectors.toMap(
 				item -> item.getCategory().getId(),
 				EssentialExpenseSnapshotWeekCategory::getCategory,
@@ -327,7 +339,17 @@ public class TransactionQueryService {
 		);
 	}
 
-	private List<Projection> loadProjections(Integer userId, LocalDateTime fromDateTime, LocalDateTime toDateTime) {
+	private TransactionAnalysisMetadata getLatestMetadata(Integer userId) {
+		return transactionAnalysisMetadataRepository.findTopByUser_IdOrderByAnalyzedAtDesc(userId)
+			.orElseThrow(() -> new TransactionException(TransactionErrorCode.TRANSACTION_ANALYSIS_RESULT_NOT_FOUND));
+	}
+
+	private List<Projection> loadProjections(
+		Integer userId,
+		LocalDateTime fromDateTime,
+		LocalDateTime toDateTime,
+		LocalDateTime analyzedAt
+	) {
 		List<TransactionOverride> transactions = new ArrayList<>();
 		transactions.addAll(accountTransactionOverrideRepository
 			.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(userId, fromDateTime, toDateTime));
@@ -338,9 +360,18 @@ public class TransactionQueryService {
 				toDateTime
 			));
 		transactions.sort(Comparator.comparing(TransactionOverride::getTransactionDateTime).reversed());
-		Map<Integer, TransactionAnalysisResult> resultsByTransactionId = transactionAnalysisResultRepository.findAllByTransaction_IdIn(
-			transactions.stream().map(TransactionOverride::getId).toList()
-		).stream().collect(Collectors.toMap(result -> result.getTransaction().getId(), Function.identity()));
+		List<Integer> transactionIds = transactions.stream().map(TransactionOverride::getId).toList();
+		List<TransactionAnalysisResult> analysisResults = transactionIds.isEmpty()
+			? List.of()
+			: analyzedAt == null
+				? transactionAnalysisResultRepository.findAllByTransaction_IdIn(transactionIds)
+				: transactionAnalysisResultRepository.findAllByTransaction_IdInAndAnalyzedAt(transactionIds, analyzedAt);
+		Map<Integer, TransactionAnalysisResult> resultsByTransactionId = analysisResults.stream()
+			.collect(Collectors.toMap(
+				result -> result.getTransaction().getId(),
+				Function.identity(),
+				(left, right) -> left.getAnalyzedAt().isAfter(right.getAnalyzedAt()) ? left : right
+			));
 
 		return transactions.stream()
 			.map(transaction -> new Projection(transaction, resultsByTransactionId.get(transaction.getId())))
@@ -518,12 +549,12 @@ public class TransactionQueryService {
 
 	private String buildOnboardingInsightMessage(long averageIncome, long averageExpense) {
 		if (averageIncome <= 0L) {
-			return "소비 분석 데이터가 아직 충분하지 않아요.";
+			return "Not enough analysis data is available yet.";
 		}
 		if (averageExpense >= Math.round(averageIncome * 0.6d)) {
-			return "소비 절약이 필요해보여요.";
+			return "You should reduce spending.";
 		}
-		return "현재 소비 흐름을 잘 유지하고 있어요.";
+		return "Your current spending flow is stable.";
 	}
 
 	private double round(double value) {

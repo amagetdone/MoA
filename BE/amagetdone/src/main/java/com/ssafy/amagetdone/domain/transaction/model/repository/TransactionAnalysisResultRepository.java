@@ -17,6 +17,11 @@ public interface TransactionAnalysisResultRepository extends JpaRepository<Trans
 
 	List<TransactionAnalysisResult> findAllByTransaction_IdIn(Collection<Integer> transactionIds);
 
+	List<TransactionAnalysisResult> findAllByTransaction_IdInAndAnalyzedAt(
+		Collection<Integer> transactionIds,
+		LocalDateTime analyzedAt
+	);
+
 	@Query("""
 		select r.analysisIncluded as analysisIncluded,
 		       r.excludedReason as excludedReason,

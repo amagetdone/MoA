@@ -6,9 +6,12 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.http.HttpHeaders.ORIGIN;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -32,6 +35,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -42,6 +47,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 	GlobalHealthCheckController.class
 })
 @Import(SecurityConfig.class)
+@TestPropertySource(properties = "app.cors.allowed-origins=https://j14d101.p.ssafy.io")
 class SecurityConfigIntegrationTest {
 
 	private static final String INVALID_BEARER = "Bearer invalid-token";
@@ -158,6 +164,16 @@ class SecurityConfigIntegrationTest {
 
 		then(jwtAccessTokenReader).should().readUserId(INVALID_BEARER);
 		then(memberProfileService).should(never()).completeProfile(eq(0), any(ProfileCompletionDto.Request.class));
+	}
+
+	@Test
+	void preflightRequestFromAllowedOriginSucceedsBeforeAuthentication() throws Exception {
+		mockMvc.perform(options("/api/v1/members/me/profile")
+				.contextPath("/api")
+				.header(ORIGIN, "https://j14d101.p.ssafy.io")
+				.header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "PATCH"))
+			.andExpect(status().isOk())
+			.andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "https://j14d101.p.ssafy.io"));
 	}
 
 	private MockHttpServletRequestBuilder apiPost(String path) {

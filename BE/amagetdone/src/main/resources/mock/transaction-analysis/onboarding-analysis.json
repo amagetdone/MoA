@@ -1,0 +1,26 @@
+{
+  "summaryText": "3-month analysis complete",
+  "averageIncome": 3200000,
+  "averageExpense": 1690000,
+  "remainingAmount": 1510000,
+  "fixedExpenseRatio": 54.44,
+  "variableExpenseRatio": 45.56,
+  "insightMessage": "Your current spending flow leaves room for savings.",
+  "categoryExpenses": [
+    {
+      "categoryId": 20,
+      "categoryName": "주거",
+      "amount": 1620000
+    },
+    {
+      "categoryId": 10,
+      "categoryName": "식비",
+      "amount": 1210000
+    },
+    {
+      "categoryId": 30,
+      "categoryName": "교통",
+      "amount": 280000
+    }
+  ]
+}

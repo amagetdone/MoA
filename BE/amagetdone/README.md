@@ -35,8 +35,9 @@ Swagger UI와 OpenAPI 문서는 `server.servlet.context-path=/api` 를 기준으
   - `GET /api/transactions/expenses/summary`
   - `GET /api/transactions/expenses/monthly`
   - `GET /api/transactions`
-  - `POST /api/transactions/analysis-jobs`
-  - `GET /api/transactions/analysis-jobs/{jobId}`
+  - `POST /api/transactions/sync`
+  - `POST /api/transactions/analysis`
+  - `GET /api/transactions/analysis`
   - `GET /api/transactions/analysis/weeks/{yearWeek}`
   - `GET /api/transactions/analysis/months/{yearMonth}`
   - `GET /api/budgets/weeks/{yearWeek}/essential-expenses`
