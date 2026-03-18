@@ -10,7 +10,10 @@ import static org.mockito.Mockito.verify;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
 import com.ssafy.amagetdone.domain.account.model.entity.Card;
@@ -71,19 +74,12 @@ class TransactionSyncServiceTest {
 	@Mock
 	private TransactionDateRangeFactory dateRangeFactory;
 
+	@Mock
+	private TransactionCategoryAssignmentService transactionCategoryAssignmentService;
+
 	@Test
 	void syncSeedsAccountTransactionsWhenNoLocalTransactionExists() {
-		TransactionSyncService service = new TransactionSyncService(
-			accountRepository,
-			cardRepository,
-			categoryRepository,
-			merchantRepository,
-			accountTransactionOverrideRepository,
-			cardTransactionOverrideRepository,
-			demandDepositTransactionApiClient,
-			cardTransactionApiClient,
-			dateRangeFactory
-		);
+		TransactionSyncService service = newService();
 		User user = user(1, "user-key-1");
 		Account account = account(user, "ACC-1", "111-222-333");
 		Category defaultCategory = Category.create(DEFAULT_CATEGORY_ID, "기타서비스");
@@ -104,7 +100,10 @@ class TransactionSyncServiceTest {
 				List.of(accountItem(1001L, "20260312", "103000", "2", "출금", "444-555", 15000L, 50000L, "점심", ""))
 			)
 		);
-		given(categoryRepository.getReferenceById(DEFAULT_CATEGORY_ID)).willReturn(defaultCategory);
+		given(transactionCategoryAssignmentService.assignCategories(anyList())).willAnswer(invocation -> {
+			List<String> texts = invocation.getArgument(0);
+			return texts.stream().collect(Collectors.toMap(Function.identity(), value -> defaultCategory));
+		});
 
 		service.syncLatest(1, 6, false);
 
@@ -131,18 +130,50 @@ class TransactionSyncServiceTest {
 	}
 
 	@Test
-	void syncSkipsAccountSourceWhenNewestRemoteMatchesLocal() {
-		TransactionSyncService service = new TransactionSyncService(
-			accountRepository,
-			cardRepository,
-			categoryRepository,
-			merchantRepository,
-			accountTransactionOverrideRepository,
-			cardTransactionOverrideRepository,
-			demandDepositTransactionApiClient,
-			cardTransactionApiClient,
-			dateRangeFactory
+	void syncUsesVisibleAccountMerchantTextForCategoryAssignment() {
+		TransactionSyncService service = newService();
+		User user = user(1, "user-key-1");
+		Account account = account(user, "ACC-1", "111-222-333");
+		Category defaultCategory = Category.create(DEFAULT_CATEGORY_ID, "Other");
+		TransactionDateRangeFactory.DateRange window = new TransactionDateRangeFactory.DateRange(
+			LocalDate.of(2025, 12, 1),
+			LocalDate.of(2025, 12, 31)
 		);
+
+		given(accountRepository.findAllLinkedAccountsByUserId(1)).willReturn(List.of(account));
+		given(cardRepository.findAllByWithdrawalAccount_User_IdAndWithdrawalAccount_VerifiedTrueAndWithdrawalAccount_ActiveTrue(1))
+			.willReturn(List.of());
+		given(dateRangeFactory.resolve(1, null, false)).willReturn(window);
+		given(accountTransactionOverrideRepository.findTopByAccount_IdOrderByTransactionDateTimeDesc("ACC-1"))
+			.willReturn(Optional.empty());
+		given(demandDepositTransactionApiClient.inquireTransactions(any())).willReturn(
+			new DemandDepositTransactionDto.Response(
+				1,
+				List.of(accountItem(
+					1001L,
+					"20251220",
+					"125018",
+					"2",
+					"OUT",
+					"444-555",
+					90000L,
+					659202L,
+					"타이짬뽕인동점",
+					"자금결제부"
+				))
+			)
+		);
+		given(transactionCategoryAssignmentService.assignCategories(List.of("타이짬뽕인동점")))
+			.willReturn(Map.of("타이짬뽕인동점", defaultCategory));
+
+		service.syncLatest(1, 1, false);
+
+		verify(transactionCategoryAssignmentService).assignCategories(List.of("타이짬뽕인동점"));
+	}
+
+	@Test
+	void syncSkipsAccountSourceWhenNewestRemoteMatchesLocal() {
+		TransactionSyncService service = newService();
 		User user = user(1, "user-key-1");
 		Account account = account(user, "ACC-1", "111-222-333");
 		Category defaultCategory = Category.create(DEFAULT_CATEGORY_ID, "기타서비스");
@@ -181,17 +212,7 @@ class TransactionSyncServiceTest {
 
 	@Test
 	void syncSkipsInactiveLinkedAccounts() {
-		TransactionSyncService service = new TransactionSyncService(
-			accountRepository,
-			cardRepository,
-			categoryRepository,
-			merchantRepository,
-			accountTransactionOverrideRepository,
-			cardTransactionOverrideRepository,
-			demandDepositTransactionApiClient,
-			cardTransactionApiClient,
-			dateRangeFactory
-		);
+		TransactionSyncService service = newService();
 		User user = user(1, "user-key-1");
 		Account activeAccount = account(user, "ACC-A", "111-222-333");
 		activeAccount.markVerified();
@@ -224,17 +245,7 @@ class TransactionSyncServiceTest {
 
 	@Test
 	void syncReloadsAccountTransactionsFromLatestLocalDateWhenNewestRemoteDiffers() {
-		TransactionSyncService service = new TransactionSyncService(
-			accountRepository,
-			cardRepository,
-			categoryRepository,
-			merchantRepository,
-			accountTransactionOverrideRepository,
-			cardTransactionOverrideRepository,
-			demandDepositTransactionApiClient,
-			cardTransactionApiClient,
-			dateRangeFactory
-		);
+		TransactionSyncService service = newService();
 		User user = user(1, "user-key-1");
 		Account account = account(user, "ACC-1", "111-222-333");
 		Category defaultCategory = Category.create(DEFAULT_CATEGORY_ID, "기타서비스");
@@ -289,17 +300,7 @@ class TransactionSyncServiceTest {
 
 	@Test
 	void syncPersistsOnlyMissingCardTransactionsForEachCardSource() {
-		TransactionSyncService service = new TransactionSyncService(
-			accountRepository,
-			cardRepository,
-			categoryRepository,
-			merchantRepository,
-			accountTransactionOverrideRepository,
-			cardTransactionOverrideRepository,
-			demandDepositTransactionApiClient,
-			cardTransactionApiClient,
-			dateRangeFactory
-		);
+		TransactionSyncService service = newService();
 		User user = user(1, "user-key-1");
 		Account withdrawalAccount = account(user, "ACC-1", "111-222-333");
 		Card card = card(withdrawalAccount, 9999L, "1234-5678-9012-3456", "123");
@@ -365,17 +366,7 @@ class TransactionSyncServiceTest {
 
 	@Test
 	void syncSkipsCardsBackedByInactiveLinkedAccounts() {
-		TransactionSyncService service = new TransactionSyncService(
-			accountRepository,
-			cardRepository,
-			categoryRepository,
-			merchantRepository,
-			accountTransactionOverrideRepository,
-			cardTransactionOverrideRepository,
-			demandDepositTransactionApiClient,
-			cardTransactionApiClient,
-			dateRangeFactory
-		);
+		TransactionSyncService service = newService();
 		User user = user(1, "user-key-1");
 		Account activeAccount = account(user, "ACC-A", "111-222-333");
 		Card activeCard = card(activeAccount, 1111L, "1111-2222-3333-4444", "123");
@@ -545,5 +536,62 @@ class TransactionSyncServiceTest {
 	@SuppressWarnings("unchecked")
 	private <T> ArgumentCaptor<List<T>> listCaptor() {
 		return (ArgumentCaptor<List<T>>) (ArgumentCaptor<?>) ArgumentCaptor.forClass(List.class);
+	}
+
+	@Test
+	void syncAssignsAiCategoryBeforeSavingCardTransactions() {
+		TransactionSyncService service = newService();
+		User user = user(1, "user-key-1");
+		Account withdrawalAccount = account(user, "ACC-1", "111-222-333");
+		Card card = card(withdrawalAccount, 9999L, "1234-5678-9012-3456", "123");
+		Category assignedCategory = Category.create(1, "Food");
+		Merchant merchant = Merchant.builder().id(7).name("?ㅽ?踰낆뒪").build();
+		TransactionDateRangeFactory.DateRange window = new TransactionDateRangeFactory.DateRange(
+			LocalDate.of(2026, 3, 10),
+			LocalDate.of(2026, 3, 13)
+		);
+
+		given(accountRepository.findAllLinkedAccountsByUserId(1)).willReturn(List.of());
+		given(cardRepository.findAllByWithdrawalAccount_User_IdAndWithdrawalAccount_VerifiedTrueAndWithdrawalAccount_ActiveTrue(1))
+			.willReturn(List.of(card));
+		given(dateRangeFactory.resolve(6, null, false)).willReturn(window);
+		given(cardTransactionOverrideRepository.findTopByCard_CardUniqueNoOrderByTransactionDateTimeDesc(9999L))
+			.willReturn(Optional.empty());
+		given(cardTransactionApiClient.inquireTransactions(any())).willReturn(
+			new CardTransactionDto.Response(
+				"ISS-01",
+				"?뚯뒪?몄뭅?쒖궗",
+				"?앺솢移대뱶",
+				"1234-5678-9012-3456",
+				0L,
+				List.of(
+					cardItem(5002L, "CAFE", "移댄럹", 7L, "?ㅽ?踰낆뒪", "20260312", "111500", 6200L, "true", "Y", "BILLED")
+				)
+			)
+		);
+		given(transactionCategoryAssignmentService.assignCategories(List.of("?ㅽ?踰낆뒪")))
+			.willReturn(Map.of("?ㅽ?踰낆뒪", assignedCategory));
+		given(merchantRepository.findById(7)).willReturn(Optional.of(merchant));
+
+		service.syncLatest(1, 6, false);
+
+		ArgumentCaptor<List<CardTransactionOverride>> saveCaptor = listCaptor();
+		verify(cardTransactionOverrideRepository).saveAll(saveCaptor.capture());
+		assertEquals(assignedCategory, saveCaptor.getValue().get(0).getCategory());
+	}
+
+	private TransactionSyncService newService() {
+		return new TransactionSyncService(
+			accountRepository,
+			cardRepository,
+			categoryRepository,
+			merchantRepository,
+			accountTransactionOverrideRepository,
+			cardTransactionOverrideRepository,
+			demandDepositTransactionApiClient,
+			cardTransactionApiClient,
+			dateRangeFactory,
+			transactionCategoryAssignmentService
+		);
 	}
 }

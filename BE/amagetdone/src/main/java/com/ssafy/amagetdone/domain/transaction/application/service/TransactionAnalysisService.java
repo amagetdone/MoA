@@ -7,16 +7,12 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
 import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
-import com.ssafy.amagetdone.domain.account.model.repository.CategoryRepository;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeek;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeekCategory;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekCategoryRepository;
@@ -24,8 +20,6 @@ import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnaps
 import com.ssafy.amagetdone.domain.budget.model.vo.ExpenseScope;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.repository.UserRepository;
-import com.ssafy.amagetdone.domain.transaction.infra.client.MerchantInferenceApiClient;
-import com.ssafy.amagetdone.domain.transaction.infra.client.dto.MerchantInferenceDto;
 import com.ssafy.amagetdone.domain.transaction.model.entity.AccountTransactionOverride;
 import com.ssafy.amagetdone.domain.transaction.model.entity.CardTransactionOverride;
 import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisMetadata;
@@ -53,18 +47,15 @@ public class TransactionAnalysisService {
 
 	private static final int DEFAULT_MONTHS = 6;
 	private static final int WEEKLY_ESSENTIAL_BASE_MONTHS = 3;
-	private static final String DEFAULT_CATEGORY_NAME = "기타소비";
 
 	private final UserRepository userRepository;
 	private final AccountRepository accountRepository;
-	private final CategoryRepository categoryRepository;
 	private final AccountTransactionOverrideRepository accountTransactionOverrideRepository;
 	private final CardTransactionOverrideRepository cardTransactionOverrideRepository;
 	private final TransactionAnalysisResultRepository transactionAnalysisResultRepository;
 	private final TransactionAnalysisMetadataRepository transactionAnalysisMetadataRepository;
 	private final EssentialExpenseSnapshotWeekRepository essentialExpenseSnapshotWeekRepository;
 	private final EssentialExpenseSnapshotWeekCategoryRepository essentialExpenseSnapshotWeekCategoryRepository;
-	private final MerchantInferenceApiClient merchantInferenceApiClient;
 	private final TransactionExclusionPolicy transactionExclusionPolicy;
 	private final FixedExpenseClassifier fixedExpenseClassifier;
 	private final WeeklyEssentialAllocator weeklyEssentialAllocator;
@@ -82,65 +73,50 @@ public class TransactionAnalysisService {
 		);
 		AnalysisSignature currentSignature = AnalysisSignature.from(sourceTransactions);
 
-		Optional<TransactionAnalysisMetadata> latestMetadata = transactionAnalysisMetadataRepository
-			.findTopByUser_IdAndRequestedMonthsOrderByAnalyzedAtDesc(userId, requestedMonths);
-		if (latestMetadata.isPresent() && matches(latestMetadata.get(), analysisWindow, currentSignature)) {
-			return latestMetadata.get();
-		}
-
 		User user = userRepository.getReferenceById(userId);
 		LocalDateTime analyzedAt = LocalDateTime.now(clock);
 		Set<String> registeredAccountNos = accountRepository.findAllByUser_Id(userId).stream()
 			.map(Account::getAccountNo)
 			.filter(this::hasText)
 			.map(String::trim)
-			.collect(Collectors.toSet());
-		Map<String, Category> categoriesByName = categoryRepository.findAll().stream()
-			.collect(Collectors.toMap(Category::getName, Function.identity(), (left, right) -> left, LinkedHashMap::new));
-		Category defaultCategory = Optional.ofNullable(categoriesByName.get(DEFAULT_CATEGORY_NAME))
-			.orElseGet(() -> categoryRepository.getReferenceById(4));
+			.collect(java.util.stream.Collectors.toSet());
 
 		List<PreparedTransaction> preparedTransactions = sourceTransactions.stream()
 			.map(transaction -> prepareTransaction(transaction, registeredAccountNos))
 			.toList();
-		Map<String, MerchantInferenceDto.Result> labelsByText = labelTransactions(preparedTransactions);
 
 		List<FixedExpenseClassifier.Candidate> classifierCandidates = new ArrayList<>();
-		Map<Integer, Resolution> resolutionsByTransactionId = new LinkedHashMap<>();
+		LinkedHashMap<Integer, Resolution> resolutionsByTransactionId = new LinkedHashMap<>();
 		for (PreparedTransaction preparedTransaction : preparedTransactions) {
+			TransactionOverride transaction = preparedTransaction.transaction();
 			if (preparedTransaction.earlyExcludedReason() != null) {
 				resolutionsByTransactionId.put(
-					preparedTransaction.transaction().getId(),
-					Resolution.excluded(preparedTransaction.transaction().getCategory(), preparedTransaction.earlyExcludedReason(), null)
+					transaction.getId(),
+					Resolution.excluded(transaction.getCategory(), preparedTransaction.earlyExcludedReason())
 				);
 				continue;
 			}
 
-			MerchantInferenceDto.Result label = labelsByText.get(preparedTransaction.normalizedMerchantText());
-			String finalLabel = label != null ? label.finalLabel() : DEFAULT_CATEGORY_NAME;
-			Category resolvedCategory = categoriesByName.getOrDefault(finalLabel, defaultCategory);
-			TransactionExcludedReason postLabelExclusion = transactionExclusionPolicy.determinePostLabelExclusion(finalLabel);
+			String categoryName = transaction.getCategory().getName();
+			TransactionExcludedReason postLabelExclusion = transactionExclusionPolicy.determinePostLabelExclusion(categoryName);
 			if (postLabelExclusion != null) {
 				resolutionsByTransactionId.put(
-					preparedTransaction.transaction().getId(),
-					Resolution.excluded(resolvedCategory, postLabelExclusion, label)
+					transaction.getId(),
+					Resolution.excluded(transaction.getCategory(), postLabelExclusion)
 				);
 				continue;
 			}
 
 			classifierCandidates.add(new FixedExpenseClassifier.Candidate(
-				preparedTransaction.transaction().getId(),
-				finalLabel,
+				transaction.getId(),
+				categoryName,
 				preparedTransaction.normalizedMerchantText(),
-				preparedTransaction.transaction().getTransactionDateTime().toLocalDate(),
-				preparedTransaction.transaction().getTransactionBalance()
+				transaction.getTransactionDateTime().toLocalDate(),
+				transaction.getTransactionBalance()
 			));
-			resolutionsByTransactionId.put(
-				preparedTransaction.transaction().getId(),
-				Resolution.included(resolvedCategory, label)
-			);
+			resolutionsByTransactionId.put(transaction.getId(), Resolution.included(transaction.getCategory()));
 		}
-		Map<Integer, ExpenseScope> expenseScopesByTransactionId = fixedExpenseClassifier.classify(classifierCandidates);
+		java.util.Map<Integer, ExpenseScope> expenseScopesByTransactionId = fixedExpenseClassifier.classify(classifierCandidates);
 
 		List<TransactionAnalysisResult> analysisResults = preparedTransactions.stream()
 			.map(preparedTransaction -> toAnalysisResult(
@@ -163,17 +139,6 @@ public class TransactionAnalysisService {
 			.latestTransactionAt(currentSignature.latestTransactionAt())
 			.analyzedAt(analyzedAt)
 			.build());
-	}
-
-	private boolean matches(
-		TransactionAnalysisMetadata metadata,
-		AnalysisWindow analysisWindow,
-		AnalysisSignature analysisSignature
-	) {
-		return metadata.getWindowStartAt().equals(analysisWindow.windowStartAt())
-			&& metadata.getWindowEndAt().equals(analysisWindow.windowEndAt())
-			&& metadata.getTransactionCount().equals(analysisSignature.transactionCount())
-			&& java.util.Objects.equals(metadata.getLatestTransactionAt(), analysisSignature.latestTransactionAt());
 	}
 
 	private AnalysisWindow resolveCompletedMonthWindow(int requestedMonths) {
@@ -203,32 +168,9 @@ public class TransactionAnalysisService {
 		String merchantText = extractMerchantText(transaction);
 		return new PreparedTransaction(
 			transaction,
-			merchantText,
 			normalizeMerchantText(merchantText),
 			transactionExclusionPolicy.determinePreLabelExclusion(transaction, registeredAccountNos)
 		);
-	}
-
-	private Map<String, MerchantInferenceDto.Result> labelTransactions(List<PreparedTransaction> preparedTransactions) {
-		List<String> merchantTexts = preparedTransactions.stream()
-			.filter(preparedTransaction -> preparedTransaction.earlyExcludedReason() == null)
-			.map(PreparedTransaction::normalizedMerchantText)
-			.filter(this::hasText)
-			.distinct()
-			.toList();
-		if (merchantTexts.isEmpty()) {
-			return Map.of();
-		}
-
-		return merchantInferenceApiClient.labelMerchants(merchantTexts).results().stream()
-			.collect(Collectors.toMap(
-				result -> normalizeMerchantText(
-					hasText(result.normalizedMerchantText()) ? result.normalizedMerchantText() : result.merchantText()
-				),
-				Function.identity(),
-				(left, right) -> left,
-				LinkedHashMap::new
-			));
 	}
 
 	private TransactionAnalysisResult toAnalysisResult(
@@ -237,18 +179,17 @@ public class TransactionAnalysisService {
 		ExpenseScope expenseScope,
 		LocalDateTime analyzedAt
 	) {
-		MerchantInferenceDto.Result label = resolution.label();
 		return TransactionAnalysisResult.builder()
 			.transaction(transaction)
 			.category(resolution.category())
 			.analysisIncluded(resolution.analysisIncluded())
 			.excludedReason(resolution.excludedReason())
 			.expenseScope(resolution.analysisIncluded() ? expenseScope : null)
-			.rawLabel(label != null ? label.rawLabel() : null)
-			.finalLabel(label != null ? label.finalLabel() : null)
-			.confidence(label != null ? label.confidence() : null)
-			.fallbackApplied(label != null && Boolean.TRUE.equals(label.fallbackApplied()))
-			.thresholdUsed(label != null ? label.thresholdUsed() : null)
+			.rawLabel(null)
+			.finalLabel(null)
+			.confidence(null)
+			.fallbackApplied(false)
+			.thresholdUsed(null)
 			.analyzedAt(analyzedAt)
 			.build();
 	}
@@ -352,7 +293,6 @@ public class TransactionAnalysisService {
 
 	private record PreparedTransaction(
 		TransactionOverride transaction,
-		String merchantText,
 		String normalizedMerchantText,
 		TransactionExcludedReason earlyExcludedReason
 	) {
@@ -361,20 +301,15 @@ public class TransactionAnalysisService {
 	private record Resolution(
 		Category category,
 		boolean analysisIncluded,
-		TransactionExcludedReason excludedReason,
-		MerchantInferenceDto.Result label
+		TransactionExcludedReason excludedReason
 	) {
 
-		private static Resolution excluded(
-			Category category,
-			TransactionExcludedReason excludedReason,
-			MerchantInferenceDto.Result label
-		) {
-			return new Resolution(category, false, excludedReason, label);
+		private static Resolution excluded(Category category, TransactionExcludedReason excludedReason) {
+			return new Resolution(category, false, excludedReason);
 		}
 
-		private static Resolution included(Category category, MerchantInferenceDto.Result label) {
-			return new Resolution(category, true, null, label);
+		private static Resolution included(Category category) {
+			return new Resolution(category, true, null);
 		}
 	}
 }

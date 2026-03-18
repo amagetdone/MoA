@@ -9,7 +9,8 @@ import com.ssafy.amagetdone.domain.account.application.usecase.FindAccountUserUs
 import com.ssafy.amagetdone.domain.account.application.usecase.FindUserAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.CreateDemandDepositAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.DepositAccountUseCase;
-import com.ssafy.amagetdone.domain.account.application.usecase.InitializeSsafyDummyDataUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.InitializeAccountTransactionOverridesUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.InitializeCardTransactionOverridesUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.InquireAccountBalanceUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountTransactionsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountsUseCase;
@@ -35,7 +36,8 @@ public class AccountService {
 	private final RegisterDemandDepositProductUseCase registerDemandDepositProductUseCase;
 	private final ListDemandDepositProductsUseCase listDemandDepositProductsUseCase;
 	private final CreateDemandDepositAccountUseCase createDemandDepositAccountUseCase;
-	private final InitializeSsafyDummyDataUseCase initializeSsafyDummyDataUseCase;
+	private final InitializeAccountTransactionOverridesUseCase initializeAccountTransactionOverridesUseCase;
+	private final InitializeCardTransactionOverridesUseCase initializeCardTransactionOverridesUseCase;
 	private final ListAccountsUseCase listAccountsUseCase;
 	private final ReconcileLinkedAccountsUseCase reconcileLinkedAccountsUseCase;
 
@@ -85,8 +87,17 @@ public class AccountService {
 			account.isVerified()
 		);
 	}
-	public AccountAdminDto.DataInitResponse initializeDummyData(AccountAdminDto.DataInitRequest request) {
-		return initializeSsafyDummyDataUseCase.execute(request);
+
+	public AccountAdminDto.TransactionInitResponse initializeAccountTransactions(
+		AccountAdminDto.AccountTransactionInitRequest request
+	) {
+		return initializeAccountTransactionOverridesUseCase.execute(request);
+	}
+
+	public AccountAdminDto.TransactionInitResponse initializeCardTransactions(
+		AccountAdminDto.CardTransactionInitRequest request
+	) {
+		return initializeCardTransactionOverridesUseCase.execute(request);
 	}
 
 	public List<AccountDto.AccountSummaryResponse> syncAccounts(Integer userId) {
