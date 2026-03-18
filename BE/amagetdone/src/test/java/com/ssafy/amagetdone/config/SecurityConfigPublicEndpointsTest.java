@@ -28,10 +28,10 @@ class SecurityConfigPublicEndpointsTest {
 	}
 
 	@Test
-	void swaggerDocsRemainPrivateInProdProfile() {
+	void swaggerDocsArePublicInProdProfile() {
 		RequestMatcher publicEndpoints = publicEndpointsFor("prod");
 
-		assertFalse(publicEndpoints.matches(apiGet("/v3/api-docs")));
+		assertTrue(publicEndpoints.matches(apiGet("/v3/api-docs")));
 	}
 
 	@Test

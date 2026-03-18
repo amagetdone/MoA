@@ -10,6 +10,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CardTransactionOverrideRepository extends JpaRepository<CardTransactionOverride, Integer> {
 
+	List<CardTransactionOverride> findAllByCard_CardUniqueNo(Long cardUniqueNo);
+
+	void deleteByCard_CardUniqueNo(Long cardUniqueNo);
+
 	Optional<CardTransactionOverride> findTopByCard_CardUniqueNoOrderByTransactionDateTimeDesc(Long cardUniqueNo);
 
 	boolean existsByCard_CardUniqueNoAndTransactionUniqueNo(Long cardUniqueNo, Long transactionUniqueNo);

@@ -46,10 +46,12 @@ docs/plans/
 docs/api/
 docs/finapi/
 docs/kanban/
+docs/issues/
 AGENTS.md
 JIRA.md
 GIT.md
 docs/*.md
+!docs/subagents.skills.md
 docs/superpowers/
 
 ui

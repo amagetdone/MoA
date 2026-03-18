@@ -37,6 +37,7 @@ import com.ssafy.amagetdone.domain.transaction.model.repository.CardTransactionO
 import com.ssafy.amagetdone.domain.transaction.model.repository.TransactionAnalysisMetadataRepository;
 import com.ssafy.amagetdone.domain.transaction.model.repository.TransactionAnalysisResultRepository;
 import com.ssafy.amagetdone.domain.transaction.model.vo.TransactionExcludedReason;
+import com.ssafy.amagetdone.domain.transaction.support.util.TransactionMerchantTextResolver;
 
 import lombok.RequiredArgsConstructor;
 
@@ -533,11 +534,7 @@ public class TransactionQueryService {
 	}
 
 	private String merchantTextOf(TransactionOverride transaction) {
-		if (transaction instanceof CardTransactionOverride cardTransaction) {
-			return cardTransaction.getMerchant().getName();
-		}
-		AccountTransactionOverride accountTransaction = (AccountTransactionOverride) transaction;
-		return accountTransaction.getTransactionSummary();
+		return TransactionMerchantTextResolver.resolve(transaction);
 	}
 
 	private String directionOf(TransactionOverride transaction) {

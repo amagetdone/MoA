@@ -82,10 +82,9 @@ public class SecurityConfig {
 
 	@Bean
 	public RequestMatcher publicEndpoints(Environment environment) {
-		boolean swaggerPublic = environment.acceptsProfiles(Profiles.of("dev", "test"));
 		return request -> {
 			String path = normalizePath(request);
-			if ("/health".equals(path) || isPublicSwaggerPath(path, swaggerPublic)) {
+			if ("/health".equals(path) || isPublicSwaggerPath(path)) {
 				return true;
 			}
 
@@ -99,11 +98,7 @@ public class SecurityConfig {
 		};
 	}
 
-	private boolean isPublicSwaggerPath(String path, boolean swaggerPublic) {
-		if (!swaggerPublic) {
-			return false;
-		}
-
+	private boolean isPublicSwaggerPath(String path) {
 		return "/swagger-ui.html".equals(path)
 			|| path.startsWith("/swagger-ui/")
 			|| "/v3/api-docs".equals(path)

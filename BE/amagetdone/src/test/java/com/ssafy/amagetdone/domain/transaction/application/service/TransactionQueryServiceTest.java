@@ -18,6 +18,7 @@ import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnaps
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.vo.UserStatus;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionListDto;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.SyncLatestTransactionsUseCase;
 import com.ssafy.amagetdone.domain.transaction.model.entity.AccountTransactionOverride;
 import com.ssafy.amagetdone.domain.transaction.model.entity.CardTransactionOverride;
@@ -153,6 +154,64 @@ class TransactionQueryServiceTest {
 		assertEquals(2_400_000L, result.categoryExpenses().get(0).amount());
 		assertEquals("Food", result.categoryExpenses().get(1).categoryName());
 		assertEquals(1_800_000L, result.categoryExpenses().get(1).amount());
+	}
+
+	@Test
+	void listTransactionsUsesVisibleAccountMerchantText() {
+		TransactionQueryService queryService = new TransactionQueryService(
+			accountTransactionOverrideRepository,
+			cardTransactionOverrideRepository,
+			transactionAnalysisResultRepository,
+			transactionAnalysisMetadataRepository,
+			essentialExpenseSnapshotWeekRepository,
+			essentialExpenseSnapshotWeekCategoryRepository,
+			syncLatestTransactionsUseCase
+		);
+
+		User user = User.builder()
+			.id(1)
+			.email("tester@example.com")
+			.nickname("tester")
+			.status(UserStatus.ACTIVE)
+			.build();
+		Account account = Account.create(user, "111-222-333", "type-1", "main", "deposit", "001", "bank", "KRW");
+		Category defaultCategory = Category.create(4, "Other");
+		AccountTransactionOverride accountTransaction = AccountTransactionOverride.builder()
+			.id(1)
+			.account(account)
+			.category(defaultCategory)
+			.transactionDateTime(LocalDateTime.of(2025, 12, 20, 12, 50, 18))
+			.transactionBalance(90_000L)
+			.transactionMemo("자금결제부")
+			.transactionUniqueNo(1L)
+			.transactionType(2)
+			.transactionTypeName("OUT")
+			.transactionAfterBalance(659_202L)
+			.transactionSummary("타이짬뽕인동점")
+			.build();
+
+		given(syncLatestTransactionsUseCase.execute(1, 1, false))
+			.willReturn(new com.ssafy.amagetdone.domain.transaction.application.service.TransactionSyncService.SyncResult(0, 0));
+		given(accountTransactionOverrideRepository
+			.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of(accountTransaction));
+		given(cardTransactionOverrideRepository
+			.findAllByCard_WithdrawalAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of());
+		given(transactionAnalysisResultRepository.findAllByTransaction_IdIn(anyList())).willReturn(List.of());
+
+		TransactionListDto.Response response = queryService.listTransactions(
+			1,
+			new TransactionListDto.Query(
+				java.time.LocalDate.of(2025, 12, 1),
+				java.time.LocalDate.of(2025, 12, 31),
+				"ALL",
+				0,
+				20
+			)
+		);
+
+		assertEquals("타이짬뽕인동점", response.items().get(0).merchantText());
 	}
 
 	private AccountTransactionOverride accountTransaction(
