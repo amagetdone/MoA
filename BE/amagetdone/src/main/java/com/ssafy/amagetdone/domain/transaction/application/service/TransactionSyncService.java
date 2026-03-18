@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -25,6 +26,7 @@ import com.ssafy.amagetdone.domain.transaction.model.repository.AccountTransacti
 import com.ssafy.amagetdone.domain.transaction.model.repository.CardTransactionOverrideRepository;
 import com.ssafy.amagetdone.domain.transaction.support.util.TransactionDateRangeFactory;
 import com.ssafy.amagetdone.domain.transaction.support.util.TransactionDateRangeFactory.DateRange;
+import com.ssafy.amagetdone.domain.transaction.support.util.TransactionMerchantTextResolver;
 
 import lombok.RequiredArgsConstructor;
 
@@ -51,6 +53,7 @@ public class TransactionSyncService {
 	private final SsafyDemandDepositTransactionApiClient demandDepositTransactionApiClient;
 	private final SsafyCardTransactionApiClient cardTransactionApiClient;
 	private final TransactionDateRangeFactory dateRangeFactory;
+	private final TransactionCategoryAssignmentService transactionCategoryAssignmentService;
 
 	public SyncResult syncLatest(Integer userId, int months, boolean forceFullSync) {
 		List<Account> linkedAccounts = accountRepository.findAllLinkedAccountsByUserId(userId).stream()
@@ -93,17 +96,28 @@ public class TransactionSyncService {
 			return 0;
 		}
 
-		Category defaultCategory = categoryRepository.getReferenceById(DEFAULT_CATEGORY_ID);
-		List<AccountTransactionOverride> transactions = response.transactions().stream()
+		List<DemandDepositTransactionDto.Item> newItems = response.transactions().stream()
 			.filter(item -> !accountTransactionOverrideRepository.existsByAccount_IdAndTransactionUniqueNo(
 				account.getId(),
 				item.transactionUniqueNo()
 			))
-			.map(item -> toAccountTransaction(account, defaultCategory, item))
 			.toList();
-		if (transactions.isEmpty()) {
+		if (newItems.isEmpty()) {
 			return 0;
 		}
+		Map<String, Category> assignedCategories = transactionCategoryAssignmentService.assignCategories(
+			newItems.stream()
+				.map(TransactionMerchantTextResolver::resolve)
+				.toList()
+		);
+		Category defaultCategory = categoryRepository.getReferenceById(DEFAULT_CATEGORY_ID);
+		List<AccountTransactionOverride> transactions = newItems.stream()
+			.map(item -> toAccountTransaction(
+				account,
+				resolveCategory(assignedCategories, TransactionMerchantTextResolver.resolve(item), defaultCategory),
+				item
+			))
+			.toList();
 
 		accountTransactionOverrideRepository.saveAll(transactions);
 		return transactions.size();
@@ -134,17 +148,28 @@ public class TransactionSyncService {
 			return 0;
 		}
 
-		Category defaultCategory = categoryRepository.getReferenceById(DEFAULT_CATEGORY_ID);
-		List<CardTransactionOverride> transactions = response.transactions().stream()
+		List<CardTransactionDto.Item> newItems = response.transactions().stream()
 			.filter(item -> !cardTransactionOverrideRepository.existsByCard_CardUniqueNoAndTransactionUniqueNo(
 				card.getCardUniqueNo(),
 				item.transactionUniqueNo()
 			))
-			.map(item -> toCardTransaction(card, defaultCategory, item))
 			.toList();
-		if (transactions.isEmpty()) {
+		if (newItems.isEmpty()) {
 			return 0;
 		}
+		Map<String, Category> assignedCategories = transactionCategoryAssignmentService.assignCategories(
+			newItems.stream()
+				.map(TransactionMerchantTextResolver::resolve)
+				.toList()
+		);
+		Category defaultCategory = categoryRepository.getReferenceById(DEFAULT_CATEGORY_ID);
+		List<CardTransactionOverride> transactions = newItems.stream()
+			.map(item -> toCardTransaction(
+				card,
+				resolveCategory(assignedCategories, TransactionMerchantTextResolver.resolve(item), defaultCategory),
+				item
+			))
+			.toList();
 
 		cardTransactionOverrideRepository.saveAll(transactions);
 		return transactions.size();
@@ -252,6 +277,13 @@ public class TransactionSyncService {
 
 	private boolean hasText(String value) {
 		return value != null && !value.isBlank();
+	}
+
+	private Category resolveCategory(Map<String, Category> assignedCategories, String sourceText, Category defaultCategory) {
+		if (assignedCategories == null || assignedCategories.isEmpty()) {
+			return defaultCategory;
+		}
+		return assignedCategories.getOrDefault(sourceText, defaultCategory);
 	}
 
 	public record SyncResult(

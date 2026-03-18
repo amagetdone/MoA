@@ -10,6 +10,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AccountTransactionOverrideRepository extends JpaRepository<AccountTransactionOverride, Integer> {
 
+	List<AccountTransactionOverride> findAllByAccount_Id(String accountId);
+
+	void deleteByAccount_Id(String accountId);
+
 	Optional<AccountTransactionOverride> findTopByAccount_IdOrderByTransactionDateTimeDesc(String accountId);
 
 	boolean existsByAccount_IdAndTransactionUniqueNo(String accountId, Long transactionUniqueNo);

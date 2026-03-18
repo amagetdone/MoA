@@ -6,8 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -28,7 +26,6 @@ import com.ssafy.amagetdone.domain.account.model.entity.Card;
 import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.domain.account.model.entity.Merchant;
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
-import com.ssafy.amagetdone.domain.account.model.repository.CategoryRepository;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeek;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeekCategory;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekCategoryRepository;
@@ -38,7 +35,6 @@ import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.repository.UserRepository;
 import com.ssafy.amagetdone.domain.member.model.vo.UserStatus;
 import com.ssafy.amagetdone.domain.transaction.infra.client.MerchantInferenceApiClient;
-import com.ssafy.amagetdone.domain.transaction.infra.client.dto.MerchantInferenceDto;
 import com.ssafy.amagetdone.domain.transaction.model.entity.AccountTransactionOverride;
 import com.ssafy.amagetdone.domain.transaction.model.entity.CardTransactionOverride;
 import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisMetadata;
@@ -69,9 +65,6 @@ class TransactionAnalysisServiceTest {
 	private AccountRepository accountRepository;
 
 	@Mock
-	private CategoryRepository categoryRepository;
-
-	@Mock
 	private AccountTransactionOverrideRepository accountTransactionOverrideRepository;
 
 	@Mock
@@ -98,8 +91,6 @@ class TransactionAnalysisServiceTest {
 		User user = user(1, "user-key-1");
 		Category defaultCategory = Category.create(4, "Other");
 
-		given(transactionAnalysisMetadataRepository.findTopByUser_IdAndRequestedMonthsOrderByAnalyzedAtDesc(1, 3))
-			.willReturn(Optional.empty());
 		given(accountTransactionOverrideRepository.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(
 			any(),
 			any(),
@@ -110,7 +101,6 @@ class TransactionAnalysisServiceTest {
 			.willReturn(List.of());
 		given(userRepository.getReferenceById(1)).willReturn(user);
 		given(accountRepository.findAllByUser_Id(1)).willReturn(List.of());
-		given(categoryRepository.findAll()).willReturn(List.of(defaultCategory));
 		given(transactionAnalysisResultRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
 		given(transactionAnalysisMetadataRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
 
@@ -134,7 +124,7 @@ class TransactionAnalysisServiceTest {
 	}
 
 	@Test
-	void analyzeTransactionsReusesStoredMetadataWhenSignatureIsUnchanged() {
+	void analyzeTransactionsAlwaysRerunsEvenWhenSignatureIsUnchanged() {
 		TransactionAnalysisService service = serviceWithClock("2026-03-17T10:15:30Z");
 		User user = user(1, "user-key-1");
 		Account account = account(user, "ACC-1", "111-222-333");
@@ -162,8 +152,6 @@ class TransactionAnalysisServiceTest {
 			.analyzedAt(LocalDateTime.of(2026, 3, 1, 0, 0))
 			.build();
 
-		given(transactionAnalysisMetadataRepository.findTopByUser_IdAndRequestedMonthsOrderByAnalyzedAtDesc(1, 3))
-			.willReturn(Optional.of(existingMetadata));
 		given(accountTransactionOverrideRepository.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(
 			any(),
 			any(),
@@ -173,16 +161,69 @@ class TransactionAnalysisServiceTest {
 			.findAllByCard_WithdrawalAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
 			.willReturn(List.of());
 
-		TransactionAnalysisMetadata reused = service.analyzeTransactions(1, 3);
+		given(userRepository.getReferenceById(1)).willReturn(user);
+		given(accountRepository.findAllByUser_Id(1)).willReturn(List.of(account));
+		given(transactionAnalysisResultRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
+		given(transactionAnalysisMetadataRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
 
-		assertSame(existingMetadata, reused);
-		verifyNoInteractions(userRepository, accountRepository, categoryRepository, merchantInferenceApiClient);
-		verifyNoInteractions(transactionAnalysisResultRepository, essentialExpenseSnapshotWeekRepository,
-			essentialExpenseSnapshotWeekCategoryRepository);
+		TransactionAnalysisMetadata rerun = service.analyzeTransactions(1, 3);
+
+		verify(transactionAnalysisResultRepository).saveAll(any());
+		verify(transactionAnalysisMetadataRepository).save(any());
+		assertTrue(rerun.getAnalyzedAt().isAfter(existingMetadata.getAnalyzedAt()));
+		verifyNoInteractions(merchantInferenceApiClient);
 	}
 
 	@Test
-	void analyzeTransactionsClassifiesTransactionsAndStoresSnapshots() {
+	void analyzeTransactionsRerunsWhenStoredAnalysisCategoryDiffersFromCurrentTransactionCategory() {
+		TransactionAnalysisService service = serviceWithClock("2026-03-17T10:15:30Z");
+		User user = user(1, "user-key-1");
+		Account account = account(user, "ACC-1", "111-222-333");
+		Category currentCategory = Category.create(10, "\uC2DD\uBE44");
+		Category previousCategory = Category.create(12, "\uC8FC\uAC70/\uD1B5\uC2E0");
+		AccountTransactionOverride transaction = accountTransaction(
+			101,
+			currentCategory,
+			account,
+			1001L,
+			LocalDateTime.of(2026, 2, 10, 9, 0),
+			55_000L,
+			1_000_000L,
+			"Emart",
+			"",
+			2
+		);
+		TransactionAnalysisMetadata existingMetadata = TransactionAnalysisMetadata.builder()
+			.id(88)
+			.user(user)
+			.requestedMonths(3)
+			.windowStartAt(LocalDateTime.of(2025, 12, 1, 0, 0))
+			.windowEndAt(LocalDateTime.of(2026, 2, 28, 23, 59, 59, 999_999_999))
+			.transactionCount(1)
+			.latestTransactionAt(LocalDateTime.of(2026, 2, 10, 9, 0))
+			.analyzedAt(LocalDateTime.of(2026, 3, 1, 0, 0))
+			.build();
+		given(accountTransactionOverrideRepository.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(
+			any(),
+			any(),
+			any()
+		)).willReturn(List.of(transaction));
+		given(cardTransactionOverrideRepository
+			.findAllByCard_WithdrawalAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of());
+		given(userRepository.getReferenceById(1)).willReturn(user);
+		given(accountRepository.findAllByUser_Id(1)).willReturn(List.of(account));
+		given(transactionAnalysisResultRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
+		given(transactionAnalysisMetadataRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
+
+		TransactionAnalysisMetadata rerun = service.analyzeTransactions(1, 3);
+
+		verify(transactionAnalysisResultRepository).saveAll(any());
+		assertTrue(rerun.getAnalyzedAt().isAfter(existingMetadata.getAnalyzedAt()));
+	}
+
+	@Test
+	void analyzeTransactionsUsesStoredCategoryWithoutCallingInferenceApi() {
 		TransactionAnalysisService service = serviceWithClock("2026-04-13T12:00:00Z");
 		User user = user(1, "user-key-1");
 		Account mainAccount = account(user, "ACC-1", "111-222-333");
@@ -190,10 +231,10 @@ class TransactionAnalysisServiceTest {
 		Card card = card(mainAccount, 9999L, "1234-5678-9012-3456", "123");
 		Merchant netflix = Merchant.builder().id(7).name("Netflix").build();
 		Merchant emart = Merchant.builder().id(8).name("Emart").build();
-		Category defaultCategory = Category.create(4, "기타소비");
-		Category subscriptionCategory = Category.create(2, "구독료");
-		Category housingCategory = Category.create(12, "주거/통신");
-		Category foodCategory = Category.create(10, "식비");
+		Category defaultCategory = Category.create(4, "Other");
+		Category subscriptionCategory = Category.create(2, "\uAD6C\uB3C5\uB8CC");
+		Category housingCategory = Category.create(12, "\uC8FC\uAC70/\uD1B5\uC2E0");
+		Category foodCategory = Category.create(10, "\uC2DD\uBE44");
 		AccountTransactionOverride incomeTransaction = accountTransaction(
 			101,
 			defaultCategory,
@@ -220,7 +261,7 @@ class TransactionAnalysisServiceTest {
 		);
 		AccountTransactionOverride recurringJanuaryTransaction = accountTransaction(
 			103,
-			defaultCategory,
+			housingCategory,
 			mainAccount,
 			1003L,
 			LocalDateTime.of(2026, 1, 7, 9, 0),
@@ -232,7 +273,7 @@ class TransactionAnalysisServiceTest {
 		);
 		AccountTransactionOverride recurringFebruaryTransaction = accountTransaction(
 			104,
-			defaultCategory,
+			housingCategory,
 			mainAccount,
 			1004L,
 			LocalDateTime.of(2026, 2, 7, 9, 0),
@@ -244,7 +285,7 @@ class TransactionAnalysisServiceTest {
 		);
 		AccountTransactionOverride recurringMarchTransaction = accountTransaction(
 			105,
-			defaultCategory,
+			housingCategory,
 			mainAccount,
 			1005L,
 			LocalDateTime.of(2026, 3, 7, 9, 0),
@@ -256,7 +297,7 @@ class TransactionAnalysisServiceTest {
 		);
 		CardTransactionOverride subscriptionTransaction = cardTransaction(
 			106,
-			defaultCategory,
+			subscriptionCategory,
 			netflix,
 			card,
 			2001L,
@@ -265,7 +306,7 @@ class TransactionAnalysisServiceTest {
 		);
 		CardTransactionOverride groceryTransaction = cardTransaction(
 			107,
-			defaultCategory,
+			foodCategory,
 			emart,
 			card,
 			2002L,
@@ -273,8 +314,6 @@ class TransactionAnalysisServiceTest {
 			83_000L
 		);
 
-		given(transactionAnalysisMetadataRepository.findTopByUser_IdAndRequestedMonthsOrderByAnalyzedAtDesc(1, 3))
-			.willReturn(Optional.empty());
 		given(userRepository.getReferenceById(1)).willReturn(user);
 		given(accountRepository.findAllByUser_Id(1)).willReturn(List.of(mainAccount, internalTargetAccount));
 		given(accountTransactionOverrideRepository.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(
@@ -293,31 +332,12 @@ class TransactionAnalysisServiceTest {
 		given(cardTransactionOverrideRepository
 			.findAllByCard_WithdrawalAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
 			.willReturn(List.of(subscriptionTransaction, groceryTransaction));
-		given(merchantInferenceApiClient.labelMerchants(anyList())).willReturn(
-			new MerchantInferenceDto.Response(
-				List.of(
-					inferenceResult("Phone bill", "Phone bill", "주거/통신", "주거/통신", 0.91, false, 0.5),
-					inferenceResult("Netflix", "Netflix", "구독료", "구독료", 0.99, false, 0.5),
-					inferenceResult("Emart", "Emart", "식비", "식비", 0.88, false, 0.5)
-				)
-			)
-		);
-		given(categoryRepository.findAll()).willReturn(List.of(defaultCategory, subscriptionCategory, housingCategory, foodCategory));
 		given(transactionAnalysisResultRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
 		given(essentialExpenseSnapshotWeekRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
 		given(essentialExpenseSnapshotWeekCategoryRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
 		given(transactionAnalysisMetadataRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
 
 		TransactionAnalysisMetadata metadata = service.analyzeTransactions(1, 3);
-
-		ArgumentCaptor<List<String>> merchantTextsCaptor = listCaptor();
-		verify(merchantInferenceApiClient).labelMerchants(merchantTextsCaptor.capture());
-		assertEquals(3, merchantTextsCaptor.getValue().size());
-		assertTrue(merchantTextsCaptor.getValue().contains("Phone bill"));
-		assertTrue(merchantTextsCaptor.getValue().contains("Netflix"));
-		assertTrue(merchantTextsCaptor.getValue().contains("Emart"));
-		assertFalse(merchantTextsCaptor.getValue().contains("Salary"));
-		assertFalse(merchantTextsCaptor.getValue().contains("Transfer"));
 
 		ArgumentCaptor<List<TransactionAnalysisResult>> analysisCaptor = listCaptor();
 		verify(transactionAnalysisResultRepository).saveAll(analysisCaptor.capture());
@@ -335,6 +355,12 @@ class TransactionAnalysisServiceTest {
 		assertEquals(subscriptionCategory, resultByTransactionId.get(106).getCategory());
 		assertEquals(housingCategory, resultByTransactionId.get(105).getCategory());
 		assertEquals(foodCategory, resultByTransactionId.get(107).getCategory());
+		assertNull(resultByTransactionId.get(105).getRawLabel());
+		assertNull(resultByTransactionId.get(105).getFinalLabel());
+		assertNull(resultByTransactionId.get(105).getConfidence());
+		assertFalse(resultByTransactionId.get(105).isFallbackApplied());
+		assertNull(resultByTransactionId.get(105).getThresholdUsed());
+		verifyNoInteractions(merchantInferenceApiClient);
 
 		ArgumentCaptor<List<EssentialExpenseSnapshotWeek>> weekSnapshotCaptor = listCaptor();
 		verify(essentialExpenseSnapshotWeekRepository).saveAll(weekSnapshotCaptor.capture());
@@ -355,9 +381,9 @@ class TransactionAnalysisServiceTest {
 				item -> item.getExpenseScope() + ":" + item.getCategory().getName(),
 				EssentialExpenseSnapshotWeekCategory::getAmount
 			));
-		assertEquals(17_000L, marchCategoryAmounts.get("FIXED:구독료"));
-		assertEquals(55_000L, marchCategoryAmounts.get("FIXED:주거/통신"));
-		assertEquals(83_000L, marchCategoryAmounts.get("VARIABLE:식비"));
+		assertEquals(17_000L, marchCategoryAmounts.get("FIXED:\uAD6C\uB3C5\uB8CC"));
+		assertEquals(55_000L, marchCategoryAmounts.get("FIXED:\uC8FC\uAC70/\uD1B5\uC2E0"));
+		assertEquals(83_000L, marchCategoryAmounts.get("VARIABLE:\uC2DD\uBE44"));
 
 		assertEquals(LocalDateTime.of(2026, 1, 1, 0, 0), metadata.getWindowStartAt());
 		assertEquals(LocalDateTime.of(2026, 3, 31, 23, 59, 59, 999_999_999), metadata.getWindowEndAt());
@@ -369,14 +395,12 @@ class TransactionAnalysisServiceTest {
 		TransactionAnalysisService service = new TransactionAnalysisService(
 			userRepository,
 			accountRepository,
-			categoryRepository,
 			accountTransactionOverrideRepository,
 			cardTransactionOverrideRepository,
 			transactionAnalysisResultRepository,
 			transactionAnalysisMetadataRepository,
 			essentialExpenseSnapshotWeekRepository,
 			essentialExpenseSnapshotWeekCategoryRepository,
-			merchantInferenceApiClient,
 			new TransactionExclusionPolicy(),
 			new FixedExpenseClassifier(),
 			new WeeklyEssentialAllocator()
@@ -472,26 +496,6 @@ class TransactionAnalysisServiceTest {
 			.billStatementsStatus("BILLED")
 			.card(card)
 			.build();
-	}
-
-	private MerchantInferenceDto.Result inferenceResult(
-		String merchantText,
-		String normalizedMerchantText,
-		String rawLabel,
-		String finalLabel,
-		Double confidence,
-		Boolean fallbackApplied,
-		Double thresholdUsed
-	) {
-		return new MerchantInferenceDto.Result(
-			merchantText,
-			normalizedMerchantText,
-			rawLabel,
-			finalLabel,
-			confidence,
-			fallbackApplied,
-			thresholdUsed
-		);
 	}
 
 	@SuppressWarnings("unchecked")

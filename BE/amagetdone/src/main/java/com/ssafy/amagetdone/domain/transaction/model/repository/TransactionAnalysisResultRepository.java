@@ -13,6 +13,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface TransactionAnalysisResultRepository extends JpaRepository<TransactionAnalysisResult, Integer> {
 
+	void deleteByTransaction_IdIn(Collection<Integer> transactionIds);
+
 	Optional<TransactionAnalysisResult> findByTransaction_Id(Integer transactionId);
 
 	List<TransactionAnalysisResult> findAllByTransaction_IdIn(Collection<Integer> transactionIds);
