@@ -23,4 +23,19 @@ public final class AccountAdminDto {
 		String accountType
 	) {
 	}
+
+	public record DataInitRequest(
+		String apiKey,
+		String userApiKey
+	) {
+	}
+
+	public record DataInitResponse(
+		String accountNo,
+		String cardNo,
+		String cardUniqueNo,
+		int accountTransactionCount,
+		int cardTransactionCount
+	) {
+	}
 }
