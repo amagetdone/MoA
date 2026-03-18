@@ -1,5 +1,6 @@
 package com.ssafy.amagetdone.domain.plan.application.service;
 
+import java.time.Clock;
 import com.ssafy.amagetdone.domain.member.application.service.MemberProfileImageService;
 import com.ssafy.amagetdone.domain.plan.exception.PlanErrorCode;
 import com.ssafy.amagetdone.domain.plan.exception.PlanException;
@@ -22,6 +23,7 @@ import java.util.Base64;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.LocalDate;
 
 @Service
 @ConditionalOnBean({ PlanAiClient.class, PyanClient.class })
@@ -34,19 +36,22 @@ public class PlanAiPipelineService {
 	private final PlanAiClient planAiClient;
 	private final S3StorageService storageService;
 	private final PyanClient pyanClient;
+	private final Clock clock;
 
 	public PlanAiPipelineService(
 		PlanRepository planRepository,
 		MemberProfileImageService memberProfileImageService,
 		PlanAiClient planAiClient,
 		S3StorageService storageService,
-		PyanClient pyanClient
+		PyanClient pyanClient,
+		Clock clock
 	) {
 		this.planRepository = planRepository;
 		this.memberProfileImageService = memberProfileImageService;
 		this.planAiClient = planAiClient;
 		this.storageService = storageService;
 		this.pyanClient = pyanClient;
+		this.clock = clock;
 	}
 
 	@Transactional
@@ -89,6 +94,9 @@ public class PlanAiPipelineService {
 			String videoUrl = resolveCompressedDownloadUrl(response);
 			plan.updateVideoUrl(videoUrl);
 			plan.markAiSucceeded();
+			if (plan.getStartDate() != null && !plan.getStartDate().isAfter(LocalDate.now(clock))) {
+				plan.activate();
+			}
 			planRepository.saveAndFlush(plan);
 			log.info(
 				"event=PLAN_AI_PIPELINE_SUCCESS planId={} userId={} planImageKey={} videoUrl={}",

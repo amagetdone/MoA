@@ -7,7 +7,8 @@ import org.springframework.http.HttpStatus;
 public enum PlanErrorCode implements ErrorCode {
 	PLAN_NOT_FOUND(HttpStatus.NOT_FOUND, "PLAN_001", "Plan not found"),
 	PLAN_OWNER_NOT_FOUND(HttpStatus.NOT_FOUND, "PLAN_002", "Plan owner not found"),
-	BUDGET_WEEK_NOT_FOUND(HttpStatus.BAD_REQUEST, "PLAN_003", "Budget week not found for plan period");
+	BUDGET_WEEK_NOT_FOUND(HttpStatus.BAD_REQUEST, "PLAN_003", "Budget week not found for plan period"),
+	PLAN_VIDEO_NOT_FOUND(HttpStatus.NOT_FOUND, "PLAN_004", "Plan video not found");
 
 	private final HttpStatus httpStatus;
 	private final String code;

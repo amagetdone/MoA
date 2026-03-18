@@ -1,5 +1,6 @@
 package com.ssafy.amagetdone.domain.plan.application.service;
 
+import java.time.Clock;
 import java.time.LocalDate;
 
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
@@ -16,21 +17,23 @@ import org.springframework.transaction.annotation.Transactional;
 public class PlanStatusScheduler {
 
 	private final PlanRepository planRepository;
+	private final Clock clock;
 
-	public PlanStatusScheduler(PlanRepository planRepository) {
+	public PlanStatusScheduler(PlanRepository planRepository, Clock clock) {
 		this.planRepository = planRepository;
+		this.clock = clock;
 	}
 
 	@Scheduled(cron = "0 5 0 * * *", zone = "Asia/Seoul")
 	@Transactional
 	public void activateStartedPlans() {
-		activateStartedPlans(LocalDate.now());
+		activateStartedPlans(LocalDate.now(clock));
 	}
 
 	@EventListener(ApplicationReadyEvent.class)
 	@Transactional
 	public void activateStartedPlansOnStartup() {
-		activateStartedPlans(LocalDate.now());
+		activateStartedPlans(LocalDate.now(clock));
 	}
 
 	@Transactional

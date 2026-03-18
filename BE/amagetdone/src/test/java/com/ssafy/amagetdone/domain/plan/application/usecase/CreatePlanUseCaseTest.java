@@ -6,7 +6,10 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Optional;
 
 import com.ssafy.amagetdone.domain.member.model.entity.User;
@@ -21,7 +24,7 @@ import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepos
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -45,25 +48,30 @@ class CreatePlanUseCaseTest {
 	@Mock
 	private ApplicationEventPublisher applicationEventPublisher;
 
-	@InjectMocks
 	private CreatePlanUseCase createPlanUseCase;
+
+	private void createUseCaseWithClock(Clock clock) {
+		createPlanUseCase = new CreatePlanUseCase(
+			userRepository,
+			planRepository,
+			planPriorityService,
+			applicationEventPublisher,
+			clock
+		);
+	}
 
 	@Test
 	void createsWaitingPlanAndPublishesCreatedEvent() {
+		createUseCaseWithClock(Clock.fixed(Instant.parse("2026-03-10T00:00:00Z"), ZoneId.of("Asia/Seoul")));
 		User user = User.createPendingSocialUser();
 		ReflectionTestUtils.setField(user, "id", 1);
-		Plan savedPlan = instantiatePlan();
-		ReflectionTestUtils.setField(savedPlan, "id", 10);
-		ReflectionTestUtils.setField(savedPlan, "title", "Europe trip fund");
-		ReflectionTestUtils.setField(savedPlan, "description", "Summer travel savings");
-		ReflectionTestUtils.setField(savedPlan, "targetAmount", 3000000L);
-		ReflectionTestUtils.setField(savedPlan, "startDate", LocalDate.of(2026, 4, 1));
-		ReflectionTestUtils.setField(savedPlan, "endDate", LocalDate.of(2026, 9, 1));
-		ReflectionTestUtils.setField(savedPlan, "priority", 1);
-		ReflectionTestUtils.setField(savedPlan, "status", com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus.WAITING);
 
 		given(userRepository.findById(1)).willReturn(Optional.of(user));
-		given(planRepository.save(any(Plan.class))).willReturn(savedPlan);
+		given(planRepository.save(any(Plan.class))).willAnswer(invocation -> {
+			Plan plan = invocation.getArgument(0);
+			ReflectionTestUtils.setField(plan, "id", 10);
+			return plan;
+		});
 
 		PlanCreateResponse response = createPlanUseCase.execute(1, new PlanCreateRequest(
 			"Europe trip fund",
@@ -81,13 +89,58 @@ class CreatePlanUseCaseTest {
 		verify(applicationEventPublisher).publishEvent(new PlanCreatedEvent(10, 1));
 	}
 
-	private Plan instantiatePlan() {
-		try {
-			var constructor = Plan.class.getDeclaredConstructor();
-			constructor.setAccessible(true);
-			return constructor.newInstance();
-		} catch (ReflectiveOperationException exception) {
-			throw new IllegalStateException(exception);
-		}
+	@Test
+	void createsActivePlanWhenStartDateIsToday() {
+		createUseCaseWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
+		User user = User.createPendingSocialUser();
+		ReflectionTestUtils.setField(user, "id", 1);
+		LocalDate today = LocalDate.of(2026, 3, 19);
+
+		given(userRepository.findById(1)).willReturn(Optional.of(user));
+		given(planRepository.save(any(Plan.class))).willAnswer(invocation -> {
+			Plan plan = invocation.getArgument(0);
+			ReflectionTestUtils.setField(plan, "id", 11);
+			return plan;
+		});
+
+		PlanCreateResponse response = createPlanUseCase.execute(1, new PlanCreateRequest(
+			"Immediate plan",
+			"Starts now",
+			100000L,
+			today,
+			today.plusWeeks(2),
+			1
+		));
+
+		assertEquals("ACTIVE", response.status());
+		ArgumentCaptor<Plan> planCaptor = ArgumentCaptor.forClass(Plan.class);
+		verify(planRepository).save(planCaptor.capture());
+		assertEquals(com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus.ACTIVE, planCaptor.getValue().getStatus());
+		verify(applicationEventPublisher).publishEvent(new PlanCreatedEvent(11, 1));
+	}
+
+	@Test
+	void createsActivePlanUsingKstDateEvenWhenSystemDefaultZoneIsUtc() {
+		createUseCaseWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
+		User user = User.createPendingSocialUser();
+		ReflectionTestUtils.setField(user, "id", 1);
+
+		given(userRepository.findById(1)).willReturn(Optional.of(user));
+		given(planRepository.save(any(Plan.class))).willAnswer(invocation -> {
+			Plan plan = invocation.getArgument(0);
+			ReflectionTestUtils.setField(plan, "id", 12);
+			return plan;
+		});
+
+		PlanCreateResponse response = createPlanUseCase.execute(1, new PlanCreateRequest(
+			"KST plan",
+			"KST should be active",
+			100000L,
+			LocalDate.of(2026, 3, 19),
+			LocalDate.of(2026, 4, 1),
+			1
+		));
+
+		assertEquals("ACTIVE", response.status());
 	}
 }
