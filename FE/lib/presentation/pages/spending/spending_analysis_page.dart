@@ -32,8 +32,10 @@ class SpendingAnalysisPage extends ConsumerWidget {
         showNotification: true,
       ),
       body: state.isLoading
-          ? const SizedBox.shrink()
-          : SingleChildScrollView(
+          ? const Center(child: CircularProgressIndicator())
+          : Scrollbar(
+              thumbVisibility: false,
+              child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
               padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
               child: Column(
@@ -125,16 +127,48 @@ class SpendingAnalysisPage extends ConsumerWidget {
                 ],
               ),
             ),
+          ),
     );
   }
 }
 
-class _SpendingSummaryCard extends StatelessWidget {
+String _weekLabel(DateTime weekStart) {
+  final weekOfMonth = ((weekStart.day - 1) ~/ 7) + 1;
+  return '${weekStart.month}월 $weekOfMonth주차';
+}
+
+String _weekDateRange(DateTime weekStart) {
+  final weekEnd = weekStart.add(const Duration(days: 6));
+  String fmt(DateTime d) =>
+      '${d.year}.${d.month.toString().padLeft(2, '0')}.${d.day.toString().padLeft(2, '0')}';
+  return '${fmt(weekStart)} ~ ${fmt(weekEnd)}';
+}
+
+String _monthLabel(DateTime monthStart) {
+  return '${monthStart.year}년 ${monthStart.month}월';
+}
+
+String _monthDateRange(DateTime monthStart) {
+  final lastDay = DateTime(monthStart.year, monthStart.month + 1, 0);
+  String fmt(DateTime d) =>
+      '${d.year}.${d.month.toString().padLeft(2, '0')}.${d.day.toString().padLeft(2, '0')}';
+  return '${fmt(monthStart)} ~ ${fmt(lastDay)}';
+}
+
+class _SpendingSummaryCard extends ConsumerWidget {
   final SpendingState state;
   const _SpendingSummaryCard({required this.state});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final viewModel = ref.read(spendingViewModelProvider.notifier);
+    final periodLabel = state.isWeekly
+        ? _weekLabel(state.selectedWeekStart)
+        : _monthLabel(state.selectedMonthStart);
+    final periodRange = state.isWeekly
+        ? _weekDateRange(state.selectedWeekStart)
+        : _monthDateRange(state.selectedMonthStart);
+
     return MoreCard(
       padding: EdgeInsets.symmetric(vertical: 24.h, horizontal: 16.w),
       child: Column(
@@ -142,7 +176,7 @@ class _SpendingSummaryCard extends StatelessWidget {
           Row(
             children: [
               IconButton(
-                onPressed: () {},
+                onPressed: () => viewModel.navigatePeriod(-1),
                 icon: const Icon(Icons.arrow_left, size: 32),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -154,14 +188,14 @@ class _SpendingSummaryCard extends StatelessWidget {
                     FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(
-                        state.isWeekly ? '3월 1주차' : '2025년 3월',
+                        periodLabel,
                         style: AppTextStyles.headingMd,
                       ),
                     ),
                     FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(
-                        '2025.03.01 ~ 2025.03.08',
+                        periodRange,
                         style: AppTextStyles.caption
                             .copyWith(color: AppColors.textTertiary),
                       ),
@@ -170,27 +204,26 @@ class _SpendingSummaryCard extends StatelessWidget {
                 ),
               ),
               IconButton(
-                onPressed: () {},
+                onPressed: () => viewModel.navigatePeriod(1),
                 icon: const Icon(Icons.arrow_right, size: 32),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
             ],
           ),
-          SizedBox(height: 24.h),
+          SizedBox(height: 16.h),
           FittedBox(
             fit: BoxFit.scaleDown,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  '총 지출',
+                  '총 지출  ',
                   style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary),
                 ),
-                SizedBox(width: 12.w),
                 Text(
                   CurrencyFormatter.formatKRW(state.totalSpent),
-                  style: AppTextStyles.headingXl.copyWith(fontSize: 28.sp),
+                  style: AppTextStyles.headingMd.copyWith(fontSize: 22.sp),
                 ),
               ],
             ),
@@ -210,7 +243,7 @@ class _SpendingInsightBox extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF6ED),
+       color: const Color(0xFFFFF6ED),
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Row(

@@ -14,8 +14,11 @@ class SpendingState {
   final int monthlyIncome;
   final int monthlySavingsGoal;
   final int monthlyFixedExpense;
+  final DateTime selectedWeekStart;
+  final DateTime selectedMonthStart;
+  final int? touchedPieIndex;
 
-  const SpendingState({
+  SpendingState({
     this.isLoading = false,
     this.errorMessage,
     this.isWeekly = true,
@@ -26,7 +29,22 @@ class SpendingState {
     this.monthlyIncome = 0,
     this.monthlySavingsGoal = 0,
     this.monthlyFixedExpense = 0,
-  });
+    DateTime? selectedWeekStart,
+    DateTime? selectedMonthStart,
+    this.touchedPieIndex,
+  })  : selectedWeekStart = selectedWeekStart ?? _thisWeekStart(),
+        selectedMonthStart = selectedMonthStart ?? _thisMonthStart();
+
+  static DateTime _thisWeekStart() {
+    final now = DateTime.now();
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+    return DateTime(monday.year, monday.month, monday.day);
+  }
+
+  static DateTime _thisMonthStart() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, 1);
+  }
 
   int get totalSpent => categories.fold(0, (sum, c) => sum + c.amount);
 
@@ -42,6 +60,9 @@ class SpendingState {
     int? monthlyIncome,
     int? monthlySavingsGoal,
     int? monthlyFixedExpense,
+    DateTime? selectedWeekStart,
+    DateTime? selectedMonthStart,
+    Object? touchedPieIndex = _sentinel,
   }) {
     return SpendingState(
       isLoading: isLoading ?? this.isLoading,
@@ -56,13 +77,20 @@ class SpendingState {
       monthlyIncome: monthlyIncome ?? this.monthlyIncome,
       monthlySavingsGoal: monthlySavingsGoal ?? this.monthlySavingsGoal,
       monthlyFixedExpense: monthlyFixedExpense ?? this.monthlyFixedExpense,
+      selectedWeekStart: selectedWeekStart ?? this.selectedWeekStart,
+      selectedMonthStart: selectedMonthStart ?? this.selectedMonthStart,
+      touchedPieIndex: touchedPieIndex == _sentinel
+          ? this.touchedPieIndex
+          : touchedPieIndex as int?,
     );
   }
+
+  static const _sentinel = Object();
 }
 
 class SpendingViewModel extends StateNotifier<SpendingState> {
   SpendingViewModel(this._repository)
-    : super(const SpendingState(isLoading: true)) {
+    : super(SpendingState(isLoading: true)) {
     loadData();
   }
 
@@ -72,10 +100,11 @@ class SpendingViewModel extends StateNotifier<SpendingState> {
     state = state.copyWith(isLoading: true, clearErrorMessage: true);
 
     try {
+      await _repository.syncTransactions();
+      await _repository.analyzeTransactions();
       final overview = await _repository.fetchSpendingOverview();
       state = state.copyWith(
         isLoading: false,
-        categories: overview.categories,
         dailySpendings: overview.dailySpendings,
         monthlySpendings: overview.monthlySpendings,
         weeklyBudget: overview.weeklyBudget,
@@ -83,13 +112,49 @@ class SpendingViewModel extends StateNotifier<SpendingState> {
         monthlySavingsGoal: overview.monthlySavingsGoal,
         monthlyFixedExpense: overview.monthlyFixedExpense,
       );
+      await _loadPeriodData();
     } catch (error) {
       state = state.copyWith(isLoading: false, errorMessage: error.toString());
     }
   }
 
+  Future<void> _loadPeriodData() async {
+    try {
+      if (state.isWeekly) {
+        final categories = await _repository.fetchWeeklyCategories(state.selectedWeekStart);
+        final dailySpendings = await _repository.fetchWeeklyDailySpending(state.selectedWeekStart);
+        state = state.copyWith(categories: categories, dailySpendings: dailySpendings);
+      } else {
+        final categories = await _repository.fetchMonthlyCategories(state.selectedMonthStart);
+        final monthlySpendings = await _repository.fetchMonthlyDailySpending(state.selectedMonthStart);
+        state = state.copyWith(categories: categories, monthlySpendings: monthlySpendings);
+      }
+    } catch (e) {
+      state = state.copyWith(errorMessage: e.toString());
+    }
+  }
+
   void togglePeriod(bool isWeekly) {
     state = state.copyWith(isWeekly: isWeekly);
+    if (isWeekly) _loadPeriodData();
+  }
+
+  void navigatePeriod(int delta) {
+    if (state.isWeekly) {
+      state = state.copyWith(
+        selectedWeekStart: state.selectedWeekStart.add(Duration(days: 7 * delta)),
+      );
+      _loadPeriodData();
+    } else {
+      final current = state.selectedMonthStart;
+      state = state.copyWith(
+        selectedMonthStart: DateTime(current.year, current.month + delta, 1),
+      );
+    }
+  }
+
+  void setTouchedPieIndex(int? index) {
+    state = state.copyWith(touchedPieIndex: index);
   }
 
   Future<void> saveBudgetPlan({

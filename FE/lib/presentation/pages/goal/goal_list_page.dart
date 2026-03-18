@@ -109,7 +109,13 @@ class GoalListPage extends ConsumerWidget {
                       ),
                     ],
                   ),
-                );
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.orange500,
+        foregroundColor: Colors.white,
+        onPressed: () => context.push(AppRoutes.goalCreate),
+        child: const Icon(Icons.add),
+      ),
+    );
   }
 
   Widget _buildError(

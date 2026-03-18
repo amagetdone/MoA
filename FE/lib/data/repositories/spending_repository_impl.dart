@@ -16,6 +16,69 @@ class SpendingRepositoryImpl implements SpendingRepository {
   final AppLocalDataSource _localDataSource;
 
   @override
+  Future<void> syncTransactions({int months = 3, bool relabel = false}) async {
+    await _remoteDataSource.syncTransactions(months: months, relabel: relabel);
+  }
+
+  @override
+  Future<void> analyzeTransactions({int months = 3, bool relabel = false}) async {
+    await _remoteDataSource.analyzeTransactions(months: months, relabel: relabel);
+  }
+
+  @override
+  Future<List<DailySpending>> fetchWeeklyDailySpending(DateTime weekStart) async {
+    return _remoteDataSource.fetchWeeklyDailySpending(weekStart);
+  }
+
+  String _toYearMonth(DateTime monthStart) {
+    return '${monthStart.year}-${monthStart.month.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Future<List<SpendingCategory>> fetchMonthlyCategories(DateTime monthStart) async {
+    final yearMonth = _toYearMonth(monthStart);
+    final dto = await _remoteDataSource.fetchMonthlyAnalysis(yearMonth);
+    return dto.categoryExpenses
+        .map((e) => SpendingCategory(
+              name: e.categoryName,
+              amount: e.amount,
+              budget: 0,
+              colorValue: 0xFFFF7043,
+              iconKey: 'more_horiz',
+            ))
+        .toList();
+  }
+
+  @override
+  Future<List<DailySpending>> fetchMonthlyDailySpending(DateTime monthStart) async {
+    return _remoteDataSource.fetchMonthlyDailySpending(monthStart);
+  }
+
+  @override
+  Future<List<SpendingCategory>> fetchWeeklyCategories(DateTime weekStart) async {
+    final yearWeek = _toIsoYearWeek(weekStart);
+    final dto = await _remoteDataSource.fetchWeeklyAnalysis(yearWeek);
+    return dto.categoryExpenses
+        .map((e) => SpendingCategory(
+              name: e.categoryName,
+              amount: e.amount,
+              budget: 0,
+              colorValue: 0xFFFF7043,
+              iconKey: 'more_horiz',
+            ))
+        .toList();
+  }
+
+  String _toIsoYearWeek(DateTime weekMonday) {
+    final thursday = weekMonday.add(const Duration(days: 3));
+    final year = thursday.year;
+    final jan4 = DateTime(year, 1, 4);
+    final week1Monday = jan4.subtract(Duration(days: jan4.weekday - 1));
+    final weekNum = weekMonday.difference(week1Monday).inDays ~/ 7 + 1;
+    return '$year-W${weekNum.toString().padLeft(2, '0')}';
+  }
+
+  @override
   Future<SpendingOverview> fetchSpendingOverview() async {
     try {
       final snapshot = await _remoteDataSource.fetchSpendingSnapshotDto();
