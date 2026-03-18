@@ -21,6 +21,7 @@ import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepos
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -52,18 +53,13 @@ class CreatePlanUseCaseTest {
 	void createsWaitingPlanAndPublishesCreatedEvent() {
 		User user = User.createPendingSocialUser();
 		ReflectionTestUtils.setField(user, "id", 1);
-		Plan savedPlan = instantiatePlan();
-		ReflectionTestUtils.setField(savedPlan, "id", 10);
-		ReflectionTestUtils.setField(savedPlan, "title", "Europe trip fund");
-		ReflectionTestUtils.setField(savedPlan, "description", "Summer travel savings");
-		ReflectionTestUtils.setField(savedPlan, "targetAmount", 3000000L);
-		ReflectionTestUtils.setField(savedPlan, "startDate", LocalDate.of(2026, 4, 1));
-		ReflectionTestUtils.setField(savedPlan, "endDate", LocalDate.of(2026, 9, 1));
-		ReflectionTestUtils.setField(savedPlan, "priority", 1);
-		ReflectionTestUtils.setField(savedPlan, "status", com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus.WAITING);
 
 		given(userRepository.findById(1)).willReturn(Optional.of(user));
-		given(planRepository.save(any(Plan.class))).willReturn(savedPlan);
+		given(planRepository.save(any(Plan.class))).willAnswer(invocation -> {
+			Plan plan = invocation.getArgument(0);
+			ReflectionTestUtils.setField(plan, "id", 10);
+			return plan;
+		});
 
 		PlanCreateResponse response = createPlanUseCase.execute(1, new PlanCreateRequest(
 			"Europe trip fund",
@@ -81,13 +77,32 @@ class CreatePlanUseCaseTest {
 		verify(applicationEventPublisher).publishEvent(new PlanCreatedEvent(10, 1));
 	}
 
-	private Plan instantiatePlan() {
-		try {
-			var constructor = Plan.class.getDeclaredConstructor();
-			constructor.setAccessible(true);
-			return constructor.newInstance();
-		} catch (ReflectiveOperationException exception) {
-			throw new IllegalStateException(exception);
-		}
+	@Test
+	void createsActivePlanWhenStartDateIsToday() {
+		User user = User.createPendingSocialUser();
+		ReflectionTestUtils.setField(user, "id", 1);
+		LocalDate today = LocalDate.now();
+
+		given(userRepository.findById(1)).willReturn(Optional.of(user));
+		given(planRepository.save(any(Plan.class))).willAnswer(invocation -> {
+			Plan plan = invocation.getArgument(0);
+			ReflectionTestUtils.setField(plan, "id", 11);
+			return plan;
+		});
+
+		PlanCreateResponse response = createPlanUseCase.execute(1, new PlanCreateRequest(
+			"Immediate plan",
+			"Starts now",
+			100000L,
+			today,
+			today.plusWeeks(2),
+			1
+		));
+
+		assertEquals("ACTIVE", response.status());
+		ArgumentCaptor<Plan> planCaptor = ArgumentCaptor.forClass(Plan.class);
+		verify(planRepository).save(planCaptor.capture());
+		assertEquals(com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus.ACTIVE, planCaptor.getValue().getStatus());
+		verify(applicationEventPublisher).publishEvent(new PlanCreatedEvent(11, 1));
 	}
 }
