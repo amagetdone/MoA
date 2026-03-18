@@ -21,14 +21,13 @@ import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
 import com.ssafy.amagetdone.domain.transaction.api.dto.ExpenseSummaryDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysisDto;
-import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisJobDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionListDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
+import com.ssafy.amagetdone.domain.transaction.application.service.TransactionSyncService;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.ListTransactionsUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.SyncLatestTransactionsUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.TransactionAnalysisResponseFacade;
-import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisJob;
-import com.ssafy.amagetdone.domain.transaction.model.vo.TransactionAnalysisJobStatus;
-import com.ssafy.amagetdone.domain.transaction.model.vo.TransactionAnalysisStep;
 import com.ssafy.amagetdone.global.config.SecurityConfig;
 import com.ssafy.amagetdone.global.security.AuthenticatedMember;
 
@@ -57,6 +56,9 @@ class TransactionControllerTest {
 	@MockitoBean
 	private ListTransactionsUseCase listTransactionsUseCase;
 
+	@MockitoBean
+	private SyncLatestTransactionsUseCase syncLatestTransactionsUseCase;
+
 	@Test
 	void getExpenseSummaryReadsAuthorizationAndReturnsApiResponse() throws Exception {
 		given(transactionAnalysisResponseFacade.getExpenseSummary(1, YearMonth.of(2025, 10), YearMonth.of(2026, 3), "MONTH"))
@@ -76,6 +78,7 @@ class TransactionControllerTest {
 				.param("bucket", "MONTH"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("지출 요약을 조회했습니다."))
 			.andExpect(jsonPath("$.data.range.fromMonth").value("2025-10"))
 			.andExpect(jsonPath("$.data.points[0].expenseAmount").value(1900000))
 			.andExpect(jsonPath("$.data.comparison.changeRate").value(10.47));
@@ -102,6 +105,7 @@ class TransactionControllerTest {
 				.param("month", "2026-03"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("월간 지출을 조회했습니다."))
 			.andExpect(jsonPath("$.data.month").value("2026-03"))
 			.andExpect(jsonPath("$.data.totalExpenseAmount").value(1900000))
 			.andExpect(jsonPath("$.data.transactionCount").value(84));
@@ -141,24 +145,18 @@ class TransactionControllerTest {
 				.param("size", "20"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("거래 내역을 조회했습니다."))
 			.andExpect(jsonPath("$.data.sync.triggered").value(true))
 			.andExpect(jsonPath("$.data.totalElements").value(143))
 			.andExpect(jsonPath("$.data.items[0].merchantText").value("Coffee Shop"));
 	}
 
 	@Test
-	void createAnalysisJobReturnsAcceptedResponse() throws Exception {
-		TransactionAnalysisJob job = TransactionAnalysisJob.builder()
-			.id("txn-analysis-20260313-001")
-			.user(user(1))
-			.requestedMonths(6)
-			.status(TransactionAnalysisJobStatus.PENDING)
-			.currentStep(TransactionAnalysisStep.SYNCING)
-			.requestedAt(LocalDateTime.of(2026, 3, 13, 15, 19))
-			.build();
-		given(transactionAnalysisResponseFacade.createAnalysisJob(1, 6, false)).willReturn(job);
+	void analyzeTransactionsReturnsOnboardingResponse() throws Exception {
+		given(transactionAnalysisResponseFacade.analyzeTransactions(1, 6))
+			.willReturn(sampleOnboardingResult());
 
-		mockMvc.perform(apiPost("/transactions/analysis-jobs")
+		mockMvc.perform(apiPost("/transactions/analysis")
 				.with(authentication(
 					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
 				))
@@ -166,91 +164,61 @@ class TransactionControllerTest {
 				.content("""
 					{
 					  "months": 6,
-					  "forceFullSync": false,
 					  "relabel": false
 					}
 					"""))
-			.andExpect(status().isAccepted())
+			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.data.jobId").value("txn-analysis-20260313-001"))
-			.andExpect(jsonPath("$.data.status").value("PENDING"))
-			.andExpect(jsonPath("$.data.requestedMonths").value(6));
+			.andExpect(jsonPath("$.message").value("거래 분석을 완료했습니다."))
+			.andExpect(jsonPath("$.data.summaryText").value("최근 3개월 소비 분석을 완료했어요."))
+			.andExpect(jsonPath("$.data.averageIncome").value(3_000_000))
+			.andExpect(jsonPath("$.data.averageExpense").value(1_900_000))
+			.andExpect(jsonPath("$.data.categoryExpenses[0].categoryName").value("Food"));
 	}
 
 	@Test
-	void getAnalysisJobStatusReturnsNullOnboardingResultWhileRunning() throws Exception {
-		given(transactionAnalysisResponseFacade.getAnalysisJobStatus(1, "txn-analysis-20260313-001"))
-			.willReturn(new TransactionAnalysisJobDto.StatusResponse(
-				"txn-analysis-20260313-001",
-				"RUNNING",
-				new TransactionAnalysisJobDto.Progress("CATEGORY_LABELING", 3, 4),
-				6,
-				LocalDateTime.of(2026, 3, 13, 15, 19),
-				LocalDateTime.of(2026, 3, 13, 15, 19, 2),
-				null,
-				null,
-				null,
-				null
-			));
+	void syncTransactionsReturnsInsertedCounts() throws Exception {
+		given(syncLatestTransactionsUseCase.execute(1, 3, true))
+			.willReturn(new TransactionSyncService.SyncResult(4, 2));
 
-		mockMvc.perform(apiGet("/transactions/analysis-jobs/txn-analysis-20260313-001")
+		mockMvc.perform(apiPost("/transactions/sync")
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
+				))
+				.contentType(APPLICATION_JSON)
+				.content("""
+					{
+					  "months": 3,
+					  "forceFullSync": true
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("거래 동기화를 완료했습니다."))
+			.andExpect(jsonPath("$.data.insertedAccountCount").value(4))
+			.andExpect(jsonPath("$.data.insertedCardCount").value(2));
+	}
+
+	@Test
+	void getOnboardingAnalysisReturnsStoredResult() throws Exception {
+		given(transactionAnalysisResponseFacade.getOnboardingAnalysis(1))
+			.willReturn(sampleOnboardingResult());
+
+		mockMvc.perform(apiGet("/transactions/analysis")
 				.with(authentication(
 					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
 				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.data.jobId").value("txn-analysis-20260313-001"))
-			.andExpect(jsonPath("$.data.status").value("RUNNING"))
-			.andExpect(jsonPath("$.data.progress.step").value("CATEGORY_LABELING"))
-			.andExpect(jsonPath("$.data.onboardingResult").doesNotExist());
-	}
-
-	@Test
-	void getAnalysisJobStatusReturnsOnboardingResultWhenSucceeded() throws Exception {
-		given(transactionAnalysisResponseFacade.getAnalysisJobStatus(1, "txn-analysis-20260313-001"))
-			.willReturn(new TransactionAnalysisJobDto.StatusResponse(
-				"txn-analysis-20260313-001",
-				"SUCCEEDED",
-				new TransactionAnalysisJobDto.Progress("COMPLETED", 4, 4),
-				6,
-				LocalDateTime.of(2026, 3, 13, 15, 19),
-				LocalDateTime.of(2026, 3, 13, 15, 19, 2),
-				LocalDateTime.of(2026, 3, 13, 15, 24, 10),
-				null,
-				null,
-				new TransactionAnalysisJobDto.OnboardingResult(
-					"3개월 간 소비패턴을 분석했어요.",
-					3_000_000L,
-					1_900_000L,
-					1_100_000L,
-					65.0,
-					35.0,
-					"소비 여유가 있어요. 목표 저축도 고려해 보세요.",
-					List.of(
-						new TransactionAnalysisJobDto.CategoryExpense(10, "식비", 750_000L),
-						new TransactionAnalysisJobDto.CategoryExpense(20, "주거", 550_000L),
-						new TransactionAnalysisJobDto.CategoryExpense(30, "교통", 150_000L)
-					)
-				)
-			));
-
-		mockMvc.perform(apiGet("/transactions/analysis-jobs/txn-analysis-20260313-001")
-				.with(authentication(
-					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
-				)))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.data.jobId").value("txn-analysis-20260313-001"))
-			.andExpect(jsonPath("$.data.status").value("SUCCEEDED"))
-			.andExpect(jsonPath("$.data.onboardingResult.summaryText").value("3개월 간 소비패턴을 분석했어요."))
-			.andExpect(jsonPath("$.data.onboardingResult.averageIncome").value(3_000_000))
-			.andExpect(jsonPath("$.data.onboardingResult.averageExpense").value(1_900_000))
-			.andExpect(jsonPath("$.data.onboardingResult.remainingAmount").value(1_100_000))
-			.andExpect(jsonPath("$.data.onboardingResult.fixedExpenseRatio").value(65.0))
-			.andExpect(jsonPath("$.data.onboardingResult.variableExpenseRatio").value(35.0))
-			.andExpect(jsonPath("$.data.onboardingResult.insightMessage").value("소비 여유가 있어요. 목표 저축도 고려해 보세요."))
-			.andExpect(jsonPath("$.data.onboardingResult.categoryExpenses[0].categoryName").value("식비"))
-			.andExpect(jsonPath("$.data.onboardingResult.categoryExpenses[0].amount").value(750_000));
+			.andExpect(jsonPath("$.message").value("온보딩 분석 결과를 조회했습니다."))
+			.andExpect(jsonPath("$.data.summaryText").value("최근 3개월 소비 분석을 완료했어요."))
+			.andExpect(jsonPath("$.data.averageIncome").value(3_000_000))
+			.andExpect(jsonPath("$.data.averageExpense").value(1_900_000))
+			.andExpect(jsonPath("$.data.remainingAmount").value(1_100_000))
+			.andExpect(jsonPath("$.data.fixedExpenseRatio").value(65.0))
+			.andExpect(jsonPath("$.data.variableExpenseRatio").value(35.0))
+			.andExpect(jsonPath("$.data.categoryExpenses[0].categoryName").value("Food"))
+			.andExpect(jsonPath("$.data.categoryExpenses[0].amount").value(750_000));
 	}
 
 	@Test
@@ -278,6 +246,7 @@ class TransactionControllerTest {
 				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("주간 분석 결과를 조회했습니다."))
 			.andExpect(jsonPath("$.data.yearWeek").value("2026-W10"))
 			.andExpect(jsonPath("$.data.expenseAmount").value(480000))
 			.andExpect(jsonPath("$.data.essentialAmount").value(155000))
@@ -308,12 +277,29 @@ class TransactionControllerTest {
 				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("월간 분석 결과를 조회했습니다."))
 			.andExpect(jsonPath("$.data.yearMonth").value("2026-03"))
 			.andExpect(jsonPath("$.data.expenseAmount").value(1900000))
 			.andExpect(jsonPath("$.data.monthlyEssentialAmount").value(680000))
 			.andExpect(jsonPath("$.data.fixedEssentialAmount").value(430000))
 			.andExpect(jsonPath("$.data.variableEssentialAmount").value(250000))
 			.andExpect(jsonPath("$.data.categoryExpenses[0].ratio").value(39.47));
+	}
+
+	private TransactionAnalysisDto.OnboardingResult sampleOnboardingResult() {
+		return new TransactionAnalysisDto.OnboardingResult(
+			"최근 3개월 소비 분석을 완료했어요.",
+			3_000_000L,
+			1_900_000L,
+			1_100_000L,
+			65.0,
+			35.0,
+			"지금 흐름이면 저축 여력이 있어요.",
+			List.of(
+				new TransactionAnalysisDto.CategoryExpense(10, "Food", 750_000L),
+				new TransactionAnalysisDto.CategoryExpense(20, "Housing", 550_000L)
+			)
+		);
 	}
 
 	private User user(int id) {

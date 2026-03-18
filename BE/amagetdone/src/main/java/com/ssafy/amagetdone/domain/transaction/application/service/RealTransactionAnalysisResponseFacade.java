@@ -5,18 +5,15 @@ import java.time.YearMonth;
 import com.ssafy.amagetdone.domain.transaction.api.dto.ExpenseSummaryDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysisDto;
-import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisJobDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetExpenseSummaryUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyExpenseUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyTransactionAnalysisUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetOnboardingAnalysisResultUseCase;
-import com.ssafy.amagetdone.domain.transaction.application.usecase.GetTransactionAnalysisJobUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetWeeklyTransactionAnalysisUseCase;
-import com.ssafy.amagetdone.domain.transaction.application.usecase.StartTransactionAnalysisJobUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.RunTransactionAnalysisUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.TransactionAnalysisResponseFacade;
-import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisJob;
-import com.ssafy.amagetdone.domain.transaction.model.vo.TransactionAnalysisJobStatus;
 
 import lombok.RequiredArgsConstructor;
 
@@ -34,15 +31,20 @@ public class RealTransactionAnalysisResponseFacade implements TransactionAnalysi
 
 	private final GetExpenseSummaryUseCase getExpenseSummaryUseCase;
 	private final GetMonthlyExpenseUseCase getMonthlyExpenseUseCase;
-	private final StartTransactionAnalysisJobUseCase startTransactionAnalysisJobUseCase;
-	private final GetTransactionAnalysisJobUseCase getTransactionAnalysisJobUseCase;
+	private final RunTransactionAnalysisUseCase runTransactionAnalysisUseCase;
 	private final GetOnboardingAnalysisResultUseCase getOnboardingAnalysisResultUseCase;
 	private final GetWeeklyTransactionAnalysisUseCase getWeeklyTransactionAnalysisUseCase;
 	private final GetMonthlyTransactionAnalysisUseCase getMonthlyTransactionAnalysisUseCase;
 
 	@Override
-	public TransactionAnalysisJob createAnalysisJob(Integer userId, Integer months, boolean forceFullSync) {
-		return startTransactionAnalysisJobUseCase.execute(userId, months, forceFullSync);
+	public TransactionAnalysisDto.OnboardingResult analyzeTransactions(Integer userId, Integer months) {
+		runTransactionAnalysisUseCase.execute(userId, months);
+		return getOnboardingAnalysisResultUseCase.execute(userId);
+	}
+
+	@Override
+	public TransactionAnalysisDto.OnboardingResult getOnboardingAnalysis(Integer userId) {
+		return getOnboardingAnalysisResultUseCase.execute(userId);
 	}
 
 	@Override
@@ -54,15 +56,6 @@ public class RealTransactionAnalysisResponseFacade implements TransactionAnalysi
 	@Override
 	public MonthlyExpenseDto.Response getMonthlyExpense(Integer userId, YearMonth month) {
 		return getMonthlyExpenseUseCase.execute(userId, month);
-	}
-
-	@Override
-	public TransactionAnalysisJobDto.StatusResponse getAnalysisJobStatus(Integer userId, String jobId) {
-		TransactionAnalysisJob job = getTransactionAnalysisJobUseCase.execute(jobId);
-		TransactionAnalysisJobDto.OnboardingResult onboardingResult = job.getStatus() == TransactionAnalysisJobStatus.SUCCEEDED
-			? getOnboardingAnalysisResultUseCase.execute(userId, job.getFinishedAt())
-			: null;
-		return TransactionAnalysisJobDto.StatusResponse.from(job, onboardingResult);
 	}
 
 	@Override

@@ -12,6 +12,7 @@ import java.util.List;
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
 import com.ssafy.amagetdone.domain.transaction.application.service.MockTransactionAnalysisResponseFacade;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.ListTransactionsUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.SyncLatestTransactionsUseCase;
 import com.ssafy.amagetdone.global.config.SecurityConfig;
 import com.ssafy.amagetdone.global.security.AuthenticatedMember;
 
@@ -39,18 +40,20 @@ class TransactionControllerMockModeTest {
 	@MockitoBean
 	private ListTransactionsUseCase listTransactionsUseCase;
 
+	@MockitoBean
+	private SyncLatestTransactionsUseCase syncLatestTransactionsUseCase;
+
 	@Test
-	void getAnalysisJobStatusReturnsMockedOnboardingPayloadInMockMode() throws Exception {
-		mockMvc.perform(apiGet("/transactions/analysis-jobs/mock-job-001")
+	void getOnboardingAnalysisReturnsMockedPayloadInMockMode() throws Exception {
+		mockMvc.perform(apiGet("/transactions/analysis")
 				.with(authentication(
 					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
 				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.data.jobId").value("mock-job-001"))
-			.andExpect(jsonPath("$.data.status").value("SUCCEEDED"))
-			.andExpect(jsonPath("$.data.onboardingResult").exists())
-			.andExpect(jsonPath("$.data.onboardingResult.categoryExpenses[0].categoryName").value("주거"));
+			.andExpect(jsonPath("$.message").value("온보딩 분석 결과를 조회했습니다."))
+			.andExpect(jsonPath("$.data.summaryText").exists())
+			.andExpect(jsonPath("$.data.categoryExpenses[0].categoryName").value("주거"));
 	}
 
 	@Test
@@ -61,13 +64,14 @@ class TransactionControllerMockModeTest {
 				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("월간 분석 결과를 조회했습니다."))
 			.andExpect(jsonPath("$.data.yearMonth").value("2026-03"))
 			.andExpect(jsonPath("$.data.categoryExpenses[0].categoryName").value("식비"));
 	}
 
 	@Test
-	void createAnalysisJobReturnsMockedPayloadInMockMode() throws Exception {
-		mockMvc.perform(apiPost("/transactions/analysis-jobs")
+	void analyzeTransactionsReturnsMockedPayloadInMockMode() throws Exception {
+		mockMvc.perform(apiPost("/transactions/analysis")
 				.with(authentication(
 					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
 				))
@@ -75,15 +79,14 @@ class TransactionControllerMockModeTest {
 				.content("""
 					{
 					  "months": 3,
-					  "forceFullSync": false,
 					  "relabel": false
 					}
 					"""))
-			.andExpect(status().isAccepted())
+			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.data.jobId").value("mock-job-001"))
-			.andExpect(jsonPath("$.data.status").value("SUCCEEDED"))
-			.andExpect(jsonPath("$.data.requestedMonths").value(3));
+			.andExpect(jsonPath("$.message").value("거래 분석을 완료했습니다."))
+			.andExpect(jsonPath("$.data.summaryText").exists())
+			.andExpect(jsonPath("$.data.categoryExpenses[0].categoryName").value("주거"));
 	}
 
 	private MockHttpServletRequestBuilder apiGet(String path) {

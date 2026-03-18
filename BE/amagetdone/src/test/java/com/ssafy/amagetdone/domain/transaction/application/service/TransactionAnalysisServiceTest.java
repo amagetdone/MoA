@@ -2,17 +2,21 @@ package com.ssafy.amagetdone.domain.transaction.application.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -25,7 +29,6 @@ import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.domain.account.model.entity.Merchant;
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.account.model.repository.CategoryRepository;
-import com.ssafy.amagetdone.domain.budget.application.usecase.UpdateBudgetSpentUseCase;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeek;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeekCategory;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekCategoryRepository;
@@ -34,19 +37,16 @@ import com.ssafy.amagetdone.domain.budget.model.vo.ExpenseScope;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.repository.UserRepository;
 import com.ssafy.amagetdone.domain.member.model.vo.UserStatus;
-import com.ssafy.amagetdone.domain.transaction.exception.TransactionException;
 import com.ssafy.amagetdone.domain.transaction.infra.client.MerchantInferenceApiClient;
 import com.ssafy.amagetdone.domain.transaction.infra.client.dto.MerchantInferenceDto;
 import com.ssafy.amagetdone.domain.transaction.model.entity.AccountTransactionOverride;
 import com.ssafy.amagetdone.domain.transaction.model.entity.CardTransactionOverride;
-import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisJob;
+import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisMetadata;
 import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisResult;
 import com.ssafy.amagetdone.domain.transaction.model.repository.AccountTransactionOverrideRepository;
 import com.ssafy.amagetdone.domain.transaction.model.repository.CardTransactionOverrideRepository;
-import com.ssafy.amagetdone.domain.transaction.model.repository.TransactionAnalysisJobRepository;
+import com.ssafy.amagetdone.domain.transaction.model.repository.TransactionAnalysisMetadataRepository;
 import com.ssafy.amagetdone.domain.transaction.model.repository.TransactionAnalysisResultRepository;
-import com.ssafy.amagetdone.domain.transaction.model.vo.TransactionAnalysisJobStatus;
-import com.ssafy.amagetdone.domain.transaction.model.vo.TransactionAnalysisStep;
 import com.ssafy.amagetdone.domain.transaction.model.vo.TransactionExcludedReason;
 import com.ssafy.amagetdone.domain.transaction.support.util.FixedExpenseClassifier;
 import com.ssafy.amagetdone.domain.transaction.support.util.TransactionExclusionPolicy;
@@ -78,10 +78,10 @@ class TransactionAnalysisServiceTest {
 	private CardTransactionOverrideRepository cardTransactionOverrideRepository;
 
 	@Mock
-	private TransactionAnalysisJobRepository transactionAnalysisJobRepository;
+	private TransactionAnalysisResultRepository transactionAnalysisResultRepository;
 
 	@Mock
-	private TransactionAnalysisResultRepository transactionAnalysisResultRepository;
+	private TransactionAnalysisMetadataRepository transactionAnalysisMetadataRepository;
 
 	@Mock
 	private EssentialExpenseSnapshotWeekRepository essentialExpenseSnapshotWeekRepository;
@@ -92,83 +92,117 @@ class TransactionAnalysisServiceTest {
 	@Mock
 	private MerchantInferenceApiClient merchantInferenceApiClient;
 
-	@Mock
-	private TransactionSyncService transactionSyncService;
-
-	@Mock
-	private UpdateBudgetSpentUseCase updateBudgetSpentUseCase;
-
 	@Test
-	void createJobRejectsDuplicateRunningAnalysis() {
-		TransactionAnalysisService service = new TransactionAnalysisService(
-			userRepository,
-			accountRepository,
-			categoryRepository,
-			accountTransactionOverrideRepository,
-			cardTransactionOverrideRepository,
-			transactionAnalysisJobRepository,
-			transactionAnalysisResultRepository,
-			essentialExpenseSnapshotWeekRepository,
-			essentialExpenseSnapshotWeekCategoryRepository,
-			merchantInferenceApiClient,
-			transactionSyncService,
-			updateBudgetSpentUseCase,
-			new TransactionExclusionPolicy(),
-			new FixedExpenseClassifier(),
-			new WeeklyEssentialAllocator()
-		);
+	void analyzeTransactionsUsesOnlyCompletedMonthsWindow() {
+		TransactionAnalysisService service = serviceWithClock("2026-03-17T10:15:30Z");
+		User user = user(1, "user-key-1");
+		Category defaultCategory = Category.create(4, "Other");
 
-		given(transactionAnalysisJobRepository.existsByUser_IdAndStatus(1, TransactionAnalysisJobStatus.RUNNING)).willReturn(true);
+		given(transactionAnalysisMetadataRepository.findTopByUser_IdAndRequestedMonthsOrderByAnalyzedAtDesc(1, 3))
+			.willReturn(Optional.empty());
+		given(accountTransactionOverrideRepository.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(
+			any(),
+			any(),
+			any()
+		)).willReturn(List.of());
+		given(cardTransactionOverrideRepository
+			.findAllByCard_WithdrawalAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of());
+		given(userRepository.getReferenceById(1)).willReturn(user);
+		given(accountRepository.findAllByUser_Id(1)).willReturn(List.of());
+		given(categoryRepository.findAll()).willReturn(List.of(defaultCategory));
+		given(transactionAnalysisResultRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
+		given(transactionAnalysisMetadataRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
 
-		assertThrows(TransactionException.class, () -> service.createJob(1, 3));
+		TransactionAnalysisMetadata metadata = service.analyzeTransactions(1, 3);
+
+		ArgumentCaptor<LocalDateTime> fromCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+		ArgumentCaptor<LocalDateTime> toCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+		verify(accountTransactionOverrideRepository)
+			.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(
+				any(),
+				fromCaptor.capture(),
+				toCaptor.capture()
+			);
+		assertEquals(LocalDateTime.of(2025, 12, 1, 0, 0), fromCaptor.getValue());
+		assertEquals(LocalDateTime.of(2026, 2, 28, 23, 59, 59, 999_999_999), toCaptor.getValue());
+		assertEquals(LocalDateTime.of(2025, 12, 1, 0, 0), metadata.getWindowStartAt());
+		assertEquals(LocalDateTime.of(2026, 2, 28, 23, 59, 59, 999_999_999), metadata.getWindowEndAt());
+		assertEquals(3, metadata.getRequestedMonths());
+		assertEquals(0, metadata.getTransactionCount());
+		verifyNoInteractions(merchantInferenceApiClient);
 	}
 
 	@Test
-	void runAnalysisExcludesIncomeAndInternalTransfersAndBuildsWeeklySnapshots() {
-		TransactionAnalysisService service = new TransactionAnalysisService(
-			userRepository,
-			accountRepository,
-			categoryRepository,
-			accountTransactionOverrideRepository,
-			cardTransactionOverrideRepository,
-			transactionAnalysisJobRepository,
-			transactionAnalysisResultRepository,
-			essentialExpenseSnapshotWeekRepository,
-			essentialExpenseSnapshotWeekCategoryRepository,
-			merchantInferenceApiClient,
-			transactionSyncService,
-			updateBudgetSpentUseCase,
-			new TransactionExclusionPolicy(),
-			new FixedExpenseClassifier(),
-			new WeeklyEssentialAllocator()
+	void analyzeTransactionsReusesStoredMetadataWhenSignatureIsUnchanged() {
+		TransactionAnalysisService service = serviceWithClock("2026-03-17T10:15:30Z");
+		User user = user(1, "user-key-1");
+		Account account = account(user, "ACC-1", "111-222-333");
+		Category category = Category.create(4, "Other");
+		AccountTransactionOverride febExpense = accountTransaction(
+			101,
+			category,
+			account,
+			1001L,
+			LocalDateTime.of(2026, 2, 10, 9, 0),
+			55_000L,
+			1_000_000L,
+			"Phone bill",
+			"",
+			2
 		);
+		TransactionAnalysisMetadata existingMetadata = TransactionAnalysisMetadata.builder()
+			.id(88)
+			.user(user)
+			.requestedMonths(3)
+			.windowStartAt(LocalDateTime.of(2025, 12, 1, 0, 0))
+			.windowEndAt(LocalDateTime.of(2026, 2, 28, 23, 59, 59, 999_999_999))
+			.transactionCount(1)
+			.latestTransactionAt(LocalDateTime.of(2026, 2, 10, 9, 0))
+			.analyzedAt(LocalDateTime.of(2026, 3, 1, 0, 0))
+			.build();
+
+		given(transactionAnalysisMetadataRepository.findTopByUser_IdAndRequestedMonthsOrderByAnalyzedAtDesc(1, 3))
+			.willReturn(Optional.of(existingMetadata));
+		given(accountTransactionOverrideRepository.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(
+			any(),
+			any(),
+			any()
+		)).willReturn(List.of(febExpense));
+		given(cardTransactionOverrideRepository
+			.findAllByCard_WithdrawalAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of());
+
+		TransactionAnalysisMetadata reused = service.analyzeTransactions(1, 3);
+
+		assertSame(existingMetadata, reused);
+		verifyNoInteractions(userRepository, accountRepository, categoryRepository, merchantInferenceApiClient);
+		verifyNoInteractions(transactionAnalysisResultRepository, essentialExpenseSnapshotWeekRepository,
+			essentialExpenseSnapshotWeekCategoryRepository);
+	}
+
+	@Test
+	void analyzeTransactionsClassifiesTransactionsAndStoresSnapshots() {
+		TransactionAnalysisService service = serviceWithClock("2026-04-13T12:00:00Z");
 		User user = user(1, "user-key-1");
 		Account mainAccount = account(user, "ACC-1", "111-222-333");
 		Account internalTargetAccount = account(user, "ACC-2", "999-888-777");
 		Card card = card(mainAccount, 9999L, "1234-5678-9012-3456", "123");
-		Merchant netflix = Merchant.builder().id(7).name("넷플릭스").build();
-		Merchant emart = Merchant.builder().id(8).name("이마트").build();
-		Category defaultCategory = Category.create(4, "기타서비스");
+		Merchant netflix = Merchant.builder().id(7).name("Netflix").build();
+		Merchant emart = Merchant.builder().id(8).name("Emart").build();
+		Category defaultCategory = Category.create(4, "기타소비");
 		Category subscriptionCategory = Category.create(2, "구독료");
 		Category housingCategory = Category.create(12, "주거/통신");
 		Category foodCategory = Category.create(10, "식비");
-		TransactionAnalysisJob job = TransactionAnalysisJob.builder()
-			.id("job-1")
-			.user(user)
-			.requestedMonths(3)
-			.status(TransactionAnalysisJobStatus.PENDING)
-			.currentStep(TransactionAnalysisStep.SYNCING)
-			.requestedAt(LocalDateTime.of(2026, 3, 13, 12, 0))
-			.build();
 		AccountTransactionOverride incomeTransaction = accountTransaction(
 			101,
 			defaultCategory,
 			mainAccount,
 			1001L,
 			LocalDateTime.of(2026, 3, 4, 9, 0),
-			2000000L,
-			4000000L,
-			"급여",
+			2_000_000L,
+			4_000_000L,
+			"Salary",
 			"",
 			1
 		);
@@ -178,9 +212,9 @@ class TransactionAnalysisServiceTest {
 			mainAccount,
 			1002L,
 			LocalDateTime.of(2026, 3, 5, 11, 0),
-			300000L,
-			3700000L,
-			"내계좌이체",
+			300_000L,
+			3_700_000L,
+			"Transfer",
 			"999-888-777",
 			2
 		);
@@ -190,9 +224,9 @@ class TransactionAnalysisServiceTest {
 			mainAccount,
 			1003L,
 			LocalDateTime.of(2026, 1, 7, 9, 0),
-			55000L,
-			3645000L,
-			"통신비",
+			55_000L,
+			3_645_000L,
+			"Phone bill",
 			"",
 			2
 		);
@@ -202,9 +236,9 @@ class TransactionAnalysisServiceTest {
 			mainAccount,
 			1004L,
 			LocalDateTime.of(2026, 2, 7, 9, 0),
-			55000L,
-			3590000L,
-			"통신비",
+			55_000L,
+			3_590_000L,
+			"Phone bill",
 			"",
 			2
 		);
@@ -214,9 +248,9 @@ class TransactionAnalysisServiceTest {
 			mainAccount,
 			1005L,
 			LocalDateTime.of(2026, 3, 7, 9, 0),
-			55000L,
-			3535000L,
-			"통신비",
+			55_000L,
+			3_535_000L,
+			"Phone bill",
 			"",
 			2
 		);
@@ -227,7 +261,7 @@ class TransactionAnalysisServiceTest {
 			card,
 			2001L,
 			LocalDateTime.of(2026, 3, 6, 8, 0),
-			17000L
+			17_000L
 		);
 		CardTransactionOverride groceryTransaction = cardTransaction(
 			107,
@@ -236,13 +270,13 @@ class TransactionAnalysisServiceTest {
 			card,
 			2002L,
 			LocalDateTime.of(2026, 3, 5, 18, 0),
-			83000L
+			83_000L
 		);
 
-		given(transactionAnalysisJobRepository.findById("job-1")).willReturn(Optional.of(job));
-		given(transactionAnalysisJobRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
-		given(transactionSyncService.syncLatest(1, 3, false)).willReturn(new TransactionSyncService.SyncResult(0, 0));
-		given(accountRepository.findAllLinkedAccountsByUserId(1)).willReturn(List.of(mainAccount, internalTargetAccount));
+		given(transactionAnalysisMetadataRepository.findTopByUser_IdAndRequestedMonthsOrderByAnalyzedAtDesc(1, 3))
+			.willReturn(Optional.empty());
+		given(userRepository.getReferenceById(1)).willReturn(user);
+		given(accountRepository.findAllByUser_Id(1)).willReturn(List.of(mainAccount, internalTargetAccount));
 		given(accountTransactionOverrideRepository.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(
 			any(),
 			any(),
@@ -262,9 +296,9 @@ class TransactionAnalysisServiceTest {
 		given(merchantInferenceApiClient.labelMerchants(anyList())).willReturn(
 			new MerchantInferenceDto.Response(
 				List.of(
-					inferenceResult("통신비", "통신비", "주거/통신", "주거/통신", 0.91, false, 0.5),
-					inferenceResult("넷플릭스", "넷플릭스", "구독료", "구독료", 0.99, false, 0.5),
-					inferenceResult("이마트", "이마트", "식비", "식비", 0.88, false, 0.5)
+					inferenceResult("Phone bill", "Phone bill", "주거/통신", "주거/통신", 0.91, false, 0.5),
+					inferenceResult("Netflix", "Netflix", "구독료", "구독료", 0.99, false, 0.5),
+					inferenceResult("Emart", "Emart", "식비", "식비", 0.88, false, 0.5)
 				)
 			)
 		);
@@ -272,18 +306,18 @@ class TransactionAnalysisServiceTest {
 		given(transactionAnalysisResultRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
 		given(essentialExpenseSnapshotWeekRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
 		given(essentialExpenseSnapshotWeekCategoryRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
+		given(transactionAnalysisMetadataRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
 
-		TransactionAnalysisJob completedJob = service.runAnalysis("job-1", false);
+		TransactionAnalysisMetadata metadata = service.analyzeTransactions(1, 3);
 
-		verify(transactionSyncService).syncLatest(1, 3, false);
 		ArgumentCaptor<List<String>> merchantTextsCaptor = listCaptor();
 		verify(merchantInferenceApiClient).labelMerchants(merchantTextsCaptor.capture());
 		assertEquals(3, merchantTextsCaptor.getValue().size());
-		assertTrue(merchantTextsCaptor.getValue().contains("통신비"));
-		assertTrue(merchantTextsCaptor.getValue().contains("넷플릭스"));
-		assertTrue(merchantTextsCaptor.getValue().contains("이마트"));
-		assertFalse(merchantTextsCaptor.getValue().contains("급여"));
-		assertFalse(merchantTextsCaptor.getValue().contains("내계좌이체"));
+		assertTrue(merchantTextsCaptor.getValue().contains("Phone bill"));
+		assertTrue(merchantTextsCaptor.getValue().contains("Netflix"));
+		assertTrue(merchantTextsCaptor.getValue().contains("Emart"));
+		assertFalse(merchantTextsCaptor.getValue().contains("Salary"));
+		assertFalse(merchantTextsCaptor.getValue().contains("Transfer"));
 
 		ArgumentCaptor<List<TransactionAnalysisResult>> analysisCaptor = listCaptor();
 		verify(transactionAnalysisResultRepository).saveAll(analysisCaptor.capture());
@@ -309,9 +343,9 @@ class TransactionAnalysisServiceTest {
 			.findFirst()
 			.orElseThrow();
 		assertEquals(3, marchWeek.getBaseMonths());
-		assertEquals(155000L, marchWeek.getEssentialAmount());
-		assertEquals(72000L, marchWeek.getFixedEssentialAmount());
-		assertEquals(83000L, marchWeek.getVariableEssentialAmount());
+		assertEquals(155_000L, marchWeek.getEssentialAmount());
+		assertEquals(72_000L, marchWeek.getFixedEssentialAmount());
+		assertEquals(83_000L, marchWeek.getVariableEssentialAmount());
 
 		ArgumentCaptor<List<EssentialExpenseSnapshotWeekCategory>> weekCategoryCaptor = listCaptor();
 		verify(essentialExpenseSnapshotWeekCategoryRepository).saveAll(weekCategoryCaptor.capture());
@@ -321,16 +355,38 @@ class TransactionAnalysisServiceTest {
 				item -> item.getExpenseScope() + ":" + item.getCategory().getName(),
 				EssentialExpenseSnapshotWeekCategory::getAmount
 			));
-		assertEquals(17000L, marchCategoryAmounts.get("FIXED:구독료"));
-		assertEquals(55000L, marchCategoryAmounts.get("FIXED:주거/통신"));
-		assertEquals(83000L, marchCategoryAmounts.get("VARIABLE:식비"));
+		assertEquals(17_000L, marchCategoryAmounts.get("FIXED:구독료"));
+		assertEquals(55_000L, marchCategoryAmounts.get("FIXED:주거/통신"));
+		assertEquals(83_000L, marchCategoryAmounts.get("VARIABLE:식비"));
 
-		ArgumentCaptor<List<TransactionAnalysisResult>> spentUpdateCaptor = listCaptor();
-		verify(updateBudgetSpentUseCase).execute(same(user), spentUpdateCaptor.capture());
-		assertEquals(analysisCaptor.getValue(), spentUpdateCaptor.getValue());
+		assertEquals(LocalDateTime.of(2026, 1, 1, 0, 0), metadata.getWindowStartAt());
+		assertEquals(LocalDateTime.of(2026, 3, 31, 23, 59, 59, 999_999_999), metadata.getWindowEndAt());
+		assertEquals(7, metadata.getTransactionCount());
+		assertEquals(LocalDateTime.of(2026, 3, 7, 9, 0), metadata.getLatestTransactionAt());
+	}
 
-		assertEquals(TransactionAnalysisJobStatus.SUCCEEDED, completedJob.getStatus());
-		assertEquals(TransactionAnalysisStep.COMPLETED, completedJob.getCurrentStep());
+	private TransactionAnalysisService serviceWithClock(String instant) {
+		TransactionAnalysisService service = new TransactionAnalysisService(
+			userRepository,
+			accountRepository,
+			categoryRepository,
+			accountTransactionOverrideRepository,
+			cardTransactionOverrideRepository,
+			transactionAnalysisResultRepository,
+			transactionAnalysisMetadataRepository,
+			essentialExpenseSnapshotWeekRepository,
+			essentialExpenseSnapshotWeekCategoryRepository,
+			merchantInferenceApiClient,
+			new TransactionExclusionPolicy(),
+			new FixedExpenseClassifier(),
+			new WeeklyEssentialAllocator()
+		);
+		ReflectionTestUtils.setField(
+			service,
+			"clock",
+			Clock.fixed(Instant.parse(instant), ZoneId.of("Asia/Seoul"))
+		);
+		return service;
 	}
 
 	private User user(Integer id, String userKey) {
@@ -356,11 +412,11 @@ class TransactionAnalysisServiceTest {
 			.withdrawalAccount(withdrawalAccount)
 			.cvc(cvc)
 			.cardNo(cardNo)
-			.name("테스트카드")
+			.name("test-card")
 			.issuerCode("ISS")
-			.cardIssuerName("테스트카드사")
+			.cardIssuerName("issuer")
 			.cardExpiryDate(LocalDateTime.of(2027, 12, 31, 0, 0))
-			.cardDescription("기본 카드")
+			.cardDescription("basic card")
 			.withdrawalDate("15")
 			.baselinePerformance(0L)
 			.maxBenefitLimit(0L)
@@ -387,7 +443,7 @@ class TransactionAnalysisServiceTest {
 			.transactionMemo(transactionMemo)
 			.transactionUniqueNo(transactionUniqueNo)
 			.transactionType(transactionType)
-			.transactionTypeName(transactionType == 1 ? "입금" : "출금")
+			.transactionTypeName(transactionType == 1 ? "IN" : "OUT")
 			.transactionAfterBalance(transactionAfterBalance)
 			.transactionSummary(transactionSummary)
 			.account(account)

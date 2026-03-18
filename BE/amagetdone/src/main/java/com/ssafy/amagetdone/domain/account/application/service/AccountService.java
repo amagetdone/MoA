@@ -16,9 +16,11 @@ import com.ssafy.amagetdone.domain.account.infra.client.dto.DemandDepositAccount
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class AccountService {
 
 	private final FindAccountUserUseCase findAccountUserUseCase;
@@ -90,6 +92,14 @@ public class AccountService {
 			account.getAlias(),
 			account.isVerified()
 		);
+	}
+	public AccountAdminDto.DataInitResponse initializeDummyData(AccountAdminDto.DataInitRequest request) {
+		return initializeSsafyDummyDataUseCase.execute(request);
+	}
+
+	public List<AccountDto.AccountSummaryResponse> syncAccounts(Integer userId) {
+		List<Account> accounts = reconcileLinkedAccountsUseCase.execute(userId);
+		return listAccountsUseCase.toResponses(accounts);
 	}
 
 	public List<AccountDto.AccountSummaryResponse> getAccounts(Integer userId) {

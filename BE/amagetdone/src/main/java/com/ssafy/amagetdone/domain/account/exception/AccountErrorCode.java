@@ -9,6 +9,7 @@ public enum AccountErrorCode implements ErrorCode {
 	USER_NOT_FOUND(HttpStatus.NOT_FOUND, "ACCOUNT_002", "User not found"),
 	USER_KEY_REQUIRED(HttpStatus.BAD_REQUEST, "ACCOUNT_003", "User key is required"),
 	ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "ACCOUNT_004", "Account not found"),
+	INVALID_DATA_INIT_REQUEST(HttpStatus.BAD_REQUEST, "ACCOUNT_019", "Invalid data init request"),
 	DEMAND_DEPOSIT_PRODUCT_API_CALL_FAILED(
 		HttpStatus.BAD_GATEWAY,
 		"ACCOUNT_005",
@@ -58,6 +59,26 @@ public enum AccountErrorCode implements ErrorCode {
 		HttpStatus.BAD_GATEWAY,
 		"ACCOUNT_014",
 		"Invalid demand deposit transfer API response"
+	),
+	CREDIT_CARD_API_CALL_FAILED(
+		HttpStatus.BAD_GATEWAY,
+		"ACCOUNT_015",
+		"Credit card API call failed"
+	),
+	INVALID_CREDIT_CARD_API_RESPONSE(
+		HttpStatus.BAD_GATEWAY,
+		"ACCOUNT_016",
+		"Invalid credit card API response"
+	),
+	CREDIT_CARD_TRANSACTION_API_CALL_FAILED(
+		HttpStatus.BAD_GATEWAY,
+		"ACCOUNT_017",
+		"Credit card transaction API call failed"
+	),
+	INVALID_CREDIT_CARD_TRANSACTION_API_RESPONSE(
+		HttpStatus.BAD_GATEWAY,
+		"ACCOUNT_018",
+		"Invalid credit card transaction API response"
 	);
 
 	private final HttpStatus httpStatus;

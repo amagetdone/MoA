@@ -1,0 +1,26 @@
+{
+  "summaryText": "최근 3개월 소비 분석을 완료했어요.",
+  "averageIncome": 3200000,
+  "averageExpense": 1690000,
+  "remainingAmount": 1510000,
+  "fixedExpenseRatio": 54.44,
+  "variableExpenseRatio": 45.56,
+  "insightMessage": "현재 소비 흐름이면 저축 여력이 있어요.",
+  "categoryExpenses": [
+    {
+      "categoryId": 20,
+      "categoryName": "주거",
+      "amount": 1620000
+    },
+    {
+      "categoryId": 10,
+      "categoryName": "식비",
+      "amount": 1210000
+    },
+    {
+      "categoryId": 30,
+      "categoryName": "교통",
+      "amount": 280000
+    }
+  ]
+}

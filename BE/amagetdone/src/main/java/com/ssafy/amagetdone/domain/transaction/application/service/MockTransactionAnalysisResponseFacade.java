@@ -8,12 +8,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.amagetdone.domain.transaction.api.dto.ExpenseSummaryDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysisDto;
-import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisJobDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.TransactionAnalysisResponseFacade;
-import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisJob;
-import com.ssafy.amagetdone.domain.transaction.model.vo.TransactionAnalysisJobStatus;
-import com.ssafy.amagetdone.domain.transaction.model.vo.TransactionAnalysisStep;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.ClassPathResource;
@@ -27,32 +24,26 @@ public class MockTransactionAnalysisResponseFacade implements TransactionAnalysi
 
 	private final ExpenseSummaryDto.Response expenseSummary;
 	private final MonthlyExpenseDto.Response monthlyExpense;
-	private final TransactionAnalysisJobDto.StatusResponse analysisJobStatus;
+	private final TransactionAnalysisDto.OnboardingResult onboardingResult;
 	private final WeeklyTransactionAnalysisDto.Response weeklyAnalysis;
 	private final MonthlyTransactionAnalysisDto.Response monthlyAnalysis;
 
 	public MockTransactionAnalysisResponseFacade(ObjectMapper objectMapper) {
 		this.expenseSummary = read(objectMapper, "expense-summary.json", ExpenseSummaryDto.Response.class);
 		this.monthlyExpense = read(objectMapper, "monthly-expense.json", MonthlyExpenseDto.Response.class);
-		this.analysisJobStatus = read(objectMapper, "analysis-job-status.json", TransactionAnalysisJobDto.StatusResponse.class);
+		this.onboardingResult = read(objectMapper, "onboarding-analysis.json", TransactionAnalysisDto.OnboardingResult.class);
 		this.weeklyAnalysis = read(objectMapper, "weekly-analysis.json", WeeklyTransactionAnalysisDto.Response.class);
 		this.monthlyAnalysis = read(objectMapper, "monthly-analysis.json", MonthlyTransactionAnalysisDto.Response.class);
 	}
 
 	@Override
-	public TransactionAnalysisJob createAnalysisJob(Integer userId, Integer months, boolean forceFullSync) {
-		return TransactionAnalysisJob.builder()
-			.id("mock-job-001")
-			.user(null)
-			.requestedMonths(analysisJobStatus.requestedMonths())
-			.status(TransactionAnalysisJobStatus.valueOf(analysisJobStatus.status()))
-			.currentStep(TransactionAnalysisStep.valueOf(analysisJobStatus.progress().step()))
-			.requestedAt(analysisJobStatus.requestedAt())
-			.startedAt(analysisJobStatus.startedAt())
-			.finishedAt(analysisJobStatus.finishedAt())
-			.errorCode(analysisJobStatus.errorCode())
-			.errorMessage(analysisJobStatus.errorMessage())
-			.build();
+	public TransactionAnalysisDto.OnboardingResult analyzeTransactions(Integer userId, Integer months) {
+		return onboardingResult;
+	}
+
+	@Override
+	public TransactionAnalysisDto.OnboardingResult getOnboardingAnalysis(Integer userId) {
+		return onboardingResult;
 	}
 
 	@Override
@@ -64,22 +55,6 @@ public class MockTransactionAnalysisResponseFacade implements TransactionAnalysi
 	@Override
 	public MonthlyExpenseDto.Response getMonthlyExpense(Integer userId, YearMonth month) {
 		return monthlyExpense;
-	}
-
-	@Override
-	public TransactionAnalysisJobDto.StatusResponse getAnalysisJobStatus(Integer userId, String jobId) {
-		return new TransactionAnalysisJobDto.StatusResponse(
-			jobId,
-			analysisJobStatus.status(),
-			analysisJobStatus.progress(),
-			analysisJobStatus.requestedMonths(),
-			analysisJobStatus.requestedAt(),
-			analysisJobStatus.startedAt(),
-			analysisJobStatus.finishedAt(),
-			analysisJobStatus.errorCode(),
-			analysisJobStatus.errorMessage(),
-			analysisJobStatus.onboardingResult()
-		);
 	}
 
 	@Override
@@ -118,4 +93,5 @@ public class MockTransactionAnalysisResponseFacade implements TransactionAnalysi
 			throw new IllegalStateException("Failed to load transaction analysis mock data: " + fileName, exception);
 		}
 	}
+
 }

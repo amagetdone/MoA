@@ -21,7 +21,9 @@ public enum TransactionErrorCode implements ErrorCode {
 	TRANSACTION_ANALYSIS_JOB_NOT_FOUND(HttpStatus.NOT_FOUND, "TRANSACTION_008",
 		"Transaction analysis job was not found"),
 	TRANSACTION_ANALYSIS_PROCESS_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "TRANSACTION_009",
-		"Transaction analysis process failed");
+		"Transaction analysis process failed"),
+	TRANSACTION_ANALYSIS_RESULT_NOT_FOUND(HttpStatus.NOT_FOUND, "TRANSACTION_010",
+		"Transaction analysis result was not found");
 
 	private final HttpStatus httpStatus;
 	private final String code;

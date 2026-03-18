@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -19,6 +20,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@TestPropertySource(properties = "app.external-base-url=https://j14d101.p.ssafy.io/api")
 class SwaggerConfigIntegrationTest {
 
 	@Autowired
@@ -34,6 +36,7 @@ class SwaggerConfigIntegrationTest {
 			.andExpect(content().encoding("UTF-8"))
 			.andExpect(content().contentTypeCompatibleWith("application/json"))
 			.andExpect(jsonPath("$.openapi").exists())
+			.andExpect(jsonPath("$.servers[0].url").value("https://j14d101.p.ssafy.io/api"))
 			.andExpect(jsonPath("$.info.title").value("\uBAA8\uC544 API"))
 			.andExpect(jsonPath("$.info.description").value("\uBAA8\uC544 \uBC31\uC5D4\uB4DC API \uBB38\uC11C"));
 	}
@@ -135,6 +138,17 @@ class SwaggerConfigIntegrationTest {
 			.andExpect(jsonPath("$.components.securitySchemes.bearerAuth.type").value("http"))
 			.andExpect(jsonPath("$.components.securitySchemes.bearerAuth.scheme").value("bearer"))
 			.andExpect(jsonPath("$.components.securitySchemes.bearerAuth.bearerFormat").value("JWT"));
+	}
+
+	@Test
+	void apiDocsDescribeTransactionsEndpointsInKorean() throws Exception {
+		mockMvc.perform(apiGet("/v3/api-docs"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.paths['/transactions'].get.tags[0]").value("거래 API"))
+			.andExpect(jsonPath("$.paths['/transactions'].get.summary").value("거래 내역 조회"))
+			.andExpect(jsonPath("$.paths['/transactions'].get.description").value("날짜 범위와 분석 포함 여부 조건으로 거래 내역을 조회합니다."))
+			.andExpect(jsonPath("$.paths['/transactions/analysis'].post.summary").value("거래 분석 실행"))
+			.andExpect(jsonPath("$.paths['/transactions/analysis'].post.description").value("최근 완료된 월 기준으로 거래를 분석하고 온보딩 결과를 반환합니다."));
 	}
 
 	@Test
