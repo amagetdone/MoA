@@ -23,33 +23,4 @@ public final class AccountAdminDto {
 		String accountType
 	) {
 	}
-
-	public record AccountCreateRequest(
-		Integer userId,
-		String accountTypeUniqueNo
-	) {
-	}
-
-	public record AccountCreateResponse(
-		String bankCode,
-		String accountNo,
-		String currency,
-		String currencyName
-	) {
-	}
-
-	public record DataInitRequest(
-		String apiKey,
-		String userApiKey
-	) {
-	}
-
-	public record DataInitResponse(
-		String accountNo,
-		String cardNo,
-		String cardUniqueNo,
-		int accountTransactionCount,
-		int cardTransactionCount
-	) {
-	}
 }
