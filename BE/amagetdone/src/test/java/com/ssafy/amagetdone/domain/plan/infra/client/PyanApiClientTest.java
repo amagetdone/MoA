@@ -54,6 +54,13 @@ class PyanApiClientTest {
 	}
 
 	@Test
+	void propertiesDefaultPenModeToNone() {
+		PyanProperties properties = new PyanProperties();
+
+		assertEquals("none", properties.getPenMode());
+	}
+
+	@Test
 	void generatePollsUntilReadyAndReturnsCompressedDownloadUrl() {
 		RestClient.Builder builder = RestClient.builder();
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();

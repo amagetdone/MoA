@@ -1,6 +1,7 @@
 package com.ssafy.amagetdone.global.infra.storage;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import com.amazonaws.services.s3.AmazonS3;
@@ -8,6 +9,7 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.UriUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
@@ -17,6 +19,9 @@ public class S3ObjectStorageService implements S3StorageService {
 
 	@Value("${cloud.aws.s3.bucket}")
 	private String bucket;
+
+	@Value("${cloud.aws.region.static-region}")
+	private String region;
 
 	public S3ObjectStorageService(AmazonS3 amazonS3) {
 		this.amazonS3 = amazonS3;
@@ -42,7 +47,8 @@ public class S3ObjectStorageService implements S3StorageService {
 
 	@Override
 	public String getUrl(String objectKey) {
-		return amazonS3.getUrl(bucket, objectKey).toString();
+		String encodedKey = UriUtils.encodePath(objectKey, StandardCharsets.UTF_8);
+		return "https://" + bucket + ".s3." + region + ".amazonaws.com/" + encodedKey;
 	}
 
 	@Override

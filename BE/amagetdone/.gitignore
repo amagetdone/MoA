@@ -3,6 +3,7 @@ HELP.md
 .gradle-home*/
 .gradle-local/
 build/
+build-verification/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/

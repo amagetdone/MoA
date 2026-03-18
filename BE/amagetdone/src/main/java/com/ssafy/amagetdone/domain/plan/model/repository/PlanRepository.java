@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -26,6 +27,12 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 	List<Plan> findAllByUserIdAndPriorityGreaterThanEqualOrderByPriorityAsc(Integer userId, Integer priority);
 
 	List<Plan> findAllByStatusAndStartDateLessThanEqual(PlanStatus status, LocalDate date);
+
+	List<Plan> findAllByStatusAndStartDateLessThanEqualAndAiPipelineStatus(
+		PlanStatus status,
+		LocalDate date,
+		PlanAiPipelineStatus aiPipelineStatus
+	);
 
 	boolean existsByUserId(Integer userId);
 
