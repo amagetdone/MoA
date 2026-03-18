@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:more_app/domain/repositories/auth_repository.dart';
 import 'package:more_app/domain/repositories/menu_repository.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
 
@@ -59,12 +58,11 @@ class MenuState {
 }
 
 class MenuViewModel extends StateNotifier<MenuState> {
-  MenuViewModel(this._repository, this._authRepository) : super(const MenuState(isLoading: true)) {
+  MenuViewModel(this._repository) : super(const MenuState(isLoading: true)) {
     loadData();
   }
 
   final MenuRepository _repository;
-  final AuthRepository _authRepository;
 
   Future<void> loadData() async {
     state = state.copyWith(isLoading: true, clearErrorMessage: true);
@@ -72,23 +70,11 @@ class MenuViewModel extends StateNotifier<MenuState> {
     try {
       final summary = await _repository.fetchMenuSummary();
 
-      String userName = summary.user.name;
-      String userEmail = summary.user.email;
-      String? profileImageUrl = summary.user.profileImageUrl;
-      try {
-        final user = await _authRepository.getCurrentUser();
-        if (user != null) {
-          userName = user.name;
-          userEmail = user.email;
-          profileImageUrl = user.profileImageUrl;
-        }
-      } catch (_) {}
-
       state = state.copyWith(
         isLoading: false,
-        userName: userName,
-        userEmail: userEmail,
-        profileImageUrl: profileImageUrl,
+        userName: summary.user.name,
+        userEmail: summary.user.email,
+        profileImageUrl: summary.user.profileImageUrl,
         activeGoalCount: summary.activeGoalCount,
         achievedGoalCount: summary.achievedGoalCount,
         totalSaved: summary.totalSaved,
@@ -116,6 +102,5 @@ final menuViewModelProvider = StateNotifierProvider<MenuViewModel, MenuState>((
 ) {
   return MenuViewModel(
     ref.read(menuRepositoryProvider),
-    ref.read(authRepositoryProvider),
   );
 });

@@ -18,7 +18,8 @@ class LoginPage extends ConsumerWidget {
         if (result.status == 'TEMP') {
           context.go(AppRoutes.onboardingProfile);
         } else {
-          context.go(AppRoutes.home);
+          // TODO: 온보딩 테스트용 - 원래는 AppRoutes.home
+          context.go(AppRoutes.onboarding);
         }
       } else if (next is AuthError) {
         ScaffoldMessenger.of(context).showSnackBar(

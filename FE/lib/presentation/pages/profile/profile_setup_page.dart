@@ -39,6 +39,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
   bool _isSubmitting = false;
   File? _selectedImage;
   String? _existingImageUrl;
+  bool _useDefaultImage = false;
 
   // Validation errors
   String? _nicknameError;
@@ -84,7 +85,10 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
       imageQuality: 80,
     );
     if (picked != null) {
-      setState(() => _selectedImage = File(picked.path));
+      setState(() {
+        _selectedImage = File(picked.path);
+        _useDefaultImage = false;
+      });
     }
   }
 
@@ -440,14 +444,19 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                                 image: FileImage(_selectedImage!),
                                 fit: BoxFit.cover,
                               )
-                            : _existingImageUrl != null
-                                ? DecorationImage(
-                                    image: NetworkImage(_existingImageUrl!),
+                            : _useDefaultImage
+                                ? const DecorationImage(
+                                    image: AssetImage('assets/images/default_profile.png'),
                                     fit: BoxFit.cover,
                                   )
-                                : null,
+                                : _existingImageUrl != null
+                                    ? DecorationImage(
+                                        image: NetworkImage(_existingImageUrl!),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : null,
                       ),
-                      child: _selectedImage == null && _existingImageUrl == null
+                      child: _selectedImage == null && !_useDefaultImage && _existingImageUrl == null
                           ? Icon(
                               Icons.camera_alt_outlined,
                               size: 32.w,
@@ -465,6 +474,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                         setState(() {
                           _selectedImage = null;
                           _existingImageUrl = null;
+                          _useDefaultImage = true;
                         });
                       },
                       child: Text(
