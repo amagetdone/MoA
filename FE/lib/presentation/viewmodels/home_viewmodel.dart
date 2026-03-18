@@ -75,14 +75,17 @@ class HomeViewModel extends StateNotifier<HomeState> {
     try {
       final dashboard = await _repository.fetchHomeDashboard();
 
-      HomeStatus status;
-      if (!_hasAccount) {
-        status = HomeStatus.noAccount;
-      } else if (!_hasPlan) {
-        status = HomeStatus.noGoal;
-      } else {
-        status = HomeStatus.ready;
-      }
+      // TODO: TEMP - 테스트를 위해 항상 ready 상태로 설정
+      HomeStatus status = HomeStatus.ready;
+      // 원복 코드:
+      // HomeStatus status;
+      // if (!_hasAccount) {
+      //   status = HomeStatus.noAccount;
+      // } else if (!_hasPlan) {
+      //   status = HomeStatus.noGoal;
+      // } else {
+      //   status = HomeStatus.ready;
+      // }
 
       state = state.copyWith(
         isLoading: false,

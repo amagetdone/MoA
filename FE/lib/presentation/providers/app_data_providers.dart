@@ -9,7 +9,7 @@ import 'package:more_app/data/datasources/remote/goal_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/home_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/menu_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/real/real_auth_remote_datasource.dart';
-import 'package:more_app/data/datasources/remote/seed/seed_account_remote_datasource.dart';
+import 'package:more_app/data/datasources/remote/real/real_account_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/seed/seed_data_store.dart';
 import 'package:more_app/data/datasources/remote/seed/seed_goal_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/seed/seed_home_remote_datasource.dart';
@@ -78,8 +78,8 @@ final homeRemoteDataSourceProvider = Provider<HomeRemoteDataSource>((ref) {
 
 final accountRemoteDataSourceProvider =
     Provider<AccountRemoteDataSource>((ref) {
-  return SeedAccountRemoteDataSource(
-    dataStore: ref.read(seedDataStoreProvider),
+  return RealAccountRemoteDataSource(
+    dio: ref.read(apiClientProvider).dio,
   );
 });
 
