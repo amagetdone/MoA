@@ -16,8 +16,11 @@ import java.util.List;
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanCreateResponse;
 import com.ssafy.amagetdone.domain.plan.application.usecase.CreatePlanUseCase;
+import com.ssafy.amagetdone.domain.plan.application.usecase.GetPlanVideoDownloadUrlUseCase;
 import com.ssafy.amagetdone.domain.plan.application.usecase.ListPlansUseCase;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanListItemResponse;
+import com.ssafy.amagetdone.domain.plan.exception.PlanErrorCode;
+import com.ssafy.amagetdone.domain.plan.exception.PlanException;
 import com.ssafy.amagetdone.global.config.SecurityConfig;
 import com.ssafy.amagetdone.global.security.AuthenticatedMember;
 
@@ -30,7 +33,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(PlanController.class)
+@WebMvcTest({PlanController.class, PlanVideoController.class})
 @Import(SecurityConfig.class)
 class PlanControllerTest {
 
@@ -42,6 +45,9 @@ class PlanControllerTest {
 
 	@MockitoBean
 	private ListPlansUseCase listPlansUseCase;
+
+	@MockitoBean
+	private GetPlanVideoDownloadUrlUseCase getPlanVideoDownloadUrlUseCase;
 
 	@MockitoBean
 	private JwtAccessTokenReader jwtAccessTokenReader;
@@ -143,5 +149,34 @@ class PlanControllerTest {
 					}
 					"""))
 			.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void getPlanVideoDownloadUrlReturnsVideoUrl() throws Exception {
+		given(getPlanVideoDownloadUrlUseCase.execute(1, 10))
+			.willReturn("https://cdn.example.com/plan-10.mp4");
+
+		mockMvc.perform(get("/api/plans/10/video/download")
+				.contextPath("/api")
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+				)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.data").value("https://cdn.example.com/plan-10.mp4"));
+	}
+
+	@Test
+	void getPlanVideoDownloadUrlReturnsNotFoundWhenVideoMissing() throws Exception {
+		given(getPlanVideoDownloadUrlUseCase.execute(1, 10))
+			.willThrow(new PlanException(PlanErrorCode.PLAN_VIDEO_NOT_FOUND));
+
+		mockMvc.perform(get("/api/plans/10/video/download")
+				.contextPath("/api")
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+				)))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.errorCode").value("PLAN_004"));
 	}
 }
