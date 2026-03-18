@@ -27,34 +27,59 @@ class SpendingCard extends StatelessWidget {
         : 0.0;
 
     return MoreCard(
-      color: const Color(0xFFF7ECDD),
-      padding: EdgeInsets.fromLTRB(22.w, 22.h, 22.w, 24.h),
+      padding: EdgeInsets.fromLTRB(22.w, 22.h, 22.w, 22.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── 헤더 ──
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _HomeGlyph(
-                icon: Icons.account_balance_wallet_outlined,
-                backgroundColor: const Color(0xFFE8AF74),
-                iconColor: AppColors.textPrimary,
+              Container(
+                width: 46.w,
+                height: 46.w,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3E0),
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+                child: Icon(
+                  Icons.account_balance_wallet_outlined,
+                  color: AppColors.orange500,
+                  size: 24.w,
+                ),
               ),
               SizedBox(width: 14.w),
-              Wrap(
-                spacing: 10.w,
-                runSpacing: 6.h,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(
-                    '자유소비',
-                    style: AppTextStyles.headingMd.copyWith(
-                      fontWeight: FontWeight.w800,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          '여유자금',
+                          style: AppTextStyles.bodyLg.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
+                        _DayBadge(daysLeft: daysLeft),
+                      ],
                     ),
-                  ),
-                  _DayBadge(daysLeft: daysLeft),
-                ],
+                    SizedBox(height: 4.h),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        CurrencyFormatter.formatKRW(remaining),
+                        style: AppTextStyles.headingLg.copyWith(
+                          color: AppColors.orange500,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -67,11 +92,11 @@ class SpendingCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 7.h,
-              backgroundColor: AppColors.gray500.withValues(alpha: 0.2),
+              backgroundColor: AppColors.gray100,
               valueColor: AlwaysStoppedAnimation<Color>(
                 progress >= 0.9
                     ? Colors.redAccent
-                    : const Color(0xFFD98235),
+                    : AppColors.orange500,
               ),
             ),
           ),
@@ -103,46 +128,10 @@ class SpendingCard extends StatelessWidget {
                 ),
               ),
               Text(
-                '${CurrencyFormatter.formatKRW(remaining)} 남음',
+                '오늘 ${CurrencyFormatter.formatKRW(dailyAvailable)}',
                 style: AppTextStyles.bodySm.copyWith(
                   color: AppColors.textTertiary,
                   fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-
-          SizedBox(height: 16.h),
-
-          // ── 구분선 ──
-          Container(
-            height: 1.h,
-            color: AppColors.gray500.withValues(alpha: 0.4),
-          ),
-
-          SizedBox(height: 14.h),
-
-          // ── 오늘 사용 가능 금액 ──
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                '오늘 사용 가능한 금액',
-                style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.textTertiary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  CurrencyFormatter.formatKRW(dailyAvailable),
-                  style: AppTextStyles.headingMd.copyWith(
-                    color: AppColors.orange500,
-                    fontWeight: FontWeight.w800,
-                  ),
                 ),
               ),
             ],
@@ -159,31 +148,6 @@ class SpendingCard extends StatelessWidget {
   }
 }
 
-class _HomeGlyph extends StatelessWidget {
-  const _HomeGlyph({
-    required this.icon,
-    required this.backgroundColor,
-    required this.iconColor,
-  });
-
-  final IconData icon;
-  final Color backgroundColor;
-  final Color iconColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 46.w,
-      height: 46.w,
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(16.r),
-      ),
-      child: Icon(icon, color: iconColor, size: 24.w),
-    );
-  }
-}
-
 class _DayBadge extends StatelessWidget {
   const _DayBadge({required this.daysLeft});
 
@@ -192,25 +156,17 @@ class _DayBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 3.h),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999.r),
-        gradient: const LinearGradient(
-          colors: [Color(0xFFF4C596), Color(0xFFD98235)],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFE08D43).withValues(alpha: 0.45),
-            blurRadius: 12.r,
-            offset: Offset(0, 4.h),
-          ),
-        ],
+        color: AppColors.orange500.withValues(alpha: 0.12),
       ),
       child: Text(
         'D-$daysLeft',
-        style: AppTextStyles.bodySm.copyWith(
-          color: Colors.white,
+        style: AppTextStyles.caption.copyWith(
+          color: AppColors.orange500,
           fontWeight: FontWeight.w700,
+          fontSize: 11.sp,
         ),
       ),
     );

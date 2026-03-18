@@ -97,7 +97,7 @@ class HomePage extends ConsumerWidget {
             ),
             SizedBox(height: 32.h),
             GestureDetector(
-              onTap: () => context.push(AppRoutes.onboardingAccount),
+              onTap: () => context.push(AppRoutes.accountAdd),
               child: MoreCard(
                 child: Column(
                   children: [
@@ -143,7 +143,7 @@ class HomePage extends ConsumerWidget {
     final topGoals = _sortedGoals(state.activeGoals).take(3).toList();
 
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(24.w, 12.h, 24.w, 28.h),
+      padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 28.h),
       child: Column(
         children: [
           // 예산 카드

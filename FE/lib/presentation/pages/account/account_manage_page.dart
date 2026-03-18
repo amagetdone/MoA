@@ -30,14 +30,7 @@ class AccountManagePage extends ConsumerWidget {
             : () => context.pop(),
         skipText: isOnboarding ? '건너뛰기' : null,
         onSkip: isOnboarding ? () => context.go(AppRoutes.home) : null,
-        actions: isOnboarding
-            ? null
-            : [
-                IconButton(
-                  icon: const Icon(Icons.notifications_none_outlined, size: 24),
-                  onPressed: () {},
-                ),
-              ],
+        showNotification: !isOnboarding,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),

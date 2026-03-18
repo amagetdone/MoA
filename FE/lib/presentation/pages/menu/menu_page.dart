@@ -54,24 +54,32 @@ class MenuPage extends ConsumerWidget {
                   CircleAvatar(
                     radius: 24.r,
                     backgroundColor: AppColors.gray100,
-                    child: Icon(
-                      Icons.person_outline,
-                      size: 28.w,
-                      color: AppColors.gray500,
-                    ),
+                    backgroundImage: state.profileImageUrl != null
+                        ? NetworkImage(state.profileImageUrl!)
+                        : null,
+                    child: state.profileImageUrl == null
+                        ? Icon(
+                            Icons.person_outline,
+                            size: 28.w,
+                            color: AppColors.gray500,
+                          )
+                        : null,
                   ),
                   SizedBox(width: 14.w),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => context.push(
-                        AppRoutes.profileEdit,
-                        extra: <String, String>{
-                          'nickname': state.userName,
-                          'email': state.userEmail,
-                          if (state.profileImageUrl != null)
-                            'profileImageUrl': state.profileImageUrl!,
-                        },
-                      ),
+                      onTap: () async {
+                        await context.push(
+                          AppRoutes.profileEdit,
+                          extra: <String, String>{
+                            'nickname': state.userName,
+                            'email': state.userEmail,
+                            if (state.profileImageUrl != null)
+                              'profileImageUrl': state.profileImageUrl!,
+                          },
+                        );
+                        ref.read(menuViewModelProvider.notifier).loadData();
+                      },
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [

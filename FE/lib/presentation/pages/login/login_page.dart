@@ -12,31 +12,20 @@ class LoginPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // TODO: TEMP 하드코딩 - 무조건 온보딩 프로필로 이동 (테스트용)
     ref.listen<AuthState>(authViewModelProvider, (prev, next) {
       if (next is AuthAuthenticated) {
-        context.go(AppRoutes.onboardingProfile);
+        final result = next.authResult;
+        if (result.status == 'TEMP') {
+          context.go(AppRoutes.onboardingProfile);
+        } else {
+          context.go(AppRoutes.home);
+        }
       } else if (next is AuthError) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(next.message)),
         );
       }
     });
-    // 원복 코드:
-    // ref.listen<AuthState>(authViewModelProvider, (prev, next) {
-    //   if (next is AuthAuthenticated) {
-    //     final result = next.authResult;
-    //     if (result.status == 'TEMP') {
-    //       context.go(AppRoutes.onboardingProfile);
-    //     } else {
-    //       context.go(AppRoutes.home);
-    //     }
-    //   } else if (next is AuthError) {
-    //     ScaffoldMessenger.of(context).showSnackBar(
-    //       SnackBar(content: Text(next.message)),
-    //     );
-    //   }
-    // });
 
     final authState = ref.watch(authViewModelProvider);
     final isLoading = authState is AuthLoading;

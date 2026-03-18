@@ -133,15 +133,10 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: MoreAppBar(
+      appBar: const MoreAppBar(
         title: '',
         showBack: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none_outlined, size: 24),
-            onPressed: () {},
-          ),
-        ],
+        showNotification: true,
       ),
       body: state.isLoading
           ? const SizedBox.shrink()

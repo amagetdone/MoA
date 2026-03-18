@@ -31,22 +31,23 @@ class GoalListPage extends ConsumerWidget {
                     children: [
                       // ── 타이틀 + 서브타이틀 ─────────────────────────
                       Padding(
-                        padding: EdgeInsets.fromLTRB(24.w, 4.h, 24.w, 0),
+                        padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               '나의 목표',
                               style: AppTextStyles.headingLg.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.textPrimary,
+                                fontSize: 24.sp,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                            SizedBox(height: 4.h),
+                            SizedBox(height: 6.h),
                             Text(
                               '총 $totalCount개의 목표를 계획했어요.',
                               style: AppTextStyles.bodySm.copyWith(
                                 color: AppColors.textTertiary,
+                                fontSize: 14.sp,
                               ),
                             ),
                           ],

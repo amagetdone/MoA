@@ -173,10 +173,39 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
     if (_isSubmitting) return;
     if (!_validateAll() || !_isFormValid) return;
 
-    if (widget.isOnboarding) {
-      context.go(AppRoutes.onboarding);
-    } else {
-      context.pop();
+    setState(() => _isSubmitting = true);
+    try {
+      final dio = ref.read(apiClientProvider).dio;
+
+      await dio.patch(
+        'v1/members/me/profile',
+        data: {
+          'nickname': _nicknameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'birthDate': _birthDateController.text.trim().replaceAll('.', '-'),
+          'hasFixedIncome': _selectedIncome == '있어요',
+        },
+      );
+
+      if (_selectedImage != null) {
+        await _uploadProfileImage();
+      }
+
+      if (!mounted) return;
+
+      if (widget.isOnboarding) {
+        context.go(AppRoutes.onboarding);
+      } else {
+        context.pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('프로필 저장에 실패했습니다.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
