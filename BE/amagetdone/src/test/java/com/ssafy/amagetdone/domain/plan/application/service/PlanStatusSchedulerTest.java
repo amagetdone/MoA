@@ -3,8 +3,11 @@ package com.ssafy.amagetdone.domain.plan.application.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.given;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.time.ZoneId;
 
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
@@ -13,7 +16,6 @@ import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -24,11 +26,15 @@ class PlanStatusSchedulerTest {
 	@Mock
 	private PlanRepository planRepository;
 
-	@InjectMocks
 	private PlanStatusScheduler planStatusScheduler;
+
+	private void createSchedulerWithClock(Clock clock) {
+		planStatusScheduler = new PlanStatusScheduler(planRepository, clock);
+	}
 
 	@Test
 	void activatesWaitingPlansWhoseStartDateHasArrived() {
+		createSchedulerWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
 		LocalDate today = LocalDate.of(2026, 3, 18);
 		Plan waitingPlan = planWithStatuses(PlanStatus.WAITING, PlanAiPipelineStatus.SUCCEEDED);
 		Plan pendingAiPlan = planWithStatuses(PlanStatus.WAITING, PlanAiPipelineStatus.PENDING);
@@ -47,7 +53,8 @@ class PlanStatusSchedulerTest {
 
 	@Test
 	void activatesWaitingPlansOnApplicationReady() {
-		LocalDate today = LocalDate.now();
+		createSchedulerWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
+		LocalDate today = LocalDate.of(2026, 3, 19);
 		Plan waitingPlan = planWithStatuses(PlanStatus.WAITING, PlanAiPipelineStatus.SUCCEEDED);
 
 		given(planRepository.findAllByStatusAndStartDateLessThanEqualAndAiPipelineStatus(

@@ -6,7 +6,10 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Optional;
 
 import com.ssafy.amagetdone.domain.member.model.entity.User;
@@ -22,7 +25,6 @@ import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepos
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -46,11 +48,21 @@ class CreatePlanUseCaseTest {
 	@Mock
 	private ApplicationEventPublisher applicationEventPublisher;
 
-	@InjectMocks
 	private CreatePlanUseCase createPlanUseCase;
+
+	private void createUseCaseWithClock(Clock clock) {
+		createPlanUseCase = new CreatePlanUseCase(
+			userRepository,
+			planRepository,
+			planPriorityService,
+			applicationEventPublisher,
+			clock
+		);
+	}
 
 	@Test
 	void createsWaitingPlanAndPublishesCreatedEvent() {
+		createUseCaseWithClock(Clock.fixed(Instant.parse("2026-03-10T00:00:00Z"), ZoneId.of("Asia/Seoul")));
 		User user = User.createPendingSocialUser();
 		ReflectionTestUtils.setField(user, "id", 1);
 
@@ -79,9 +91,10 @@ class CreatePlanUseCaseTest {
 
 	@Test
 	void createsActivePlanWhenStartDateIsToday() {
+		createUseCaseWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
 		User user = User.createPendingSocialUser();
 		ReflectionTestUtils.setField(user, "id", 1);
-		LocalDate today = LocalDate.now();
+		LocalDate today = LocalDate.of(2026, 3, 19);
 
 		given(userRepository.findById(1)).willReturn(Optional.of(user));
 		given(planRepository.save(any(Plan.class))).willAnswer(invocation -> {
@@ -104,5 +117,30 @@ class CreatePlanUseCaseTest {
 		verify(planRepository).save(planCaptor.capture());
 		assertEquals(com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus.ACTIVE, planCaptor.getValue().getStatus());
 		verify(applicationEventPublisher).publishEvent(new PlanCreatedEvent(11, 1));
+	}
+
+	@Test
+	void createsActivePlanUsingKstDateEvenWhenSystemDefaultZoneIsUtc() {
+		createUseCaseWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
+		User user = User.createPendingSocialUser();
+		ReflectionTestUtils.setField(user, "id", 1);
+
+		given(userRepository.findById(1)).willReturn(Optional.of(user));
+		given(planRepository.save(any(Plan.class))).willAnswer(invocation -> {
+			Plan plan = invocation.getArgument(0);
+			ReflectionTestUtils.setField(plan, "id", 12);
+			return plan;
+		});
+
+		PlanCreateResponse response = createPlanUseCase.execute(1, new PlanCreateRequest(
+			"KST plan",
+			"KST should be active",
+			100000L,
+			LocalDate.of(2026, 3, 19),
+			LocalDate.of(2026, 4, 1),
+			1
+		));
+
+		assertEquals("ACTIVE", response.status());
 	}
 }

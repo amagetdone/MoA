@@ -1,5 +1,6 @@
 package com.ssafy.amagetdone.domain.plan.application.usecase;
 
+import java.time.Clock;
 import java.time.LocalDate;
 
 import com.ssafy.amagetdone.domain.member.model.entity.User;
@@ -24,17 +25,20 @@ public class CreatePlanUseCase {
 	private final PlanRepository planRepository;
 	private final PlanPriorityService planPriorityService;
 	private final ApplicationEventPublisher applicationEventPublisher;
+	private final Clock clock;
 
 	public CreatePlanUseCase(
 		UserRepository userRepository,
 		PlanRepository planRepository,
 		PlanPriorityService planPriorityService,
-		ApplicationEventPublisher applicationEventPublisher
+		ApplicationEventPublisher applicationEventPublisher,
+		Clock clock
 	) {
 		this.userRepository = userRepository;
 		this.planRepository = planRepository;
 		this.planPriorityService = planPriorityService;
 		this.applicationEventPublisher = applicationEventPublisher;
+		this.clock = clock;
 	}
 
 	@Transactional
@@ -53,7 +57,7 @@ public class CreatePlanUseCase {
 			request.endDate(),
 			request.priority()
 		);
-		if (!request.startDate().isAfter(LocalDate.now())) {
+		if (!request.startDate().isAfter(LocalDate.now(clock))) {
 			plan.activate();
 		}
 
