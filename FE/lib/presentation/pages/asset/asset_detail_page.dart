@@ -43,15 +43,10 @@ class AssetDetailPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: MoreAppBar(
+      appBar: const MoreAppBar(
         title: '',
         showBack: true,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.notifications_none_outlined, size: 24.w),
-            onPressed: () {},
-          ),
-        ],
+        showNotification: true,
       ),
       body: Column(
         children: [

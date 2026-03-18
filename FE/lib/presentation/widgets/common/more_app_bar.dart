@@ -43,9 +43,12 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
         ),
       if (showNotification)
-        IconButton(
-          icon: Icon(Icons.notifications_none, size: 24.w, color: AppColors.textPrimary),
-          onPressed: () {},
+        Padding(
+          padding: EdgeInsets.only(right: 16.w),
+          child: IconButton(
+            icon: Icon(Icons.notifications_none, size: 24.w, color: AppColors.textPrimary),
+            onPressed: () {},
+          ),
         ),
       ...?actions,
     ];
@@ -56,19 +59,22 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
       scrolledUnderElevation: 0,
       centerTitle: true,
       automaticallyImplyLeading: false,
-      leadingWidth: showLogo ? 48.w : null,
+      leadingWidth: 56.w,
       leading: showBack
-          ? IconButton(
-              icon: Icon(Icons.arrow_back_ios, size: 20.w, color: AppColors.textPrimary),
-              onPressed: onBack ?? () {
-                if (context.canPop()) {
-                  context.pop();
-                }
-              },
+          ? Padding(
+              padding: EdgeInsets.only(left: 16.w),
+              child: IconButton(
+                icon: Icon(Icons.arrow_back_ios, size: 20.w, color: AppColors.textPrimary),
+                onPressed: onBack ?? () {
+                  if (context.canPop()) {
+                    context.pop();
+                  }
+                },
+              ),
             )
           : showLogo
               ? Padding(
-                  padding: EdgeInsets.only(left: 16.w),
+                  padding: EdgeInsets.only(left: 24.w),
                   child: Image.asset(
                     'assets/images/logo/applogo.png',
                     width: 24.w,

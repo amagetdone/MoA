@@ -39,12 +39,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
         title: '',
         backgroundColor: const Color(0xFFFFCC91).withValues(alpha: 0.6),
         showBack: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none_outlined, size: 24),
-            onPressed: () {},
-          ),
-        ],
+        showNotification: true,
       ),
       body: Stack(
         children: [
@@ -370,31 +365,54 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
         Container(
           padding: EdgeInsets.all(4.w),
           decoration: BoxDecoration(color: const Color(0xFFEEEEEE), borderRadius: BorderRadius.circular(12.r)),
-          child: Row(
-            children: options.asMap().entries.map((e) {
-              final isSelected = e.key == selectedIdx;
-              return Expanded(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => onTap(e.key),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: EdgeInsets.symmetric(vertical: 8.h),
-                    decoration: BoxDecoration(
-                      color: isSelected ? Colors.white : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10.r),
-                      boxShadow: isSelected ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4)] : [],
-                    ),
-                    child: Center(
-                      child: Text(e.value, style: AppTextStyles.caption.copyWith(
-                        color: isSelected ? Colors.black87 : Colors.black38,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal
-                      )),
+          child: IntrinsicHeight(
+            child: Stack(
+              children: [
+                AnimatedAlign(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOut,
+                  alignment: Alignment(
+                    -1.0 + (2.0 * selectedIdx / (options.length - 1)),
+                    0.0,
+                  ),
+                  child: FractionallySizedBox(
+                    widthFactor: 1.0 / options.length,
+                    heightFactor: 1.0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10.r),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4)],
+                      ),
                     ),
                   ),
                 ),
-              );
-            }).toList(),
+                Row(
+                  children: options.asMap().entries.map((e) {
+                    final isSelected = e.key == selectedIdx;
+                    return Expanded(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => onTap(e.key),
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8.h),
+                          child: Center(
+                            child: AnimatedDefaultTextStyle(
+                              duration: const Duration(milliseconds: 200),
+                              style: AppTextStyles.caption.copyWith(
+                                color: isSelected ? Colors.black87 : Colors.black38,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              ),
+                              child: Text(e.value),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
           ),
         ),
       ],

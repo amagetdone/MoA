@@ -35,12 +35,12 @@ class SpendingAnalysisPage extends ConsumerWidget {
           ? const SizedBox.shrink()
           : SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+              padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('지출 내역', style: AppTextStyles.headingLg),
-                  SizedBox(height: 8.h),
+                  Text('지출 내역', style: AppTextStyles.headingLg.copyWith(fontSize: 24.sp, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 6.h),
                   Text(
                     '주, 월 단위로 소비 내역을 확인할 수 있어요.',
                     style: AppTextStyles.bodySm.copyWith(

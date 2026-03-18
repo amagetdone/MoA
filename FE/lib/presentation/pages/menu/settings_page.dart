@@ -71,47 +71,91 @@ class SettingsPage extends ConsumerWidget {
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(
-          '로그아웃',
-          style: AppTextStyles.headingMd.copyWith(
-            color: AppColors.textPrimary,
-            fontSize: 18.sp,
+      barrierColor: Colors.black.withValues(alpha: 0.4),
+      builder: (dialogContext) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        backgroundColor: AppColors.bgSurface,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(24.w, 28.h, 24.w, 20.h),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 52.w,
+                height: 52.w,
+                decoration: BoxDecoration(
+                  color: AppColors.orange500.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.logout, size: 24.w, color: AppColors.orange500),
+              ),
+              SizedBox(height: 16.h),
+              Text(
+                '로그아웃',
+                style: AppTextStyles.headingMd.copyWith(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                '정말 로그아웃 하시겠습니까?',
+                style: AppTextStyles.bodyMd.copyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: 14.sp,
+                ),
+              ),
+              SizedBox(height: 24.h),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 48.h,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: AppColors.borderDefault),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                        ),
+                        child: Text(
+                          '취소',
+                          style: AppTextStyles.bodyMd.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: SizedBox(
+                      height: 48.h,
+                      child: FilledButton(
+                        onPressed: () {
+                          Navigator.of(dialogContext).pop();
+                          ref.read(authViewModelProvider.notifier).logout();
+                          context.go(AppRoutes.login);
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.orange500,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                        ),
+                        child: Text(
+                          '로그아웃',
+                          style: AppTextStyles.bodyMd.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        content: Text(
-          '정말 로그아웃 하시겠습니까?',
-          style: AppTextStyles.bodyMd.copyWith(
-            color: AppColors.textSecondary,
-            fontSize: 14.sp,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(
-              '취소',
-              style: AppTextStyles.bodyMd.copyWith(
-                color: AppColors.textTertiary,
-                fontSize: 14.sp,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              ref.read(authViewModelProvider.notifier).logout();
-              context.go(AppRoutes.login);
-            },
-            child: Text(
-              '로그아웃',
-              style: AppTextStyles.bodyMd.copyWith(
-                color: AppColors.red500,
-                fontSize: 14.sp,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -119,46 +163,91 @@ class SettingsPage extends ConsumerWidget {
   void _showDeleteAccountDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(
-          '회원탈퇴',
-          style: AppTextStyles.headingMd.copyWith(
-            color: AppColors.textPrimary,
-            fontSize: 18.sp,
+      barrierColor: Colors.black.withValues(alpha: 0.4),
+      builder: (dialogContext) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        backgroundColor: AppColors.bgSurface,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(24.w, 28.h, 24.w, 20.h),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 52.w,
+                height: 52.w,
+                decoration: BoxDecoration(
+                  color: AppColors.red500.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.person_remove_outlined, size: 24.w, color: AppColors.red500),
+              ),
+              SizedBox(height: 16.h),
+              Text(
+                '회원탈퇴',
+                style: AppTextStyles.headingMd.copyWith(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                '탈퇴 시 모든 데이터가 삭제됩니다.\n정말 탈퇴하시겠습니까?',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodyMd.copyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: 14.sp,
+                ),
+              ),
+              SizedBox(height: 24.h),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 48.h,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: AppColors.borderDefault),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                        ),
+                        child: Text(
+                          '취소',
+                          style: AppTextStyles.bodyMd.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: SizedBox(
+                      height: 48.h,
+                      child: FilledButton(
+                        onPressed: () {
+                          Navigator.of(dialogContext).pop();
+                          // TODO: Implement account deletion
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.red500,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                        ),
+                        child: Text(
+                          '탈퇴',
+                          style: AppTextStyles.bodyMd.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        content: Text(
-          '탈퇴 시 모든 데이터가 삭제됩니다.\n정말 탈퇴하시겠습니까?',
-          style: AppTextStyles.bodyMd.copyWith(
-            color: AppColors.textSecondary,
-            fontSize: 14.sp,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(
-              '취소',
-              style: AppTextStyles.bodyMd.copyWith(
-                color: AppColors.textTertiary,
-                fontSize: 14.sp,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              // TODO: Implement account deletion
-            },
-            child: Text(
-              '탈퇴',
-              style: AppTextStyles.bodyMd.copyWith(
-                color: AppColors.red500,
-                fontSize: 14.sp,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
