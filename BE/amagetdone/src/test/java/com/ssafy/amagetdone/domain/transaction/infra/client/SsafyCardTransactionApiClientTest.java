@@ -150,4 +150,39 @@ class SsafyCardTransactionApiClientTest {
 			)
 		);
 	}
+
+	@Test
+	void inquireCardTransactionsReturnsEmptyListWhenPayloadHasNoTransactionList() {
+		RestClient.Builder builder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+		TransactionSsafyApiProperties properties = new TransactionSsafyApiProperties();
+		properties.setBaseUrl("https://finopenapi.ssafy.io/ssafy/api/v1/edu");
+		properties.setInstitutionCode("00100");
+		properties.setFintechAppNo("001");
+		SsafyCardTransactionApiClient client = new SsafyCardTransactionApiClient(
+			builder,
+			properties,
+			new SsafyApiRequestFactory(),
+			new SsafyApiResponseValidator()
+		);
+		ReflectionTestUtils.setField(client, "apiKey", "transaction-api-key");
+
+		server.expect(requestTo("https://finopenapi.ssafy.io/ssafy/api/v1/edu/creditCard/inquireCreditCardTransactionList"))
+			.andExpect(method(POST))
+			.andRespond(withSuccess("""
+				{
+				  "Header": {
+				    "responseCode": "H0000",
+				    "responseMessage": "정상처리 되었습니다."
+				  },
+				  "REC": {}
+				}
+				""", APPLICATION_JSON));
+
+		CardTransactionDto.Response result = client.inquireTransactions(
+			new CardTransactionDto.Request("user-key", "1005518816096479", "725", "20240401", "20240502")
+		);
+
+		assertEquals(0, result.transactions().size());
+	}
 }
