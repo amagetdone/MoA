@@ -6,10 +6,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.Optional;
 
 import com.ssafy.amagetdone.domain.member.model.entity.User;
@@ -50,19 +47,18 @@ class CreatePlanUseCaseTest {
 
 	private CreatePlanUseCase createPlanUseCase;
 
-	private void createUseCaseWithClock(Clock clock) {
+	private void createUseCase() {
 		createPlanUseCase = new CreatePlanUseCase(
 			userRepository,
 			planRepository,
 			planPriorityService,
-			applicationEventPublisher,
-			clock
+			applicationEventPublisher
 		);
 	}
 
 	@Test
 	void createsWaitingPlanAndPublishesCreatedEvent() {
-		createUseCaseWithClock(Clock.fixed(Instant.parse("2026-03-10T00:00:00Z"), ZoneId.of("Asia/Seoul")));
+		createUseCase();
 		User user = User.createPendingSocialUser();
 		ReflectionTestUtils.setField(user, "id", 1);
 
@@ -90,8 +86,8 @@ class CreatePlanUseCaseTest {
 	}
 
 	@Test
-	void createsActivePlanWhenStartDateIsToday() {
-		createUseCaseWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
+	void createsWaitingPlanWhenStartDateIsTodayUntilAiPipelineSucceeds() {
+		createUseCase();
 		User user = User.createPendingSocialUser();
 		ReflectionTestUtils.setField(user, "id", 1);
 		LocalDate today = LocalDate.of(2026, 3, 19);
@@ -112,16 +108,16 @@ class CreatePlanUseCaseTest {
 			1
 		));
 
-		assertEquals("ACTIVE", response.status());
+		assertEquals("WAITING", response.status());
 		ArgumentCaptor<Plan> planCaptor = ArgumentCaptor.forClass(Plan.class);
 		verify(planRepository).save(planCaptor.capture());
-		assertEquals(com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus.ACTIVE, planCaptor.getValue().getStatus());
+		assertEquals(com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus.WAITING, planCaptor.getValue().getStatus());
 		verify(applicationEventPublisher).publishEvent(new PlanCreatedEvent(11, 1));
 	}
 
 	@Test
-	void createsActivePlanUsingKstDateEvenWhenSystemDefaultZoneIsUtc() {
-		createUseCaseWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
+	void createsWaitingPlanUsingKstDateEvenWhenSystemDefaultZoneIsUtc() {
+		createUseCase();
 		User user = User.createPendingSocialUser();
 		ReflectionTestUtils.setField(user, "id", 1);
 
@@ -141,6 +137,6 @@ class CreatePlanUseCaseTest {
 			1
 		));
 
-		assertEquals("ACTIVE", response.status());
+		assertEquals("WAITING", response.status());
 	}
 }
