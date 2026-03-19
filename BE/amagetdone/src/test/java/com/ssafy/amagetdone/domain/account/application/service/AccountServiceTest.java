@@ -1,3 +1,4 @@
+// Responsibility: Verifies account service orchestration for linked-account operations.
 package com.ssafy.amagetdone.domain.account.application.service;
 
 import static org.assertj.core.api.Assertions.*;
@@ -8,11 +9,14 @@ import java.util.List;
 import com.ssafy.amagetdone.domain.account.api.dto.AccountAdminDto;
 import com.ssafy.amagetdone.domain.account.api.dto.AccountDto;
 import com.ssafy.amagetdone.domain.account.application.usecase.ConfirmAccountOwnershipUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.FindUserAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListDemandDepositProductsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ReconcileLinkedAccountsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.RegisterDemandDepositProductUseCase;
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
+import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
+import com.ssafy.amagetdone.domain.member.model.entity.User;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +41,12 @@ class AccountServiceTest {
 
 	@Mock
 	private ReconcileLinkedAccountsUseCase reconcileLinkedAccountsUseCase;
+
+	@Mock
+	private FindUserAccountUseCase findUserAccountUseCase;
+
+	@Mock
+	private AccountRepository accountRepository;
 
 	@InjectMocks
 	private AccountService accountService;
@@ -92,5 +102,32 @@ class AccountServiceTest {
 
 		assertThat(accountService.registerProduct(request)).isEqualTo(response);
 		verify(registerDemandDepositProductUseCase).execute(request);
+	}
+
+	@Test
+	void deleteAccountSoftDeletesActiveLinkedAccount() {
+		User user = User.createPendingSocialUser();
+		Account account = Account.create(
+			user,
+			"0011234567890123",
+			null,
+			"생활비 계좌",
+			"수시입출금",
+			"001",
+			"한국은행",
+			"KRW"
+		);
+		account.markVerifiedLinked();
+
+		when(findUserAccountUseCase.execute(7, "0011234567890123")).thenReturn(account);
+		when(accountRepository.save(account)).thenReturn(account);
+
+		accountService.deleteAccount(7, "0011234567890123");
+
+		assertThat(account.isVerified()).isFalse();
+		assertThat(account.isActive()).isFalse();
+		assertThat(account.isDeleted()).isTrue();
+		verify(findUserAccountUseCase).execute(7, "0011234567890123");
+		verify(accountRepository).save(account);
 	}
 }

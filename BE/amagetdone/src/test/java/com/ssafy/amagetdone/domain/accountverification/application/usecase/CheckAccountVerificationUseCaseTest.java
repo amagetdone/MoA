@@ -1,3 +1,4 @@
+// Responsibility: Verifies account verification success and failure paths, including relinking deleted accounts.
 package com.ssafy.amagetdone.domain.accountverification.application.usecase;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -158,6 +159,69 @@ class CheckAccountVerificationUseCaseTest {
 
 		assertThat(result.verified()).isTrue();
 		assertThat(existingAccount.isActive()).isTrue();
+		assertThat(existingAccount.isDeleted()).isFalse();
+		verify(syncLinkedCardsUseCase).execute(7, "user-key", "0011234567890123");
+	}
+
+	@Test
+	void checkVerificationRestoresSoftDeletedAccount() {
+		User user = mock(User.class);
+		when(user.getId()).thenReturn(7);
+		when(user.getUserKey()).thenReturn("user-key");
+
+		AccountVerification verification = AccountVerification.createRequested(
+			user,
+			"0011234567890123",
+			"AMAGETDONE",
+			88L,
+			LocalDateTime.of(2026, 3, 13, 9, 0)
+		);
+		ReflectionTestUtils.setField(verification, "id", 12L);
+
+		Account existingAccount = Account.create(
+			user,
+			"0011234567890123",
+			null,
+			"삭제된 계좌",
+			"수시입출금",
+			"001",
+			"한국은행",
+			"KRW"
+		);
+		existingAccount.softDelete();
+
+		when(accountVerificationRepository.findTopByUser_IdAndAccountNoOrderByCreatedAtDesc(7, "0011234567890123"))
+			.thenReturn(Optional.of(verification));
+		when(ssafyAccountVerificationApiClient.checkVerification(any()))
+			.thenReturn(new AccountVerificationClientDto.CheckVerificationResponse("SUCCESS", 88L, "0011234567890123"));
+		when(accountRepository.findByUserIdAndAccountNo(7, "0011234567890123"))
+			.thenReturn(Optional.of(existingAccount));
+		when(ssafyDemandDepositAccountApiClient.inquireAccount(any())).thenReturn(new DemandDepositAccountDto.AccountDetailResponse(
+			"001",
+			"한국은행",
+			"테스터",
+			"0011234567890123",
+			"삭제된 계좌",
+			"1",
+			"수시입출금",
+			"20260318",
+			"20300318",
+			100000000L,
+			50000000L,
+			250000L,
+			"KRW"
+		));
+		when(accountRepository.save(existingAccount)).thenReturn(existingAccount);
+
+		AccountVerificationDto.CheckVerificationResponse result = checkAccountVerificationUseCase.execute(
+			7,
+			new AccountVerificationDto.CheckVerificationRequest("0011234567890123", "1234")
+		);
+
+		assertThat(result.verified()).isTrue();
+		assertThat(existingAccount.isVerified()).isTrue();
+		assertThat(existingAccount.isActive()).isTrue();
+		assertThat(existingAccount.isDeleted()).isFalse();
 		verify(syncLinkedCardsUseCase).execute(7, "user-key", "0011234567890123");
 	}
 
