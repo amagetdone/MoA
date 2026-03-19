@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:more_app/domain/entities/auth_result.dart';
 import 'package:more_app/domain/repositories/auth_repository.dart';
@@ -18,6 +20,7 @@ class AuthLoading extends AuthState {
 class AuthAuthenticated extends AuthState {
   final AuthResult authResult;
   final bool isTest;
+
   const AuthAuthenticated(this.authResult, {this.isTest = false});
 }
 
@@ -36,38 +39,67 @@ class AuthError extends AuthState {
 }
 
 class AuthViewModel extends StateNotifier<AuthState> {
-  final AuthRepository _repository;
-
   AuthViewModel(this._repository) : super(const AuthInitial());
 
-  Future<void> loginWithKakao() async {
+  final AuthRepository _repository;
+  int _socialLoginAttempt = 0;
+
+  bool _isSilentLoginInterruption(Object error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('popup_closed') ||
+        message.contains('취소') ||
+        message.contains('cancel') ||
+        message.contains('timeout') ||
+        message.contains('timed out');
+  }
+
+  Future<void> _runSocialLogin(Future<AuthResult> Function() action) async {
+    final attempt = ++_socialLoginAttempt;
     state = const AuthLoading();
+
     try {
-      final result = await _repository.loginWithKakao();
+      final result = await action();
+      if (attempt != _socialLoginAttempt) {
+        return;
+      }
+
       state = AuthAuthenticated(result);
-    } catch (e) {
-      state = AuthError(e.toString());
+    } catch (error) {
+      if (attempt != _socialLoginAttempt) {
+        return;
+      }
+
+      if (_isSilentLoginInterruption(error)) {
+        await resetInterruptedLogin();
+        return;
+      }
+
+      state = AuthError(error.toString());
     }
   }
+
+  Future<void> loginWithKakao() => _runSocialLogin(_repository.loginWithKakao);
 
   Future<void> loginWithTest() async {
     state = const AuthLoading();
     try {
       final result = await _repository.loginWithTest();
       state = AuthAuthenticated(result, isTest: true);
-    } catch (e) {
-      state = AuthError(e.toString());
+    } catch (error) {
+      state = AuthError(error.toString());
     }
   }
 
-  Future<void> loginWithGoogle() async {
-    state = const AuthLoading();
-    try {
-      final result = await _repository.loginWithGoogle();
-      state = AuthAuthenticated(result);
-    } catch (e) {
-      state = AuthError(e.toString());
+  Future<void> loginWithGoogle() => _runSocialLogin(_repository.loginWithGoogle);
+
+  Future<void> resetInterruptedLogin() async {
+    if (state is! AuthLoading) {
+      return;
     }
+
+    _socialLoginAttempt++;
+    unawaited(_repository.resetSocialLoginState());
+    state = const AuthUnauthenticated();
   }
 
   Future<void> autoLogin() async {
@@ -89,8 +121,8 @@ class AuthViewModel extends StateNotifier<AuthState> {
     try {
       await _repository.logout();
       state = const AuthUnauthenticated();
-    } catch (e) {
-      state = AuthError(e.toString());
+    } catch (error) {
+      state = AuthError(error.toString());
     }
   }
 }
