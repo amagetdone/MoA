@@ -27,9 +27,9 @@ public class MypageQueryService {
 		User user = userRepository.findById(userId)
 			.orElseThrow(() -> new MemberException(MemberErrorCode.USER_NOT_FOUND));
 
-		long activePlanCount = planRepository.countByUser_IdAndStatus(userId, PlanStatus.ACTIVE);
-		long completedPlanCount = planRepository.countByUser_IdAndStatus(userId, PlanStatus.COMPLETED);
-		long totalSavedAmount = Optional.ofNullable(planRepository.sumSavedAmountByUserId(userId)).orElse(0L);
+		long activePlanCount = planRepository.countByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE);
+		long completedPlanCount = planRepository.countByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.COMPLETED);
+		long totalSavedAmount = Optional.ofNullable(planRepository.sumSavedAmountByUserIdAndDeletedFalse(userId)).orElse(0L);
 
 		return new MypageDto.Response(
 			user.getNickname(),

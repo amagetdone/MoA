@@ -24,7 +24,7 @@ public class PlanImageService {
 
 	@Transactional
 	public String replacePlanImage(Integer userId, Integer planId, MultipartFile file) {
-		Plan plan = planRepository.findByIdAndUserId(planId, userId)
+		Plan plan = planRepository.findByIdAndUserIdAndDeletedFalse(planId, userId)
 			.orElseThrow(() -> new PlanException(PlanErrorCode.PLAN_NOT_FOUND));
 
 		if (hasText(plan.getPlanUrl())) {
@@ -37,7 +37,7 @@ public class PlanImageService {
 	}
 
 	public byte[] loadPlanImageBytes(Integer userId, Integer planId) {
-		Plan plan = planRepository.findByIdAndUserId(planId, userId)
+		Plan plan = planRepository.findByIdAndUserIdAndDeletedFalse(planId, userId)
 			.orElseThrow(() -> new PlanException(PlanErrorCode.PLAN_NOT_FOUND));
 		if (!hasText(plan.getPlanUrl())) {
 			throw new IllegalArgumentException("Plan image is missing.");

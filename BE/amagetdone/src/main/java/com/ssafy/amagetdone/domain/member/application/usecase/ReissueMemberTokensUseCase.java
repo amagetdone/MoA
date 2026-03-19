@@ -68,7 +68,7 @@ public class ReissueMemberTokensUseCase {
 		return new Result(
 			user.getStatus().name(),
 			accountRepository.existsLinkedAccountByUserId(claims.userId()),
-			planRepository.existsByUserId(claims.userId()),
+			planRepository.existsByUserIdAndDeletedFalse(claims.userId()),
 			memberTokenPair
 		);
 	}

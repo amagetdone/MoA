@@ -55,7 +55,7 @@ public class PlanStatusScheduler {
 	@Transactional
 	void activateStartedPlans(LocalDate today) {
 		Set<Integer> activatedUserIds = new LinkedHashSet<>();
-		planRepository.findAllByStatusAndStartDateLessThanEqualAndAiPipelineStatus(
+		planRepository.findAllByStatusAndStartDateLessThanEqualAndAiPipelineStatusAndDeletedFalse(
 				PlanStatus.WAITING,
 				today,
 				PlanAiPipelineStatus.SUCCEEDED
@@ -78,7 +78,7 @@ public class PlanStatusScheduler {
 		}
 
 		Set<Integer> activeUserIds = new LinkedHashSet<>();
-		planRepository.findAllByStatus(PlanStatus.ACTIVE).forEach(plan -> {
+		planRepository.findAllByStatusAndDeletedFalse(PlanStatus.ACTIVE).forEach(plan -> {
 			if (plan.getUser() != null && plan.getUser().getId() != null) {
 				activeUserIds.add(plan.getUser().getId());
 			}
