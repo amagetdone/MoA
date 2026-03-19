@@ -11,20 +11,19 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.LocalDate;
 import java.util.List;
 
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanCreateResponse;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanDetailResponse;
-import com.ssafy.amagetdone.domain.plan.application.usecase.CreatePlanUseCase;
-import com.ssafy.amagetdone.domain.plan.application.usecase.GetPlanVideoDownloadUrlUseCase;
-import com.ssafy.amagetdone.domain.plan.application.usecase.GetPlanDetailUseCase;
-import com.ssafy.amagetdone.domain.plan.application.usecase.ListPlansUseCase;
-import com.ssafy.amagetdone.domain.plan.application.usecase.ListPlanWeeklyPlansUseCase;
-import com.ssafy.amagetdone.domain.plan.application.usecase.UpdatePlanPrioritiesUseCase;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanListItemResponse;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanWeeklyPlansPageResponse;
+import com.ssafy.amagetdone.domain.plan.application.usecase.CreatePlanUseCase;
+import com.ssafy.amagetdone.domain.plan.application.usecase.GetPlanDetailUseCase;
+import com.ssafy.amagetdone.domain.plan.application.usecase.GetPlanVideoDownloadUrlUseCase;
+import com.ssafy.amagetdone.domain.plan.application.usecase.ListPlanWeeklyPlansUseCase;
+import com.ssafy.amagetdone.domain.plan.application.usecase.ListPlansUseCase;
+import com.ssafy.amagetdone.domain.plan.application.usecase.UpdatePlanPrioritiesUseCase;
 import com.ssafy.amagetdone.domain.plan.exception.PlanErrorCode;
 import com.ssafy.amagetdone.domain.plan.exception.PlanException;
 import com.ssafy.amagetdone.global.config.SecurityConfig;
@@ -73,7 +72,7 @@ class PlanControllerTest {
 			.willReturn(List.of(
 				new PlanListItemResponse(
 					1L,
-					"아이패드 구매",
+					"?꾩씠?⑤뱶 援щℓ",
 					320000L,
 					1000000L,
 					1,
@@ -83,7 +82,7 @@ class PlanControllerTest {
 				),
 				new PlanListItemResponse(
 					2L,
-					"여행 자금",
+					"?ы뻾 ?먭툑",
 					500000L,
 					1500000L,
 					2,
@@ -100,9 +99,9 @@ class PlanControllerTest {
 				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.message").value("목표 목록 조회 성공"))
+			.andExpect(jsonPath("$.message").value("紐⑺몴 紐⑸줉 議고쉶 ?깃났"))
 			.andExpect(jsonPath("$.data[0].planId").value(1))
-			.andExpect(jsonPath("$.data[0].title").value("아이패드 구매"))
+			.andExpect(jsonPath("$.data[0].title").value("?꾩씠?⑤뱶 援щℓ"))
 			.andExpect(jsonPath("$.data[0].achievementRate").value(32))
 			.andExpect(jsonPath("$.data[1].achievementRate").value(33.5));
 	}
@@ -113,11 +112,28 @@ class PlanControllerTest {
 			.willReturn(new PlanCreateResponse(
 				10,
 				"Europe trip fund",
-				"Summer travel savings",
-				3000000L,
-				LocalDate.of(2026, 4, 1),
-				LocalDate.of(2026, 9, 1),
-				1,
+				new PlanCreateResponse.WeeklyMission(300_000L, 24),
+				new PlanCreateResponse.WeeklyBudget(
+					1_500_000L,
+					300_000L,
+					new PlanCreateResponse.BudgetBucket(
+						700_000L,
+						List.of(
+							new PlanCreateResponse.BudgetItem("Housing", 350_000L),
+							new PlanCreateResponse.BudgetItem("Phone", 200_000L),
+							new PlanCreateResponse.BudgetItem("Subscription", 150_000L)
+						)
+					),
+					new PlanCreateResponse.BudgetBucket(
+						300_000L,
+						List.of(
+							new PlanCreateResponse.BudgetItem("Food", 180_000L),
+							new PlanCreateResponse.BudgetItem("Leisure", 70_000L),
+							new PlanCreateResponse.BudgetItem("Living", 50_000L)
+						)
+					),
+					200_000L
+				),
 				"WAITING"
 			));
 
@@ -141,7 +157,17 @@ class PlanControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.data.planId").value(10))
-			.andExpect(jsonPath("$.data.status").value("WAITING"));
+			.andExpect(jsonPath("$.data.planTitle").value("Europe trip fund"))
+			.andExpect(jsonPath("$.data.weeklyMission.weeklySavingsAmount").value(300000))
+			.andExpect(jsonPath("$.data.weeklyMission.weeksToGoal").value(24))
+			.andExpect(jsonPath("$.data.weeklyBudget.totalIncomeAmount").value(1500000))
+			.andExpect(jsonPath("$.data.weeklyBudget.savingAmount").value(300000))
+			.andExpect(jsonPath("$.data.weeklyBudget.fixedExpense.totalAmount").value(700000))
+			.andExpect(jsonPath("$.data.weeklyBudget.fixedExpense.items[0].category").value("Housing"))
+			.andExpect(jsonPath("$.data.weeklyBudget.variableExpense.totalAmount").value(300000))
+			.andExpect(jsonPath("$.data.weeklyBudget.variableExpense.items[0].category").value("Food"))
+			.andExpect(jsonPath("$.data.status").value("WAITING"))
+			.andExpect(jsonPath("$.data.weeklyBudget.freeAmount").value(200000));
 	}
 
 	@Test
@@ -200,8 +226,8 @@ class PlanControllerTest {
 		given(getPlanDetailUseCase.execute(1, 1))
 			.willReturn(new PlanDetailResponse(
 				1,
-				"맥북 구매",
-				"맥북 프로 14인치",
+				"留λ턿 援щℓ",
+				"留λ턿 ?꾨줈 14?몄튂",
 				1,
 				3_000_000L,
 				1_200_000L,
@@ -286,7 +312,7 @@ class PlanControllerTest {
 					"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.message").value("목표 우선순위가 변경되었습니다."))
+			.andExpect(jsonPath("$.message").value("紐⑺몴 ?곗꽑?쒖쐞媛 蹂寃쎈릺?덉뒿?덈떎."))
 			.andExpect(jsonPath("$.data").isEmpty());
 	}
 }
