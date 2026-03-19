@@ -1,6 +1,7 @@
 package com.ssafy.amagetdone.domain.plan.model.entity;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
@@ -118,8 +119,16 @@ public class Plan extends BaseEntity {
 		plan.startDate = startDate;
 		plan.endDate = endDate;
 		plan.priority = priority;
-		plan.targetWeeks = 0;
+		plan.targetWeeks = calculateTargetWeeks(startDate, endDate);
 		return plan;
+	}
+
+	private static int calculateTargetWeeks(LocalDate startDate, LocalDate endDate) {
+		if (startDate == null || endDate == null || endDate.isBefore(startDate)) {
+			return 0;
+		}
+		long durationDays = ChronoUnit.DAYS.between(startDate, endDate) + 1L;
+		return (int)((durationDays + 6L) / 7L);
 	}
 
 	public void updatePlanUrl(String planUrl) {

@@ -108,12 +108,28 @@ class PlanControllerTest {
 			.willReturn(new PlanCreateResponse(
 				10,
 				"Europe trip fund",
-				"Summer travel savings",
-				3000000L,
-				LocalDate.of(2026, 4, 1),
-				LocalDate.of(2026, 9, 1),
-				1,
-				"WAITING"
+				new PlanCreateResponse.WeeklyMission(300_000L, 24),
+				new PlanCreateResponse.WeeklyBudget(
+					1_500_000L,
+					300_000L,
+					new PlanCreateResponse.BudgetBucket(
+						700_000L,
+						List.of(
+							new PlanCreateResponse.BudgetItem("주거비", 350_000L),
+							new PlanCreateResponse.BudgetItem("통신비", 200_000L),
+							new PlanCreateResponse.BudgetItem("구독비", 150_000L)
+						)
+					),
+					new PlanCreateResponse.BudgetBucket(
+						300_000L,
+						List.of(
+							new PlanCreateResponse.BudgetItem("식비", 180_000L),
+							new PlanCreateResponse.BudgetItem("여가비", 70_000L),
+							new PlanCreateResponse.BudgetItem("생활비", 50_000L)
+						)
+					),
+					200_000L
+				)
 			));
 
 		mockMvc.perform(post("/api/v1/plans")
@@ -136,7 +152,16 @@ class PlanControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.data.planId").value(10))
-			.andExpect(jsonPath("$.data.status").value("WAITING"));
+			.andExpect(jsonPath("$.data.planTitle").value("Europe trip fund"))
+			.andExpect(jsonPath("$.data.weeklyMission.weeklySavingsAmount").value(300000))
+			.andExpect(jsonPath("$.data.weeklyMission.weeksToGoal").value(24))
+			.andExpect(jsonPath("$.data.weeklyBudget.totalIncomeAmount").value(1500000))
+			.andExpect(jsonPath("$.data.weeklyBudget.savingAmount").value(300000))
+			.andExpect(jsonPath("$.data.weeklyBudget.fixedExpense.totalAmount").value(700000))
+			.andExpect(jsonPath("$.data.weeklyBudget.fixedExpense.items[0].category").value("주거비"))
+			.andExpect(jsonPath("$.data.weeklyBudget.variableExpense.totalAmount").value(300000))
+			.andExpect(jsonPath("$.data.weeklyBudget.variableExpense.items[0].category").value("식비"))
+			.andExpect(jsonPath("$.data.weeklyBudget.freeAmount").value(200000));
 	}
 
 	@Test
