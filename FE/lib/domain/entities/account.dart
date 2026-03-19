@@ -5,6 +5,7 @@ class Account {
   final String accountName;
   final int balance;
   final bool isPrimary;
+  final bool verified;
 
   const Account({
     required this.id,
@@ -13,6 +14,7 @@ class Account {
     required this.accountName,
     required this.balance,
     this.isPrimary = false,
+    this.verified = true,
   });
 
   Account copyWith({
@@ -22,6 +24,7 @@ class Account {
     String? accountName,
     int? balance,
     bool? isPrimary,
+    bool? verified,
   }) {
     return Account(
       id: id ?? this.id,
@@ -30,6 +33,7 @@ class Account {
       accountName: accountName ?? this.accountName,
       balance: balance ?? this.balance,
       isPrimary: isPrimary ?? this.isPrimary,
+      verified: verified ?? this.verified,
     );
   }
 }

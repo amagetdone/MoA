@@ -11,6 +11,7 @@ import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
+import 'package:more_app/presentation/viewmodels/menu_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 import 'package:more_app/presentation/widgets/common/more_text_field.dart';
@@ -203,6 +204,8 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
       }
 
       if (!mounted) return;
+
+      ref.read(menuViewModelProvider.notifier).loadData();
 
       if (widget.isOnboarding) {
         context.go(AppRoutes.onboarding);

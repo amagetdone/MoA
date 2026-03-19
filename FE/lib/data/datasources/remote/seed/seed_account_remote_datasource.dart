@@ -112,11 +112,15 @@ class SeedAccountRemoteDataSource implements AccountRemoteDataSource {
   }
 
   @override
-  Future<List<Transaction>> fetchTransactions(String accountNo) async {
+  Future<List<Transaction>> fetchTransactions({
+    String? fromDate,
+    String? toDate,
+    String? analysisInclusion,
+    int page = 0,
+    int size = 50,
+  }) async {
     await Future.delayed(const Duration(milliseconds: 220));
     final snapshot = await _dataStore.ensureSessionSnapshot();
-    return snapshot.transactions
-        .where((t) => t.accountId == accountNo)
-        .toList();
+    return snapshot.transactions;
   }
 }

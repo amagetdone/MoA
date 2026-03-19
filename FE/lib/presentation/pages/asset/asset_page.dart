@@ -10,6 +10,7 @@ import 'package:more_app/domain/entities/account.dart';
 import 'package:more_app/domain/entities/transaction.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/viewmodels/account_viewmodel.dart';
+import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_sheet.dart';
@@ -25,6 +26,8 @@ class AssetPage extends ConsumerStatefulWidget {
 class _AssetPageState extends ConsumerState<AssetPage> {
   bool _isCreditExpanded = false;
   String? _selectedAccountNo;
+  int _periodIdx = 1; // 0:1개월, 1:3개월, 2:6개월, 3:지난달
+  String _filterLabel = '3개월·전체·계좌';
 
   @override
   void initState() {
@@ -32,6 +35,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final accounts = ref.read(accountViewModelProvider).accounts;
       _loadPrimaryAccount(accounts);
+      _fetchTransactions();
     });
   }
 
@@ -42,7 +46,39 @@ class _AssetPageState extends ConsumerState<AssetPage> {
       orElse: () => accounts.first,
     );
     setState(() => _selectedAccountNo = primary.accountNumber);
-    // ref.read(accountViewModelProvider.notifier).loadTransactions(primary.accountNumber);
+  }
+
+  void _fetchTransactions() {
+    final now = DateTime.now();
+    String? fromDate;
+    String? toDate;
+
+    switch (_periodIdx) {
+      case 0: // 1개월
+        fromDate = _formatDate(DateTime(now.year, now.month - 1, now.day));
+        break;
+      case 1: // 3개월
+        fromDate = _formatDate(DateTime(now.year, now.month - 3, now.day));
+        break;
+      case 2: // 6개월
+        fromDate = _formatDate(DateTime(now.year, now.month - 6, now.day));
+        break;
+      case 3: // 지난달
+        final lastMonth = DateTime(now.year, now.month - 1, 1);
+        fromDate = _formatDate(lastMonth);
+        toDate = _formatDate(DateTime(now.year, now.month, 0));
+        break;
+    }
+
+    ref.read(accountViewModelProvider.notifier).loadTransactions(
+      fromDate: fromDate,
+      toDate: toDate,
+      size: 100,
+    );
+  }
+
+  String _formatDate(DateTime dt) {
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
   }
 
   void _showFilterBottomSheet(List<Account> accounts) {
@@ -51,9 +87,15 @@ class _AssetPageState extends ConsumerState<AssetPage> {
       child: _AssetFilterBottomSheet(
         accounts: accounts,
         selectedAccountNo: _selectedAccountNo,
-        onAccountSelected: (accountNo) {
-          setState(() => _selectedAccountNo = accountNo);
-          // ref.read(accountViewModelProvider.notifier).loadTransactions(accountNo);
+        initialPeriodIdx: _periodIdx,
+        onApply: ({required int periodIdx, required String? accountNo}) {
+          setState(() {
+            _periodIdx = periodIdx;
+            _selectedAccountNo = accountNo;
+            final periods = ['1개월', '3개월', '6개월', '지난달'];
+            _filterLabel = '${periods[periodIdx]}·전체·계좌';
+          });
+          _fetchTransactions();
         },
       ),
     );
@@ -148,7 +190,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('총 자산', style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary)),
-                                Text(CurrencyFormatter.formatKRW(accountState.totalAsset), style: AppTextStyles.headingLg),
+                                Text(CurrencyFormatter.formatKRW(ref.watch(homeViewModelProvider).totalAsset), style: AppTextStyles.headingLg),
                               ],
                             ),
                             const Spacer(),
@@ -214,7 +256,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                             children: [
                               const Icon(Icons.search, size: 18, color: Colors.black38),
                               const Spacer(),
-                              Text('3개월·전체·계좌', style: AppTextStyles.caption.copyWith(color: Colors.black38)),
+                              Text(_filterLabel, style: AppTextStyles.caption.copyWith(color: Colors.black38)),
                               const Icon(Icons.arrow_drop_down, size: 18, color: Colors.black38),
                             ],
                           ),
@@ -281,7 +323,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => context.push(AppRoutes.assetDetailLocation(t.id)),
+      onTap: () => context.push(AppRoutes.assetDetail, extra: t),
       child: Padding(
         padding: EdgeInsets.only(bottom: 20.h),
         child: Row(
@@ -292,7 +334,10 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                 children: [
                   Row(
                     children: [
-                      Text(t.title, style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold)),
+                      Text(
+                        t.title.length > 10 ? '${t.title.substring(0, 10)}...' : t.title,
+                        style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold),
+                      ),
                       SizedBox(width: 8.w),
                       Text(timeText, style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
                     ],
@@ -334,12 +379,14 @@ class _AssetPageState extends ConsumerState<AssetPage> {
 class _AssetFilterBottomSheet extends StatefulWidget {
   final List<Account> accounts;
   final String? selectedAccountNo;
-  final void Function(String accountNo) onAccountSelected;
+  final int initialPeriodIdx;
+  final void Function({required int periodIdx, required String? accountNo}) onApply;
 
   const _AssetFilterBottomSheet({
     required this.accounts,
     required this.selectedAccountNo,
-    required this.onAccountSelected,
+    required this.onApply,
+    this.initialPeriodIdx = 1,
   });
 
   @override
@@ -347,7 +394,7 @@ class _AssetFilterBottomSheet extends StatefulWidget {
 }
 
 class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
-  int _periodIdx = 1;
+  late int _periodIdx;
   int _typeIdx = 0;
   int _creditIdx = 0;
   String? _selectedAccountNo;
@@ -356,6 +403,7 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
   @override
   void initState() {
     super.initState();
+    _periodIdx = widget.initialPeriodIdx;
     _selectedAccountNo = widget.selectedAccountNo;
   }
 
@@ -420,9 +468,10 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
             MoreBottomButton(
               text: '완료',
               onPressed: () {
-                if (_selectedAccountNo != null) {
-                  widget.onAccountSelected(_selectedAccountNo!);
-                }
+                widget.onApply(
+                  periodIdx: _periodIdx,
+                  accountNo: _selectedAccountNo,
+                );
                 Navigator.pop(context);
               },
             ),

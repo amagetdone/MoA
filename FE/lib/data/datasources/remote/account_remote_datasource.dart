@@ -10,4 +10,11 @@ abstract class AccountRemoteDataSource {
   Future<bool> confirmAccount(String accountNo);
   Future<Map<String, dynamic>> requestVerification(String accountNo);
   Future<bool> checkVerification({required String accountNo, required String authCode});
+  Future<List<Transaction>> fetchTransactions({
+    String? fromDate,
+    String? toDate,
+    String? analysisInclusion,
+    int page,
+    int size,
+  });
 }

@@ -43,7 +43,7 @@ class MainShellPage extends StatelessWidget {
               onDestinationSelected: (index) {
                 navigationShell.goBranch(
                   index,
-                  initialLocation: index == navigationShell.currentIndex,
+                  initialLocation: true,
                 );
               },
               labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,

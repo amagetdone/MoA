@@ -76,4 +76,21 @@ class AccountRepositoryImpl implements AccountRepository {
   Future<bool> checkVerification({required String accountNo, required String authCode}) async {
     return await _remoteDataSource.checkVerification(accountNo: accountNo, authCode: authCode);
   }
+
+  @override
+  Future<List<Transaction>> fetchTransactions({
+    String? fromDate,
+    String? toDate,
+    String? analysisInclusion,
+    int page = 0,
+    int size = 50,
+  }) async {
+    return await _remoteDataSource.fetchTransactions(
+      fromDate: fromDate,
+      toDate: toDate,
+      analysisInclusion: analysisInclusion,
+      page: page,
+      size: size,
+    );
+  }
 }
