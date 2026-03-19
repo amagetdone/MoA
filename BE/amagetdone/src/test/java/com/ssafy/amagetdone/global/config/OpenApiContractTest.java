@@ -1,7 +1,8 @@
-package com.ssafy.amagetdone.global.docs.controller;
+package com.ssafy.amagetdone.global.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.RecordComponent;
@@ -10,19 +11,51 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.ssafy.amagetdone.domain.budget.api.dto.BudgetHomeDto;
+import com.ssafy.amagetdone.global.docs.controller.BudgetDocsController;
 import com.ssafy.amagetdone.global.docs.schema.BudgetHomeApiResponseSchema;
 import com.ssafy.amagetdone.global.security.AuthenticatedMember;
 
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 
 import org.junit.jupiter.api.Test;
 
-class BudgetHomeDocsContractTest {
+class OpenApiContractTest {
+
+	private final SwaggerConfig swaggerConfig = new SwaggerConfig();
 
 	@Test
-	void budgetHomeEndpointUsesExplicitResponseWrapperSchema() throws NoSuchMethodException {
+	void addsBearerAuthSecurityScheme() {
+		OpenAPI openApi = swaggerConfig.moreOpenApi("");
+		SecurityScheme bearerAuth = openApi.getComponents().getSecuritySchemes().get("bearerAuth");
+
+		assertNotNull(bearerAuth);
+		assertEquals(SecurityScheme.Type.HTTP, bearerAuth.getType());
+		assertEquals("bearer", bearerAuth.getScheme());
+		assertEquals("JWT", bearerAuth.getBearerFormat());
+	}
+
+	@Test
+	void omitsServersWhenExternalBaseUrlIsBlank() {
+		OpenAPI openApi = swaggerConfig.moreOpenApi("");
+
+		assertTrue(openApi.getServers() == null || openApi.getServers().isEmpty());
+	}
+
+	@Test
+	void addsConfiguredExternalBaseUrlAsServer() {
+		OpenAPI openApi = swaggerConfig.moreOpenApi("https://j14d101.p.ssafy.io/api");
+
+		assertNotNull(openApi.getServers());
+		assertEquals(1, openApi.getServers().size());
+		assertEquals("https://j14d101.p.ssafy.io/api", openApi.getServers().get(0).getUrl());
+	}
+
+	@Test
+	void budgetHomeEndpointUsesExplicitResponseWrapperSchema() throws Exception {
 		Method method = BudgetDocsController.class.getMethod("getBudgetHome", AuthenticatedMember.class);
 		ApiResponses responses = method.getAnnotation(ApiResponses.class);
 
@@ -39,10 +72,12 @@ class BudgetHomeDocsContractTest {
 	}
 
 	@Test
-	void budgetHomeResponseSchemaNamesRemainStable() {
+	void budgetHomeSchemaNamesAndSectionsRemainStable() {
 		Schema apiResponseSchema = BudgetHomeApiResponseSchema.class.getAnnotation(Schema.class);
 		Schema budgetHomeSchema = BudgetHomeDto.Response.class.getAnnotation(Schema.class);
 		Schema wrapperDataSchema = BudgetHomeApiResponseSchema.BudgetHomeResponseSchema.class.getAnnotation(Schema.class);
+		Map<String, Class<?>> components = Arrays.stream(BudgetHomeApiResponseSchema.BudgetHomeResponseSchema.class.getRecordComponents())
+			.collect(Collectors.toMap(RecordComponent::getName, RecordComponent::getType));
 
 		assertNotNull(apiResponseSchema);
 		assertNotNull(budgetHomeSchema);
@@ -50,13 +85,6 @@ class BudgetHomeDocsContractTest {
 		assertEquals("BudgetHomeApiResponse", apiResponseSchema.name());
 		assertEquals("BudgetHomeResponse", budgetHomeSchema.name());
 		assertEquals("BudgetHomeResponse", wrapperDataSchema.name());
-	}
-
-	@Test
-	void budgetHomeWrapperContainsExpectedSections() {
-		Map<String, Class<?>> components = Arrays.stream(BudgetHomeApiResponseSchema.BudgetHomeResponseSchema.class.getRecordComponents())
-			.collect(Collectors.toMap(RecordComponent::getName, RecordComponent::getType));
-
 		assertEquals(BudgetHomeApiResponseSchema.BudgetHomeResponseSchema.class, dataComponent().getType());
 		assertEquals(4, components.size());
 		assertEquals(BudgetHomeApiResponseSchema.FreeSpendingSchema.class, components.get("freeSpending"));
