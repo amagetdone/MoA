@@ -5,9 +5,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.http.HttpHeaders.ORIGIN;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -40,6 +42,8 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 @WebMvcTest({
 	AuthController.class,
@@ -54,6 +58,9 @@ class SecurityConfigIntegrationTest {
 
 	@Autowired
 	private MockMvc mockMvc;
+
+	@Autowired
+	private RequestMatcher publicEndpoints;
 
 	@MockitoBean
 	private MemberAuthService memberAuthService;
@@ -186,11 +193,47 @@ class SecurityConfigIntegrationTest {
 			.andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:4173"));
 	}
 
+	@Test
+	void healthEndpointRemainsPublic() throws Exception {
+		mockMvc.perform(get("/api/health").contextPath("/api"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data").value("Hello World!"));
+	}
+
+	@Test
+	void refreshEndpointRemainsPublicWithoutAuthorizationHeader() throws Exception {
+		given(memberTokenService.reissue("refresh-token"))
+			.willReturn(new RefreshTokenDto.Response("ACTIVE", true, false, "new-access-token", "new-refresh-token"));
+
+		mockMvc.perform(apiPost("/v1/auth/refresh")
+				.contentType(APPLICATION_JSON)
+				.content("""
+					{
+					  "refreshToken": "refresh-token"
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.accessToken").value("new-access-token"));
+	}
+
+	@Test
+	void swaggerDocsMatcherRemainsPublic() {
+		assertTrue(publicEndpoints.matches(apiGet("/v3/api-docs")));
+		assertTrue(publicEndpoints.matches(apiGet("/swagger-ui/index.html")));
+	}
+
 	private MockHttpServletRequestBuilder apiPost(String path) {
 		return post("/api" + path).contextPath("/api");
 	}
 
 	private MockHttpServletRequestBuilder apiPatch(String path) {
 		return patch("/api" + path).contextPath("/api");
+	}
+
+	private MockHttpServletRequest apiGet(String path) {
+		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api" + path);
+		request.setContextPath("/api");
+		request.setServletPath(path);
+		return request;
 	}
 }
