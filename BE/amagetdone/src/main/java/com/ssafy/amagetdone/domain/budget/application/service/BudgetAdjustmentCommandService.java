@@ -75,13 +75,26 @@ public class BudgetAdjustmentCommandService {
 				}
 				targetAllocation.setFinalAmount(currentFinalAmount - adjustmentAmount);
 			}
+			case PLAN_SAVED_ADD -> {
+				targetAllocation = requirePlanAllocation(userId, request.planId(), planAllocations);
+				long remainingFreeBudget = calculateRemainingFreeBudget(budgetWeek);
+				if (remainingFreeBudget < adjustmentAmount) {
+					throw new IllegalArgumentException("Adjustment amount exceeds remaining free budget");
+				}
+				targetAllocation.getPlan().setSavedAmount(
+					zero(targetAllocation.getPlan().getSavedAmount()) + adjustmentAmount
+				);
+				budgetWeek.setFinalFreeAmount(zero(budgetWeek.getFinalFreeAmount()) - adjustmentAmount);
+			}
 			case PLAN_DELAY, PLAN_EARLY_CLOSE, ROLLOVER_APPLIED -> throw new IllegalArgumentException(
 				"Unsupported adjustment type: " + adjustmentType
 			);
 		}
 
 		budgetWeek.setStatus(BudgetWeekStatus.ADJUSTED);
-		budgetWeek.setFinalFreeAmount(calculateFinalFreeAmount(budgetWeek, planAllocations));
+		if (adjustmentType != BudgetAdjustmentType.PLAN_SAVED_ADD) {
+			budgetWeek.setFinalFreeAmount(calculateFinalFreeAmount(budgetWeek, planAllocations));
+		}
 
 		BudgetAdjustment savedAdjustment = budgetAdjustmentRepository.save(BudgetAdjustment.builder()
 			.budgetWeek(budgetWeek)
@@ -128,7 +141,9 @@ public class BudgetAdjustmentCommandService {
 	}
 
 	private boolean requiresPlan(BudgetAdjustmentType adjustmentType) {
-		return adjustmentType == BudgetAdjustmentType.PLAN_ADD || adjustmentType == BudgetAdjustmentType.PLAN_SUBTRACT;
+		return adjustmentType == BudgetAdjustmentType.PLAN_ADD
+			|| adjustmentType == BudgetAdjustmentType.PLAN_SUBTRACT
+			|| adjustmentType == BudgetAdjustmentType.PLAN_SAVED_ADD;
 	}
 
 	private PlanWeekAllocation requirePlanAllocation(
@@ -153,6 +168,10 @@ public class BudgetAdjustmentCommandService {
 			- finalSavingAmount
 			- zero(budgetWeek.getRolloverInAmount())
 			+ zero(budgetWeek.getManualAdjustmentAmount());
+	}
+
+	private long calculateRemainingFreeBudget(BudgetWeek budgetWeek) {
+		return zero(budgetWeek.getFinalFreeAmount()) - zero(budgetWeek.getActualSpentAmount());
 	}
 
 	private long zero(Long amount) {

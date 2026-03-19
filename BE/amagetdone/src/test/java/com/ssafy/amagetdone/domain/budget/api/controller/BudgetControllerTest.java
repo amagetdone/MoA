@@ -321,6 +321,48 @@ class BudgetControllerTest {
 	}
 
 	@Test
+	void saveBudgetAdjustmentAcceptsPlanSavedAddType() throws Exception {
+		BudgetAdjustmentDto.Request request = new BudgetAdjustmentDto.Request(
+			BudgetAdjustmentType.PLAN_SAVED_ADD,
+			15000L,
+			11,
+			"자유비를 목표 저축으로 이동"
+		);
+		given(saveBudgetAdjustmentUseCase.execute(1, "2026-W10", request))
+			.willReturn(new BudgetAdjustmentDto.Response(
+				"2026-W10",
+				"PLAN_SAVED_ADD",
+				15000L,
+				11,
+				"자유비를 목표 저축으로 이동",
+				0L,
+				230000L,
+				105000L,
+				"ADJUSTED"
+			));
+
+		mockMvc.perform(apiPost("/budgets/weeks/2026-W10/adjustments")
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+				))
+				.contentType(APPLICATION_JSON)
+				.content("""
+					{
+					  "type": "PLAN_SAVED_ADD",
+					  "amount": 15000,
+					  "planId": 11,
+					  "reason": "자유비를 목표 저축으로 이동"
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.data.adjustmentType").value("PLAN_SAVED_ADD"))
+			.andExpect(jsonPath("$.data.planId").value(11))
+			.andExpect(jsonPath("$.data.planFinalAmount").value(230000))
+			.andExpect(jsonPath("$.data.finalFreeAmount").value(105000));
+	}
+
+	@Test
 	void getWeeklySavingsDetailReturnsPlanAllocationsAndAdjustmentSummary() throws Exception {
 		given(getWeeklySavingsDetailUseCase.execute(1, "2026-W10"))
 			.willReturn(WeeklySavingsDetailDto.Response.of(

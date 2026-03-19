@@ -46,6 +46,27 @@ public interface TransactionAnalysisResultRepository extends JpaRepository<Trans
 	);
 
 	@Query("""
+		select r
+		from TransactionAnalysisResult r
+		join r.transaction t
+		left join treat(t as AccountTransactionOverride) accountTransaction
+		left join accountTransaction.account account
+		left join treat(t as CardTransactionOverride) cardTransaction
+		left join cardTransaction.card card
+		left join card.withdrawalAccount withdrawalAccount
+		where (account.user.id = :userId or withdrawalAccount.user.id = :userId)
+		  and r.analyzedAt = :analyzedAt
+		  and t.transactionDateTime between :fromDateTime and :toDateTime
+		order by t.transactionDateTime asc, r.id asc
+		""")
+	List<TransactionAnalysisResult> findAllByUserIdAndAnalyzedAtAndTransactionDateTimeBetweenOrderByTransactionDateTimeAsc(
+		@Param("userId") Integer userId,
+		@Param("analyzedAt") LocalDateTime analyzedAt,
+		@Param("fromDateTime") LocalDateTime fromDateTime,
+		@Param("toDateTime") LocalDateTime toDateTime
+	);
+
+	@Query("""
 		select r.analysisIncluded as analysisIncluded,
 		       r.excludedReason as excludedReason,
 		       r.expenseScope as expenseScope,

@@ -8,13 +8,19 @@ import org.springframework.stereotype.Component;
 @Component
 public class GetBudgetHomeUseCase {
 
+	private final SyncBudgetStateOnReadUseCase syncBudgetStateOnReadUseCase;
 	private final BudgetHomeQueryService budgetHomeQueryService;
 
-	public GetBudgetHomeUseCase(BudgetHomeQueryService budgetHomeQueryService) {
+	public GetBudgetHomeUseCase(
+		SyncBudgetStateOnReadUseCase syncBudgetStateOnReadUseCase,
+		BudgetHomeQueryService budgetHomeQueryService
+	) {
+		this.syncBudgetStateOnReadUseCase = syncBudgetStateOnReadUseCase;
 		this.budgetHomeQueryService = budgetHomeQueryService;
 	}
 
 	public BudgetHomeDto.Response execute(Integer userId) {
+		syncBudgetStateOnReadUseCase.execute(userId);
 		return budgetHomeQueryService.getHome(userId);
 	}
 }
