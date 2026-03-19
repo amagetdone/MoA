@@ -7,9 +7,12 @@ import 'package:more_app/presentation/pages/account/account_manage_page.dart';
 import 'package:more_app/presentation/pages/account/account_verify_page.dart';
 import 'package:more_app/presentation/pages/asset/asset_detail_page.dart';
 import 'package:more_app/presentation/pages/asset/asset_page.dart';
+import 'package:more_app/domain/entities/transaction.dart' as tx;
 import 'package:more_app/presentation/pages/goal/goal_create_page.dart';
 import 'package:more_app/presentation/pages/goal/goal_detail_page.dart';
 import 'package:more_app/presentation/pages/goal/goal_list_page.dart';
+import 'package:more_app/presentation/pages/goal/goal_loading_page.dart';
+import 'package:more_app/presentation/pages/goal/goal_plan_page.dart';
 import 'package:more_app/presentation/pages/goal/goal_priority_page.dart';
 import 'package:more_app/presentation/pages/home/home_page.dart';
 import 'package:more_app/presentation/pages/login/login_page.dart';
@@ -60,6 +63,8 @@ abstract class AppRoutes {
   static const String accountVerify = '/account/verify';
   static const String accountComplete = '/account/complete';
   static const String goalCreate = '/goal/create';
+  static const String goalLoading = '/goal/loading';
+  static const String goalPlan = '/goal/plan';
   static const String goalDetail = '/goal/detail';
   static const String goalPriority = '/goal/priority';
   static const String settings = '/settings';
@@ -119,7 +124,7 @@ final appRouter = GoRouter(
                     path: 'asset',
                     builder: (context, state) => const AssetPage(),
                     routes: [
-                      GoRoute(path: 'detail', builder: (context, state) => AssetDetailPage(transactionId: state.uri.queryParameters['id'] ?? '')),
+                      GoRoute(path: 'detail', builder: (context, state) => AssetDetailPage(transaction: state.extra as tx.Transaction)),
                       GoRoute(path: 'manage', builder: (context, state) => const AccountManagePage()),
                     ]
                 ),
@@ -168,6 +173,8 @@ final appRouter = GoRouter(
       return AccountCompletePage(isOnboarding: false, bankName: extra?['bankName'] ?? '', accountNumber: extra?['accountNumber'] ?? '');
     }),
     GoRoute(path: AppRoutes.goalCreate, builder: (context, state) => const GoalCreatePage(isOnboarding: false)),
+    GoRoute(path: AppRoutes.goalLoading, builder: (context, state) => const GoalLoadingPage()),
+    GoRoute(path: AppRoutes.goalPlan, builder: (context, state) => const GoalPlanPage()),
     GoRoute(path: AppRoutes.goalPriority, builder: (context, state) => const GoalPriorityPage()),
     GoRoute(path: AppRoutes.spendingBudget, builder: (context, state) => const SpendingBudgetPage()),
     GoRoute(

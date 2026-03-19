@@ -82,7 +82,7 @@ class OnboardingPlanPage extends ConsumerWidget {
                           text: CurrencyFormatter.formatKRW(weeklySavings),
                           style: const TextStyle(color: AppColors.orange500),
                         ),
-                        TextSpan(text: '만 저축하면\n$weeksToGoal주 후 $planTitle 갈 수 있어요 !'),
+                        TextSpan(text: '만 저축하면\n$weeksToGoal주 후 $planTitle 이룰 수 있어요 !'),
                       ],
                     ),
                   ),

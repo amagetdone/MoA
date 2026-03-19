@@ -103,10 +103,7 @@ class AccountCompletePage extends ConsumerWidget {
         text: '완료',
         progress: isOnboarding ? 4 / 7 : null,
         onPressed: () async {
-          await ref.read(accountViewModelProvider.notifier).addLinkedAccount(
-                bankName: bankName,
-                accountNumber: accountNumber,
-              );
+          await ref.read(accountViewModelProvider.notifier).loadData();
           await ref.read(homeViewModelProvider.notifier).loadData();
 
           if (!context.mounted) return;
@@ -114,7 +111,7 @@ class AccountCompletePage extends ConsumerWidget {
           if (isOnboarding) {
             context.go(AppRoutes.onboardingAccount);
           } else {
-            context.go(AppRoutes.home);
+            context.go(AppRoutes.accountManage);
           }
         },
       ),

@@ -66,11 +66,8 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
       status: GoalStatus.inProgress,
     );
 
-    if (widget.isOnboarding) {
-      await ref.read(onboardingViewModelProvider.notifier).createPlan(goal);
-    } else {
-      await ref.read(goalViewModelProvider.notifier).addGoal(goal);
-    }
+    await ref.read(onboardingViewModelProvider.notifier).createPlan(goal);
+    await ref.read(goalViewModelProvider.notifier).loadGoals();
     await ref.read(homeViewModelProvider.notifier).loadData();
 
     if (!mounted) return;
@@ -78,7 +75,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
     if (widget.isOnboarding) {
       context.go(AppRoutes.onboardingLoading, extra: {'nextRoute': AppRoutes.onboardingPlan});
     } else {
-      context.pop();
+      context.go(AppRoutes.goalLoading);
     }
   }
 
