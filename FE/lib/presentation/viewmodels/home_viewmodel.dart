@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:more_app/domain/entities/account.dart';
-import 'package:more_app/domain/entities/auth_result.dart';
+import 'package:more_app/domain/entities/account_dashboard.dart';
 import 'package:more_app/domain/entities/goal.dart';
+import 'package:more_app/domain/entities/home_dashboard.dart';
+import 'package:more_app/domain/repositories/account_repository.dart';
 import 'package:more_app/domain/repositories/home_repository.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
 import 'package:more_app/presentation/viewmodels/auth_viewmodel.dart';
@@ -17,7 +19,11 @@ class HomeState {
   final int totalAsset;
   final int weeklyBudget;
   final int weeklySpent;
+  final int weeklyRemaining;
+  final int daysRemaining;
+  final int dailyAvailable;
   final int weeklySaved;
+  final int savingProgressRate;
 
   const HomeState({
     this.isLoading = false,
@@ -28,7 +34,11 @@ class HomeState {
     this.totalAsset = 0,
     this.weeklyBudget = 0,
     this.weeklySpent = 0,
+    this.weeklyRemaining = 0,
+    this.daysRemaining = 0,
+    this.dailyAvailable = 0,
     this.weeklySaved = 0,
+    this.savingProgressRate = 0,
   });
 
   HomeState copyWith({
@@ -41,7 +51,11 @@ class HomeState {
     int? totalAsset,
     int? weeklyBudget,
     int? weeklySpent,
+    int? weeklyRemaining,
+    int? daysRemaining,
+    int? dailyAvailable,
     int? weeklySaved,
+    int? savingProgressRate,
   }) {
     return HomeState(
       isLoading: isLoading ?? this.isLoading,
@@ -54,31 +68,39 @@ class HomeState {
       totalAsset: totalAsset ?? this.totalAsset,
       weeklyBudget: weeklyBudget ?? this.weeklyBudget,
       weeklySpent: weeklySpent ?? this.weeklySpent,
+      weeklyRemaining: weeklyRemaining ?? this.weeklyRemaining,
+      daysRemaining: daysRemaining ?? this.daysRemaining,
+      dailyAvailable: dailyAvailable ?? this.dailyAvailable,
       weeklySaved: weeklySaved ?? this.weeklySaved,
+      savingProgressRate: savingProgressRate ?? this.savingProgressRate,
     );
   }
 }
 
 class HomeViewModel extends StateNotifier<HomeState> {
-  HomeViewModel(this._repository, this._hasAccount, this._hasPlan)
+  HomeViewModel(this._repository, this._accountRepository)
       : super(const HomeState(isLoading: true)) {
     loadData();
   }
 
   final HomeRepository _repository;
-  final bool _hasAccount;
-  final bool _hasPlan;
+  final AccountRepository _accountRepository;
 
   Future<void> loadData() async {
     state = state.copyWith(isLoading: true, clearErrorMessage: true);
 
     try {
-      final dashboard = await _repository.fetchHomeDashboard();
+      final results = await Future.wait([
+        _repository.fetchHomeDashboard(),
+        _accountRepository.fetchAccountDashboard(),
+      ]);
+      final dashboard = results[0] as HomeDashboard;
+      final accountDashboard = results[1] as AccountDashboard;
 
       HomeStatus status;
-      if (!_hasAccount) {
+      if (accountDashboard.accounts.isEmpty && dashboard.activeGoals.isEmpty) {
         status = HomeStatus.noAccount;
-      } else if (!_hasPlan) {
+      } else if (dashboard.activeGoals.isEmpty) {
         status = HomeStatus.noGoal;
       } else {
         status = HomeStatus.ready;
@@ -87,12 +109,16 @@ class HomeViewModel extends StateNotifier<HomeState> {
       state = state.copyWith(
         isLoading: false,
         status: status,
-        accounts: dashboard.accounts,
+        accounts: accountDashboard.accounts,
         activeGoals: dashboard.activeGoals,
         totalAsset: dashboard.totalAsset,
         weeklyBudget: dashboard.weeklyBudget,
         weeklySpent: dashboard.weeklySpent,
+        weeklyRemaining: dashboard.weeklyRemaining,
+        daysRemaining: dashboard.daysRemaining,
+        dailyAvailable: dashboard.dailyAvailable,
         weeklySaved: dashboard.weeklySaved,
+        savingProgressRate: dashboard.savingProgressRate,
       );
     } catch (error) {
       state = state.copyWith(isLoading: false, errorMessage: error.toString());
@@ -103,17 +129,9 @@ class HomeViewModel extends StateNotifier<HomeState> {
 final homeViewModelProvider = StateNotifierProvider<HomeViewModel, HomeState>((
   ref,
 ) {
-  final authState = ref.watch(authViewModelProvider);
-  bool hasAccount = true;
-  bool hasPlan = true;
-
-  if (authState is AuthAuthenticated) {
-    hasAccount = authState.authResult.account;
-    hasPlan = authState.authResult.plan;
-  } else if (authState is AuthAutoLoginSuccess) {
-    hasAccount = authState.authResult.account;
-    hasPlan = authState.authResult.plan;
-  }
-
-  return HomeViewModel(ref.read(homeRepositoryProvider), hasAccount, hasPlan);
+  ref.watch(authViewModelProvider);
+  return HomeViewModel(
+    ref.read(homeRepositoryProvider),
+    ref.read(accountRepositoryProvider),
+  );
 });

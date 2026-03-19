@@ -18,7 +18,11 @@ class ApiClient {
     dio.interceptors.add(AuthInterceptor(onForceLogout: onForceLogout));
     dio.interceptors.add(ApiResponseInterceptor());
     dio.interceptors.add(
-      LogInterceptor(requestBody: true, responseBody: true),
+      LogInterceptor(
+        requestBody: true,
+        responseBody: true,
+        logPrint: (o) => print('[API] $o'),
+      ),
     );
   }
 }

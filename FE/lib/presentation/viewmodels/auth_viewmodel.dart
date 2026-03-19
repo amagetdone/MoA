@@ -80,10 +80,10 @@ class AuthViewModel extends StateNotifier<AuthState> {
 
   Future<void> loginWithKakao() => _runSocialLogin(_repository.loginWithKakao);
 
-  Future<void> loginWithTest() async {
+  Future<void> loginWithTest({required int id}) async {
     state = const AuthLoading();
     try {
-      final result = await _repository.loginWithTest();
+      final result = await _repository.loginWithTest(id: id);
       state = AuthAuthenticated(result, isTest: true);
     } catch (error) {
       state = AuthError(error.toString());

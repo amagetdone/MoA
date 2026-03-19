@@ -110,7 +110,12 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             SizedBox(height: 32.h),
             GestureDetector(
-              onTap: () => context.push(AppRoutes.accountAdd),
+              onTap: () async {
+                await context.push(AppRoutes.accountAdd);
+                if (mounted) {
+                  ref.read(homeViewModelProvider.notifier).loadData();
+                }
+              },
               child: MoreCard(
                 child: Column(
                   children: [
@@ -161,13 +166,19 @@ class _HomePageState extends ConsumerState<HomePage> {
         children: [
           // 예산 카드
           SpendingCard(
-            weeklyBudget: state.weeklyBudget,
-            weeklySpent: state.weeklySpent,
+            totalAmount: state.weeklyBudget,
+            usedAmount: state.weeklySpent,
+            remainingAmount: state.weeklyRemaining,
+            daysRemaining: state.daysRemaining,
+            dailyAvailable: state.dailyAvailable,
           ),
           SizedBox(height: 12.h),
 
           // 저축 카드
-          SavingsCard(weeklySaved: state.weeklySaved),
+          SavingsCard(
+            weeklySaved: state.weeklySaved,
+            savingProgressRate: state.savingProgressRate,
+          ),
           SizedBox(height: 12.h),
 
           // 총자산 / 계좌 카드
@@ -264,6 +275,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   List<Goal> _sortedGoals(List<Goal> goals) {
     return List<Goal>.from(goals)
-      ..sort((a, b) => b.progressRate.compareTo(a.progressRate));
+      ..sort((a, b) => a.priority.compareTo(b.priority));
   }
 }

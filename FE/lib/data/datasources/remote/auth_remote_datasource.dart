@@ -18,5 +18,5 @@ abstract class AuthRemoteDataSource {
 
   Future<void> logout({required String refreshToken});
 
-  Future<SocialLoginResponseDto> loginWithTest();
+  Future<SocialLoginResponseDto> loginWithTest({required int id});
 }

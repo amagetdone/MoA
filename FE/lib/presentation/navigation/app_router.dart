@@ -115,7 +115,6 @@ final appRouter = GoRouter(
               path: AppRoutes.spendingTab,
               builder: (context, state) => const SpendingAnalysisPage(),
               routes: [
-                GoRoute(path: 'pattern', builder: (context, state) => const SpendingPatternPage()),
                 GoRoute(
                     path: 'asset',
                     builder: (context, state) => const AssetPage(),
@@ -171,6 +170,11 @@ final appRouter = GoRouter(
     GoRoute(path: AppRoutes.goalCreate, builder: (context, state) => const GoalCreatePage(isOnboarding: false)),
     GoRoute(path: AppRoutes.goalPriority, builder: (context, state) => const GoalPriorityPage()),
     GoRoute(path: AppRoutes.spendingBudget, builder: (context, state) => const SpendingBudgetPage()),
+    GoRoute(
+      path: AppRoutes.spendingPattern,
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const SpendingPatternPage(),
+    ),
     GoRoute(path: AppRoutes.settings, builder: (context, state) => const SettingsPage()),
   ],
 );

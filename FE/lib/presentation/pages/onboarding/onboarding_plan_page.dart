@@ -4,8 +4,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
+import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
-import 'package:more_app/presentation/viewmodels/spending_viewmodel.dart';
+import 'package:more_app/presentation/viewmodels/onboarding_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
@@ -15,7 +16,18 @@ class OnboardingPlanPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(spendingViewModelProvider);
+    final plan = ref.watch(onboardingViewModelProvider).planResult;
+
+    final planTitle = plan?.planTitle ?? '';
+    final weeklySavings = plan?.weeklySavingsAmount ?? 0;
+    final weeksToGoal = plan?.weeksToGoal ?? 0;
+    final budget = plan?.weeklyBudget;
+    final totalIncome = budget?.totalIncomeAmount ?? 0;
+    final savingAmount = budget?.savingAmount ?? 0;
+    final fixedTotal = budget?.fixedExpense.totalAmount ?? 0;
+    final fixedItems = budget?.fixedExpense.items ?? [];
+    final variableTotal = budget?.variableExpense.totalAmount ?? 0;
+    final freeAmount = budget?.freeAmount ?? 0;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
@@ -33,19 +45,8 @@ class OnboardingPlanPage extends ConsumerWidget {
               ),
             ),
             SizedBox(height: 6.h),
-            if (state.isLoading)
-              const SizedBox.shrink()
-            else if (state.errorMessage != null)
-              Padding(
-                padding: EdgeInsets.only(bottom: 24.h),
-                child: Text(
-                  '계획 데이터를 불러오지 못했습니다.\n${state.errorMessage!}',
-                  style: AppTextStyles.bodySm.copyWith(color: AppColors.red500),
-                ),
-              ),
-
             Text(
-              '소비패턴 결과를 반영하여\n유럽여행 목표 계획을 수립합니다.',
+              '소비패턴 결과를 반영하여\n$planTitle 목표 계획을 수립합니다.',
               style: AppTextStyles.bodyMd.copyWith(
                 color: AppColors.gray500,
                 fontSize: 14.sp,
@@ -78,10 +79,10 @@ class OnboardingPlanPage extends ConsumerWidget {
                       children: [
                         const TextSpan(text: '매주 '),
                         TextSpan(
-                          text: '300,000원',
-                          style: TextStyle(color: AppColors.orange500),
+                          text: CurrencyFormatter.formatKRW(weeklySavings),
+                          style: const TextStyle(color: AppColors.orange500),
                         ),
-                        const TextSpan(text: '만 저축하면\n24주 후 유럽여행 갈 수 있어요 !'),
+                        TextSpan(text: '만 저축하면\n$weeksToGoal주 후 $planTitle 갈 수 있어요 !'),
                       ],
                     ),
                   ),
@@ -101,19 +102,11 @@ class OnboardingPlanPage extends ConsumerWidget {
                     textBaseline: TextBaseline.alphabetic,
                     children: [
                       Text(
-                        '200,000원',
+                        CurrencyFormatter.formatKRW(freeAmount),
                         style: AppTextStyles.headingLg.copyWith(
                           color: AppColors.orange500,
                           fontSize: 24.sp,
                           fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      SizedBox(width: 8.w),
-                      Text(
-                        '(자유소비 140,000원 ÷ 7일)',
-                        style: AppTextStyles.bodySm.copyWith(
-                          color: AppColors.gray500,
-                          fontSize: 12.sp,
                         ),
                       ),
                     ],
@@ -139,63 +132,69 @@ class OnboardingPlanPage extends ConsumerWidget {
                   SizedBox(height: 16.h),
 
                   _BudgetRow(
-                      label: '총 예산 (수입)',
-                      value: '1,500,000원',
-                      isHeader: true),
-                  SizedBox(height: 16.h),
-                  Divider(height: 1, color: AppColors.gray100),
-                  SizedBox(height: 16.h),
-
-                  _BudgetRow(
-                      label: '→ 저축비',
-                      value: '300,000원',
-                      color: AppColors.orange500),
-                  _BudgetSubLabel(text: '목표를 위해 저축하는 금액'),
-                  SizedBox(height: 16.h),
-                  Divider(height: 1, color: AppColors.gray100),
-                  SizedBox(height: 16.h),
-
-                  _BudgetRow(label: '→ 고정비', value: '700,000원'),
-                  _BudgetSubLabel(text: '매주 고정으로 나가는 비용'),
-                  SizedBox(height: 8.h),
-                  Padding(
-                    padding: EdgeInsets.only(left: 16.w),
-                    child: Column(
-                      children: [
-                        _BudgetRow(
-                            label: '주거비',
-                            value: '350,000원',
-                            isSubItem: true),
-                        SizedBox(height: 6.h),
-                        _BudgetRow(
-                            label: '통신비',
-                            value: '200,000원',
-                            isSubItem: true),
-                        SizedBox(height: 6.h),
-                        _BudgetRow(
-                            label: '구독비',
-                            value: '150,000원',
-                            isSubItem: true),
-                      ],
-                    ),
+                    label: '총 예산 (수입)',
+                    value: CurrencyFormatter.formatKRW(totalIncome),
+                    isHeader: true,
                   ),
                   SizedBox(height: 16.h),
                   Divider(height: 1, color: AppColors.gray100),
                   SizedBox(height: 16.h),
 
-                  _BudgetRow(label: '→ 변동비', value: '300,000원'),
-                  _BudgetSubLabel(text: '식비, 여가비 등 생활에 필요한 비용'),
+                  _BudgetRow(
+                    label: '→ 저축비',
+                    value: CurrencyFormatter.formatKRW(savingAmount),
+                    color: AppColors.orange500,
+                  ),
+                  const _BudgetSubLabel(text: '목표를 위해 저축하는 금액'),
+                  SizedBox(height: 16.h),
+                  Divider(height: 1, color: AppColors.gray100),
+                  SizedBox(height: 16.h),
+
+                  _BudgetRow(
+                    label: '→ 고정비',
+                    value: CurrencyFormatter.formatKRW(fixedTotal),
+                  ),
+                  const _BudgetSubLabel(text: '매주 고정으로 나가는 비용'),
+                  if (fixedItems.isNotEmpty) ...[
+                    SizedBox(height: 8.h),
+                    Padding(
+                      padding: EdgeInsets.only(left: 16.w),
+                      child: Column(
+                        children: fixedItems.asMap().entries.map((entry) {
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              bottom: entry.key < fixedItems.length - 1 ? 6.h : 0,
+                            ),
+                            child: _BudgetRow(
+                              label: entry.value.category,
+                              value: CurrencyFormatter.formatKRW(entry.value.amount),
+                              isSubItem: true,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                  SizedBox(height: 16.h),
+                  Divider(height: 1, color: AppColors.gray100),
+                  SizedBox(height: 16.h),
+
+                  _BudgetRow(
+                    label: '→ 변동비',
+                    value: CurrencyFormatter.formatKRW(variableTotal),
+                  ),
+                  const _BudgetSubLabel(text: '식비, 여가비 등 생활에 필요한 비용'),
                   SizedBox(height: 16.h),
                   Divider(height: 1, color: AppColors.gray100),
                   SizedBox(height: 16.h),
 
                   _BudgetRow(
                     label: '= 여유 자금',
-                    value: '200,000원',
+                    value: CurrencyFormatter.formatKRW(freeAmount),
                     isHeader: true,
                     color: AppColors.orange500,
                   ),
-                  _BudgetSubLabel(text: '고정/변동/저축비를 제외한 자유롭게 사용 가능한 금액'),
+                  const _BudgetSubLabel(text: '고정/변동/저축비를 제외한 자유롭게 사용 가능한 금액'),
                 ],
               ),
             ),

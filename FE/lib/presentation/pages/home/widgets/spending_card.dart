@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:more_app/core/theme/app_colors.dart';
@@ -10,20 +8,23 @@ import 'package:more_app/presentation/widgets/common/more_card.dart';
 class SpendingCard extends StatelessWidget {
   const SpendingCard({
     super.key,
-    required this.weeklyBudget,
-    required this.weeklySpent,
+    required this.totalAmount,
+    required this.usedAmount,
+    required this.remainingAmount,
+    required this.daysRemaining,
+    required this.dailyAvailable,
   });
 
-  final int weeklyBudget;
-  final int weeklySpent;
+  final int totalAmount;
+  final int usedAmount;
+  final int remainingAmount;
+  final int daysRemaining;
+  final int dailyAvailable;
 
   @override
   Widget build(BuildContext context) {
-    final remaining = math.max(weeklyBudget - weeklySpent, 0);
-    final daysLeft = _remainingWeekDays;
-    final dailyAvailable = remaining > 0 ? remaining ~/ daysLeft : 0;
-    final progress = weeklyBudget > 0
-        ? (weeklySpent / weeklyBudget).clamp(0.0, 1.0)
+    final progress = totalAmount > 0
+        ? (usedAmount / totalAmount).clamp(0.0, 1.0)
         : 0.0;
 
     return MoreCard(
@@ -63,7 +64,7 @@ class SpendingCard extends StatelessWidget {
                           ),
                         ),
                         SizedBox(width: 8.w),
-                        _DayBadge(daysLeft: daysLeft),
+                        _DayBadge(daysRemaining: daysRemaining),
                       ],
                     ),
                     SizedBox(height: 4.h),
@@ -71,7 +72,7 @@ class SpendingCard extends StatelessWidget {
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        CurrencyFormatter.formatKRW(remaining),
+                        CurrencyFormatter.formatKRW(remainingAmount),
                         style: AppTextStyles.headingLg.copyWith(
                           color: AppColors.orange500,
                           fontWeight: FontWeight.w800,
@@ -111,14 +112,14 @@ class SpendingCard extends StatelessWidget {
                 text: TextSpan(
                   children: [
                     TextSpan(
-                      text: CurrencyFormatter.formatKRW(weeklySpent),
+                      text: CurrencyFormatter.formatKRW(usedAmount),
                       style: AppTextStyles.bodySm.copyWith(
                         fontWeight: FontWeight.w700,
                         color: AppColors.textPrimary,
                       ),
                     ),
                     TextSpan(
-                      text: ' / ${CurrencyFormatter.formatKRW(weeklyBudget)}',
+                      text: ' / ${CurrencyFormatter.formatKRW(totalAmount)}',
                       style: AppTextStyles.bodySm.copyWith(
                         color: AppColors.textTertiary,
                         fontWeight: FontWeight.w500,
@@ -140,18 +141,12 @@ class SpendingCard extends StatelessWidget {
       ),
     );
   }
-
-  int get _remainingWeekDays {
-    final weekday = DateTime.now().weekday;
-    final daysUntilSunday = DateTime.sunday - weekday;
-    return math.max(daysUntilSunday, 1);
-  }
 }
 
 class _DayBadge extends StatelessWidget {
-  const _DayBadge({required this.daysLeft});
+  const _DayBadge({required this.daysRemaining});
 
-  final int daysLeft;
+  final int daysRemaining;
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +157,7 @@ class _DayBadge extends StatelessWidget {
         color: AppColors.orange500.withValues(alpha: 0.12),
       ),
       child: Text(
-        'D-$daysLeft',
+        'D-$daysRemaining',
         style: AppTextStyles.caption.copyWith(
           color: AppColors.orange500,
           fontWeight: FontWeight.w700,

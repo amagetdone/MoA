@@ -188,7 +188,7 @@ class MenuPage extends ConsumerWidget {
               icon: Icons.pie_chart_outline,
               title: '소비패턴 분석',
               subtitle: '지난 3개월 간 소비패턴 분석',
-              onTap: () => context.go(AppRoutes.spendingTab),
+              onTap: () => context.push(AppRoutes.spendingPattern),
             ),
             _MenuListItem(
               icon: Icons.tune_outlined,

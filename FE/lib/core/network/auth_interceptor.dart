@@ -20,6 +20,9 @@ class AuthInterceptor extends Interceptor {
       final token = await _storage.read(key: 'access_token');
       if (token != null) {
         options.headers['Authorization'] = 'Bearer $token';
+        print('[AuthInterceptor] Authorization: Bearer $token');
+      } else {
+        print('[AuthInterceptor] No access_token found for ${options.path}');
       }
     }
     handler.next(options);

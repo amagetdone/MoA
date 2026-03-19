@@ -1,59 +1,105 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
-import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
+import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/viewmodels/onboarding_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_text_field.dart';
 
-class OnboardingLoadingPage extends StatefulWidget {
+class OnboardingLoadingPage extends ConsumerStatefulWidget {
   final String? nextRoute;
 
   const OnboardingLoadingPage({super.key, this.nextRoute});
 
   @override
-  State<OnboardingLoadingPage> createState() => _OnboardingLoadingPageState();
+  ConsumerState<OnboardingLoadingPage> createState() =>
+      _OnboardingLoadingPageState();
 }
 
-class _OnboardingLoadingPageState extends State<OnboardingLoadingPage>
+class _OnboardingLoadingPageState extends ConsumerState<OnboardingLoadingPage>
     with TickerProviderStateMixin {
   late final AnimationController _animController;
-  int _phase = 0; // 0 = analyzing, 1 = planning
-  final TextEditingController _incomeController =
-      TextEditingController(text: '3,000,000');
+  late final TextEditingController _incomeController;
+  int _phase = 0;
 
   @override
   void initState() {
     super.initState();
+    _incomeController = TextEditingController();
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat();
-    _runPhases();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _runPhases());
   }
 
   Future<void> _runPhases() async {
     final nextRoute = widget.nextRoute ?? AppRoutes.onboardingAnalysis;
 
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-
-    // 계좌 → 분석 플로우일 때만 수입 확인 다이얼로그 표시
     if (nextRoute == AppRoutes.onboardingAnalysis) {
-      await _showIncomeDialog();
+      // phase 0: "연동된 계좌를 분석 중입니다." - sync+analysis 완료 대기
+      final syncFuture =
+          ref.read(onboardingViewModelProvider.notifier).syncAndAnalyze();
+
+      try {
+        await syncFuture.timeout(
+          const Duration(seconds: 30),
+          onTimeout: () {},
+        );
+      } catch (_) {}
+      if (!mounted) return;
+
+      // 분석된 수입으로 다이얼로그 기본값 세팅
+      final analysisIncome =
+          ref.read(onboardingViewModelProvider).analysisResult?.averageIncome;
+      if (analysisIncome != null) {
+        _incomeController.text = _formatNumber(analysisIncome);
+      } else {
+        try {
+          final income =
+              await ref.read(onboardingViewModelProvider.notifier).loadIncome();
+          if (mounted) _incomeController.text = _formatNumber(income);
+        } catch (_) {
+          _incomeController.text = '3,000,000';
+        }
+      }
+
+      // 수입 다이얼로그
+      final income = await _showIncomeDialog();
+      if (!mounted) return;
+      await ref
+          .read(onboardingViewModelProvider.notifier)
+          .saveIncome(income ?? 0);
+      if (!mounted) return;
+
+      // phase 1: "지난 3개월 거래내역 기반으로 소비패턴을 분석 중입니다."
+      setState(() => _phase = 1);
+      await Future.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
+    } else {
+      await Future.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
+
+      setState(() => _phase = 1);
+      await Future.delayed(const Duration(seconds: 2));
       if (!mounted) return;
     }
-
-    setState(() => _phase = 1);
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
 
     context.go(nextRoute);
   }
 
-  Future<void> _showIncomeDialog() async {
-    await showDialog(
+  String _formatNumber(int amount) {
+    return amount.toString().replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (m) => '${m[1]},',
+        );
+  }
+
+  Future<int?> _showIncomeDialog() async {
+    return showDialog<int>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
@@ -96,7 +142,12 @@ class _OnboardingLoadingPageState extends State<OnboardingLoadingPage>
               width: double.infinity,
               height: 48.h,
               child: ElevatedButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
+                onPressed: () {
+                  final income =
+                      CurrencyFormatter.parseFormatted(_incomeController.text) ??
+                          0;
+                  Navigator.of(dialogContext).pop(income);
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.orange500,
                   foregroundColor: Colors.white,
@@ -153,7 +204,6 @@ class _OnboardingLoadingPageState extends State<OnboardingLoadingPage>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Animated loading bars
                       SizedBox(
                         width: 80.w,
                         height: 48.h,
@@ -186,11 +236,12 @@ class _OnboardingLoadingPageState extends State<OnboardingLoadingPage>
                       ),
                       SizedBox(height: 32.h),
                       Text(
-                        _phase == 0
-                            ? '소비패턴을 분석중이에요'
-                            : widget.nextRoute == AppRoutes.onboardingPlan
-                                ? '소비패턴 분석을 기반으로\n목표를 수립 중이에요'
-                                : '소비패턴 분석을 마무리 하고 있어요',
+                        widget.nextRoute == AppRoutes.onboardingPlan
+                            ? '소비패턴 기반으로\n목표 계획을 수립 중입니다.'
+                            : _phase == 0
+                                ? '연동된 계좌를 분석 중입니다.'
+                                : '지난 3개월 거래내역 기반으로\n소비패턴을 분석 중입니다.',
+                        textAlign: TextAlign.center,
                         style: AppTextStyles.headingMd.copyWith(
                           color: AppColors.gray900,
                           fontSize: 18.sp,
@@ -220,7 +271,10 @@ class _OnboardingLoadingPageState extends State<OnboardingLoadingPage>
                       ),
                     ),
                     FractionallySizedBox(
-                      widthFactor: widget.nextRoute == AppRoutes.onboardingPlan ? 6 / 7 : 4 / 7,
+                      widthFactor:
+                          widget.nextRoute == AppRoutes.onboardingPlan
+                              ? 6 / 7
+                              : 4 / 7,
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(4.r),

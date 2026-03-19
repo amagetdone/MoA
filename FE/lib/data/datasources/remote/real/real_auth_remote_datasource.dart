@@ -59,8 +59,8 @@ class RealAuthRemoteDataSource implements AuthRemoteDataSource {
   }
 
   @override
-  Future<SocialLoginResponseDto> loginWithTest() async {
-    final response = await _dio.post('v1/auth/social/test');
+  Future<SocialLoginResponseDto> loginWithTest({required int id}) async {
+    final response = await _dio.post('v1/auth/social/test', data: {'id': id});
     return SocialLoginResponseDto.fromJson(response.data as Map<String, dynamic>);
   }
 }

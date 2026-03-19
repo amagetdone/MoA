@@ -64,9 +64,9 @@ class MainShellPage extends StatelessWidget {
                   label: '목표',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.person_outline, size: 24.r),
-                  selectedIcon: Icon(Icons.person, color: AppColors.orange500, size: 24.r),
-                  label: '내 정보',
+                  icon: Icon(Icons.menu_outlined, size: 24.r),
+                  selectedIcon: Icon(Icons.menu, color: AppColors.orange500, size: 24.r),
+                  label: '메뉴',
                 ),
               ],
             ),

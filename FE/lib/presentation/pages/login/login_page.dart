@@ -126,9 +126,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
         if (result.status == 'TEMP') {
           context.go(AppRoutes.onboardingProfile);
         } else if (next.isTest) {
-          context.go(AppRoutes.home);
-        } else {
           context.go(AppRoutes.onboarding);
+        } else {
+          context.go(AppRoutes.home);
         }
       }
     });
@@ -189,7 +189,24 @@ class _LoginPageState extends ConsumerState<LoginPage>
               GestureDetector(
                 onTap: isLoading
                     ? null
-                    : () => ref.read(authViewModelProvider.notifier).loginWithTest(),
+                    : () async {
+                        final id = await showDialog<int>(
+                          context: context,
+                          builder: (ctx) => SimpleDialog(
+                            title: const Text('테스트 계정 선택'),
+                            children: List.generate(5, (i) {
+                              final num = i + 1;
+                              return SimpleDialogOption(
+                                onPressed: () => Navigator.pop(ctx, num),
+                                child: Text('계정 $num'),
+                              );
+                            }),
+                          ),
+                        );
+                        if (id != null) {
+                          ref.read(authViewModelProvider.notifier).loginWithTest(id: id);
+                        }
+                      },
                 child: Text(
                   '테스트 계정으로 로그인',
                   style: AppTextStyles.bodySm.copyWith(

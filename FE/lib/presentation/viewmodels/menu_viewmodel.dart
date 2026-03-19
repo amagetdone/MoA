@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:more_app/domain/repositories/menu_repository.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
+import 'package:more_app/presentation/viewmodels/auth_viewmodel.dart';
 
 class MenuState {
   final String userName;
@@ -100,6 +101,7 @@ class MenuViewModel extends StateNotifier<MenuState> {
 final menuViewModelProvider = StateNotifierProvider<MenuViewModel, MenuState>((
   ref,
 ) {
+  ref.watch(authViewModelProvider);
   return MenuViewModel(
     ref.read(menuRepositoryProvider),
   );

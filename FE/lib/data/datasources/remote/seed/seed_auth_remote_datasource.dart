@@ -57,7 +57,7 @@ class SeedAuthRemoteDataSource implements AuthRemoteDataSource {
   }
 
   @override
-  Future<SocialLoginResponseDto> loginWithTest() async {
+  Future<SocialLoginResponseDto> loginWithTest({required int id}) async {
     await Future.delayed(const Duration(milliseconds: 300));
     return SocialLoginResponseDto(
       status: 'ACTIVE',

@@ -14,6 +14,9 @@ class SeedSocialAuthDataSource implements SocialAuthDataSource {
   }
 
   @override
+  Future<void> resetPendingLogins() async {}
+
+  @override
   Future<void> logoutKakao() async {}
 
   @override

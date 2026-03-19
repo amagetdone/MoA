@@ -35,8 +35,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
       if (result.status == 'TEMP') {
         context.go(AppRoutes.onboardingProfile);
       } else {
-        // TODO: 온보딩 테스트용 - 원래는 AppRoutes.home
-        context.go(AppRoutes.onboarding);
+          context.go(AppRoutes.home);
       }
     } else {
       context.go(AppRoutes.login);

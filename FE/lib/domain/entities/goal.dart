@@ -10,6 +10,8 @@ class Goal {
   final GoalStatus status;
   final String? iconName;
   final String? sketchVideoAssetPath;
+  final int? dDay;
+  final int? apiProgressRate;
 
   const Goal({
     required this.id,
@@ -23,15 +25,20 @@ class Goal {
     this.status = GoalStatus.inProgress,
     this.iconName,
     this.sketchVideoAssetPath,
+    this.dDay,
+    this.apiProgressRate,
   });
 
   double get progressRate =>
-      targetAmount > 0 ? (currentAmount / targetAmount).clamp(0.0, 1.0) : 0.0;
+      apiProgressRate != null
+          ? (apiProgressRate! / 100).clamp(0.0, 1.0)
+          : (targetAmount > 0 ? (currentAmount / targetAmount).clamp(0.0, 1.0) : 0.0);
 
   int get remainingAmount =>
       (targetAmount - currentAmount).clamp(0, targetAmount);
 
   int get remainingDays {
+    if (dDay != null) return dDay!;
     final now = DateTime.now();
     return endDate.difference(now).inDays;
   }
@@ -48,6 +55,8 @@ class Goal {
     GoalStatus? status,
     String? iconName,
     String? sketchVideoAssetPath,
+    int? dDay,
+    int? apiProgressRate,
   }) {
     return Goal(
       id: id ?? this.id,
@@ -61,6 +70,8 @@ class Goal {
       status: status ?? this.status,
       iconName: iconName ?? this.iconName,
       sketchVideoAssetPath: sketchVideoAssetPath ?? this.sketchVideoAssetPath,
+      dDay: dDay ?? this.dDay,
+      apiProgressRate: apiProgressRate ?? this.apiProgressRate,
     );
   }
 }

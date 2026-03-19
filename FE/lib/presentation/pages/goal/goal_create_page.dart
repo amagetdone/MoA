@@ -8,6 +8,7 @@ import 'package:more_app/domain/entities/goal.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/viewmodels/goal_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
+import 'package:more_app/presentation/viewmodels/onboarding_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 import 'package:more_app/presentation/widgets/common/more_date_field.dart';
@@ -65,7 +66,11 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
       status: GoalStatus.inProgress,
     );
 
-    await ref.read(goalViewModelProvider.notifier).addGoal(goal);
+    if (widget.isOnboarding) {
+      await ref.read(onboardingViewModelProvider.notifier).createPlan(goal);
+    } else {
+      await ref.read(goalViewModelProvider.notifier).addGoal(goal);
+    }
     await ref.read(homeViewModelProvider.notifier).loadData();
 
     if (!mounted) return;

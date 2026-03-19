@@ -1,19 +1,32 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
+import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/viewmodels/onboarding_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 
-class OnboardingAnalysisPage extends StatelessWidget {
+class OnboardingAnalysisPage extends ConsumerWidget {
   const OnboardingAnalysisPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final analysis = ref.watch(onboardingViewModelProvider).analysisResult;
+
+    final averageIncome = analysis?.averageIncome ?? 0;
+    final averageExpense = analysis?.averageExpense ?? 0;
+    final remainingAmount = analysis?.remainingAmount ?? 0;
+    final fixedRatio = (analysis?.fixedExpenseRatio ?? 65.0) / 100;
+    final variableRatio = (analysis?.variableExpenseRatio ?? 35.0) / 100;
+    final insightMessage = analysis?.insightMessage ?? '';
+    final categories = analysis?.categoryExpenses ?? [];
+
     return PopScope(
       canPop: false,
       child: Scaffold(
@@ -36,7 +49,7 @@ class OnboardingAnalysisPage extends StatelessWidget {
               ),
               SizedBox(height: 6.h),
               Text(
-                '3개월 간 소비패턴을 분석했어요.',
+                analysis?.summaryText ?? '3개월 간 소비패턴을 분석했어요.',
                 style: AppTextStyles.bodyMd.copyWith(
                   color: AppColors.gray500,
                   fontSize: 14.sp,
@@ -48,17 +61,20 @@ class OnboardingAnalysisPage extends StatelessWidget {
               MoreCard(
                 child: Column(
                   children: [
-                    _StatRow(label: '평균 수입', value: '3,000,000원'),
+                    _StatRow(
+                      label: '평균 수입',
+                      value: CurrencyFormatter.formatKRW(averageIncome),
+                    ),
                     SizedBox(height: 8.h),
                     _StatRow(
                       label: '평균 지출',
-                      value: '1,900,000원',
+                      value: CurrencyFormatter.formatKRW(averageExpense),
                       valueColor: AppColors.orange500,
                     ),
                     Divider(height: 24.h),
                     _StatRow(
                       label: '남은 금액',
-                      value: '1,100,000원',
+                      value: CurrencyFormatter.formatKRW(remainingAmount),
                       isBold: true,
                       valueColor: const Color(0xFF4CAF50),
                     ),
@@ -71,19 +87,21 @@ class OnboardingAnalysisPage extends StatelessWidget {
               MoreCard(
                 child: Column(
                   children: [
-                    // Donut chart
                     Center(
                       child: SizedBox(
                         width: 200.w,
                         height: 200.w,
                         child: CustomPaint(
-                          painter: _DonutChartPainter(),
+                          painter: _DonutChartPainter(
+                            fixedRatio: fixedRatio,
+                            variableRatio: variableRatio,
+                          ),
                           child: Center(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  '1,900,000원',
+                                  CurrencyFormatter.formatKRW(averageExpense),
                                   style: AppTextStyles.headingMd.copyWith(
                                     color: AppColors.gray900,
                                     fontSize: 16.sp,
@@ -111,66 +129,82 @@ class OnboardingAnalysisPage extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         _LegendDot(
-                            color: AppColors.orange500, label: '고정비 65%'),
+                          color: AppColors.orange500,
+                          label:
+                              '고정비 ${(fixedRatio * 100).toStringAsFixed(0)}%',
+                        ),
                         SizedBox(width: 24.w),
                         _LegendDot(
-                            color: const Color(0xFF4CAF50), label: '변동비 35%'),
+                          color: const Color(0xFF4CAF50),
+                          label:
+                              '변동비 ${(variableRatio * 100).toStringAsFixed(0)}%',
+                        ),
                       ],
                     ),
-                    SizedBox(height: 16.h),
 
-                    // Yellow banner
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 16.w, vertical: 12.h),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF8E1),
-                        borderRadius: BorderRadius.circular(8.r),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.lightbulb_outline,
-                              size: 20.w, color: const Color(0xFFFFA000)),
-                          SizedBox(width: 8.w),
-                          Expanded(
-                            child: Text(
-                              '식비 절약이 필요해보여요.',
-                              style: AppTextStyles.bodySm.copyWith(
-                                color: const Color(0xFFF57C00),
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13.sp,
+                    if (insightMessage.isNotEmpty) ...[
+                      SizedBox(height: 16.h),
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 16.w, vertical: 12.h),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF8E1),
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.lightbulb_outline,
+                                size: 20.w,
+                                color: const Color(0xFFFFA000)),
+                            SizedBox(width: 8.w),
+                            Expanded(
+                              child: Text(
+                                insightMessage,
+                                style: AppTextStyles.bodySm.copyWith(
+                                  color: const Color(0xFFF57C00),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13.sp,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 20.h),
-
-                    // Category header
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        '카테고리별 지출',
-                        style: AppTextStyles.bodyMd.copyWith(
-                          color: AppColors.gray900,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14.sp,
+                          ],
                         ),
                       ),
-                    ),
-                    SizedBox(height: 12.h),
+                    ],
 
-                    // Category bars
-                    _CategoryBar(
-                        name: '식비', amount: '750,000원', ratio: 0.75),
-                    SizedBox(height: 12.h),
-                    _CategoryBar(
-                        name: '여가비', amount: '550,000원', ratio: 0.55),
-                    SizedBox(height: 12.h),
-                    _CategoryBar(
-                        name: '교통비', amount: '150,000원', ratio: 0.15),
+                    if (categories.isNotEmpty) ...[
+                      SizedBox(height: 20.h),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '카테고리별 지출',
+                          style: AppTextStyles.bodyMd.copyWith(
+                            color: AppColors.gray900,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14.sp,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 12.h),
+                      ...categories.asMap().entries.map((entry) {
+                        final cat = entry.value;
+                        final ratio = averageExpense > 0
+                            ? (cat.amount / averageExpense).clamp(0.0, 1.0)
+                            : 0.0;
+                        return Padding(
+                          padding: EdgeInsets.only(
+                              bottom: entry.key < categories.length - 1
+                                  ? 12.h
+                                  : 0),
+                          child: _CategoryBar(
+                            name: cat.categoryName,
+                            amount: CurrencyFormatter.formatKRW(cat.amount),
+                            ratio: ratio,
+                          ),
+                        );
+                      }),
+                    ],
                   ],
                 ),
               ),
@@ -313,6 +347,14 @@ class _CategoryBar extends StatelessWidget {
 }
 
 class _DonutChartPainter extends CustomPainter {
+  final double fixedRatio;
+  final double variableRatio;
+
+  const _DonutChartPainter({
+    required this.fixedRatio,
+    required this.variableRatio,
+  });
+
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
@@ -334,8 +376,8 @@ class _DonutChartPainter extends CustomPainter {
       ..strokeCap = StrokeCap.butt;
 
     const startAngle = -math.pi / 2;
-    const fixedSweep = 2 * math.pi * 0.65;
-    const variableSweep = 2 * math.pi * 0.35;
+    final fixedSweep = 2 * math.pi * fixedRatio;
+    final variableSweep = 2 * math.pi * variableRatio;
 
     canvas.drawArc(rect, startAngle, fixedSweep, false, fixedPaint);
     canvas.drawArc(
@@ -343,5 +385,7 @@ class _DonutChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _DonutChartPainter oldDelegate) =>
+      oldDelegate.fixedRatio != fixedRatio ||
+      oldDelegate.variableRatio != variableRatio;
 }
