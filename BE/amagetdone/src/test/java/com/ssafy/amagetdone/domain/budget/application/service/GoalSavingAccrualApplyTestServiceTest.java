@@ -196,7 +196,7 @@ class GoalSavingAccrualApplyTestServiceTest {
 	}
 
 	@Test
-	void applyIsNoOpWhenSamePlanScopeAndPeriodAreRepeated() {
+	void applyAccumulatesWhenSamePlanScopeAndPeriodAreRepeated() {
 		User user = user(1);
 		Plan plan = activePlan(user, 28, "Repeat", 0L, 1);
 		BudgetWeek budgetWeek = budgetWeek(user, 207, 3, LocalDate.of(2026, 3, 16), LocalDate.of(2026, 3, 22), 7);
@@ -215,8 +215,8 @@ class GoalSavingAccrualApplyTestServiceTest {
 		);
 
 		assertThat(first.appliedAmount()).isEqualTo(42_000L);
-		assertThat(second.appliedAmount()).isEqualTo(0L);
-		assertThat(plan.getSavedAmount()).isEqualTo(42_000L);
+		assertThat(second.appliedAmount()).isEqualTo(42_000L);
+		assertThat(plan.getSavedAmount()).isEqualTo(84_000L);
 	}
 
 	@Test
