@@ -7,6 +7,7 @@ class WeeklyAnalysisDto {
   final int fixedEssentialAmount;
   final int variableEssentialAmount;
   final List<WeeklyCategoryExpenseDto> categoryExpenses;
+  final String? lastAnalyzedAt;
 
   const WeeklyAnalysisDto({
     required this.yearWeek,
@@ -17,6 +18,7 @@ class WeeklyAnalysisDto {
     this.fixedEssentialAmount = 0,
     this.variableEssentialAmount = 0,
     this.categoryExpenses = const [],
+    this.lastAnalyzedAt,
   });
 
   factory WeeklyAnalysisDto.fromJson(Map<String, dynamic> json) {
@@ -31,6 +33,7 @@ class WeeklyAnalysisDto {
       categoryExpenses: (json['categoryExpenses'] as List<dynamic>? ?? [])
           .map((e) => WeeklyCategoryExpenseDto.fromJson(e as Map<String, dynamic>))
           .toList(),
+      lastAnalyzedAt: json['lastAnalyzedAt'] as String?,
     );
   }
 }
@@ -42,6 +45,7 @@ class MonthlyAnalysisDto {
   final int fixedEssentialAmount;
   final int variableEssentialAmount;
   final List<WeeklyCategoryExpenseDto> categoryExpenses;
+  final String? lastAnalyzedAt;
 
   const MonthlyAnalysisDto({
     required this.yearMonth,
@@ -50,6 +54,7 @@ class MonthlyAnalysisDto {
     this.fixedEssentialAmount = 0,
     this.variableEssentialAmount = 0,
     this.categoryExpenses = const [],
+    this.lastAnalyzedAt,
   });
 
   factory MonthlyAnalysisDto.fromJson(Map<String, dynamic> json) {
@@ -62,6 +67,7 @@ class MonthlyAnalysisDto {
       categoryExpenses: (json['categoryExpenses'] as List<dynamic>? ?? [])
           .map((e) => WeeklyCategoryExpenseDto.fromJson(e as Map<String, dynamic>))
           .toList(),
+      lastAnalyzedAt: json['lastAnalyzedAt'] as String?,
     );
   }
 }

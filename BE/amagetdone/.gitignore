@@ -1,6 +1,9 @@
 HELP.md
 .gradle
+.gradle-home*/
+.gradle-local/
 build/
+build-verification/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
@@ -38,5 +41,17 @@ out/
 
 .env
 .venv/
+.worktrees/
 docs/plans/
+docs/api/
+docs/finapi/
+docs/kanban/
+docs/issues/
 AGENTS.md
+JIRA.md
+GIT.md
+docs/*.md
+!docs/subagents.skills.md
+docs/superpowers/
+
+ui

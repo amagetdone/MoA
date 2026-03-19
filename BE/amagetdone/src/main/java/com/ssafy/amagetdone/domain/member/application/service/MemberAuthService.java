@@ -2,8 +2,9 @@ package com.ssafy.amagetdone.domain.member.application.service;
 
 import java.util.List;
 
-import com.ssafy.amagetdone.domain.asset.model.repository.AccountRepository;
+import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
+import com.ssafy.amagetdone.domain.member.application.usecase.EnsureFinMemberLinkedUseCase;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
 import com.ssafy.amagetdone.domain.member.application.usecase.FindOrCreateSocialUserUseCase;
@@ -17,11 +18,14 @@ import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.member.support.log.MemberLogHelper;
 import com.ssafy.amagetdone.domain.member.support.util.MemberTokenPair;
 
+import lombok.RequiredArgsConstructor;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class MemberAuthService {
 
 	private static final Logger log = LoggerFactory.getLogger(MemberAuthService.class);
@@ -30,24 +34,9 @@ public class MemberAuthService {
 	private final FindOrCreateSocialUserUseCase findOrCreateSocialUserUseCase;
 	private final IssueMemberTokensUseCase issueMemberTokensUseCase;
 	private final ResetTestSocialUserUseCase resetTestSocialUserUseCase;
+	private final EnsureFinMemberLinkedUseCase ensureFinMemberLinkedUseCase;
 	private final AccountRepository accountRepository;
 	private final PlanRepository planRepository;
-
-	public MemberAuthService(
-		List<SocialAuthClient> socialAuthClients,
-		FindOrCreateSocialUserUseCase findOrCreateSocialUserUseCase,
-		IssueMemberTokensUseCase issueMemberTokensUseCase,
-		ResetTestSocialUserUseCase resetTestSocialUserUseCase,
-		AccountRepository accountRepository,
-		PlanRepository planRepository
-	) {
-		this.socialAuthClients = socialAuthClients;
-		this.findOrCreateSocialUserUseCase = findOrCreateSocialUserUseCase;
-		this.issueMemberTokensUseCase = issueMemberTokensUseCase;
-		this.resetTestSocialUserUseCase = resetTestSocialUserUseCase;
-		this.accountRepository = accountRepository;
-		this.planRepository = planRepository;
-	}
 
 	public SocialAuthDto.Response authenticate(SocialProvider provider, SocialAuthDto.Request request) {
 		return authenticateInternal(provider, request);
@@ -92,8 +81,9 @@ public class MemberAuthService {
 
 			FindOrCreateSocialUserUseCase.Result result = findOrCreateSocialUserUseCase.execute(identity);
 			User user = result.user();
+			linkTestFinancialMemberIfNeeded(provider, user);
 			MemberTokenPair tokenPair = issueMemberTokensUseCase.execute(user, provider);
-			boolean hasAccount = accountRepository.existsByUserId(user.getId());
+			boolean hasAccount = accountRepository.existsLinkedAccountByUserId(user.getId());
 			boolean hasPlan = planRepository.existsByUserId(user.getId());
 
 			log.info(
@@ -131,5 +121,13 @@ public class MemberAuthService {
 			);
 			throw exception;
 		}
+	}
+
+	private void linkTestFinancialMemberIfNeeded(SocialProvider provider, User user) {
+		if (provider != SocialProvider.TEST) {
+			return;
+		}
+		String userKey = ensureFinMemberLinkedUseCase.execute(user.getId(), user.getEmail());
+		user.updateUserKey(userKey);
 	}
 }

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:more_app/data/datasources/remote/spending_remote_datasource.dart';
 import 'package:more_app/data/models/app_snapshot_dto.dart';
 import 'package:more_app/data/models/weekly_analysis_dto.dart';
@@ -12,24 +13,30 @@ class RealSpendingRemoteDataSource implements SpendingRemoteDataSource {
 
   @override
   Future<void> syncTransactions({int months = 3, bool relabel = false}) async {
-    await _dio.post(
+    debugPrint('[Spending] POST /transactions/sync months=$months');
+    final res = await _dio.post(
       '/transactions/sync',
-      data: {'months': months, 'relabel': relabel},
+      data: {'months': months, 'forceFullSync': false},
     );
+    debugPrint('[Spending] sync result: ${res.statusCode} ${res.data}');
   }
 
   @override
   Future<void> analyzeTransactions({int months = 3, bool relabel = false}) async {
-    await _dio.post(
+    debugPrint('[Spending] POST /transactions/analysis months=$months');
+    final res = await _dio.post(
       '/transactions/analysis',
       data: {'months': months, 'relabel': relabel},
     );
+    debugPrint('[Spending] analyze result: ${res.statusCode} ${res.data}');
   }
 
   @override
   Future<WeeklyAnalysisDto> fetchWeeklyAnalysis(String yearWeek) async {
+    debugPrint('[Spending] GET /transactions/analysis/weeks/$yearWeek');
     final response = await _dio.get('/transactions/analysis/weeks/$yearWeek');
-    return WeeklyAnalysisDto.fromJson(response.data['data'] as Map<String, dynamic>);
+    debugPrint('[Spending] weekly result: ${response.statusCode} ${response.data}');
+    return WeeklyAnalysisDto.fromJson(response.data as Map<String, dynamic>);
   }
 
   @override
@@ -49,14 +56,15 @@ class RealSpendingRemoteDataSource implements SpendingRemoteDataSource {
       },
     );
 
-    final items = (response.data['data']['transactions'] as List<dynamic>? ?? []);
+    final items = (response.data['items'] as List<dynamic>? ?? []);
 
     final dailyMap = <String, int>{};
     for (final item in items) {
-      final type = item['transactionType'] as String? ?? '';
-      if (type == '1') continue; // 수입 제외
-      final date = item['transactionDate'] as String? ?? '';
-      final amount = (item['transactionBalance'] as num?)?.toInt() ?? 0;
+      final direction = item['direction'] as String? ?? '';
+      if (direction == 'IN') continue; // 수입 제외
+      final occurredAt = item['occurredAt'] as String? ?? '';
+      final date = occurredAt.length >= 10 ? occurredAt.substring(0, 10) : '';
+      final amount = (item['amount'] as num?)?.toInt() ?? 0;
       if (date.isNotEmpty && amount > 0) {
         dailyMap[date] = (dailyMap[date] ?? 0) + amount;
       }
@@ -70,8 +78,10 @@ class RealSpendingRemoteDataSource implements SpendingRemoteDataSource {
 
   @override
   Future<MonthlyAnalysisDto> fetchMonthlyAnalysis(String yearMonth) async {
+    debugPrint('[Spending] GET /transactions/analysis/months/$yearMonth');
     final response = await _dio.get('/transactions/analysis/months/$yearMonth');
-    return MonthlyAnalysisDto.fromJson(response.data['data'] as Map<String, dynamic>);
+    debugPrint('[Spending] monthly result: ${response.statusCode} ${response.data}');
+    return MonthlyAnalysisDto.fromJson(response.data as Map<String, dynamic>);
   }
 
   @override
@@ -87,25 +97,26 @@ class RealSpendingRemoteDataSource implements SpendingRemoteDataSource {
         'toDate': fmt(monthEnd),
         'analysisInclusion': 'INCLUDED',
         'page': 0,
-        'size': 500,
+        'size': 1000,
       },
     );
 
-    final items = (response.data['data']['transactions'] as List<dynamic>? ?? []);
+    final items = (response.data['items'] as List<dynamic>? ?? []);
 
     final dailyMap = <String, int>{};
     for (final item in items) {
-      final type = item['transactionType'] as String? ?? '';
-      if (type == '1') continue;
-      final date = item['transactionDate'] as String? ?? '';
-      final amount = (item['transactionBalance'] as num?)?.toInt() ?? 0;
+      final direction = item['direction'] as String? ?? '';
+      if (direction == 'IN') continue;
+      final occurredAt = item['occurredAt'] as String? ?? '';
+      final date = occurredAt.length >= 10 ? occurredAt.substring(0, 10) : '';
+      final amount = (item['amount'] as num?)?.toInt() ?? 0;
       if (date.isNotEmpty && amount > 0) {
         dailyMap[date] = (dailyMap[date] ?? 0) + amount;
       }
     }
 
-    final dayCount = monthEnd.day;
-    return List.generate(dayCount, (i) {
+    final daysInMonth = monthEnd.day;
+    return List.generate(daysInMonth, (i) {
       final date = DateTime(monthStart.year, monthStart.month, i + 1);
       return DailySpending(date: date, amount: dailyMap[fmt(date)] ?? 0);
     });

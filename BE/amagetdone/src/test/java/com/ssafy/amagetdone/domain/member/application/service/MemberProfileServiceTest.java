@@ -46,7 +46,7 @@ class MemberProfileServiceTest {
 		User user = User.createPendingSocialUser();
 		setUserId(user, 1);
 		given(userRepository.findById(1)).willReturn(Optional.of(user));
-		given(ensureFinMemberLinkedUseCase.execute("moa@example.com")).willReturn("ssafy-user-key");
+		given(ensureFinMemberLinkedUseCase.execute(1, "moa@example.com")).willReturn("ssafy-user-key");
 
 		ProfileCompletionDto.Response response = memberProfileService.completeProfile(
 			1,
@@ -113,7 +113,7 @@ class MemberProfileServiceTest {
 		User user = User.createPendingSocialUser();
 		setUserId(user, 7);
 		given(userRepository.findById(7)).willReturn(Optional.of(user));
-		given(ensureFinMemberLinkedUseCase.execute("moa@example.com"))
+		given(ensureFinMemberLinkedUseCase.execute(7, "moa@example.com"))
 			.willThrow(new MemberException(MemberErrorCode.FINANCIAL_MEMBER_LINK_FAILED));
 
 		MemberException exception = assertThrows(

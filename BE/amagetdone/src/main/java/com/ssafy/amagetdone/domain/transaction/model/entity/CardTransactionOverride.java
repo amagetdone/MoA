@@ -1,7 +1,7 @@
 package com.ssafy.amagetdone.domain.transaction.model.entity;
 
-import com.ssafy.amagetdone.domain.asset.model.entity.Card;
-import com.ssafy.amagetdone.domain.asset.model.entity.Merchant;
+import com.ssafy.amagetdone.domain.account.model.entity.Card;
+import com.ssafy.amagetdone.domain.account.model.entity.Merchant;
 
 import org.hibernate.annotations.ColumnDefault;
 
@@ -12,7 +12,19 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrimaryKeyJoinColumn;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@SuperBuilder
 @Entity
 @Table(name = "card_transaction_override")
 @PrimaryKeyJoinColumn(name = "id")
@@ -31,6 +43,7 @@ public class CardTransactionOverride extends TransactionOverride {
 	@Column(name = "billStatementsYn", nullable = false)
 	private boolean billStatementsYn;
 
+	@Builder.Default
 	@ColumnDefault("'미결제'")
 	@Column(name = "billStatementsStatus", nullable = false, length = 20)
 	private String billStatementsStatus = "미결제";
@@ -38,7 +51,4 @@ public class CardTransactionOverride extends TransactionOverride {
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "cardUniqueNo", referencedColumnName = "cardUniqueNo", nullable = false)
 	private Card card;
-
-	protected CardTransactionOverride() {
-	}
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
 import 'package:more_app/data/datasources/remote/spending_remote_datasource.dart';
 import 'package:more_app/data/models/app_snapshot_dto.dart';
@@ -35,18 +36,27 @@ class SpendingRepositoryImpl implements SpendingRepository {
   }
 
   @override
-  Future<List<SpendingCategory>> fetchMonthlyCategories(DateTime monthStart) async {
+  Future<MonthlyAnalysisResult> fetchMonthlyAnalysis(DateTime monthStart) async {
     final yearMonth = _toYearMonth(monthStart);
-    final dto = await _remoteDataSource.fetchMonthlyAnalysis(yearMonth);
-    return dto.categoryExpenses
-        .map((e) => SpendingCategory(
-              name: e.categoryName,
-              amount: e.amount,
-              budget: 0,
-              colorValue: 0xFFFF7043,
-              iconKey: 'more_horiz',
-            ))
-        .toList();
+    try {
+      final dto = await _remoteDataSource.fetchMonthlyAnalysis(yearMonth);
+      final categories = dto.categoryExpenses
+          .map((e) => SpendingCategory(
+                name: e.categoryName,
+                amount: e.amount,
+                budget: 0,
+                colorValue: 0xFFFF7043,
+                iconKey: 'more_horiz',
+              ))
+          .toList();
+      return MonthlyAnalysisResult(
+        categories: categories,
+        expenseAmount: dto.expenseAmount,
+      );
+    } catch (e, st) {
+      debugPrint('[Spending] fetchMonthlyAnalysis ERROR: $e\n$st');
+      return const MonthlyAnalysisResult();
+    }
   }
 
   @override
@@ -55,18 +65,27 @@ class SpendingRepositoryImpl implements SpendingRepository {
   }
 
   @override
-  Future<List<SpendingCategory>> fetchWeeklyCategories(DateTime weekStart) async {
+  Future<WeeklyAnalysisResult> fetchWeeklyAnalysis(DateTime weekStart) async {
     final yearWeek = _toIsoYearWeek(weekStart);
-    final dto = await _remoteDataSource.fetchWeeklyAnalysis(yearWeek);
-    return dto.categoryExpenses
-        .map((e) => SpendingCategory(
-              name: e.categoryName,
-              amount: e.amount,
-              budget: 0,
-              colorValue: 0xFFFF7043,
-              iconKey: 'more_horiz',
-            ))
-        .toList();
+    try {
+      final dto = await _remoteDataSource.fetchWeeklyAnalysis(yearWeek);
+      final categories = dto.categoryExpenses
+          .map((e) => SpendingCategory(
+                name: e.categoryName,
+                amount: e.amount,
+                budget: 0,
+                colorValue: 0xFFFF7043,
+                iconKey: 'more_horiz',
+              ))
+          .toList();
+      return WeeklyAnalysisResult(
+        categories: categories,
+        expenseAmount: dto.expenseAmount,
+      );
+    } catch (e, st) {
+      debugPrint('[Spending] fetchWeeklyAnalysis ERROR: $e\n$st');
+      return const WeeklyAnalysisResult();
+    }
   }
 
   String _toIsoYearWeek(DateTime weekMonday) {
