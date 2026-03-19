@@ -42,7 +42,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
       orElse: () => accounts.first,
     );
     setState(() => _selectedAccountNo = primary.accountNumber);
-    ref.read(accountViewModelProvider.notifier).loadTransactions(primary.accountNumber);
+    // ref.read(accountViewModelProvider.notifier).loadTransactions(primary.accountNumber);
   }
 
   void _showFilterBottomSheet(List<Account> accounts) {
@@ -53,7 +53,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
         selectedAccountNo: _selectedAccountNo,
         onAccountSelected: (accountNo) {
           setState(() => _selectedAccountNo = accountNo);
-          ref.read(accountViewModelProvider.notifier).loadTransactions(accountNo);
+          // ref.read(accountViewModelProvider.notifier).loadTransactions(accountNo);
         },
       ),
     );

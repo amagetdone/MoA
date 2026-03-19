@@ -92,16 +92,6 @@ class AccountViewModel extends StateNotifier<AccountState> {
     await _repository.removeAccount(id);
     await loadData();
   }
-
-  Future<void> loadTransactions(String accountNo) async {
-    state = state.copyWith(isLoading: true, clearErrorMessage: true);
-    try {
-      final transactions = await _repository.fetchTransactions(accountNo);
-      state = state.copyWith(isLoading: false, transactions: transactions);
-    } catch (error) {
-      state = state.copyWith(isLoading: false, errorMessage: error.toString());
-    }
-  }
 }
 
 final accountViewModelProvider =
