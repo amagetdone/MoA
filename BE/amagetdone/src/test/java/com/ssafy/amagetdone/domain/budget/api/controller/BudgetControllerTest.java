@@ -1,6 +1,7 @@
 package com.ssafy.amagetdone.domain.budget.api.controller;
 
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -138,6 +139,8 @@ class BudgetControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.data.success").value(true));
+
+		verify(triggerBudgetAllocationUseCase).execute(1);
 	}
 
 	@Test

@@ -2,7 +2,10 @@ package com.ssafy.amagetdone.domain.plan.application.service;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
+import com.ssafy.amagetdone.domain.budget.application.usecase.TriggerBudgetAllocationUseCase;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
@@ -17,10 +20,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class PlanStatusScheduler {
 
 	private final PlanRepository planRepository;
+	private final TriggerBudgetAllocationUseCase triggerBudgetAllocationUseCase;
 	private final Clock clock;
 
-	public PlanStatusScheduler(PlanRepository planRepository, Clock clock) {
+	public PlanStatusScheduler(
+		PlanRepository planRepository,
+		TriggerBudgetAllocationUseCase triggerBudgetAllocationUseCase,
+		Clock clock
+	) {
 		this.planRepository = planRepository;
+		this.triggerBudgetAllocationUseCase = triggerBudgetAllocationUseCase;
 		this.clock = clock;
 	}
 
@@ -38,6 +47,7 @@ public class PlanStatusScheduler {
 
 	@Transactional
 	void activateStartedPlans(LocalDate today) {
+		Set<Integer> activatedUserIds = new LinkedHashSet<>();
 		planRepository.findAllByStatusAndStartDateLessThanEqualAndAiPipelineStatus(
 				PlanStatus.WAITING,
 				today,
@@ -46,7 +56,11 @@ public class PlanStatusScheduler {
 			.forEach(plan -> {
 				if (plan.getStatus() == PlanStatus.WAITING) {
 					plan.activate();
+					if (plan.getUser() != null && plan.getUser().getId() != null) {
+						activatedUserIds.add(plan.getUser().getId());
+					}
 				}
 			});
+		activatedUserIds.forEach(triggerBudgetAllocationUseCase::execute);
 	}
 }

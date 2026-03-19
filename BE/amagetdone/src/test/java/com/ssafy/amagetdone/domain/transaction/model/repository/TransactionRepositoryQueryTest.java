@@ -103,6 +103,15 @@ class TransactionRepositoryQueryTest {
 		);
 		assertMethod(
 			TransactionAnalysisResultRepository.class,
+			"findAllByUserIdAndAnalyzedAtAndTransactionDateTimeBetween",
+			List.class,
+			Integer.class,
+			LocalDateTime.class,
+			LocalDateTime.class,
+			LocalDateTime.class
+		);
+		assertMethod(
+			TransactionAnalysisResultRepository.class,
 			"summarizeByUserIdAndPeriod",
 			List.class,
 			Integer.class,
