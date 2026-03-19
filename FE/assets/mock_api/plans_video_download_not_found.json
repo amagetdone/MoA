@@ -1,0 +1,6 @@
+{
+  "status": "error",
+  "message": "Plan video not found",
+  "errorCode": "PLAN_004",
+  "detail": null
+}

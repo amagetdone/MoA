@@ -7,6 +7,7 @@ import 'package:more_app/data/datasources/remote/account_remote_datasource.dart'
 import 'package:more_app/data/datasources/remote/auth_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/goal_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/home_remote_datasource.dart';
+import 'package:more_app/data/datasources/remote/mock/mock_api_goal_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/menu_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/real/real_auth_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/real/real_account_remote_datasource.dart';
@@ -14,9 +15,7 @@ import 'package:more_app/data/datasources/remote/real/real_goal_remote_datasourc
 import 'package:more_app/data/datasources/remote/seed/seed_data_store.dart';
 import 'package:more_app/data/datasources/remote/seed/seed_home_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/real/real_menu_remote_datasource.dart';
-import 'package:more_app/data/datasources/remote/seed/seed_menu_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/real/real_spending_remote_datasource.dart';
-import 'package:more_app/data/datasources/remote/seed/seed_spending_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/social_auth_datasource.dart';
 import 'package:more_app/data/datasources/remote/social_auth_datasource_impl.dart';
 import 'package:more_app/data/datasources/remote/spending_remote_datasource.dart';
@@ -86,9 +85,13 @@ final accountRemoteDataSourceProvider =
 });
 
 final goalRemoteDataSourceProvider = Provider<GoalRemoteDataSource>((ref) {
-  return RealGoalRemoteDataSource(
-    dio: ref.read(apiClientProvider).dio,
-  );
+  const forceGoalMockApi = bool.fromEnvironment('USE_GOAL_MOCK_API');
+
+  if (forceGoalMockApi) {
+    return MockApiGoalRemoteDataSource();
+  }
+
+  return RealGoalRemoteDataSource(dio: ref.read(apiClientProvider).dio);
 });
 
 final spendingRemoteDataSourceProvider =

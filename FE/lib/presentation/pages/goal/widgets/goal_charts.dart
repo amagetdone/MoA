@@ -5,453 +5,1057 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
+import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:more_app/domain/entities/goal.dart';
 import 'package:more_app/domain/entities/spending.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 
-// ─── 달성 현황 라인 차트 ──────────────────────────────────────
 class GoalLineChart extends StatelessWidget {
+  const GoalLineChart({super.key, required this.history, required this.goal});
+
   final List<DailySpending> history;
   final Goal goal;
 
-  const GoalLineChart({super.key, required this.history, required this.goal});
+  @override
+  Widget build(BuildContext context) {
+    final graphData = goal.graphData;
+    if (graphData != null &&
+        (graphData.weeks.isNotEmpty ||
+            graphData.planned.isNotEmpty ||
+            graphData.actual.isNotEmpty)) {
+      final totalWeekCount = math.max(
+        goal.totalWeeks,
+        math.max(
+          graphData.weeks.length,
+          math.max(graphData.planned.length, graphData.actual.length),
+        ),
+      );
+      final actualSeries = _buildCumulativeSeries(
+        weeklyValues: graphData.actual,
+        totalWeeks: totalWeekCount,
+      );
+      final plannedSeries = _buildCumulativeSeries(
+        weeklyValues: graphData.planned,
+        totalWeeks: totalWeekCount,
+      );
+
+      return _LineChartCard(
+        title: '달성 추이',
+        helperText:
+            '1주차부터 마지막 주차까지 전체 경로를 한 번에 보여줍니다. 원하는 지점을 터치하면 금액을 확인할 수 있습니다.',
+        primaryLegend: '실제',
+        secondaryLegend: '예상 경로',
+        primaryColor: AppColors.green500,
+        secondaryColor: AppColors.textTertiary,
+        primarySeries: [
+          for (var i = 0; i < totalWeekCount; i++)
+            _ChartDatum(
+              x: i.toDouble(),
+              label: '${i + 1}주차',
+              value: actualSeries[i],
+            ),
+        ],
+        secondarySeries: [
+          for (var i = 0; i < totalWeekCount; i++)
+            _ChartDatum(
+              x: i.toDouble(),
+              label: '${i + 1}주차',
+              value: plannedSeries[i],
+            ),
+        ],
+      );
+    }
+
+    final totalWeeks = math.max(goal.totalWeeks, 1);
+    final weeklyTotals = List<int>.filled(totalWeeks, 0);
+    for (final item in history) {
+      final weekIndex = (item.date.difference(goal.startDate).inDays ~/ 7)
+          .clamp(0, totalWeeks - 1);
+      weeklyTotals[weekIndex] += item.amount;
+    }
+
+    if (weeklyTotals.every((value) => value == 0) && goal.targetAmount <= 0) {
+      return const SizedBox.shrink();
+    }
+
+    final actualSeries = _buildCumulativeSeries(
+      weeklyValues: weeklyTotals,
+      totalWeeks: totalWeeks,
+    );
+    final plannedSeries = _buildEvenPlanSeries(
+      totalWeeks: totalWeeks,
+      targetAmount: goal.targetAmount,
+    );
+
+    return _LineChartCard(
+      title: '달성 추이',
+      helperText:
+          '1주차부터 마지막 주차까지 전체 경로를 한 번에 보여줍니다. 원하는 지점을 터치하면 금액을 확인할 수 있습니다.',
+      primaryLegend: '실제',
+      secondaryLegend: '예상 경로',
+      primaryColor: AppColors.green500,
+      secondaryColor: AppColors.textTertiary,
+      primarySeries: [
+        for (var i = 0; i < totalWeeks; i++)
+          _ChartDatum(
+            x: i.toDouble(),
+            label: '${i + 1}주차',
+            value: actualSeries[i],
+          ),
+      ],
+      secondarySeries: [
+        for (var i = 0; i < totalWeeks; i++)
+          _ChartDatum(
+            x: i.toDouble(),
+            label: '${i + 1}주차',
+            value: plannedSeries[i],
+          ),
+      ],
+    );
+  }
+}
+
+class GoalBarChart extends StatelessWidget {
+  const GoalBarChart({super.key, required this.history, required this.goal});
+
+  final List<DailySpending> history;
+  final Goal goal;
 
   @override
   Widget build(BuildContext context) {
-    if (history.isEmpty) return const SizedBox.shrink();
+    if (goal.weeklyPlans.isNotEmpty) {
+      final sortedPlans = [...goal.weeklyPlans]
+        ..sort((a, b) => a.week.compareTo(b.week));
+      final currentWeek = goal.currentWeekNumber;
+      final highlightedIndex = sortedPlans.indexWhere(
+        (plan) => plan.week == currentWeek,
+      );
+      final safeHighlightedIndex = highlightedIndex >= 0
+          ? highlightedIndex
+          : sortedPlans.length - 1;
+      final highlightedPlan = sortedPlans[safeHighlightedIndex];
+      final weeklyTarget = goal.weeklyMission?.weeklySavingsAmount.toDouble();
 
-    final totalDays =
-        goal.endDate.difference(goal.startDate).inDays.toDouble();
-    final targetAmount = goal.targetAmount.toDouble();
+      return _BarChartCard(
+        title: '저축 이력',
+        leftMetricLabel: '현재 주차 계획',
+        leftMetricValue: CurrencyFormatter.formatKRW(highlightedPlan.amount),
+        leftMetricColor: AppColors.orange500,
+        rightMetricLabel: '주간 목표',
+        rightMetricValue: CurrencyFormatter.formatKRW(
+          weeklyTarget?.round() ?? 0,
+        ),
+        bars: [
+          for (final plan in sortedPlans)
+            _ChartDatum(
+              x: (plan.week - 1).toDouble(),
+              label: '${plan.week}주차',
+              value: plan.amount.toDouble(),
+            ),
+        ],
+        referenceLineY: weeklyTarget,
+        highlightedIndex: safeHighlightedIndex,
+        baseColor: AppColors.green500,
+        highlightedColor: AppColors.orange500,
+        tooltipPrefix: '주간 계획',
+      );
+    }
 
-    // 누적 실적 spot (X = startDate 기준 경과일)
-    final actualSpots = <FlSpot>[];
-    var cumulative = 0;
+    final weeklyTotals = <int, int>{};
     for (final item in history) {
-      cumulative += item.amount;
-      final x = item.date.difference(goal.startDate).inDays
-          .toDouble()
-          .clamp(0.0, totalDays);
-      actualSpots.add(FlSpot(x, cumulative.toDouble()));
+      final weekIndex = (item.date.difference(goal.startDate).inDays ~/ 7)
+          .clamp(0, 9999);
+      weeklyTotals[weekIndex] = (weeklyTotals[weekIndex] ?? 0) + item.amount;
     }
 
-    final lastSpot = actualSpots.last;
-    final projectionSpots = <FlSpot>[
-      lastSpot,
-      FlSpot(totalDays, targetAmount),
+    final fallbackWeekCount = math.max(
+      1,
+      math.max(goal.currentWeekNumber, goal.totalWeeks),
+    );
+    final latestWeekIndex = weeklyTotals.isEmpty
+        ? fallbackWeekCount - 1
+        : (weeklyTotals.keys.toList()..sort()).last;
+    final latestWeekAmount = weeklyTotals[latestWeekIndex] ?? 0;
+    final weeklyTarget = goal.totalWeeks > 0
+        ? goal.targetAmount / goal.totalWeeks
+        : 0.0;
+
+    return _BarChartCard(
+      title: '저축 이력',
+      leftMetricLabel: '최근 주 저축',
+      leftMetricValue: CurrencyFormatter.formatKRW(latestWeekAmount),
+      leftMetricColor: AppColors.green500,
+      rightMetricLabel: '주간 목표',
+      rightMetricValue: CurrencyFormatter.formatKRW(weeklyTarget.round()),
+      bars: [
+        for (var i = 0; i <= latestWeekIndex; i++)
+          _ChartDatum(
+            x: i.toDouble(),
+            label: '${i + 1}주차',
+            value: (weeklyTotals[i] ?? 0).toDouble(),
+          ),
+      ],
+      referenceLineY: weeklyTarget > 0 ? weeklyTarget : null,
+      highlightedIndex: latestWeekIndex,
+      baseColor: AppColors.green500,
+      highlightedColor: AppColors.green500,
+      tooltipPrefix: '저축 금액',
+    );
+  }
+}
+
+class _LineChartCard extends StatefulWidget {
+  const _LineChartCard({
+    required this.title,
+    required this.helperText,
+    required this.primaryLegend,
+    required this.secondaryLegend,
+    required this.primaryColor,
+    required this.secondaryColor,
+    required this.primarySeries,
+    required this.secondarySeries,
+  });
+
+  final String title;
+  final String helperText;
+  final String primaryLegend;
+  final String secondaryLegend;
+  final Color primaryColor;
+  final Color secondaryColor;
+  final List<_ChartDatum> primarySeries;
+  final List<_ChartDatum> secondarySeries;
+
+  @override
+  State<_LineChartCard> createState() => _LineChartCardState();
+}
+
+class _LineChartCardState extends State<_LineChartCard> {
+  int? _selectedIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final allValues = <double>[
+      ...widget.primarySeries.map((e) => e.value),
+      ...widget.secondarySeries.map((e) => e.value),
     ];
+    final maxY = _resolvePositiveChartMaxY(allValues, paddingFactor: 1.1);
+    final titleInterval = math.max(1, (widget.primarySeries.length / 6).ceil());
+    final latestActual = widget.primarySeries.isEmpty
+        ? 0
+        : widget.primarySeries.last.value.round();
+    final latestPlanned = widget.secondarySeries.isEmpty
+        ? 0
+        : widget.secondarySeries.last.value.round();
 
-    final maxY = math.max(targetAmount, lastSpot.y) * 1.2;
-    // X축 틱: 월 경계(매월 1일) 기준으로 직접 계산
-    final monthTicks = <double>[];
-    var tickDate = DateTime(goal.startDate.year, goal.startDate.month + 1, 1);
-    while (tickDate.isBefore(goal.endDate)) {
-      monthTicks.add(tickDate.difference(goal.startDate).inDays.toDouble());
-      tickDate = DateTime(tickDate.year, tickDate.month + 1, 1);
-    }
-    // 시작·끝 추가 (중복 제거 후 정렬)
-    monthTicks.insert(0, 0);
-    if (!monthTicks.contains(totalDays)) monthTicks.add(totalDays);
-    monthTicks.sort();
+    final primaryBar = LineChartBarData(
+      spots: [
+        for (final item in widget.primarySeries) FlSpot(item.x, item.value),
+      ],
+      isCurved: true,
+      color: widget.primaryColor,
+      barWidth: 2.8,
+      isStrokeCapRound: true,
+      dotData: FlDotData(
+        show: true,
+        checkToShowDot: (spot, _) =>
+            _selectedIndex != null && spot.x.toInt() == _selectedIndex,
+        getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
+          radius: 4.2,
+          color: widget.primaryColor,
+          strokeWidth: 2,
+          strokeColor: Colors.white,
+        ),
+      ),
+      belowBarData: BarAreaData(
+        show: true,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            widget.primaryColor.withValues(alpha: 0.18),
+            widget.primaryColor.withValues(alpha: 0),
+          ],
+        ),
+      ),
+    );
 
-    final tickInterval = totalDays / 8; // dummy: getTitlesWidget에서 필터링
+    final secondaryBar = LineChartBarData(
+      spots: [
+        for (final item in widget.secondarySeries) FlSpot(item.x, item.value),
+      ],
+      isCurved: true,
+      color: widget.secondaryColor,
+      barWidth: 2,
+      dashArray: const [6, 4],
+      dotData: FlDotData(
+        show: true,
+        checkToShowDot: (spot, _) =>
+            _selectedIndex != null && spot.x.toInt() == _selectedIndex,
+        getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
+          radius: 3.8,
+          color: widget.secondaryColor,
+          strokeWidth: 2,
+          strokeColor: Colors.white,
+        ),
+      ),
+      belowBarData: BarAreaData(show: false),
+    );
 
     return MoreCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 타이틀 + 목표 금액
+          Text(
+            widget.title,
+            style: AppTextStyles.headingMd.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: 10.h),
+          _MetricRow(
+            leftLabel: '현재 누적',
+            leftValue: CurrencyFormatter.formatKRW(latestActual),
+            leftColor: widget.primaryColor,
+            rightLabel: '예상 누적',
+            rightValue: CurrencyFormatter.formatKRW(latestPlanned),
+            rightColor: AppColors.textPrimary,
+          ),
+          SizedBox(height: 10.h),
+          _LegendRow(
+            items: [
+              _LegendItem(
+                label: widget.primaryLegend,
+                color: widget.primaryColor,
+              ),
+              _LegendItem(
+                label: widget.secondaryLegend,
+                color: widget.secondaryColor,
+                dashed: true,
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            widget.helperText,
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textTertiary,
+            ),
+          ),
+          SizedBox(height: 12.h),
+          SizedBox(
+            height: 300.h,
+            child: LineChart(
+              LineChartData(
+                minX: 0,
+                maxX: math.max(0, widget.primarySeries.length - 1).toDouble(),
+                minY: 0,
+                maxY: maxY,
+                clipData: const FlClipData.all(),
+                borderData: FlBorderData(show: false),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: _resolveGridInterval(maxY),
+                  getDrawingHorizontalLine: (_) =>
+                      FlLine(color: AppColors.borderDefault, strokeWidth: 1),
+                ),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 42.w,
+                      interval: _resolveGridInterval(maxY),
+                      getTitlesWidget: (value, meta) => Padding(
+                        padding: EdgeInsets.only(right: 6.w),
+                        child: Text(
+                          _formatAxisAmount(value),
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28.h,
+                      interval: titleInterval.toDouble(),
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index < 0 || index >= widget.primarySeries.length) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: EdgeInsets.only(top: 6.h),
+                          child: Text(
+                            widget.primarySeries[index].label,
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                lineTouchData: LineTouchData(
+                  enabled: true,
+                  handleBuiltInTouches: false,
+                  touchTooltipData: LineTouchTooltipData(
+                    fitInsideHorizontally: true,
+                    fitInsideVertically: true,
+                    tooltipRoundedRadius: 12.r,
+                    tooltipPadding: EdgeInsets.symmetric(
+                      horizontal: 10.w,
+                      vertical: 6.h,
+                    ),
+                    tooltipMargin: 8.h,
+                    getTooltipColor: (_) => Colors.white,
+                    getTooltipItems: (spots) => spots
+                        .map(
+                          (spot) => LineTooltipItem(
+                            '${spot.barIndex == 0 ? widget.primaryLegend : widget.secondaryLegend}\n${CurrencyFormatter.formatKRW(spot.y.round())}',
+                            AppTextStyles.caption.copyWith(
+                              color: spot.barIndex == 0
+                                  ? widget.primaryColor
+                                  : widget.secondaryColor,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  touchCallback: (event, response) {
+                    if (event is FlTapUpEvent) {
+                      setState(() {
+                        _selectedIndex = response?.lineBarSpots?.isEmpty ?? true
+                            ? null
+                            : response!.lineBarSpots!.first.spotIndex;
+                      });
+                    }
+                  },
+                ),
+                showingTooltipIndicators: _selectedIndex == null
+                    ? const []
+                    : [
+                        if (_selectedIndex! < primaryBar.spots.length)
+                          ShowingTooltipIndicators([
+                            LineBarSpot(
+                              primaryBar,
+                              0,
+                              primaryBar.spots[_selectedIndex!],
+                            ),
+                          ]),
+                        if (_selectedIndex! < secondaryBar.spots.length)
+                          ShowingTooltipIndicators([
+                            LineBarSpot(
+                              secondaryBar,
+                              1,
+                              secondaryBar.spots[_selectedIndex!],
+                            ),
+                          ]),
+                      ],
+                lineBarsData: [primaryBar, secondaryBar],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BarChartCard extends StatefulWidget {
+  const _BarChartCard({
+    required this.title,
+    required this.leftMetricLabel,
+    required this.leftMetricValue,
+    required this.leftMetricColor,
+    required this.rightMetricLabel,
+    required this.rightMetricValue,
+    required this.bars,
+    required this.baseColor,
+    required this.highlightedColor,
+    required this.tooltipPrefix,
+    this.referenceLineY,
+    this.highlightedIndex,
+  });
+
+  final String title;
+  final String leftMetricLabel;
+  final String leftMetricValue;
+  final Color leftMetricColor;
+  final String rightMetricLabel;
+  final String rightMetricValue;
+  final List<_ChartDatum> bars;
+  final double? referenceLineY;
+  final int? highlightedIndex;
+  final Color baseColor;
+  final Color highlightedColor;
+  final String tooltipPrefix;
+
+  @override
+  State<_BarChartCard> createState() => _BarChartCardState();
+}
+
+class _BarChartCardState extends State<_BarChartCard> {
+  final ScrollController _scrollController = ScrollController();
+
+  double _zoom = 1.0;
+  int? _selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.highlightedIndex;
+    _scrollController.addListener(_handleScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_handleScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _handleScroll() => setState(() {});
+
+  void _zoomIn() => setState(() => _zoom = (_zoom + 0.2).clamp(0.8, 2.4));
+
+  void _zoomOut() => setState(() => _zoom = (_zoom - 0.2).clamp(0.8, 2.4));
+
+  @override
+  Widget build(BuildContext context) {
+    return MoreCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.title,
+            style: AppTextStyles.headingMd.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: 10.h),
+          _MetricRow(
+            leftLabel: widget.leftMetricLabel,
+            leftValue: widget.leftMetricValue,
+            leftColor: widget.leftMetricColor,
+            rightLabel: widget.rightMetricLabel,
+            rightValue: widget.rightMetricValue,
+            rightColor: AppColors.textPrimary,
+          ),
+          SizedBox(height: 10.h),
+          _ChartControlRow(
+            onZoomIn: _zoomIn,
+            onZoomOut: _zoomOut,
+            helperText:
+                '좌우로 스크롤하고, 막대를 터치해 금액을 확인하세요. 화면에 보이는 구간 기준으로 높이가 다시 계산됩니다.',
+          ),
+          SizedBox(height: 8.h),
+          SizedBox(
+            height: 360.h,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final count = widget.bars.length;
+                final stepWidth = 56.w * _zoom;
+                final chartWidth = math.max(
+                  constraints.maxWidth,
+                  count * stepWidth,
+                );
+                final visibleCount = math.max(
+                  1,
+                  (constraints.maxWidth / stepWidth).ceil(),
+                );
+                final startIndex = _scrollController.hasClients
+                    ? (_scrollController.offset / stepWidth).floor()
+                    : 0;
+                final clampedStart = startIndex
+                    .clamp(0, math.max(0, count - 1))
+                    .toInt();
+                final endIndex = math.min(
+                  count - 1,
+                  clampedStart + visibleCount - 1,
+                );
+                final visibleValues = <double>[
+                  for (var i = clampedStart; i <= endIndex; i++)
+                    widget.bars[i].value,
+                  if (widget.referenceLineY != null) widget.referenceLineY!,
+                ];
+                final bounds = _resolveBarChartBounds(visibleValues);
+                final titleInterval = math.max(1, (visibleCount / 4).ceil());
+                final barWidth = math.min(stepWidth * 0.48, 28.w).toDouble();
+
+                return SingleChildScrollView(
+                  controller: _scrollController,
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: chartWidth,
+                    child: BarChart(
+                      BarChartData(
+                        minY: bounds.minY,
+                        maxY: bounds.maxY,
+                        alignment: BarChartAlignment.spaceAround,
+                        borderData: FlBorderData(show: false),
+                        gridData: FlGridData(
+                          show: true,
+                          drawVerticalLine: false,
+                          horizontalInterval: bounds.interval,
+                          getDrawingHorizontalLine: (_) => FlLine(
+                            color: AppColors.borderDefault,
+                            strokeWidth: 1,
+                          ),
+                        ),
+                        titlesData: FlTitlesData(
+                          topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 42.w,
+                              interval: bounds.interval,
+                              getTitlesWidget: (value, meta) => Padding(
+                                padding: EdgeInsets.only(right: 6.w),
+                                child: Text(
+                                  _formatAxisAmount(value),
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: AppColors.textTertiary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 28.h,
+                              interval: titleInterval.toDouble(),
+                              getTitlesWidget: (value, meta) {
+                                final index = value.toInt();
+                                if (index < 0 || index >= widget.bars.length) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Padding(
+                                  padding: EdgeInsets.only(top: 6.h),
+                                  child: Text(
+                                    widget.bars[index].label,
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: AppColors.textTertiary,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        barTouchData: BarTouchData(
+                          enabled: true,
+                          handleBuiltInTouches: false,
+                          touchTooltipData: BarTouchTooltipData(
+                            fitInsideHorizontally: true,
+                            fitInsideVertically: true,
+                            tooltipRoundedRadius: 12.r,
+                            tooltipPadding: EdgeInsets.symmetric(
+                              horizontal: 10.w,
+                              vertical: 6.h,
+                            ),
+                            tooltipMargin: 8.h,
+                            getTooltipColor: (_) => Colors.white,
+                            getTooltipItem:
+                                (
+                                  group,
+                                  groupIndex,
+                                  rod,
+                                  rodIndex,
+                                ) => BarTooltipItem(
+                                  '${widget.tooltipPrefix}\n${CurrencyFormatter.formatKRW(rod.toY.round())}',
+                                  AppTextStyles.caption.copyWith(
+                                    color: group.x == widget.highlightedIndex
+                                        ? widget.highlightedColor
+                                        : widget.baseColor,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                          ),
+                          touchCallback: (event, response) {
+                            if (event is FlTapUpEvent) {
+                              setState(() {
+                                _selectedIndex = response?.spot == null
+                                    ? null
+                                    : response!.spot!.touchedBarGroupIndex;
+                              });
+                            }
+                          },
+                        ),
+                        extraLinesData: widget.referenceLineY == null
+                            ? null
+                            : ExtraLinesData(
+                                horizontalLines: [
+                                  HorizontalLine(
+                                    y: widget.referenceLineY!,
+                                    color: AppColors.textTertiary.withValues(
+                                      alpha: 0.55,
+                                    ),
+                                    strokeWidth: 1.5,
+                                    dashArray: const [6, 4],
+                                  ),
+                                ],
+                              ),
+                        barGroups: List.generate(widget.bars.length, (index) {
+                          return BarChartGroupData(
+                            x: index,
+                            showingTooltipIndicators: _selectedIndex == index
+                                ? const [0]
+                                : const [],
+                            barRods: [
+                              BarChartRodData(
+                                toY: widget.bars[index].value,
+                                color: index == widget.highlightedIndex
+                                    ? widget.highlightedColor
+                                    : widget.baseColor,
+                                width: barWidth,
+                                borderRadius: BorderRadius.only(
+                                  topLeft: Radius.circular(4.r),
+                                  topRight: Radius.circular(4.r),
+                                ),
+                              ),
+                            ],
+                          );
+                        }),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChartDatum {
+  const _ChartDatum({
+    required this.x,
+    required this.label,
+    required this.value,
+  });
+
+  final double x;
+  final String label;
+  final double value;
+}
+
+class _MetricRow extends StatelessWidget {
+  const _MetricRow({
+    required this.leftLabel,
+    required this.leftValue,
+    required this.leftColor,
+    required this.rightLabel,
+    required this.rightValue,
+    required this.rightColor,
+  });
+
+  final String leftLabel;
+  final String leftValue;
+  final Color leftColor;
+  final String rightLabel;
+  final String rightValue;
+  final Color rightColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _MetricBlock(
+            label: leftLabel,
+            value: leftValue,
+            color: leftColor,
+          ),
+        ),
+        Expanded(
+          child: _MetricBlock(
+            label: rightLabel,
+            value: rightValue,
+            color: rightColor,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MetricBlock extends StatelessWidget {
+  const _MetricBlock({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(right: 8.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textTertiary,
+            ),
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.bodySm.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChartControlRow extends StatelessWidget {
+  const _ChartControlRow({
+    required this.onZoomIn,
+    required this.onZoomOut,
+    required this.helperText,
+  });
+
+  final VoidCallback onZoomIn;
+  final VoidCallback onZoomOut;
+  final String helperText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            helperText,
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textTertiary,
+            ),
+          ),
+        ),
+        _ZoomButton(icon: Icons.remove_rounded, onTap: onZoomOut),
+        SizedBox(width: 6.w),
+        _ZoomButton(icon: Icons.add_rounded, onTap: onZoomIn),
+      ],
+    );
+  }
+}
+
+class _ZoomButton extends StatelessWidget {
+  const _ZoomButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(999.r),
+      onTap: onTap,
+      child: Container(
+        width: 28.w,
+        height: 28.w,
+        decoration: BoxDecoration(
+          color: AppColors.gray50,
+          borderRadius: BorderRadius.circular(999.r),
+        ),
+        child: Icon(icon, size: 18.w, color: AppColors.textPrimary),
+      ),
+    );
+  }
+}
+
+class _LegendRow extends StatelessWidget {
+  const _LegendRow({required this.items});
+
+  final List<_LegendItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 12.w,
+      runSpacing: 6.h,
+      children: [
+        for (final item in items)
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                '목표 달성 현황',
-                style: AppTextStyles.headingMd.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
+              Container(
+                width: 12.w,
+                height: 12.w,
+                decoration: BoxDecoration(
+                  color: item.dashed ? Colors.transparent : item.color,
+                  borderRadius: BorderRadius.circular(999.r),
+                  border: item.dashed
+                      ? Border.all(color: item.color, width: 1.4)
+                      : null,
                 ),
               ),
+              SizedBox(width: 6.w),
               Text(
-                _fmtAmount(goal.targetAmount),
+                item.label,
                 style: AppTextStyles.caption.copyWith(
                   color: AppColors.textTertiary,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 16.h),
-          SizedBox(
-            height: 200.h,
-            child: LineChart(
-              LineChartData(
-                clipData: const FlClipData.all(),
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: maxY / 4,
-                  getDrawingHorizontalLine: (_) => FlLine(
-                    color: AppColors.borderDefault,
-                    strokeWidth: 1,
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  leftTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 28.h,
-                      interval: tickInterval,
-                      getTitlesWidget: (value, meta) {
-                        // 월 경계 틱만 표시
-                        final nearest = monthTicks.fold<double>(
-                          monthTicks.first,
-                          (prev, t) =>
-                              (t - value).abs() < (prev - value).abs()
-                                  ? t
-                                  : prev,
-                        );
-                        if ((nearest - value).abs() > tickInterval * 0.5) {
-                          return const SizedBox.shrink();
-                        }
-                        final date = goal.startDate
-                            .add(Duration(days: nearest.toInt()));
-                        return Padding(
-                          padding: EdgeInsets.only(top: 4.h),
-                          child: Text(
-                            '${date.month}월',
-                            style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textTertiary,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                minX: 0,
-                maxX: totalDays,
-                minY: 0,
-                maxY: maxY,
-                lineBarsData: [
-                  // ① 실적 라인 (초록 solid)
-                  LineChartBarData(
-                    spots: actualSpots,
-                    isCurved: true,
-                    curveSmoothness: 0.15,
-                    color: AppColors.green500,
-                    barWidth: 2.5,
-                    isStrokeCapRound: true,
-                    dotData: FlDotData(
-                      show: true,
-                      checkToShowDot: (spot, _) =>
-                          spot.x == lastSpot.x && spot.y == lastSpot.y,
-                      getDotPainter: (_, __, ___, ____) =>
-                          FlDotCirclePainter(
-                            radius: 4,
-                            color: AppColors.green500,
-                            strokeColor: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                    ),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          AppColors.green500.withValues(alpha: 0.25),
-                          AppColors.green500.withValues(alpha: 0),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // ② 프로젝션 라인 (점선)
-                  LineChartBarData(
-                    spots: projectionSpots,
-                    isCurved: false,
-                    color: AppColors.textTertiary.withValues(alpha: 0.45),
-                    barWidth: 1.8,
-                    dashArray: [6, 4],
-                    dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(show: false),
-                  ),
-                ],
-                lineTouchData: LineTouchData(
-                  touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (_) => AppColors.textPrimary,
-                    getTooltipItems: (touched) => touched
-                        .map(
-                          (s) => LineTooltipItem(
-                            _fmtAmount(s.y.toInt()),
-                            AppTextStyles.caption
-                                .copyWith(color: Colors.white),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // 현재 저축액 레이블 (라인 끝 아래)
-          SizedBox(height: 4.h),
-          Text(
-            _fmtAmount(cumulative),
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.green500,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
+      ],
     );
-  }
-
-  String _fmtAmount(int amount) {
-    if (amount >= 10000) {
-      final man = amount ~/ 10000;
-      final rest = amount % 10000;
-      return rest == 0 ? '$man만원' : '${(amount / 10000).toStringAsFixed(1)}만원';
-    }
-    return '$amount원';
   }
 }
 
-// ─── 저축 이력 바 차트 ────────────────────────────────────────
-class GoalBarChart extends StatelessWidget {
-  final List<DailySpending> history;
-  final Goal goal;
+class _LegendItem {
+  const _LegendItem({
+    required this.label,
+    required this.color,
+    this.dashed = false,
+  });
 
-  const GoalBarChart({super.key, required this.history, required this.goal});
+  final String label;
+  final Color color;
+  final bool dashed;
+}
 
-  @override
-  Widget build(BuildContext context) {
-    if (history.isEmpty) return const SizedBox.shrink();
+class _BarChartBounds {
+  const _BarChartBounds({
+    required this.minY,
+    required this.maxY,
+    required this.interval,
+  });
 
-    // ① 주차별 합산
-    final Map<int, int> weeklyTotals = {};
-    for (final item in history) {
-      final w = item.date.difference(goal.startDate).inDays ~/ 7;
-      weeklyTotals[w] = (weeklyTotals[w] ?? 0) + item.amount;
+  final double minY;
+  final double maxY;
+  final double interval;
+}
+
+List<double> _buildCumulativeSeries({
+  required List<int> weeklyValues,
+  required int totalWeeks,
+}) {
+  final safeTotalWeeks = math.max(totalWeeks, weeklyValues.length);
+  final result = <double>[];
+  var cumulative = 0.0;
+
+  for (var i = 0; i < safeTotalWeeks; i++) {
+    if (i < weeklyValues.length) {
+      cumulative += weeklyValues[i].toDouble();
     }
-
-    // ② 메타 계산
-    final totalWeeks =
-        (goal.endDate.difference(goal.startDate).inDays / 7).ceil();
-    final currentWeek =
-        DateTime.now().difference(goal.startDate).inDays ~/ 7;
-    final weeklyTarget =
-        totalWeeks > 0 ? goal.targetAmount / totalWeeks : 0.0;
-
-    // 표시할 주차 수 (최대 8주)
-    final displayWeeks = math.min(totalWeeks, 8);
-
-    // ③ 최대 Y
-    final maxWeekly = weeklyTotals.values.fold<int>(
-      0,
-      (prev, v) => v > prev ? v : prev,
-    );
-    final maxY = math.max(weeklyTarget, maxWeekly.toDouble()) * 1.35;
-
-    // ④ 바 그룹
-    final barGroups = List.generate(displayWeeks, (i) {
-      final amount = (weeklyTotals[i] ?? 0).toDouble();
-      final isFuture = i > currentWeek;
-      final Color barColor;
-      if (isFuture) {
-        barColor = AppColors.gray500.withValues(alpha: 0.15);
-      } else if (!isFuture && amount >= weeklyTarget) {
-        barColor = AppColors.green500;
-      } else {
-        barColor = AppColors.red500;
-      }
-      return BarChartGroupData(
-        x: i,
-        barRods: [
-          BarChartRodData(
-            toY: isFuture ? weeklyTarget * 0.05 : amount,
-            color: barColor,
-            width: displayWeeks > 6 ? 24.w : 32.w,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(4.r),
-              topRight: Radius.circular(4.r),
-            ),
-          ),
-        ],
-      );
-    });
-
-    return MoreCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '저축 이력',
-            style: AppTextStyles.headingMd.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          SizedBox(height: 14.h),
-
-          // ── 주차 서클 ──────────────────────────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: List.generate(displayWeeks, (i) {
-              final amount = weeklyTotals[i] ?? 0;
-              final isFuture = i > currentWeek;
-              final isCurrent = i == currentWeek;
-              final metTarget = !isFuture && amount >= weeklyTarget;
-
-              final Color bgColor;
-              final Color txtColor;
-              if (isFuture) {
-                bgColor = AppColors.gray500.withValues(alpha: 0.15);
-                txtColor = AppColors.textTertiary;
-              } else if (metTarget) {
-                bgColor = AppColors.green500;
-                txtColor = Colors.white;
-              } else {
-                bgColor = AppColors.red500;
-                txtColor = Colors.white;
-              }
-
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 28.w,
-                    height: 28.w,
-                    decoration: BoxDecoration(
-                      color: bgColor,
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '${i + 1}',
-                      style: AppTextStyles.caption.copyWith(
-                        color: txtColor,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  if (isCurrent) ...[
-                    SizedBox(height: 2.h),
-                    Text(
-                      '진행중',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textTertiary,
-                        fontSize: 9.sp,
-                      ),
-                    ),
-                  ],
-                ],
-              );
-            }),
-          ),
-
-          SizedBox(height: 12.h),
-
-          // ── 바 차트 ────────────────────────────────────────
-          SizedBox(
-            height: 180.h,
-            child: BarChart(
-              BarChartData(
-                alignment: BarChartAlignment.spaceAround,
-                maxY: maxY,
-                gridData: const FlGridData(show: false),
-                titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  leftTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 24.h,
-                      getTitlesWidget: (value, meta) {
-                        final i = value.toInt();
-                        if (i < 0 || i >= displayWeeks) {
-                          return const SizedBox.shrink();
-                        }
-                        return Padding(
-                          padding: EdgeInsets.only(top: 4.h),
-                          child: Text(
-                            '${i + 1}주차',
-                            style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textTertiary,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                barGroups: barGroups,
-                // 주 목표 점선
-                extraLinesData: weeklyTarget > 0
-                    ? ExtraLinesData(
-                        horizontalLines: [
-                          HorizontalLine(
-                            y: weeklyTarget,
-                            color: AppColors.textTertiary
-                                .withValues(alpha: 0.5),
-                            strokeWidth: 1.5,
-                            dashArray: [6, 4],
-                            label: HorizontalLineLabel(
-                              show: true,
-                              alignment: Alignment.topRight,
-                              labelResolver: (_) =>
-                                  _fmtAmount(weeklyTarget.toInt()),
-                              style: AppTextStyles.caption.copyWith(
-                                color: AppColors.textTertiary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    : null,
-                barTouchData: BarTouchData(
-                  touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (_) => AppColors.textPrimary,
-                    getTooltipItem: (_, __, rod, ___) => BarTooltipItem(
-                      _fmtAmount(rod.toY.toInt()),
-                      AppTextStyles.caption.copyWith(color: Colors.white),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    result.add(cumulative);
   }
 
-  String _fmtAmount(int amount) {
-    if (amount >= 10000) {
-      final man = amount ~/ 10000;
-      final rest = amount % 10000;
-      return rest == 0 ? '$man만원' : '${(amount / 10000).toStringAsFixed(1)}만원';
-    }
-    return '$amount원';
+  return result;
+}
+
+List<double> _buildEvenPlanSeries({
+  required int totalWeeks,
+  required int targetAmount,
+}) {
+  if (totalWeeks <= 0 || targetAmount <= 0) {
+    return List<double>.filled(math.max(totalWeeks, 1), 0);
   }
+
+  final weeklyTarget = targetAmount / totalWeeks;
+  final result = <double>[];
+  var cumulative = 0.0;
+
+  for (var i = 0; i < totalWeeks; i++) {
+    cumulative = math.min(targetAmount.toDouble(), cumulative + weeklyTarget);
+    result.add(cumulative);
+  }
+
+  return result;
+}
+
+double _resolvePositiveChartMaxY(
+  List<double> values, {
+  double paddingFactor = 1.1,
+}) {
+  final normalized = values
+      .where((value) => value.isFinite && value > 0)
+      .toList();
+  final maxValue = normalized.isEmpty ? 1.0 : normalized.reduce(math.max);
+  return _roundUpAxisValue(maxValue * paddingFactor);
+}
+
+_BarChartBounds _resolveBarChartBounds(List<double> values) {
+  final normalized = values.where((value) => value.isFinite).toList();
+  if (normalized.isEmpty) {
+    return const _BarChartBounds(minY: 0, maxY: 100, interval: 25);
+  }
+
+  final positiveMax = normalized.reduce(math.max);
+  final negativeMin = normalized.reduce(math.min);
+  final maxY = _roundUpAxisValue(math.max(positiveMax, 1) * 1.08);
+  final minY = negativeMin < 0
+      ? -_roundUpAxisValue(negativeMin.abs() * 1.12)
+      : 0.0;
+  final interval = _resolveGridInterval(maxY - minY);
+  return _BarChartBounds(minY: minY, maxY: maxY, interval: interval);
+}
+
+double _resolveGridInterval(double rangeOrMax) {
+  final safeRange = rangeOrMax <= 0 ? 100.0 : rangeOrMax;
+  return _roundUpAxisValue(
+    safeRange / 4,
+  ).clamp(1.0, double.infinity).toDouble();
+}
+
+double _roundUpAxisValue(double value) {
+  final safeValue = value <= 0 ? 1.0 : value;
+  if (safeValue < 1000) return (safeValue / 50).ceil() * 50.0;
+  if (safeValue < 10000) return (safeValue / 500).ceil() * 500.0;
+  if (safeValue < 100000) return (safeValue / 5000).ceil() * 5000.0;
+  return (safeValue / 10000).ceil() * 10000.0;
+}
+
+String _formatAxisAmount(double value) {
+  final absValue = value.abs();
+  if (absValue >= 100000000) {
+    final formatted = (value / 100000000).toStringAsFixed(
+      absValue % 100000000 == 0 ? 0 : 1,
+    );
+    return '$formatted억';
+  }
+  if (absValue >= 10000) {
+    final formatted = (value / 10000).toStringAsFixed(
+      absValue % 10000 == 0 ? 0 : 1,
+    );
+    return '$formatted만';
+  }
+  if (absValue >= 1000) {
+    return '${(value / 1000).toStringAsFixed(0)}천';
+  }
+  return value.toStringAsFixed(0);
 }
