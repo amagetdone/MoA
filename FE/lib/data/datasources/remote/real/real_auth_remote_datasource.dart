@@ -57,4 +57,10 @@ class RealAuthRemoteDataSource implements AuthRemoteDataSource {
       data: {'refreshToken': refreshToken},
     );
   }
+
+  @override
+  Future<SocialLoginResponseDto> loginWithTest() async {
+    final response = await _dio.post('v1/auth/social/test');
+    return SocialLoginResponseDto.fromJson(response.data as Map<String, dynamic>);
+  }
 }

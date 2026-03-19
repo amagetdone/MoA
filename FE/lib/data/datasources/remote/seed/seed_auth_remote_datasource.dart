@@ -55,4 +55,16 @@ class SeedAuthRemoteDataSource implements AuthRemoteDataSource {
   Future<void> logout({required String refreshToken}) async {
     await Future.delayed(const Duration(milliseconds: 150));
   }
+
+  @override
+  Future<SocialLoginResponseDto> loginWithTest() async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    return SocialLoginResponseDto(
+      status: 'ACTIVE',
+      account: true,
+      plan: true,
+      accessToken: 'test_access_token_${DateTime.now().millisecondsSinceEpoch}',
+      refreshToken: 'test_refresh_token_${DateTime.now().millisecondsSinceEpoch}',
+    );
+  }
 }

@@ -17,4 +17,6 @@ abstract class AuthRemoteDataSource {
   Future<UserDto> getCurrentUser({required String accessToken});
 
   Future<void> logout({required String refreshToken});
+
+  Future<SocialLoginResponseDto> loginWithTest();
 }

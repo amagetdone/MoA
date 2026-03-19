@@ -17,6 +17,8 @@ class LoginPage extends ConsumerWidget {
         final result = next.authResult;
         if (result.status == 'TEMP') {
           context.go(AppRoutes.onboardingProfile);
+        } else if (next.isTest) {
+          context.go(AppRoutes.home);
         } else {
           // TODO: 온보딩 테스트용 - 원래는 AppRoutes.home
           context.go(AppRoutes.onboarding);
@@ -88,6 +90,19 @@ class LoginPage extends ConsumerWidget {
                 text: '구글로 시작하기',
                 iconPath: 'assets/images/logo/googlelogo.png',
                 borderColor: AppColors.borderDefault,
+              ),
+              SizedBox(height: 12.h),
+              GestureDetector(
+                onTap: isLoading
+                    ? null
+                    : () => ref.read(authViewModelProvider.notifier).loginWithTest(),
+                child: Text(
+                  '테스트 계정으로 로그인',
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.textTertiary,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
               ),
               Spacer(flex: 3),
             ],

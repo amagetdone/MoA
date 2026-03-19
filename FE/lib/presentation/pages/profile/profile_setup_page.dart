@@ -93,14 +93,21 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
   }
 
   Future<void> _uploadProfileImage() async {
-    if (_selectedImage == null) return;
     final dio = ref.read(apiClientProvider).dio;
-    final formData = FormData.fromMap({
-      'image': await MultipartFile.fromFile(
+    final MultipartFile imageFile;
+    if (_selectedImage != null) {
+      imageFile = await MultipartFile.fromFile(
         _selectedImage!.path,
         filename: _selectedImage!.path.split('/').last,
-      ),
-    });
+      );
+    } else {
+      final byteData = await DefaultAssetBundle.of(context).load('assets/images/default_profile.png');
+      imageFile = MultipartFile.fromBytes(
+        byteData.buffer.asUint8List(),
+        filename: 'default_profile.png',
+      );
+    }
+    final formData = FormData.fromMap({'image': imageFile});
     await dio.patch(
       'v1/members/me/profile-image',
       data: formData,
@@ -191,7 +198,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
         },
       );
 
-      if (_selectedImage != null) {
+      if (_selectedImage != null || _useDefaultImage) {
         await _uploadProfileImage();
       }
 
