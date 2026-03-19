@@ -10,17 +10,17 @@
     {
       "categoryId": 20,
       "categoryName": "주거",
-      "amount": 1620000
+      "amount": 540000
     },
     {
       "categoryId": 10,
       "categoryName": "식비",
-      "amount": 1210000
+      "amount": 403333
     },
     {
       "categoryId": 30,
       "categoryName": "교통",
-      "amount": 280000
+      "amount": 93333
     }
   ]
 }

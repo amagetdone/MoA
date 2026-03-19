@@ -151,9 +151,12 @@ public class TransactionQueryService {
 			.filter(projection -> resolveExpenseScope(projection) == ExpenseScope.VARIABLE)
 			.mapToLong(projection -> projection.transaction().getTransactionBalance())
 			.sum();
+		int requestedMonths = latestMetadata.getRequestedMonths() == null || latestMetadata.getRequestedMonths() <= 0
+			? 1
+			: latestMetadata.getRequestedMonths();
 
-		long averageIncome = Math.round(totalIncomeAmount / (double) latestMetadata.getRequestedMonths());
-		long averageExpense = Math.round(totalExpenseAmount / (double) latestMetadata.getRequestedMonths());
+		long averageIncome = Math.round(totalIncomeAmount / (double) requestedMonths);
+		long averageExpense = Math.round(totalExpenseAmount / (double) requestedMonths);
 		long remainingAmount = averageIncome - averageExpense;
 		double fixedExpenseRatio = totalExpenseAmount == 0L ? 0d : round((totalFixedExpenseAmount * 100d) / totalExpenseAmount);
 		double variableExpenseRatio = totalExpenseAmount == 0L ? 0d : round((totalVariableExpenseAmount * 100d) / totalExpenseAmount);
@@ -169,7 +172,7 @@ public class TransactionQueryService {
 			.map(entry -> new TransactionAnalysisDto.CategoryExpense(
 				entry.getKey().getId(),
 				entry.getKey().getName(),
-				entry.getValue()
+				Math.round(entry.getValue() / (double) requestedMonths)
 			))
 			.toList();
 

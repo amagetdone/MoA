@@ -151,9 +151,9 @@ class TransactionQueryServiceTest {
 		assertEquals("현재 소비 흐름은 안정적이에요.", result.insightMessage());
 		assertEquals(2, result.categoryExpenses().size());
 		assertEquals("Housing", result.categoryExpenses().get(0).categoryName());
-		assertEquals(2_400_000L, result.categoryExpenses().get(0).amount());
+		assertEquals(800_000L, result.categoryExpenses().get(0).amount());
 		assertEquals("Food", result.categoryExpenses().get(1).categoryName());
-		assertEquals(1_800_000L, result.categoryExpenses().get(1).amount());
+		assertEquals(600_000L, result.categoryExpenses().get(1).amount());
 	}
 
 	@Test
