@@ -6,25 +6,27 @@ import com.ssafy.amagetdone.domain.member.application.usecase.LogoutMemberUseCas
 import com.ssafy.amagetdone.domain.member.application.usecase.ReissueMemberTokensUseCase;
 import com.ssafy.amagetdone.domain.member.support.util.MemberTokenPair;
 
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class MemberTokenService {
 
 	private final ReissueMemberTokensUseCase reissueMemberTokensUseCase;
 	private final LogoutMemberUseCase logoutMemberUseCase;
 
-	public MemberTokenService(
-		ReissueMemberTokensUseCase reissueMemberTokensUseCase,
-		LogoutMemberUseCase logoutMemberUseCase
-	) {
-		this.reissueMemberTokensUseCase = reissueMemberTokensUseCase;
-		this.logoutMemberUseCase = logoutMemberUseCase;
-	}
-
 	public RefreshTokenDto.Response reissue(String refreshToken) {
-		MemberTokenPair memberTokenPair = reissueMemberTokensUseCase.execute(refreshToken);
-		return new RefreshTokenDto.Response(memberTokenPair.accessToken(), memberTokenPair.refreshToken());
+		ReissueMemberTokensUseCase.Result result = reissueMemberTokensUseCase.execute(refreshToken);
+		MemberTokenPair memberTokenPair = result.tokenPair();
+		return new RefreshTokenDto.Response(
+			result.status(),
+			result.account(),
+			result.plan(),
+			memberTokenPair.accessToken(),
+			memberTokenPair.refreshToken()
+		);
 	}
 
 	public LogoutDto.Response logout(String refreshToken) {

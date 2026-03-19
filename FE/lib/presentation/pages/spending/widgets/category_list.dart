@@ -63,11 +63,11 @@ class _CategoryListState extends State<CategoryList> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      // 할당된 예산 (우측 상단)
+                      // 실제 지출 금액 (우측 상단)
                       Text(
-                        CurrencyFormatter.formatKRW(category.budget),
+                        CurrencyFormatter.formatKRW(category.amount),
                         style: AppTextStyles.caption.copyWith(
-                          color: const Color(0xFFC0C0C0),
+                          color: AppColors.textSecondary,
                           fontSize: 12.sp,
                           fontWeight: FontWeight.w500,
                         ),

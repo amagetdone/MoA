@@ -54,3 +54,23 @@ class DailySpending {
 
   const DailySpending({required this.date, required this.amount});
 }
+
+class WeeklyAnalysisResult {
+  final List<SpendingCategory> categories;
+  final int expenseAmount;
+
+  const WeeklyAnalysisResult({
+    this.categories = const [],
+    this.expenseAmount = 0,
+  });
+}
+
+class MonthlyAnalysisResult {
+  final List<SpendingCategory> categories;
+  final int expenseAmount;
+
+  const MonthlyAnalysisResult({
+    this.categories = const [],
+    this.expenseAmount = 0,
+  });
+}

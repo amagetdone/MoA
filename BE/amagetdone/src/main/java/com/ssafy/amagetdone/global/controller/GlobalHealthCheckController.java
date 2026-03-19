@@ -1,12 +1,13 @@
 package com.ssafy.amagetdone.global.controller;
 
+import com.ssafy.amagetdone.global.docs.controller.GlobalHealthCheckDocsController;
 import com.ssafy.amagetdone.global.response.ApiResponse;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-public class GlobalHealthCheckController {
+public class GlobalHealthCheckController implements GlobalHealthCheckDocsController {
 
 	@GetMapping("/health")
 	public ApiResponse<String> health() {

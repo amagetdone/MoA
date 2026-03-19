@@ -1,6 +1,6 @@
 package com.ssafy.amagetdone.domain.member.infra.client;
 
-import com.ssafy.amagetdone.config.SocialAuthProperties;
+import com.ssafy.amagetdone.global.config.SocialAuthProperties;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;

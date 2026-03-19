@@ -16,6 +16,7 @@ import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.repository.SocialAccountRepository;
 import com.ssafy.amagetdone.domain.member.model.repository.UserRepository;
 import com.ssafy.amagetdone.domain.member.model.vo.SocialProvider;
+import com.ssafy.amagetdone.domain.member.support.config.TestSocialUserProperties;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,14 +34,18 @@ class FindOrCreateSocialUserUseCaseTest {
 
 	@Test
 	void createDoesNotGenerateSyntheticFinancialUserKey() {
-		FindOrCreateSocialUserUseCase useCase = new FindOrCreateSocialUserUseCase(socialAccountRepository, userRepository);
+		FindOrCreateSocialUserUseCase useCase = new FindOrCreateSocialUserUseCase(
+			socialAccountRepository,
+			userRepository,
+			testSocialUserProperties()
+		);
 		SocialUserIdentity identity = new SocialUserIdentity(SocialProvider.KAKAO, "provider-uid");
 		User savedUser = User.createPendingSocialUser();
 		SocialAccount savedSocialAccount = SocialAccount.create(savedUser, SocialProvider.KAKAO, "provider-uid");
 
 		given(socialAccountRepository.findByProviderAndProviderUid(SocialProvider.KAKAO, "provider-uid"))
 			.willReturn(Optional.empty());
-		given(userRepository.save(any(User.class))).willReturn(savedUser);
+		given(userRepository.save(any(User.class))).willAnswer(invocation -> invocation.getArgument(0));
 		given(socialAccountRepository.save(any(SocialAccount.class))).willReturn(savedSocialAccount);
 
 		FindOrCreateSocialUserUseCase.Result result = useCase.execute(identity);
@@ -49,5 +54,59 @@ class FindOrCreateSocialUserUseCaseTest {
 		assertNull(result.user().getUserKey());
 		assertEquals("TEMP", result.user().getStatus().name());
 		verify(socialAccountRepository).findByProviderAndProviderUid(eq(SocialProvider.KAKAO), eq("provider-uid"));
+	}
+
+	@Test
+	void createInitializesConfiguredFieldsForTestSocialUser() {
+		FindOrCreateSocialUserUseCase useCase = new FindOrCreateSocialUserUseCase(
+			socialAccountRepository,
+			userRepository,
+			testSocialUserProperties()
+		);
+		SocialUserIdentity identity = new SocialUserIdentity(SocialProvider.TEST, "test-social-user-001");
+		User savedUser = User.createPendingSocialUser();
+		SocialAccount savedSocialAccount = SocialAccount.create(savedUser, SocialProvider.TEST, "test-social-user-001");
+
+		given(socialAccountRepository.findByProviderAndProviderUid(SocialProvider.TEST, "test-social-user-001"))
+			.willReturn(Optional.empty());
+		given(userRepository.save(any(User.class))).willAnswer(invocation -> invocation.getArgument(0));
+		given(socialAccountRepository.save(any(SocialAccount.class))).willReturn(savedSocialAccount);
+
+		FindOrCreateSocialUserUseCase.Result result = useCase.execute(identity);
+
+		assertEquals("tester", result.user().getNickname());
+		assertEquals("test@test.com", result.user().getEmail());
+		assertNull(result.user().getUserKey());
+		assertEquals("TEMP", result.user().getStatus().name());
+		assertFalse(result.isNewUser() && result.user().getUserKey() != null);
+	}
+
+	@Test
+	void executeBackfillsConfiguredFieldsForExistingTestSocialUser() {
+		FindOrCreateSocialUserUseCase useCase = new FindOrCreateSocialUserUseCase(
+			socialAccountRepository,
+			userRepository,
+			testSocialUserProperties()
+		);
+		User existingUser = User.createPendingSocialUser();
+		SocialAccount existingSocialAccount = SocialAccount.create(existingUser, SocialProvider.TEST, "test-social-user-001");
+		SocialUserIdentity identity = new SocialUserIdentity(SocialProvider.TEST, "test-social-user-001");
+
+		given(socialAccountRepository.findByProviderAndProviderUid(SocialProvider.TEST, "test-social-user-001"))
+			.willReturn(Optional.of(existingSocialAccount));
+
+		FindOrCreateSocialUserUseCase.Result result = useCase.execute(identity);
+
+		assertFalse(result.isNewUser());
+		assertEquals("tester", result.user().getNickname());
+		assertEquals("test@test.com", result.user().getEmail());
+		assertNull(result.user().getUserKey());
+	}
+
+	private TestSocialUserProperties testSocialUserProperties() {
+		TestSocialUserProperties properties = new TestSocialUserProperties();
+		properties.setNickname("tester");
+		properties.setEmail("test@test.com");
+		return properties;
 	}
 }

@@ -17,6 +17,8 @@ class SpendingState {
   final DateTime selectedWeekStart;
   final DateTime selectedMonthStart;
   final int? touchedPieIndex;
+  final int weeklyExpenseAmount;
+  final int monthlyExpenseAmount;
 
   SpendingState({
     this.isLoading = false,
@@ -32,6 +34,8 @@ class SpendingState {
     DateTime? selectedWeekStart,
     DateTime? selectedMonthStart,
     this.touchedPieIndex,
+    this.weeklyExpenseAmount = 0,
+    this.monthlyExpenseAmount = 0,
   })  : selectedWeekStart = selectedWeekStart ?? _thisWeekStart(),
         selectedMonthStart = selectedMonthStart ?? _thisMonthStart();
 
@@ -63,6 +67,8 @@ class SpendingState {
     DateTime? selectedWeekStart,
     DateTime? selectedMonthStart,
     Object? touchedPieIndex = _sentinel,
+    int? weeklyExpenseAmount,
+    int? monthlyExpenseAmount,
   }) {
     return SpendingState(
       isLoading: isLoading ?? this.isLoading,
@@ -82,6 +88,8 @@ class SpendingState {
       touchedPieIndex: touchedPieIndex == _sentinel
           ? this.touchedPieIndex
           : touchedPieIndex as int?,
+      weeklyExpenseAmount: weeklyExpenseAmount ?? this.weeklyExpenseAmount,
+      monthlyExpenseAmount: monthlyExpenseAmount ?? this.monthlyExpenseAmount,
     );
   }
 
@@ -100,19 +108,21 @@ class SpendingViewModel extends StateNotifier<SpendingState> {
     state = state.copyWith(isLoading: true, clearErrorMessage: true);
 
     try {
-      await _repository.syncTransactions();
-      await _repository.analyzeTransactions();
+      try {
+        await _repository.syncTransactions();
+      } catch (_) {}
+      try {
+        await _repository.analyzeTransactions();
+      } catch (_) {}
       final overview = await _repository.fetchSpendingOverview();
       state = state.copyWith(
-        isLoading: false,
-        dailySpendings: overview.dailySpendings,
-        monthlySpendings: overview.monthlySpendings,
         weeklyBudget: overview.weeklyBudget,
         monthlyIncome: overview.monthlyIncome,
         monthlySavingsGoal: overview.monthlySavingsGoal,
         monthlyFixedExpense: overview.monthlyFixedExpense,
       );
       await _loadPeriodData();
+      state = state.copyWith(isLoading: false);
     } catch (error) {
       state = state.copyWith(isLoading: false, errorMessage: error.toString());
     }
@@ -121,13 +131,21 @@ class SpendingViewModel extends StateNotifier<SpendingState> {
   Future<void> _loadPeriodData() async {
     try {
       if (state.isWeekly) {
-        final categories = await _repository.fetchWeeklyCategories(state.selectedWeekStart);
         final dailySpendings = await _repository.fetchWeeklyDailySpending(state.selectedWeekStart);
-        state = state.copyWith(categories: categories, dailySpendings: dailySpendings);
+        final result = await _repository.fetchWeeklyAnalysis(state.selectedWeekStart);
+        state = state.copyWith(
+          categories: result.categories,
+          dailySpendings: dailySpendings,
+          weeklyExpenseAmount: dailySpendings.fold<int>(0, (sum, d) => sum + d.amount),
+        );
       } else {
-        final categories = await _repository.fetchMonthlyCategories(state.selectedMonthStart);
+        final result = await _repository.fetchMonthlyAnalysis(state.selectedMonthStart);
         final monthlySpendings = await _repository.fetchMonthlyDailySpending(state.selectedMonthStart);
-        state = state.copyWith(categories: categories, monthlySpendings: monthlySpendings);
+        state = state.copyWith(
+          categories: result.categories,
+          monthlySpendings: monthlySpendings,
+          monthlyExpenseAmount: monthlySpendings.fold<int>(0, (sum, d) => sum + d.amount),
+        );
       }
     } catch (e) {
       state = state.copyWith(errorMessage: e.toString());
@@ -136,7 +154,7 @@ class SpendingViewModel extends StateNotifier<SpendingState> {
 
   void togglePeriod(bool isWeekly) {
     state = state.copyWith(isWeekly: isWeekly);
-    if (isWeekly) _loadPeriodData();
+    _loadPeriodData();
   }
 
   void navigatePeriod(int delta) {
@@ -144,13 +162,13 @@ class SpendingViewModel extends StateNotifier<SpendingState> {
       state = state.copyWith(
         selectedWeekStart: state.selectedWeekStart.add(Duration(days: 7 * delta)),
       );
-      _loadPeriodData();
     } else {
       final current = state.selectedMonthStart;
       state = state.copyWith(
         selectedMonthStart: DateTime(current.year, current.month + delta, 1),
       );
     }
+    _loadPeriodData();
   }
 
   void setTouchedPieIndex(int? index) {

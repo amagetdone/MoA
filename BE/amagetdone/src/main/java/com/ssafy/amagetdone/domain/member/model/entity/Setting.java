@@ -11,7 +11,18 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@SuperBuilder
 @Entity
 @Table(name = "setting")
 public class Setting extends BaseEntity {
@@ -27,7 +38,4 @@ public class Setting extends BaseEntity {
 	@ColumnDefault("FALSE")
 	@Column(name = "alarm", nullable = false)
 	private boolean alarm;
-
-	protected Setting() {
-	}
 }

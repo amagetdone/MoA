@@ -13,7 +13,19 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@SuperBuilder
 @Entity
 @Table(name = "policy")
 public class Policy extends BaseEntity {
@@ -35,9 +47,7 @@ public class Policy extends BaseEntity {
 	@Column(name = "version", nullable = false)
 	private Integer version;
 
+	@Builder.Default
 	@OneToMany(mappedBy = "policy")
 	private List<Agreement> agreements = new ArrayList<>();
-
-	protected Policy() {
-	}
 }
