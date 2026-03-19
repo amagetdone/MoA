@@ -56,14 +56,13 @@ public class DailyGoalSavingAccrualService {
 		return reconcileDailyCatchUp(userId, cutoffDate, executedDate, period);
 	}
 
-	public GoalSavingAccrualForceDto.Response forceAccrual(Integer userId, GoalSavingAccrualForceDto.Request request) {
-		GoalSavingAccrualForceDto.Request safeRequest = request == null
-			? new GoalSavingAccrualForceDto.Request(null, GoalSavingAccrualForceDto.Scope.WEEK)
+	public GoalSavingAccrualForceDto.Response backfillAccrual(Integer userId, GoalSavingAccrualForceDto.BackfillRequest request) {
+		GoalSavingAccrualForceDto.BackfillRequest safeRequest = request == null
+			? new GoalSavingAccrualForceDto.BackfillRequest(null)
 			: request;
 		LocalDate cutoffDate = LocalDate.now(clock).minusDays(1L);
 		LocalDate executedDate = LocalDate.now(clock);
-		AccrualPeriod period = periodFor(safeRequest.resolvedScope(), cutoffDate);
-		return reconcileForcedScope(userId, safeRequest.planId(), safeRequest.resolvedScope(), cutoffDate, executedDate, period);
+		return reconcileBackfillScope(userId, safeRequest.planId(), cutoffDate, executedDate);
 	}
 
 	private BudgetAdjustment autoAdjustment(
@@ -92,17 +91,34 @@ public class DailyGoalSavingAccrualService {
 		AccrualPeriod period
 	) {
 		if (userId == null || cutoffDate == null) {
-			return emptyResponse(executedDate, cutoffDate, GoalSavingAccrualForceDto.Scope.DAY, GoalSavingAccrualForceDto.TargetType.ALL, null, period);
+			return emptyResponse(
+				executedDate,
+				cutoffDate,
+				GoalSavingAccrualForceDto.OperationType.BACKFILL,
+				GoalSavingAccrualForceDto.Scope.DAY,
+				GoalSavingAccrualForceDto.TargetType.ALL,
+				null,
+				period
+			);
 		}
 
 		List<PlanWeekAllocation> allocations = findAllocations(userId, null, null, cutoffDate, true);
 		if (allocations.isEmpty()) {
-			return emptyResponse(executedDate, cutoffDate, GoalSavingAccrualForceDto.Scope.DAY, GoalSavingAccrualForceDto.TargetType.ALL, null, period);
+			return emptyResponse(
+				executedDate,
+				cutoffDate,
+				GoalSavingAccrualForceDto.OperationType.BACKFILL,
+				GoalSavingAccrualForceDto.Scope.DAY,
+				GoalSavingAccrualForceDto.TargetType.ALL,
+				null,
+				period
+			);
 		}
 
 		return applyAccruals(
 			allocations,
 			GoalSavingAccrualForceDto.Scope.DAY,
+			GoalSavingAccrualForceDto.OperationType.BACKFILL,
 			GoalSavingAccrualForceDto.TargetType.ALL,
 			null,
 			executedDate,
@@ -112,19 +128,26 @@ public class DailyGoalSavingAccrualService {
 		);
 	}
 
-	private GoalSavingAccrualForceDto.Response reconcileForcedScope(
+	private GoalSavingAccrualForceDto.Response reconcileBackfillScope(
 		Integer userId,
 		Integer planId,
-		GoalSavingAccrualForceDto.Scope scope,
 		LocalDate cutoffDate,
-		LocalDate executedDate,
-		AccrualPeriod period
+		LocalDate executedDate
 	) {
+		AccrualPeriod period = new AccrualPeriod(null, cutoffDate, cutoffDate == null ? "" : "UP_TO_%s".formatted(cutoffDate));
 		if (userId == null || cutoffDate == null) {
-			return emptyResponse(executedDate, cutoffDate, scope, planId == null ? GoalSavingAccrualForceDto.TargetType.ALL : GoalSavingAccrualForceDto.TargetType.SINGLE, planId, period);
+			return emptyResponse(
+				executedDate,
+				cutoffDate,
+				GoalSavingAccrualForceDto.OperationType.BACKFILL,
+				null,
+				planId == null ? GoalSavingAccrualForceDto.TargetType.ALL : GoalSavingAccrualForceDto.TargetType.SINGLE,
+				planId,
+				period
+			);
 		}
 
-		List<PlanWeekAllocation> allocations = findAllocations(userId, planId, period.startDate(), period.endDate(), planId == null);
+		List<PlanWeekAllocation> allocations = findAllocations(userId, planId, null, cutoffDate, planId == null);
 		if (allocations.isEmpty()) {
 			if (planId != null) {
 				var ownedPlan = planRepository.findByIdAndUserId(planId, userId);
@@ -132,30 +155,47 @@ public class DailyGoalSavingAccrualService {
 					throw new PlanException(PlanErrorCode.PLAN_NOT_FOUND);
 				}
 			}
-			return emptyResponse(executedDate, cutoffDate, scope, planId == null ? GoalSavingAccrualForceDto.TargetType.ALL : GoalSavingAccrualForceDto.TargetType.SINGLE, planId, period);
+			return emptyResponse(
+				executedDate,
+				cutoffDate,
+				GoalSavingAccrualForceDto.OperationType.BACKFILL,
+				null,
+				planId == null ? GoalSavingAccrualForceDto.TargetType.ALL : GoalSavingAccrualForceDto.TargetType.SINGLE,
+				planId,
+				period
+			);
 		}
+		LocalDate periodStartDate = allocations.stream()
+			.map(PlanWeekAllocation::getBudgetWeek)
+			.filter(Objects::nonNull)
+			.map(BudgetWeek::getWeekStartDate)
+			.min(LocalDate::compareTo)
+			.orElse(null);
 
 		return applyAccruals(
 			allocations,
-			scope,
+			null,
+			GoalSavingAccrualForceDto.OperationType.BACKFILL,
 			planId == null ? GoalSavingAccrualForceDto.TargetType.ALL : GoalSavingAccrualForceDto.TargetType.SINGLE,
 			planId,
 			executedDate,
 			cutoffDate,
-			period,
-			false
+			new AccrualPeriod(periodStartDate, cutoffDate, "UP_TO_%s".formatted(cutoffDate)),
+			true
 		);
 	}
 
 	private GoalSavingAccrualForceDto.Response emptyResponse(
 		LocalDate executedDate,
 		LocalDate cutoffDate,
+		GoalSavingAccrualForceDto.OperationType operationType,
 		GoalSavingAccrualForceDto.Scope scope,
 		GoalSavingAccrualForceDto.TargetType targetType,
 		Integer planId,
 		AccrualPeriod period
 	) {
 		return new GoalSavingAccrualForceDto.Response(
+			operationType,
 			scope,
 			targetType,
 			planId,
@@ -172,6 +212,7 @@ public class DailyGoalSavingAccrualService {
 	private GoalSavingAccrualForceDto.Response applyAccruals(
 		List<PlanWeekAllocation> allocations,
 		GoalSavingAccrualForceDto.Scope scope,
+		GoalSavingAccrualForceDto.OperationType operationType,
 		GoalSavingAccrualForceDto.TargetType targetType,
 		Integer requestedPlanId,
 		LocalDate executedDate,
@@ -252,6 +293,7 @@ public class DailyGoalSavingAccrualService {
 			.toList();
 
 		return new GoalSavingAccrualForceDto.Response(
+			operationType,
 			scope,
 			targetType,
 			requestedPlanId,

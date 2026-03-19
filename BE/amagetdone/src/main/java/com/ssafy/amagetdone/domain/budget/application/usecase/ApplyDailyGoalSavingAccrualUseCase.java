@@ -18,7 +18,7 @@ public class ApplyDailyGoalSavingAccrualUseCase {
 		return dailyGoalSavingAccrualService.applyDailyAccrual(userId);
 	}
 
-	public GoalSavingAccrualForceDto.Response force(Integer userId, GoalSavingAccrualForceDto.Request request) {
-		return dailyGoalSavingAccrualService.forceAccrual(userId, request);
+	public GoalSavingAccrualForceDto.Response backfill(Integer userId, GoalSavingAccrualForceDto.BackfillRequest request) {
+		return dailyGoalSavingAccrualService.backfillAccrual(userId, request);
 	}
 }

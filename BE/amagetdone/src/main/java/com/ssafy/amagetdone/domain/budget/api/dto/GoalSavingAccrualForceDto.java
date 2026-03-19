@@ -3,12 +3,21 @@ package com.ssafy.amagetdone.domain.budget.api.dto;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 public final class GoalSavingAccrualForceDto {
 
 	private GoalSavingAccrualForceDto() {
 	}
 
-	public record Request(
+	@JsonIgnoreProperties(ignoreUnknown = false)
+	public record BackfillRequest(
+		Integer planId
+	) {
+	}
+
+	@JsonIgnoreProperties(ignoreUnknown = false)
+	public record ApplyRequest(
 		Integer planId,
 		Scope scope
 	) {
@@ -19,6 +28,7 @@ public final class GoalSavingAccrualForceDto {
 	}
 
 	public record Response(
+		OperationType operationType,
 		Scope appliedScope,
 		TargetType targetType,
 		Integer planId,
@@ -73,5 +83,10 @@ public final class GoalSavingAccrualForceDto {
 	public enum TargetType {
 		ALL,
 		SINGLE
+	}
+
+	public enum OperationType {
+		BACKFILL,
+		APPLY
 	}
 }
