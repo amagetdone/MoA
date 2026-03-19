@@ -120,7 +120,7 @@ class PlanQueryServiceTest {
 			allocation(plan, budgetWeek(12, LocalDate.of(2026, 3, 23), LocalDate.of(2026, 3, 29)), 90_000L, 90_000L)
 		);
 
-		given(planRepository.findByIdAndUserId(1, 1)).willReturn(Optional.of(plan));
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(1, 1)).willReturn(Optional.of(plan));
 		given(planWeekAllocationRepository.findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(1)).willReturn(allocations);
 		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(any(), any(), any()))
 			.willReturn(Optional.of(currentBudgetWeek(11)));
