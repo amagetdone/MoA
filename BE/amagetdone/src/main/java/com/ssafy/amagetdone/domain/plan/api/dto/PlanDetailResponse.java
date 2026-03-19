@@ -1,5 +1,6 @@
 package com.ssafy.amagetdone.domain.plan.api.dto;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public record PlanDetailResponse(
@@ -14,7 +15,8 @@ public record PlanDetailResponse(
 	GraphData graphData,
 	List<WeeklyPlan> weeklyPlans,
 	Integer currentWeek,
-	Integer totalWeeks
+	Integer totalWeeks,
+	CompletionProjection completionProjection
 ) {
 
 	public record GraphData(
@@ -27,6 +29,12 @@ public record PlanDetailResponse(
 	public record WeeklyPlan(
 		Integer week,
 		Long amount
+	) {
+	}
+
+	public record CompletionProjection(
+		Integer weeksToGoal,
+		LocalDate estimatedCompletionDate
 	) {
 	}
 }

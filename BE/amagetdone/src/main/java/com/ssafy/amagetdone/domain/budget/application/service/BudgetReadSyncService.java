@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.ssafy.amagetdone.domain.budget.application.usecase.TriggerBudgetAllocationUseCase;
+import com.ssafy.amagetdone.domain.budget.application.usecase.ApplyDailyGoalSavingAccrualUseCase;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
@@ -34,6 +35,7 @@ public class BudgetReadSyncService {
 	private final RunTransactionAnalysisUseCase runTransactionAnalysisUseCase;
 	private final BudgetActualSpentRefreshService budgetActualSpentRefreshService;
 	private final BudgetRolloverResyncService budgetRolloverResyncService;
+	private final ApplyDailyGoalSavingAccrualUseCase applyDailyGoalSavingAccrualUseCase;
 	private final BudgetWeekRepository budgetWeekRepository;
 	private final PlanRepository planRepository;
 	private final PlanWeekAllocationRepository planWeekAllocationRepository;
@@ -45,6 +47,7 @@ public class BudgetReadSyncService {
 
 		TransactionSyncService.SyncResult syncResult = syncLatestTransactionsUseCase.execute(userId, READ_SYNC_MONTHS, false);
 		if (!hasNewTransactions(syncResult)) {
+			applyDailyGoalSavingAccrualUseCase.execute(userId);
 			return;
 		}
 
@@ -52,6 +55,7 @@ public class BudgetReadSyncService {
 		triggerBudgetAllocationUseCase.execute(userId);
 		budgetActualSpentRefreshService.refresh(userId, today);
 		budgetRolloverResyncService.resync(userId);
+		applyDailyGoalSavingAccrualUseCase.execute(userId);
 	}
 
 	private void ensureCurrentWeekAllocation(Integer userId, LocalDate today) {
@@ -90,4 +94,3 @@ public class BudgetReadSyncService {
 		return user;
 	}
 }
-

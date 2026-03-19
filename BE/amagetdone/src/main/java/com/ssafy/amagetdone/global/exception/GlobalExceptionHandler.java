@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -72,6 +73,12 @@ public class GlobalExceptionHandler {
 			.forEach(fieldError -> detail.put(fieldError.getField(), fieldError.getDefaultMessage()));
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
 			.body(ErrorResponse.of("Validation failed", "INVALID_REQUEST", detail));
+	}
+
+	@ExceptionHandler(HttpMessageNotReadableException.class)
+	public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(HttpMessageNotReadableException exception) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+			.body(ErrorResponse.of("Malformed request body", "INVALID_REQUEST"));
 	}
 
 	@ExceptionHandler(DataIntegrityViolationException.class)

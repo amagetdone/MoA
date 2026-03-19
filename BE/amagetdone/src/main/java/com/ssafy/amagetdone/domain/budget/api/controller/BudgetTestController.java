@@ -2,9 +2,11 @@ package com.ssafy.amagetdone.domain.budget.api.controller;
 
 import com.ssafy.amagetdone.domain.budget.api.dto.BudgetWeekSeedRequest;
 import com.ssafy.amagetdone.domain.budget.api.dto.BudgetWeekSeedResponse;
+import com.ssafy.amagetdone.domain.budget.api.dto.GoalSavingAccrualForceDto;
 import com.ssafy.amagetdone.domain.budget.api.dto.WeeklySavingsDetailDto;
 import com.ssafy.amagetdone.domain.budget.application.service.BudgetCurrentWeekGoalAllocationTestService;
 import com.ssafy.amagetdone.domain.budget.application.service.BudgetWeekSeedService;
+import com.ssafy.amagetdone.domain.budget.application.service.GoalSavingAccrualForceTestService;
 import com.ssafy.amagetdone.global.response.ApiResponse;
 import com.ssafy.amagetdone.global.security.AuthenticatedMember;
 
@@ -27,13 +29,16 @@ public class BudgetTestController {
 
 	private final BudgetWeekSeedService budgetWeekSeedService;
 	private final BudgetCurrentWeekGoalAllocationTestService budgetCurrentWeekGoalAllocationTestService;
+	private final GoalSavingAccrualForceTestService goalSavingAccrualForceTestService;
 
 	public BudgetTestController(
 		BudgetWeekSeedService budgetWeekSeedService,
-		BudgetCurrentWeekGoalAllocationTestService budgetCurrentWeekGoalAllocationTestService
+		BudgetCurrentWeekGoalAllocationTestService budgetCurrentWeekGoalAllocationTestService,
+		GoalSavingAccrualForceTestService goalSavingAccrualForceTestService
 	) {
 		this.budgetWeekSeedService = budgetWeekSeedService;
 		this.budgetCurrentWeekGoalAllocationTestService = budgetCurrentWeekGoalAllocationTestService;
+		this.goalSavingAccrualForceTestService = goalSavingAccrualForceTestService;
 	}
 
 	@Operation(
@@ -64,6 +69,22 @@ public class BudgetTestController {
 		return ApiResponse.ok(
 			"Current week goal savings allocation test succeeded.",
 			budgetCurrentWeekGoalAllocationTestService.forceCurrentWeekAllocation(authenticatedMember.userId())
+		);
+	}
+
+	@Operation(
+		summary = "Force goal saving daily accrual",
+		description = "Runs the daily goal saving accrual reconciliation for manual verification.",
+		security = @SecurityRequirement(name = "bearerAuth")
+	)
+	@PostMapping("/savings-accrual/force")
+	public ApiResponse<GoalSavingAccrualForceDto.Response> forceSavingsAccrual(
+		@AuthenticationPrincipal AuthenticatedMember authenticatedMember,
+		@RequestBody(required = false) GoalSavingAccrualForceDto.Request request
+	) {
+		return ApiResponse.ok(
+			"Goal saving accrual force test succeeded.",
+			goalSavingAccrualForceTestService.force(authenticatedMember.userId(), request)
 		);
 	}
 }
