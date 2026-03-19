@@ -6,7 +6,8 @@ public record PlanCreateResponse(
 	Integer planId,
 	String planTitle,
 	WeeklyMission weeklyMission,
-	WeeklyBudget weeklyBudget
+	WeeklyBudget weeklyBudget,
+	String status
 ) {
 
 	public record WeeklyMission(

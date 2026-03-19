@@ -1,8 +1,5 @@
 package com.ssafy.amagetdone.domain.plan.application.usecase;
 
-import java.time.Clock;
-import java.time.LocalDate;
-
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.repository.UserRepository;
 import com.ssafy.amagetdone.domain.budget.application.usecase.TriggerBudgetAllocationUseCase;
@@ -29,7 +26,6 @@ public class CreatePlanUseCase {
 	private final TriggerBudgetAllocationUseCase triggerBudgetAllocationUseCase;
 	private final PlanCreationBudgetSummaryService planCreationBudgetSummaryService;
 	private final ApplicationEventPublisher applicationEventPublisher;
-	private final Clock clock;
 
 	public CreatePlanUseCase(
 		UserRepository userRepository,
@@ -37,8 +33,7 @@ public class CreatePlanUseCase {
 		PlanPriorityService planPriorityService,
 		TriggerBudgetAllocationUseCase triggerBudgetAllocationUseCase,
 		PlanCreationBudgetSummaryService planCreationBudgetSummaryService,
-		ApplicationEventPublisher applicationEventPublisher,
-		Clock clock
+		ApplicationEventPublisher applicationEventPublisher
 	) {
 		this.userRepository = userRepository;
 		this.planRepository = planRepository;
@@ -46,7 +41,6 @@ public class CreatePlanUseCase {
 		this.triggerBudgetAllocationUseCase = triggerBudgetAllocationUseCase;
 		this.planCreationBudgetSummaryService = planCreationBudgetSummaryService;
 		this.applicationEventPublisher = applicationEventPublisher;
-		this.clock = clock;
 	}
 
 	@Transactional
@@ -65,9 +59,6 @@ public class CreatePlanUseCase {
 			request.endDate(),
 			request.priority()
 		);
-		if (!request.startDate().isAfter(LocalDate.now(clock))) {
-			plan.activate();
-		}
 
 		Plan savedPlan = planRepository.save(plan);
 		triggerBudgetAllocationUseCase.execute(userId);

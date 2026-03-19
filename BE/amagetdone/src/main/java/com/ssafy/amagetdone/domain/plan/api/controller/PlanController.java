@@ -6,11 +6,13 @@ import com.ssafy.amagetdone.domain.plan.api.dto.PlanCreateRequest;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanCreateResponse;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanDetailResponse;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanListItemResponse;
+import com.ssafy.amagetdone.domain.plan.api.dto.PlanPriorityUpdateRequest;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanWeeklyPlansPageResponse;
 import com.ssafy.amagetdone.domain.plan.application.usecase.CreatePlanUseCase;
 import com.ssafy.amagetdone.domain.plan.application.usecase.GetPlanDetailUseCase;
 import com.ssafy.amagetdone.domain.plan.application.usecase.ListPlanWeeklyPlansUseCase;
 import com.ssafy.amagetdone.domain.plan.application.usecase.ListPlansUseCase;
+import com.ssafy.amagetdone.domain.plan.application.usecase.UpdatePlanPrioritiesUseCase;
 import com.ssafy.amagetdone.global.response.ApiResponse;
 import com.ssafy.amagetdone.global.security.AuthenticatedMember;
 
@@ -20,6 +22,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -38,17 +41,20 @@ public class PlanController {
 	private final ListPlansUseCase listPlansUseCase;
 	private final GetPlanDetailUseCase getPlanDetailUseCase;
 	private final ListPlanWeeklyPlansUseCase listPlanWeeklyPlansUseCase;
+	private final UpdatePlanPrioritiesUseCase updatePlanPrioritiesUseCase;
 
 	public PlanController(
 		CreatePlanUseCase createPlanUseCase,
 		ListPlansUseCase listPlansUseCase,
 		GetPlanDetailUseCase getPlanDetailUseCase,
-		ListPlanWeeklyPlansUseCase listPlanWeeklyPlansUseCase
+		ListPlanWeeklyPlansUseCase listPlanWeeklyPlansUseCase,
+		UpdatePlanPrioritiesUseCase updatePlanPrioritiesUseCase
 	) {
 		this.createPlanUseCase = createPlanUseCase;
 		this.listPlansUseCase = listPlansUseCase;
 		this.getPlanDetailUseCase = getPlanDetailUseCase;
 		this.listPlanWeeklyPlansUseCase = listPlanWeeklyPlansUseCase;
+		this.updatePlanPrioritiesUseCase = updatePlanPrioritiesUseCase;
 	}
 
 	@Operation(summary = "목표 목록 조회", security = @SecurityRequirement(name = "bearerAuth"))
@@ -98,5 +104,15 @@ public class PlanController {
 			"목표가 생성되었습니다.",
 			createPlanUseCase.execute(authenticatedMember.userId(), request)
 		);
+	}
+
+	@Operation(summary = "목표 우선순위 변경", security = @SecurityRequirement(name = "bearerAuth"))
+	@PatchMapping("/priority")
+	public ApiResponse<Void> updatePlanPriorities(
+		@AuthenticationPrincipal AuthenticatedMember authenticatedMember,
+		@Valid @RequestBody PlanPriorityUpdateRequest request
+	) {
+		updatePlanPrioritiesUseCase.execute(authenticatedMember.userId(), request);
+		return ApiResponse.ok("목표 우선순위가 변경되었습니다.", null);
 	}
 }

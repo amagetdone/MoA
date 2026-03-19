@@ -53,7 +53,8 @@ public class PlanCreationBudgetSummaryService {
 					new PlanCreateResponse.BudgetBucket(0L, List.of()),
 					new PlanCreateResponse.BudgetBucket(0L, List.of()),
 					0L
-				)
+				),
+				plan.getStatus().name()
 			);
 		}
 
@@ -70,7 +71,8 @@ public class PlanCreationBudgetSummaryService {
 				toBudgetBucket(essentials, ExpenseScope.FIXED),
 				toBudgetBucket(essentials, ExpenseScope.VARIABLE),
 				zero(summaryWeek.getFinalFreeAmount())
-			)
+			),
+			plan.getStatus().name()
 		);
 	}
 
