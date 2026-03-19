@@ -75,6 +75,7 @@ class BudgetEntityMappingTest {
 				"FREE_BUDGET_SUBTRACT",
 				"PLAN_ADD",
 				"PLAN_SUBTRACT",
+				"PLAN_SAVED_ADD",
 				"PLAN_DELAY",
 				"PLAN_EARLY_CLOSE",
 				"ROLLOVER_APPLIED"
