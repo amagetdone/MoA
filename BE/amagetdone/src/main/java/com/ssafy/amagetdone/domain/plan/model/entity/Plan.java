@@ -134,6 +134,10 @@ public class Plan extends BaseEntity {
 		this.priority += delta;
 	}
 
+	public void updatePriority(int priority) {
+		this.priority = priority;
+	}
+
 	public void activate() {
 		this.status = PlanStatus.ACTIVE;
 	}

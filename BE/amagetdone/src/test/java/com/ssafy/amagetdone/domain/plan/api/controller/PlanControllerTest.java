@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -21,6 +22,7 @@ import com.ssafy.amagetdone.domain.plan.application.usecase.GetPlanVideoDownload
 import com.ssafy.amagetdone.domain.plan.application.usecase.GetPlanDetailUseCase;
 import com.ssafy.amagetdone.domain.plan.application.usecase.ListPlansUseCase;
 import com.ssafy.amagetdone.domain.plan.application.usecase.ListPlanWeeklyPlansUseCase;
+import com.ssafy.amagetdone.domain.plan.application.usecase.UpdatePlanPrioritiesUseCase;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanListItemResponse;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanWeeklyPlansPageResponse;
 import com.ssafy.amagetdone.domain.plan.exception.PlanErrorCode;
@@ -58,6 +60,9 @@ class PlanControllerTest {
 
 	@MockitoBean
 	private ListPlanWeeklyPlansUseCase listPlanWeeklyPlansUseCase;
+
+	@MockitoBean
+	private UpdatePlanPrioritiesUseCase updatePlanPrioritiesUseCase;
 
 	@MockitoBean
 	private JwtAccessTokenReader jwtAccessTokenReader;
@@ -259,5 +264,29 @@ class PlanControllerTest {
 			.andExpect(jsonPath("$.data.page").value(0))
 			.andExpect(jsonPath("$.data.totalPages").value(7))
 			.andExpect(jsonPath("$.data.hasNext").value(true));
+	}
+
+	@Test
+	void updatePlanPrioritiesReturnsSuccessMessage() throws Exception {
+		mockMvc.perform(patch("/api/v1/plans/priority")
+				.contextPath("/api")
+				.with(csrf())
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+				))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "plans": [
+					    { "planId": 101, "priority": 1 },
+					    { "planId": 102, "priority": 2 },
+					    { "planId": 103, "priority": 3 }
+					  ]
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("목표 우선순위가 변경되었습니다."))
+			.andExpect(jsonPath("$.data").isEmpty());
 	}
 }

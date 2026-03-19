@@ -24,6 +24,8 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 	@Query("select coalesce(sum(p.savedAmount), 0) from Plan p where p.user.id = :userId")
 	Long sumSavedAmountByUserId(@Param("userId") Integer userId);
 
+	List<Plan> findAllByUserId(Integer userId);
+
 	List<Plan> findAllByUserIdAndPriorityGreaterThanEqualOrderByPriorityAsc(Integer userId, Integer priority);
 
 	List<Plan> findAllByStatusAndStartDateLessThanEqual(PlanStatus status, LocalDate date);
