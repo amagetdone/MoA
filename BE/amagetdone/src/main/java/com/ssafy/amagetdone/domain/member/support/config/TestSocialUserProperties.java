@@ -32,4 +32,25 @@ public class TestSocialUserProperties {
 	public void setUserApiKey(String userApiKey) {
 		this.userApiKey = userApiKey;
 	}
+
+	public String resolveNickname(int testUserId) {
+		return suffix(testUserId).isEmpty() ? nickname : nickname + testUserId;
+	}
+
+	public String resolveEmail(int testUserId) {
+		String suffix = suffix(testUserId);
+		if (suffix.isEmpty()) {
+			return email;
+		}
+
+		int separatorIndex = email.indexOf('@');
+		if (separatorIndex < 0) {
+			return email + suffix;
+		}
+		return email.substring(0, separatorIndex) + suffix + email.substring(separatorIndex);
+	}
+
+	private String suffix(int testUserId) {
+		return testUserId == 1 ? "" : String.valueOf(testUserId);
+	}
 }

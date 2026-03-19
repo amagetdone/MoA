@@ -3,6 +3,7 @@ package com.ssafy.amagetdone.global.docs.controller;
 import com.ssafy.amagetdone.domain.member.api.dto.LogoutDto;
 import com.ssafy.amagetdone.domain.member.api.dto.RefreshTokenDto;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
+import com.ssafy.amagetdone.domain.member.api.dto.TestSocialAuthDto;
 import com.ssafy.amagetdone.domain.member.api.dto.TestSocialResetDto;
 import com.ssafy.amagetdone.global.response.ApiResponse;
 
@@ -35,7 +36,14 @@ public interface AuthDocsController {
 	@ApiResponses({
 		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "테스트 로그인 성공")
 	})
-	ApiResponse<SocialAuthDto.Response> socialTestAuth();
+	ApiResponse<SocialAuthDto.Response> socialTestAuth(
+		@io.swagger.v3.oas.annotations.parameters.RequestBody(
+			required = false,
+			description = "테스트 로그인 요청",
+			content = @Content(schema = @Schema(implementation = TestSocialAuthDto.Request.class))
+		)
+		TestSocialAuthDto.Request request
+	);
 
 	@Operation(summary = "테스트 소셜 사용자 초기화", description = "테스트용 소셜 사용자를 초기화합니다.")
 	@ApiResponses({

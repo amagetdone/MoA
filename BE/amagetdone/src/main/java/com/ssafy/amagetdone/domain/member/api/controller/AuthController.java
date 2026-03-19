@@ -3,6 +3,7 @@ package com.ssafy.amagetdone.domain.member.api.controller;
 import com.ssafy.amagetdone.domain.member.api.dto.LogoutDto;
 import com.ssafy.amagetdone.domain.member.api.dto.RefreshTokenDto;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
+import com.ssafy.amagetdone.domain.member.api.dto.TestSocialAuthDto;
 import com.ssafy.amagetdone.domain.member.api.dto.TestSocialResetDto;
 import com.ssafy.amagetdone.domain.member.application.service.MemberAuthService;
 import com.ssafy.amagetdone.domain.member.application.service.MemberTokenService;
@@ -19,6 +20,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/v1/auth")
@@ -46,8 +49,11 @@ public class AuthController implements AuthDocsController {
 	}
 
 	@PostMapping("/social/test")
-	public ApiResponse<SocialAuthDto.Response> socialTestAuth() {
-		return ApiResponse.ok("테스트 소셜 로그인에 성공했습니다.", memberAuthService.authenticateTest());
+	public ApiResponse<SocialAuthDto.Response> socialTestAuth(
+		@Valid @RequestBody(required = false) TestSocialAuthDto.Request request
+	) {
+		TestSocialAuthDto.Request testRequest = request == null ? TestSocialAuthDto.Request.defaultRequest() : request;
+		return ApiResponse.ok("테스트 소셜 로그인에 성공했습니다.", memberAuthService.authenticateTest(testRequest));
 	}
 
 	@PostMapping("/social/test/reset")

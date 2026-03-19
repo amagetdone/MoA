@@ -57,25 +57,25 @@ class FindOrCreateSocialUserUseCaseTest {
 	}
 
 	@Test
-	void createInitializesConfiguredFieldsForTestSocialUser() {
+	void createInitializesConfiguredFieldsForRequestedTestSocialUser() {
 		FindOrCreateSocialUserUseCase useCase = new FindOrCreateSocialUserUseCase(
 			socialAccountRepository,
 			userRepository,
 			testSocialUserProperties()
 		);
-		SocialUserIdentity identity = new SocialUserIdentity(SocialProvider.TEST, "test-social-user-001");
+		SocialUserIdentity identity = new SocialUserIdentity(SocialProvider.TEST, "test-social-user-002");
 		User savedUser = User.createPendingSocialUser();
-		SocialAccount savedSocialAccount = SocialAccount.create(savedUser, SocialProvider.TEST, "test-social-user-001");
+		SocialAccount savedSocialAccount = SocialAccount.create(savedUser, SocialProvider.TEST, "test-social-user-002");
 
-		given(socialAccountRepository.findByProviderAndProviderUid(SocialProvider.TEST, "test-social-user-001"))
+		given(socialAccountRepository.findByProviderAndProviderUid(SocialProvider.TEST, "test-social-user-002"))
 			.willReturn(Optional.empty());
 		given(userRepository.save(any(User.class))).willAnswer(invocation -> invocation.getArgument(0));
 		given(socialAccountRepository.save(any(SocialAccount.class))).willReturn(savedSocialAccount);
 
 		FindOrCreateSocialUserUseCase.Result result = useCase.execute(identity);
 
-		assertEquals("tester", result.user().getNickname());
-		assertEquals("test@test.com", result.user().getEmail());
+		assertEquals("tester2", result.user().getNickname());
+		assertEquals("test2@test.com", result.user().getEmail());
 		assertNull(result.user().getUserKey());
 		assertEquals("TEMP", result.user().getStatus().name());
 		assertFalse(result.isNewUser() && result.user().getUserKey() != null);
@@ -89,17 +89,17 @@ class FindOrCreateSocialUserUseCaseTest {
 			testSocialUserProperties()
 		);
 		User existingUser = User.createPendingSocialUser();
-		SocialAccount existingSocialAccount = SocialAccount.create(existingUser, SocialProvider.TEST, "test-social-user-001");
-		SocialUserIdentity identity = new SocialUserIdentity(SocialProvider.TEST, "test-social-user-001");
+		SocialAccount existingSocialAccount = SocialAccount.create(existingUser, SocialProvider.TEST, "test-social-user-005");
+		SocialUserIdentity identity = new SocialUserIdentity(SocialProvider.TEST, "test-social-user-005");
 
-		given(socialAccountRepository.findByProviderAndProviderUid(SocialProvider.TEST, "test-social-user-001"))
+		given(socialAccountRepository.findByProviderAndProviderUid(SocialProvider.TEST, "test-social-user-005"))
 			.willReturn(Optional.of(existingSocialAccount));
 
 		FindOrCreateSocialUserUseCase.Result result = useCase.execute(identity);
 
 		assertFalse(result.isNewUser());
-		assertEquals("tester", result.user().getNickname());
-		assertEquals("test@test.com", result.user().getEmail());
+		assertEquals("tester5", result.user().getNickname());
+		assertEquals("test5@test.com", result.user().getEmail());
 		assertNull(result.user().getUserKey());
 	}
 

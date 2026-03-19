@@ -1,5 +1,6 @@
 package com.ssafy.amagetdone.domain.member.application.usecase;
 
+import com.ssafy.amagetdone.domain.member.infra.client.MockSocialAuthClient;
 import com.ssafy.amagetdone.domain.member.infra.client.SocialUserIdentity;
 import com.ssafy.amagetdone.domain.member.model.entity.SocialAccount;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
@@ -55,9 +56,10 @@ public class FindOrCreateSocialUserUseCase {
 		if (identity.provider() != SocialProvider.TEST) {
 			return;
 		}
+		int testUserId = MockSocialAuthClient.resolveTestUserId(identity.providerUid());
 		user.applyTestSocialProfile(
-			testSocialUserProperties.getNickname(),
-			testSocialUserProperties.getEmail()
+			testSocialUserProperties.resolveNickname(testUserId),
+			testSocialUserProperties.resolveEmail(testUserId)
 		);
 	}
 

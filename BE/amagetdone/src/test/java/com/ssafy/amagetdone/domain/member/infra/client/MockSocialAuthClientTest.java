@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
+import com.ssafy.amagetdone.domain.member.api.dto.TestSocialAuthDto;
 import com.ssafy.amagetdone.domain.member.model.vo.SocialProvider;
 
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,14 @@ class MockSocialAuthClientTest {
 		assertEquals(
 			new SocialUserIdentity(SocialProvider.TEST, "test-social-user-001"),
 			client.fetchIdentity(new SocialAuthDto.Request(null, null))
+		);
+		assertEquals(
+			new SocialUserIdentity(SocialProvider.TEST, "test-social-user-001"),
+			client.fetchIdentity(new TestSocialAuthDto.Request(null))
+		);
+		assertEquals(
+			new SocialUserIdentity(SocialProvider.TEST, "test-social-user-005"),
+			client.fetchIdentity(new TestSocialAuthDto.Request(5))
 		);
 	}
 }

@@ -4,12 +4,14 @@ import java.util.List;
 
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
+import com.ssafy.amagetdone.domain.member.api.dto.TestSocialAuthDto;
 import com.ssafy.amagetdone.domain.member.application.usecase.EnsureFinMemberLinkedUseCase;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
 import com.ssafy.amagetdone.domain.member.application.usecase.FindOrCreateSocialUserUseCase;
 import com.ssafy.amagetdone.domain.member.application.usecase.IssueMemberTokensUseCase;
 import com.ssafy.amagetdone.domain.member.application.usecase.ResetTestSocialUserUseCase;
+import com.ssafy.amagetdone.domain.member.infra.client.MockSocialAuthClient;
 import com.ssafy.amagetdone.domain.member.infra.client.SocialAuthClient;
 import com.ssafy.amagetdone.domain.member.infra.client.SocialUserIdentity;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
@@ -31,6 +33,7 @@ public class MemberAuthService {
 	private static final Logger log = LoggerFactory.getLogger(MemberAuthService.class);
 
 	private final List<SocialAuthClient> socialAuthClients;
+	private final MockSocialAuthClient mockSocialAuthClient;
 	private final FindOrCreateSocialUserUseCase findOrCreateSocialUserUseCase;
 	private final IssueMemberTokensUseCase issueMemberTokensUseCase;
 	private final ResetTestSocialUserUseCase resetTestSocialUserUseCase;
@@ -42,8 +45,9 @@ public class MemberAuthService {
 		return authenticateInternal(provider, request);
 	}
 
-	public SocialAuthDto.Response authenticateTest() {
-		return authenticateInternal(SocialProvider.TEST, new SocialAuthDto.Request(null, null));
+	public SocialAuthDto.Response authenticateTest(TestSocialAuthDto.Request request) {
+		SocialUserIdentity identity = mockSocialAuthClient.fetchIdentity(request);
+		return authenticateInternal(SocialProvider.TEST, identity);
 	}
 
 	public void resetTestUser() {
@@ -71,6 +75,40 @@ public class MemberAuthService {
 				.orElseThrow(() -> new MemberException(MemberErrorCode.UNSUPPORTED_SOCIAL_PROVIDER));
 
 			SocialUserIdentity identity = client.fetchIdentity(request);
+			socialAuthSucceeded = true;
+			return authenticateInternal(provider, identity, requestId, true);
+		} catch (RuntimeException exception) {
+			if (!socialAuthSucceeded) {
+				log.warn(
+					"event=SOCIAL_AUTH_FAILURE requestId={} provider={} errorType={}",
+					requestId,
+					provider.name(),
+					exception.getClass().getSimpleName()
+				);
+			}
+			log.warn(
+				"event=MEMBER_LOGIN_FAILURE requestId={} provider={} errorType={}",
+				requestId,
+				provider.name(),
+				exception.getClass().getSimpleName()
+			);
+			throw exception;
+		}
+	}
+
+	private SocialAuthDto.Response authenticateInternal(SocialProvider provider, SocialUserIdentity identity) {
+		String requestId = MemberLogHelper.requestId();
+		return authenticateInternal(provider, identity, requestId, false);
+	}
+
+	private SocialAuthDto.Response authenticateInternal(
+		SocialProvider provider,
+		SocialUserIdentity identity,
+		String requestId,
+		boolean socialAuthAlreadySucceeded
+	) {
+		boolean socialAuthSucceeded = socialAuthAlreadySucceeded;
+		try {
 			socialAuthSucceeded = true;
 			log.info(
 				"event=SOCIAL_AUTH_SUCCESS requestId={} provider={} providerUid={}",
