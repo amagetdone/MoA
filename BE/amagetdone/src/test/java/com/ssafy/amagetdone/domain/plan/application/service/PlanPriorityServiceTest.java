@@ -33,7 +33,11 @@ class PlanPriorityServiceTest {
 	void shiftsExistingPlansBackWhenPriorityConflicts() {
 		Plan second = planWithPriority(2);
 		Plan third = planWithPriority(3);
-		given(planRepository.findAllByUserIdAndPriorityGreaterThanEqualOrderByPriorityAsc(1, 2))
+		given(planRepository.findAllByUserIdAndDeletedFalseAndStatusInAndPriorityGreaterThanEqualOrderByPriorityAsc(
+			1,
+			List.of(PlanStatus.WAITING, PlanStatus.ACTIVE, PlanStatus.PAUSED),
+			2
+		))
 			.willReturn(List.of(second, third));
 
 		planPriorityService.shiftPriorities(1, 2);
@@ -43,11 +47,28 @@ class PlanPriorityServiceTest {
 	}
 
 	@Test
+	void compactsRemainingPrioritiesAfterDeletion() {
+		Plan third = planWithPriority(3);
+		Plan fourth = planWithPriority(4);
+		given(planRepository.findAllByUserIdAndDeletedFalseAndStatusInAndPriorityGreaterThanOrderByPriorityAsc(
+			1,
+			List.of(PlanStatus.WAITING, PlanStatus.ACTIVE, PlanStatus.PAUSED),
+			2
+		))
+			.willReturn(List.of(third, fourth));
+
+		planPriorityService.compactPrioritiesAfterDeletion(1, 2);
+
+		assertEquals(2, ReflectionTestUtils.getField(third, "priority"));
+		assertEquals(3, ReflectionTestUtils.getField(fourth, "priority"));
+	}
+
+	@Test
 	void updatesAllPlanPrioritiesWhenRequestContainsFullUserPlanSet() {
 		Plan first = planWithIdAndPriority(101, 1);
 		Plan second = planWithIdAndPriority(102, 2);
 		Plan third = planWithIdAndPriority(103, 3);
-		given(planRepository.findAllByUser_IdAndStatus(1, PlanStatus.ACTIVE))
+		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(1, PlanStatus.ACTIVE))
 			.willReturn(new ArrayList<>(List.of(first, second, third)));
 
 		planPriorityService.updatePriorities(
@@ -68,7 +89,7 @@ class PlanPriorityServiceTest {
 	void throwsWhenRequestDoesNotContainFullUserPlanSet() {
 		Plan first = planWithIdAndPriority(101, 1);
 		Plan second = planWithIdAndPriority(102, 2);
-		given(planRepository.findAllByUser_IdAndStatus(1, PlanStatus.ACTIVE))
+		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(1, PlanStatus.ACTIVE))
 			.willReturn(List.of(first, second));
 
 		PlanException exception = assertThrows(
@@ -86,7 +107,7 @@ class PlanPriorityServiceTest {
 	void throwsWhenPrioritiesAreNotContiguous() {
 		Plan first = planWithIdAndPriority(101, 1);
 		Plan second = planWithIdAndPriority(102, 2);
-		given(planRepository.findAllByUser_IdAndStatus(1, PlanStatus.ACTIVE))
+		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(1, PlanStatus.ACTIVE))
 			.willReturn(List.of(first, second));
 
 		PlanException exception = assertThrows(
@@ -108,7 +129,7 @@ class PlanPriorityServiceTest {
 		Plan activeFirst = planWithIdAndPriority(101, 1);
 		Plan activeSecond = planWithIdAndPriority(102, 2);
 		Plan waitingPlan = planWithIdAndPriority(999, 9);
-		given(planRepository.findAllByUser_IdAndStatus(1, PlanStatus.ACTIVE))
+		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(1, PlanStatus.ACTIVE))
 			.willReturn(List.of(activeFirst, activeSecond));
 
 		planPriorityService.updatePriorities(

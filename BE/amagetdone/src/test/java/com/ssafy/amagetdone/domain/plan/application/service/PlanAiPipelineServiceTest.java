@@ -5,13 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Optional;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Optional;
 
 import com.ssafy.amagetdone.domain.member.application.service.MemberProfileImageService;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
@@ -28,6 +29,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+
+import jakarta.persistence.EntityManager;
 
 @ExtendWith(MockitoExtension.class)
 class PlanAiPipelineServiceTest {
@@ -47,6 +50,9 @@ class PlanAiPipelineServiceTest {
 	@Mock
 	private PyanClient pyanClient;
 
+	@Mock
+	private EntityManager entityManager;
+
 	private PlanAiPipelineService planAiPipelineService;
 
 	private void createServiceWithClock(Clock clock) {
@@ -56,7 +62,8 @@ class PlanAiPipelineServiceTest {
 			planAiClient,
 			storageService,
 			pyanClient,
-			clock
+			clock,
+			entityManager
 		);
 	}
 
@@ -65,7 +72,7 @@ class PlanAiPipelineServiceTest {
 		createServiceWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
 		Plan plan = instantiatePlan(10, 1, "Europe trip fund", "Summer travel savings");
 		ReflectionTestUtils.setField(plan, "startDate", LocalDate.of(2026, 3, 19));
-		given(planRepository.findByIdAndUserId(10, 1)).willReturn(Optional.of(plan));
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(10, 1)).willReturn(Optional.of(plan));
 		given(memberProfileImageService.loadProfileImageUrl(1)).willReturn("https://cdn.example.com/profile.png");
 		given(planAiClient.generatePlanImage(
 			"[Title] Europe trip fund [description] Summer travel savings",
@@ -108,7 +115,7 @@ class PlanAiPipelineServiceTest {
 		createServiceWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
 		Plan plan = instantiatePlan(11, 1, "Europe trip fund", "Summer travel savings");
 		ReflectionTestUtils.setField(plan, "startDate", LocalDate.of(2026, 3, 20));
-		given(planRepository.findByIdAndUserId(11, 1)).willReturn(Optional.of(plan));
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(11, 1)).willReturn(Optional.of(plan));
 		given(memberProfileImageService.loadProfileImageUrl(1)).willReturn("https://cdn.example.com/profile.png");
 		given(planAiClient.generatePlanImage(
 			"[Title] Europe trip fund [description] Summer travel savings",
@@ -142,7 +149,7 @@ class PlanAiPipelineServiceTest {
 	void startMarksFailedWhenPipelineThrowsException() {
 		createServiceWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
 		Plan plan = instantiatePlan(12, 1, "Europe trip fund", "Summer travel savings");
-		given(planRepository.findByIdAndUserId(12, 1)).willReturn(Optional.of(plan));
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(12, 1)).willReturn(Optional.of(plan));
 		given(memberProfileImageService.loadProfileImageUrl(1)).willReturn("https://cdn.example.com/profile.png");
 		given(planAiClient.generatePlanImage(
 			"[Title] Europe trip fund [description] Summer travel savings",
@@ -160,7 +167,7 @@ class PlanAiPipelineServiceTest {
 	void startMarksFailedWhenPyanResponseDoesNotContainCompressedDownloadUrl() {
 		createServiceWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
 		Plan plan = instantiatePlan(13, 1, "Europe trip fund", "Summer travel savings");
-		given(planRepository.findByIdAndUserId(13, 1)).willReturn(Optional.of(plan));
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(13, 1)).willReturn(Optional.of(plan));
 		given(memberProfileImageService.loadProfileImageUrl(1)).willReturn("https://cdn.example.com/profile.png");
 		given(planAiClient.generatePlanImage(
 			"[Title] Europe trip fund [description] Summer travel savings",
@@ -188,6 +195,46 @@ class PlanAiPipelineServiceTest {
 
 		assertEquals("FAILED", ReflectionTestUtils.getField(plan, "aiPipelineStatus").toString());
 		assertEquals(1, ReflectionTestUtils.getField(plan, "aiRetryCount"));
+		assertNull(ReflectionTestUtils.getField(plan, "videoUrl"));
+	}
+
+	@Test
+	void startDoesNotReactivateCancelledDeletedPlanAfterAsyncCompletion() {
+		createServiceWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
+		Plan plan = instantiatePlan(14, 1, "Europe trip fund", "Summer travel savings");
+		ReflectionTestUtils.setField(plan, "startDate", LocalDate.of(2026, 3, 18));
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(14, 1)).willReturn(Optional.of(plan));
+		given(memberProfileImageService.loadProfileImageUrl(1)).willReturn("https://cdn.example.com/profile.png");
+		given(planAiClient.generatePlanImage(
+			"[Title] Europe trip fund [description] Summer travel savings",
+			"https://cdn.example.com/profile.png"
+		))
+			.willReturn("Z2VuZXJhdGVkLWltYWdl");
+		given(storageService.upload(any(), eq(ImageCategory.PLAN))).willReturn("plan/generated.png");
+		given(pyanClient.generate("generated-image".getBytes(), "plan-14"))
+			.willReturn(new PyanGenerateResponse(
+				"ready",
+				"task-14",
+				"plan-14",
+				null,
+				"https://sketch.pyan.kr/api/status/task-14",
+				"https://sketch.pyan.kr/api/video/task-14?variant=original",
+				null,
+				null,
+				"https://sketch.pyan.kr/cdn/original-14.mp4",
+				"https://sketch.pyan.kr/api/goals/plan-14",
+				"https://sketch.pyan.kr/cdn/original-14.mp4",
+				"https://sketch.pyan.kr/cdn/compressed-14.mp4"
+			));
+		doAnswer(invocation -> {
+			plan.cancelAndDelete();
+			return null;
+		}).when(entityManager).refresh(plan);
+
+		planAiPipelineService.start(14, 1);
+
+		assertEquals("CANCELLED", ReflectionTestUtils.getField(plan, "status").toString());
+		assertEquals("PROCESSING", ReflectionTestUtils.getField(plan, "aiPipelineStatus").toString());
 		assertNull(ReflectionTestUtils.getField(plan, "videoUrl"));
 	}
 

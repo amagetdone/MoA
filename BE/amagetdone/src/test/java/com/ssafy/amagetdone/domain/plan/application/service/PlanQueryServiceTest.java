@@ -64,7 +64,7 @@ class PlanQueryServiceTest {
 			allocation(plan, budgetWeek(99, LocalDate.of(2027, 1, 4), LocalDate.of(2027, 1, 10)), 90_000L, 80_000L)
 		);
 
-		given(planRepository.findByIdAndUserId(1, 1)).willReturn(Optional.of(plan));
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(1, 1)).willReturn(Optional.of(plan));
 		given(planWeekAllocationRepository.findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(1)).willReturn(allocations);
 		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(any(), any(), any()))
 			.willReturn(Optional.of(currentBudgetWeek(11)));
@@ -90,7 +90,7 @@ class PlanQueryServiceTest {
 	void getPlanDetailReturnsEmptyYearlyDataAndZeroCurrentWeekWhenNoMatchingData() {
 		Plan plan = plan(1, 1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), 3_000_000L, 1_200_000L);
 
-		given(planRepository.findByIdAndUserId(1, 1)).willReturn(Optional.of(plan));
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(1, 1)).willReturn(Optional.of(plan));
 		given(planWeekAllocationRepository.findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(1)).willReturn(List.of());
 		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(any(), any(), any()))
 			.willReturn(Optional.empty());
@@ -109,7 +109,7 @@ class PlanQueryServiceTest {
 	void listPlanWeeklyPlansReturnsRequestedPage() {
 		Plan plan = plan(1, 1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), 3_000_000L, 1_200_000L);
 
-		given(planRepository.findByIdAndUserId(1, 1)).willReturn(Optional.of(plan));
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(1, 1)).willReturn(Optional.of(plan));
 		given(planWeekAllocationRepository.findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(1)).willReturn(sevenYearAllocations(plan));
 
 		PlanWeeklyPlansPageResponse response = service.listPlanWeeklyPlans(1, 1, 1, 3);

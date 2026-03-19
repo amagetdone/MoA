@@ -32,7 +32,7 @@ class GetPlanVideoDownloadUrlUseCaseTest {
 		Plan plan = instantiatePlan();
 		ReflectionTestUtils.setField(plan, "videoUrl", "https://cdn.example.com/plan-10.mp4");
 
-		given(planRepository.findByIdAndUserId(10, 1)).willReturn(Optional.of(plan));
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(10, 1)).willReturn(Optional.of(plan));
 
 		String result = getPlanVideoDownloadUrlUseCase.execute(1, 10);
 
@@ -42,7 +42,7 @@ class GetPlanVideoDownloadUrlUseCaseTest {
 	@Test
 	void throwsNotFoundWhenPlanHasNoVideoUrl() {
 		Plan plan = instantiatePlan();
-		given(planRepository.findByIdAndUserId(10, 1)).willReturn(Optional.of(plan));
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(10, 1)).willReturn(Optional.of(plan));
 
 		PlanException exception = assertThrows(
 			PlanException.class,

@@ -36,9 +36,9 @@ class MypageQueryServiceTest {
 		user.setProfileUrl("profile/test.png");
 
 		given(userRepository.findById(1)).willReturn(Optional.of(user));
-		given(planRepository.countByUser_IdAndStatus(1, PlanStatus.ACTIVE)).willReturn(4L);
-		given(planRepository.countByUser_IdAndStatus(1, PlanStatus.COMPLETED)).willReturn(1L);
-		given(planRepository.sumSavedAmountByUserId(1)).willReturn(5690000L);
+		given(planRepository.countByUser_IdAndStatusAndDeletedFalse(1, PlanStatus.ACTIVE)).willReturn(4L);
+		given(planRepository.countByUser_IdAndStatusAndDeletedFalse(1, PlanStatus.COMPLETED)).willReturn(1L);
+		given(planRepository.sumSavedAmountByUserIdAndDeletedFalse(1)).willReturn(5690000L);
 
 		MypageDto.Response response = mypageQueryService.getMypage(1);
 

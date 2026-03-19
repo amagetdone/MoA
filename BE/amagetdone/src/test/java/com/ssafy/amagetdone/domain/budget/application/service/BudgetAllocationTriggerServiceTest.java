@@ -84,7 +84,7 @@ class BudgetAllocationTriggerServiceTest {
 		given(budgetMonthRepository.findByUser_IdAndBaseDate(userId, baseMonth)).willReturn(Optional.of(budgetMonth));
 		given(essentialExpenseMonthRepository.findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(userId))
 			.willReturn(List.of(essential));
-		given(planRepository.findAllByUser_IdAndStatus(userId, PlanStatus.ACTIVE)).willReturn(List.of(activePlan));
+		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE)).willReturn(List.of(activePlan));
 
 		service.trigger(userId);
 
@@ -98,7 +98,7 @@ class BudgetAllocationTriggerServiceTest {
 		inOrder.verify(refreshEssentialExpenseMonthFromAnalysisUseCase).execute(userId, baseMonth);
 		inOrder.verify(budgetMonthRepository).findByUser_IdAndBaseDate(userId, baseMonth);
 		inOrder.verify(essentialExpenseMonthRepository).findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(userId);
-		inOrder.verify(planRepository).findAllByUser_IdAndStatus(userId, PlanStatus.ACTIVE);
+		inOrder.verify(planRepository).findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE);
 		inOrder.verify(allocateBudgetUseCase).execute(any(User.class), eq(baseMonth), eq(3_200_000L), eq(List.of(essential)), eq(List.of(activePlan)));
 	}
 

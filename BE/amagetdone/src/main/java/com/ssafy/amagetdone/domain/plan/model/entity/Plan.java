@@ -151,6 +151,11 @@ public class Plan extends BaseEntity {
 		this.status = PlanStatus.ACTIVE;
 	}
 
+	public void cancelAndDelete() {
+		this.status = PlanStatus.CANCELLED;
+		this.setDeleted(true);
+	}
+
 	public void markAiProcessing() {
 		this.aiPipelineStatus = PlanAiPipelineStatus.PROCESSING;
 	}

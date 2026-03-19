@@ -110,7 +110,7 @@ class SyncBudgetStateOnReadUseCaseTest {
 
 		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(any(User.class), any(), any()))
 			.willReturn(Optional.of(currentWeek));
-		given(planRepository.findAllByUser_IdAndStatus(userId, PlanStatus.ACTIVE)).willReturn(List.of(activePlan));
+		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE)).willReturn(List.of(activePlan));
 		given(planWeekAllocationRepository.findByBudgetWeek(currentWeek)).willReturn(List.of());
 		given(syncLatestTransactionsUseCase.execute(userId, 3, false))
 			.willReturn(new TransactionSyncService.SyncResult(0, 0));
@@ -137,7 +137,7 @@ class SyncBudgetStateOnReadUseCaseTest {
 
 		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(any(User.class), any(), any()))
 			.willReturn(Optional.of(currentWeek));
-		given(planRepository.findAllByUser_IdAndStatus(userId, PlanStatus.ACTIVE)).willReturn(List.of(activePlan));
+		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE)).willReturn(List.of(activePlan));
 		given(planWeekAllocationRepository.findByBudgetWeek(currentWeek)).willReturn(List.of(allocation));
 		given(syncLatestTransactionsUseCase.execute(userId, 3, false))
 			.willReturn(new TransactionSyncService.SyncResult(1, 0));

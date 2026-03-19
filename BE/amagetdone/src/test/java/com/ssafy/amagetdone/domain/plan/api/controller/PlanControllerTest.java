@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -19,6 +20,7 @@ import com.ssafy.amagetdone.domain.plan.api.dto.PlanDetailResponse;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanListItemResponse;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanWeeklyPlansPageResponse;
 import com.ssafy.amagetdone.domain.plan.application.usecase.CreatePlanUseCase;
+import com.ssafy.amagetdone.domain.plan.application.usecase.DeletePlanUseCase;
 import com.ssafy.amagetdone.domain.plan.application.usecase.GetPlanDetailUseCase;
 import com.ssafy.amagetdone.domain.plan.application.usecase.GetPlanVideoDownloadUrlUseCase;
 import com.ssafy.amagetdone.domain.plan.application.usecase.ListPlanWeeklyPlansUseCase;
@@ -47,6 +49,9 @@ class PlanControllerTest {
 
 	@MockitoBean
 	private CreatePlanUseCase createPlanUseCase;
+
+	@MockitoBean
+	private DeletePlanUseCase deletePlanUseCase;
 
 	@MockitoBean
 	private ListPlansUseCase listPlansUseCase;
@@ -313,6 +318,20 @@ class PlanControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.message").value("목표 우선순위가 변경되었습니다."))
+			.andExpect(jsonPath("$.data").isEmpty());
+	}
+
+	@Test
+	void deletePlanReturnsSuccessMessage() throws Exception {
+		mockMvc.perform(delete("/api/v1/plans/10")
+				.contextPath("/api")
+				.with(csrf())
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+				)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("목표가 삭제되었습니다."))
 			.andExpect(jsonPath("$.data").isEmpty());
 	}
 }

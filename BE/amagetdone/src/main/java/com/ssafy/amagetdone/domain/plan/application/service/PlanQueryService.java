@@ -108,7 +108,7 @@ public class PlanQueryService {
 	}
 
 	private Plan findOwnedPlan(Integer userId, Integer planId) {
-		return planRepository.findByIdAndUserId(planId, userId)
+		return planRepository.findByIdAndUserIdAndDeletedFalse(planId, userId)
 			.orElseThrow(() -> new PlanException(PlanErrorCode.PLAN_NOT_FOUND));
 	}
 

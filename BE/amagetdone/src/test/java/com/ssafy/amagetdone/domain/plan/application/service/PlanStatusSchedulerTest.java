@@ -47,7 +47,7 @@ class PlanStatusSchedulerTest {
 		Plan sameUserWaitingPlan = planWithStatuses(1, PlanStatus.WAITING, PlanAiPipelineStatus.SUCCEEDED);
 		Plan pendingAiPlan = planWithStatuses(2, PlanStatus.WAITING, PlanAiPipelineStatus.PENDING);
 
-		given(planRepository.findAllByStatusAndStartDateLessThanEqualAndAiPipelineStatus(
+		given(planRepository.findAllByStatusAndStartDateLessThanEqualAndAiPipelineStatusAndDeletedFalse(
 			PlanStatus.WAITING,
 			today,
 			PlanAiPipelineStatus.SUCCEEDED
@@ -67,7 +67,7 @@ class PlanStatusSchedulerTest {
 		LocalDate today = LocalDate.of(2026, 3, 19);
 		Plan waitingPlan = planWithStatuses(3, PlanStatus.WAITING, PlanAiPipelineStatus.SUCCEEDED);
 
-		given(planRepository.findAllByStatusAndStartDateLessThanEqualAndAiPipelineStatus(
+		given(planRepository.findAllByStatusAndStartDateLessThanEqualAndAiPipelineStatusAndDeletedFalse(
 			PlanStatus.WAITING,
 			today,
 			PlanAiPipelineStatus.SUCCEEDED
@@ -86,7 +86,8 @@ class PlanStatusSchedulerTest {
 		Plan sameUserPlan = planWithStatuses(1, PlanStatus.ACTIVE, PlanAiPipelineStatus.SUCCEEDED);
 		Plan secondUserPlan = planWithStatuses(2, PlanStatus.ACTIVE, PlanAiPipelineStatus.SUCCEEDED);
 
-		given(planRepository.findAllByStatus(PlanStatus.ACTIVE)).willReturn(List.of(firstUserPlan, sameUserPlan, secondUserPlan));
+		given(planRepository.findAllByStatusAndDeletedFalse(PlanStatus.ACTIVE))
+			.willReturn(List.of(firstUserPlan, sameUserPlan, secondUserPlan));
 
 		planStatusScheduler.reallocateActivePlansForWeekStart(LocalDate.of(2026, 3, 23));
 
@@ -98,7 +99,7 @@ class PlanStatusSchedulerTest {
 	void doesNotTriggerAllocationWhenNothingWasActivated() {
 		createSchedulerWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
 
-		given(planRepository.findAllByStatusAndStartDateLessThanEqualAndAiPipelineStatus(
+		given(planRepository.findAllByStatusAndStartDateLessThanEqualAndAiPipelineStatusAndDeletedFalse(
 			PlanStatus.WAITING,
 			LocalDate.of(2026, 3, 19),
 			PlanAiPipelineStatus.SUCCEEDED

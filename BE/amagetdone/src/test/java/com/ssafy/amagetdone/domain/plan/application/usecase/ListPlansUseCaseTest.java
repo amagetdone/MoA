@@ -33,7 +33,7 @@ class ListPlansUseCaseTest {
 		Plan ipadPlan = instantiatePlan(1, "아이패드 구매", 320000L, 1000000L, 1, 3, LocalDate.now().plusDays(14));
 		Plan travelPlan = instantiatePlan(2, "여행 자금", 500000L, 1500000L, 2, 5, LocalDate.now().plusDays(72));
 
-		given(planRepository.findAllByUser_IdAndStatus(1, PlanStatus.ACTIVE))
+		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(1, PlanStatus.ACTIVE))
 			.willReturn(List.of(travelPlan, ipadPlan));
 
 		List<PlanListItemResponse> response = listPlansUseCase.execute(1);
