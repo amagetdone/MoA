@@ -36,6 +36,7 @@ class SpendingAnalysisPage extends ConsumerWidget {
           : Scrollbar(
               thumbVisibility: false,
               child: SingleChildScrollView(
+              primary: true,
               physics: const BouncingScrollPhysics(),
               padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
               child: Column(
@@ -221,7 +222,9 @@ class _SpendingSummaryCard extends ConsumerWidget {
                   style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary),
                 ),
                 Text(
-                  CurrencyFormatter.formatKRW(state.totalSpent),
+                  CurrencyFormatter.formatKRW(
+                    state.isWeekly ? state.weeklyExpenseAmount : state.monthlyExpenseAmount,
+                  ),
                   style: AppTextStyles.headingMd.copyWith(fontSize: 22.sp),
                 ),
               ],

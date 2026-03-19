@@ -1,0 +1,19 @@
+{
+  "status": "ok",
+  "message": "목표 주간 계획 조회 성공",
+  "data": {
+    "planId": 17,
+    "weeklyPlans": [
+      { "week": 4, "amount": 120000 },
+      { "week": 5, "amount": 120000 },
+      { "week": 6, "amount": 120000 },
+      { "week": 7, "amount": 120000 },
+      { "week": 8, "amount": 120000 }
+    ],
+    "page": 0,
+    "size": 5,
+    "totalElements": 25,
+    "totalPages": 5,
+    "hasNext": true
+  }
+}

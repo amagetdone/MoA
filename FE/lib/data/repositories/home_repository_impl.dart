@@ -17,7 +17,24 @@ class HomeRepositoryImpl implements HomeRepository {
   @override
   Future<HomeDashboard> fetchHomeDashboard() async {
     try {
-      return await _remoteDataSource.fetchHomeDashboard();
+      final dashboard = await _remoteDataSource.fetchHomeDashboard();
+      final cachedGoals = await _localDataSource.getGoals();
+      final activeGoals =
+          cachedGoals
+              .where((goal) => goal.status == GoalStatus.inProgress)
+              .toList()
+            ..sort((a, b) => a.priority.compareTo(b.priority));
+
+      return HomeDashboard(
+        accounts: dashboard.accounts,
+        activeGoals: activeGoals.isNotEmpty
+            ? activeGoals
+            : dashboard.activeGoals,
+        totalAsset: dashboard.totalAsset,
+        weeklyBudget: dashboard.weeklyBudget,
+        weeklySpent: dashboard.weeklySpent,
+        weeklySaved: dashboard.weeklySaved,
+      );
     } catch (_) {
       final snapshot = await _localDataSource.getCachedSnapshot();
       final totalAsset = snapshot.accounts.fold(0, (sum, account) {

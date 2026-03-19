@@ -1,0 +1,46 @@
+{
+  "status": "ok",
+  "message": "목표 목록 조회 성공",
+  "data": [
+    {
+      "planId": 17,
+      "title": "자가",
+      "savedAmount": 0,
+      "targetAmount": 3000000,
+      "priority": 1,
+      "weekNumber": 25,
+      "dday": 166,
+      "achievementRate": 0
+    },
+    {
+      "planId": 15,
+      "title": "유럽 여행 자금",
+      "savedAmount": 0,
+      "targetAmount": 3000000,
+      "priority": 2,
+      "weekNumber": 25,
+      "dday": 166,
+      "achievementRate": 0
+    },
+    {
+      "planId": 14,
+      "title": "취업",
+      "savedAmount": 0,
+      "targetAmount": 3000000,
+      "priority": 3,
+      "weekNumber": 0,
+      "dday": 166,
+      "achievementRate": 0
+    },
+    {
+      "planId": 11,
+      "title": "노트북 구매",
+      "savedAmount": 0,
+      "targetAmount": 3000000,
+      "priority": 7,
+      "weekNumber": 0,
+      "dday": 166,
+      "achievementRate": 0
+    }
+  ]
+}

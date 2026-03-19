@@ -1,6 +1,6 @@
 package com.ssafy.amagetdone.domain.transaction.model.entity;
 
-import com.ssafy.amagetdone.domain.asset.model.entity.Account;
+import com.ssafy.amagetdone.domain.account.model.entity.Account;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -9,7 +9,18 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrimaryKeyJoinColumn;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@SuperBuilder
 @Entity
 @Table(name = "account_transaction_override")
 @PrimaryKeyJoinColumn(name = "id")
@@ -33,7 +44,4 @@ public class AccountTransactionOverride extends TransactionOverride {
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "account_id", referencedColumnName = "id", nullable = false)
 	private Account account;
-
-	protected AccountTransactionOverride() {
-	}
 }

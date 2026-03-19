@@ -10,7 +10,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-import com.ssafy.amagetdone.config.SsafyFinApiProperties;
+import com.ssafy.amagetdone.global.config.SsafyFinApiProperties;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
 import com.ssafy.amagetdone.domain.member.infra.client.dto.SsafyMemberResponse;

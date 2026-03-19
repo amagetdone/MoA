@@ -3,11 +3,11 @@ package com.ssafy.amagetdone.domain;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.ssafy.amagetdone.domain.asset.model.entity.Account;
-import com.ssafy.amagetdone.domain.asset.model.entity.Card;
-import com.ssafy.amagetdone.domain.asset.model.entity.Category;
-import com.ssafy.amagetdone.domain.asset.model.entity.Merchant;
-import com.ssafy.amagetdone.domain.asset.model.entity.Pocket;
+import com.ssafy.amagetdone.domain.account.model.entity.Account;
+import com.ssafy.amagetdone.domain.account.model.entity.Card;
+import com.ssafy.amagetdone.domain.account.model.entity.Category;
+import com.ssafy.amagetdone.domain.account.model.entity.Merchant;
+import com.ssafy.amagetdone.domain.account.model.entity.Pocket;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetAdjustment;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetMonth;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetRollover;

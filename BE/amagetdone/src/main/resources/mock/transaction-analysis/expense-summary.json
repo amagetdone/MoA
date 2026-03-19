@@ -1,0 +1,34 @@
+{
+  "range": {
+    "fromMonth": "2025-12",
+    "toMonth": "2026-02",
+    "bucket": "MONTH"
+  },
+  "points": [
+    {
+      "label": "2025-12",
+      "expenseAmount": 1820000,
+      "fixedExpenseAmount": 970000,
+      "variableExpenseAmount": 850000
+    },
+    {
+      "label": "2026-01",
+      "expenseAmount": 1760000,
+      "fixedExpenseAmount": 940000,
+      "variableExpenseAmount": 820000
+    },
+    {
+      "label": "2026-02",
+      "expenseAmount": 1690000,
+      "fixedExpenseAmount": 920000,
+      "variableExpenseAmount": 770000
+    }
+  ],
+  "comparison": {
+    "latestAmount": 1690000,
+    "previousAmount": 1760000,
+    "changeAmount": -70000,
+    "changeRate": -3.98
+  },
+  "lastAnalyzedAt": "2026-03-16T09:00:00"
+}

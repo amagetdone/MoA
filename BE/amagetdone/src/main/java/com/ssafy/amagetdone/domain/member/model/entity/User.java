@@ -19,7 +19,19 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@SuperBuilder
 @Entity
 @Table(name = "users")
 public class User extends BaseEntity {
@@ -41,6 +53,7 @@ public class User extends BaseEntity {
 	@Column(name = "has_fixed_income")
 	private Boolean hasFixedIncome;
 
+	@Builder.Default
 	@ColumnDefault("'ACTIVE'")
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false, length = 20)
@@ -58,11 +71,9 @@ public class User extends BaseEntity {
 	@OneToOne(mappedBy = "user")
 	private Setting setting;
 
+	@Builder.Default
 	@OneToMany(mappedBy = "user")
 	private List<Agreement> agreements = new ArrayList<>();
-
-	protected User() {
-	}
 
 	public static User createPendingSocialUser() {
 		User user = new User();
@@ -85,6 +96,15 @@ public class User extends BaseEntity {
 		this.userKey = userKey;
 	}
 
+	public void applyTestSocialProfile(String nickname, String email) {
+		this.nickname = nickname;
+		this.email = email;
+	}
+
+	public void updateProfileUrl(String profileUrl) {
+		this.profileUrl = profileUrl;
+	}
+
 	public void resetToPending() {
 		this.email = null;
 		this.nickname = null;
@@ -100,38 +120,6 @@ public class User extends BaseEntity {
 			&& hasText(email)
 			&& birthDate != null
 			&& hasFixedIncome != null;
-	}
-
-	public Integer getId() {
-		return id;
-	}
-
-	public String getEmail() {
-		return email;
-	}
-
-	public String getNickname() {
-		return nickname;
-	}
-
-	public LocalDate getBirthDate() {
-		return birthDate;
-	}
-
-	public Boolean getHasFixedIncome() {
-		return hasFixedIncome;
-	}
-
-	public UserStatus getStatus() {
-		return status;
-	}
-
-	public String getUserKey() {
-		return userKey;
-	}
-
-	public String getProfileUrl() {
-		return profileUrl;
 	}
 
 	void linkSocialAccount(SocialAccount socialAccount) {

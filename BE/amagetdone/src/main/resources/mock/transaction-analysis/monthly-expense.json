@@ -1,0 +1,10 @@
+{
+  "month": "2026-03",
+  "totalExpenseAmount": 1690000,
+  "fixedExpenseAmount": 920000,
+  "variableExpenseAmount": 770000,
+  "excludedIncomeAmount": 3100000,
+  "excludedInternalTransferAmount": 180000,
+  "transactionCount": 61,
+  "lastAnalyzedAt": "2026-03-16T09:00:00"
+}

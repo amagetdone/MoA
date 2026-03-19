@@ -1,8 +1,10 @@
 package com.ssafy.amagetdone.domain.member.infra.client;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.Set;
 
-import com.ssafy.amagetdone.config.SocialAuthProperties;
+import com.ssafy.amagetdone.global.config.SocialAuthProperties;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
@@ -15,6 +17,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
 public class GoogleSocialAuthClient implements SocialAuthClient {
+
+	private static final Set<String> VALID_GOOGLE_ISSUERS = Set.of(
+		"accounts.google.com",
+		"https://accounts.google.com"
+	);
 
 	private final RestClient restClient;
 	private final SocialAuthProperties properties;
@@ -50,7 +57,7 @@ public class GoogleSocialAuthClient implements SocialAuthClient {
 				.retrieve()
 				.body(GoogleTokenInfoResponse.class);
 
-			if (response == null || response.sub() == null || response.sub().isBlank()) {
+			if (!isValidGoogleTokenInfo(response)) {
 				throw new MemberException(MemberErrorCode.INVALID_GOOGLE_ID_TOKEN);
 			}
 
@@ -60,7 +67,29 @@ public class GoogleSocialAuthClient implements SocialAuthClient {
 		}
 	}
 
+	private boolean isValidGoogleTokenInfo(GoogleTokenInfoResponse response) {
+		return response != null
+			&& response.sub() != null
+			&& !response.sub().isBlank()
+			&& properties.getGoogle().getClientId() != null
+			&& !properties.getGoogle().getClientId().isBlank()
+			&& properties.getGoogle().getClientId().equals(response.aud())
+			&& VALID_GOOGLE_ISSUERS.contains(response.iss())
+			&& isNotExpired(response.exp());
+	}
+
+	private boolean isNotExpired(String expirationEpochSeconds) {
+		try {
+			return Long.parseLong(expirationEpochSeconds) > Instant.now().getEpochSecond();
+		} catch (RuntimeException exception) {
+			return false;
+		}
+	}
+
 	private record GoogleTokenInfoResponse(
+		String aud,
+		String exp,
+		String iss,
 		String sub
 	) {
 	}

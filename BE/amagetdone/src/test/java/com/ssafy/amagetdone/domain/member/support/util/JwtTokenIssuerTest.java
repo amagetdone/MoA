@@ -7,7 +7,7 @@ import java.nio.charset.StandardCharsets;
 
 import javax.crypto.SecretKey;
 
-import com.ssafy.amagetdone.config.JwtProperties;
+import com.ssafy.amagetdone.global.config.JwtProperties;
 import com.ssafy.amagetdone.domain.member.model.vo.SocialProvider;
 
 import org.junit.jupiter.api.Test;

@@ -1,0 +1,52 @@
+{
+  "status": "ok",
+  "message": "목표 생성 성공",
+  "data": {
+    "planId": 21,
+    "planTitle": "유럽 여행 자금",
+    "weeklyMission": {
+      "weeklySavingsAmount": 120000,
+      "weeksToGoal": 25
+    },
+    "weeklyBudget": {
+      "totalIncomeAmount": 950000,
+      "savingAmount": 120000,
+      "fixedExpense": {
+        "totalAmount": 430000,
+        "items": [
+          {
+            "category": "월세",
+            "amount": 300000
+          },
+          {
+            "category": "통신비",
+            "amount": 70000
+          },
+          {
+            "category": "구독",
+            "amount": 60000
+          }
+        ]
+      },
+      "variableExpense": {
+        "totalAmount": 280000,
+        "items": [
+          {
+            "category": "식비",
+            "amount": 140000
+          },
+          {
+            "category": "교통",
+            "amount": 50000
+          },
+          {
+            "category": "쇼핑",
+            "amount": 90000
+          }
+        ]
+      },
+      "freeAmount": 120000
+    },
+    "status": "ACTIVE"
+  }
+}

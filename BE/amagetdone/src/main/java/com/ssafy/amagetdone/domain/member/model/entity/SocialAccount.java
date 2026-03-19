@@ -15,7 +15,18 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@SuperBuilder
 @Entity
 @Table(
 	name = "social_account",
@@ -41,9 +52,6 @@ public class SocialAccount extends BaseEntity {
 	@Column(name = "provider_uid", nullable = false, length = 255)
 	private String providerUid;
 
-	protected SocialAccount() {
-	}
-
 	public static SocialAccount create(User user, SocialProvider provider, String providerUid) {
 		SocialAccount socialAccount = new SocialAccount();
 		socialAccount.user = user;
@@ -51,17 +59,5 @@ public class SocialAccount extends BaseEntity {
 		socialAccount.providerUid = providerUid;
 		user.linkSocialAccount(socialAccount);
 		return socialAccount;
-	}
-
-	public User getUser() {
-		return user;
-	}
-
-	public SocialProvider getProvider() {
-		return provider;
-	}
-
-	public String getProviderUid() {
-		return providerUid;
 	}
 }
