@@ -93,8 +93,7 @@ public class GoalSavingAccrualApplyTestService {
 
 			long plannedAmount = scopedAmount(allocation, zero(allocation.getPlannedAmount()), overlapStart, overlapEnd);
 			long finalAmount = scopedAmount(allocation, zero(allocation.getFinalAmount()), overlapStart, overlapEnd);
-			boolean alreadyApplied = alreadyApplied(budgetWeek, plan, reasonKey);
-			long accruedAmount = alreadyApplied ? 0L : finalAmount;
+			long accruedAmount = finalAmount;
 
 			if (accruedAmount > 0L) {
 				plan.setSavedAmount(zero(plan.getSavedAmount()) + accruedAmount);
@@ -165,14 +164,6 @@ public class GoalSavingAccrualApplyTestService {
 				.thenComparing(allocation -> allocation.getPlan().getId(), Comparator.nullsLast(Integer::compareTo))
 				.thenComparing(allocation -> allocation.getBudgetWeek().getWeekStartDate()))
 			.toList();
-	}
-
-	private boolean alreadyApplied(BudgetWeek budgetWeek, Plan plan, String reasonKey) {
-		return budgetAdjustmentRepository.findByBudgetWeekOrderByCreatedAtDesc(budgetWeek).stream()
-			.anyMatch(adjustment -> adjustment.getPlan() != null
-				&& Objects.equals(adjustment.getPlan().getId(), plan.getId())
-				&& adjustment.getAdjustmentType() == BudgetAdjustmentType.PLAN_SAVED_ADD
-				&& Objects.equals(adjustment.getReason(), reasonKey));
 	}
 
 	private String reasonKey(GoalSavingAccrualForceDto.Scope scope, String periodLabel) {
