@@ -84,6 +84,9 @@ class PlanQueryServiceTest {
 		assertThat(response.totalWeeks()).isEqualTo(3);
 		assertThat(response.achievementRate()).isEqualTo(40);
 		assertThat(response.dday()).isEqualTo(287L);
+		assertThat(response.completionProjection()).isEqualTo(
+			new PlanDetailResponse.CompletionProjection(null, null)
+		);
 	}
 
 	@Test
@@ -103,6 +106,30 @@ class PlanQueryServiceTest {
 		assertThat(response.weeklyPlans()).isEmpty();
 		assertThat(response.totalWeeks()).isEqualTo(0);
 		assertThat(response.currentWeek()).isEqualTo(0);
+		assertThat(response.completionProjection()).isEqualTo(
+			new PlanDetailResponse.CompletionProjection(null, null)
+		);
+	}
+
+	@Test
+	void getPlanDetailCalculatesCompletionProjectionFromFutureFinalAllocations() {
+		Plan plan = plan(1, 1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 5, 31), 1_350_000L, 1_200_000L);
+		List<PlanWeekAllocation> allocations = List.of(
+			allocation(plan, budgetWeek(10, LocalDate.of(2026, 3, 9), LocalDate.of(2026, 3, 15)), 50_000L, 45_000L),
+			allocation(plan, budgetWeek(11, LocalDate.of(2026, 3, 16), LocalDate.of(2026, 3, 22)), 70_000L, 60_000L),
+			allocation(plan, budgetWeek(12, LocalDate.of(2026, 3, 23), LocalDate.of(2026, 3, 29)), 90_000L, 90_000L)
+		);
+
+		given(planRepository.findByIdAndUserId(1, 1)).willReturn(Optional.of(plan));
+		given(planWeekAllocationRepository.findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(1)).willReturn(allocations);
+		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(any(), any(), any()))
+			.willReturn(Optional.of(currentBudgetWeek(11)));
+
+		PlanDetailResponse response = service.getPlanDetail(1, 1);
+
+		assertThat(response.completionProjection()).isEqualTo(
+			new PlanDetailResponse.CompletionProjection(2, LocalDate.of(2026, 3, 29))
+		);
 	}
 
 	@Test

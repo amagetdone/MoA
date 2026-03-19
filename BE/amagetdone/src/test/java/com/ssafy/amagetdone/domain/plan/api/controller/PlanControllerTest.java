@@ -249,7 +249,8 @@ class PlanControllerTest {
 					new PlanDetailResponse.WeeklyPlan(12, 60_000L)
 				),
 				11,
-				3
+				3,
+				new PlanDetailResponse.CompletionProjection(5, java.time.LocalDate.of(2026, 5, 3))
 			));
 
 		mockMvc.perform(get("/api/v1/plans/1")
@@ -262,7 +263,9 @@ class PlanControllerTest {
 			.andExpect(jsonPath("$.data.graphData.weeks[0]").value(10))
 			.andExpect(jsonPath("$.data.weeklyPlans[0].week").value(10))
 			.andExpect(jsonPath("$.data.currentWeek").value(11))
-			.andExpect(jsonPath("$.data.totalWeeks").value(3));
+			.andExpect(jsonPath("$.data.totalWeeks").value(3))
+			.andExpect(jsonPath("$.data.completionProjection.weeksToGoal").value(5))
+			.andExpect(jsonPath("$.data.completionProjection.estimatedCompletionDate").value("2026-05-03"));
 	}
 
 	@Test
