@@ -111,6 +111,10 @@ public class WeeklySavingsDetailQueryService {
 			if (adjustment.getPlan() == null || !planIds.contains(adjustment.getPlan().getId())) {
 				continue;
 			}
+			if (adjustment.getAdjustmentType() == com.ssafy.amagetdone.domain.budget.model.vo.BudgetAdjustmentType.PLAN_SAVED_AUTO_ADD
+				|| adjustment.getAdjustmentType() == com.ssafy.amagetdone.domain.budget.model.vo.BudgetAdjustmentType.PLAN_SAVED_AUTO_SUBTRACT) {
+				continue;
+			}
 			groupedAdjustments.computeIfAbsent(adjustment.getPlan().getId(), ignored -> new java.util.ArrayList<>())
 				.add(adjustment);
 		}

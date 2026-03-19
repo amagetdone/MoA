@@ -43,7 +43,8 @@ public class PlanQueryService {
 
 	public PlanDetailResponse getPlanDetail(Integer userId, Integer planId) {
 		Plan plan = findOwnedPlan(userId, planId);
-		List<PlanWeekAllocation> yearAllocations = findYearAllocations(planId);
+		List<PlanWeekAllocation> allAllocations = planWeekAllocationRepository.findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(planId);
+		List<PlanWeekAllocation> yearAllocations = filterYearAllocations(allAllocations);
 
 		return new PlanDetailResponse(
 			plan.getId(),
@@ -66,14 +67,17 @@ public class PlanQueryService {
 				))
 				.toList(),
 			resolveCurrentWeek(plan.getUser()),
-			yearAllocations.size()
+			yearAllocations.size(),
+			calculateCompletionProjection(plan, allAllocations)
 		);
 	}
 
 	public PlanWeeklyPlansPageResponse listPlanWeeklyPlans(Integer userId, Integer planId, Integer page, Integer size) {
 		validatePageRequest(page, size);
 		Plan plan = findOwnedPlan(userId, planId);
-		List<PlanWeekAllocation> yearAllocations = findYearAllocations(plan.getId());
+		List<PlanWeekAllocation> yearAllocations = filterYearAllocations(
+			planWeekAllocationRepository.findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(plan.getId())
+		);
 
 		int resolvedPage = page == null ? 0 : page;
 		int resolvedSize = size == null ? 3 : size;
@@ -112,10 +116,10 @@ public class PlanQueryService {
 			.orElseThrow(() -> new PlanException(PlanErrorCode.PLAN_NOT_FOUND));
 	}
 
-	private List<PlanWeekAllocation> findYearAllocations(Integer planId) {
+	private List<PlanWeekAllocation> filterYearAllocations(List<PlanWeekAllocation> allocations) {
 		LocalDate yearStart = LocalDate.of(today().getYear(), 1, 1);
 		LocalDate yearEnd = LocalDate.of(today().getYear(), 12, 31);
-		return planWeekAllocationRepository.findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(planId).stream()
+		return allocations.stream()
 			.filter(allocation -> isOverlappingYear(allocation.getBudgetWeek(), yearStart, yearEnd))
 			.toList();
 	}
@@ -135,6 +139,48 @@ public class PlanQueryService {
 			return 0;
 		}
 		return (int)((plan.getSavedAmount() * 100) / plan.getTargetAmount());
+	}
+
+	private PlanDetailResponse.CompletionProjection calculateCompletionProjection(Plan plan, List<PlanWeekAllocation> allocations) {
+		long remainingAmount = Math.max(0L, zero(plan.getTargetAmount()) - zero(plan.getSavedAmount()));
+		if (remainingAmount == 0L) {
+			return new PlanDetailResponse.CompletionProjection(0, today());
+		}
+
+		long cumulativeAmount = 0L;
+		int weeksToGoal = 0;
+		LocalDate estimatedCompletionDate = null;
+
+		for (PlanWeekAllocation allocation : allocations) {
+			if (allocation.getBudgetWeek() == null) {
+				continue;
+			}
+			if (allocation.getBudgetWeek().getWeekEndDate().isBefore(today())) {
+				continue;
+			}
+
+			long finalAmount = zero(allocation.getFinalAmount());
+			if (finalAmount <= 0L) {
+				continue;
+			}
+
+			cumulativeAmount += finalAmount;
+			weeksToGoal++;
+			if (cumulativeAmount >= remainingAmount) {
+				estimatedCompletionDate = allocation.getBudgetWeek().getWeekEndDate();
+				break;
+			}
+		}
+
+		if (estimatedCompletionDate == null) {
+			return new PlanDetailResponse.CompletionProjection(null, null);
+		}
+
+		return new PlanDetailResponse.CompletionProjection(weeksToGoal, estimatedCompletionDate);
+	}
+
+	private long zero(Long amount) {
+		return amount == null ? 0L : amount;
 	}
 
 	private LocalDate today() {

@@ -57,6 +57,9 @@ class SyncBudgetStateOnReadUseCaseTest {
 	private BudgetRolloverResyncService budgetRolloverResyncService;
 
 	@Mock
+	private ApplyDailyGoalSavingAccrualUseCase applyDailyGoalSavingAccrualUseCase;
+
+	@Mock
 	private BudgetWeekRepository budgetWeekRepository;
 
 	@Mock
@@ -76,6 +79,7 @@ class SyncBudgetStateOnReadUseCaseTest {
 			runTransactionAnalysisUseCase,
 			budgetActualSpentRefreshService,
 			budgetRolloverResyncService,
+			applyDailyGoalSavingAccrualUseCase,
 			budgetWeekRepository,
 			planRepository,
 			planWeekAllocationRepository,
@@ -100,6 +104,7 @@ class SyncBudgetStateOnReadUseCaseTest {
 		verify(syncLatestTransactionsUseCase).execute(userId, 3, false);
 		verify(runTransactionAnalysisUseCase, never()).execute(any(), any());
 		verifyNoInteractions(budgetActualSpentRefreshService, budgetRolloverResyncService);
+		verify(applyDailyGoalSavingAccrualUseCase).execute(userId);
 	}
 
 	@Test
@@ -120,6 +125,7 @@ class SyncBudgetStateOnReadUseCaseTest {
 		verify(triggerBudgetAllocationUseCase).execute(userId);
 		verify(syncLatestTransactionsUseCase).execute(userId, 3, false);
 		verify(runTransactionAnalysisUseCase, never()).execute(any(), any());
+		verify(applyDailyGoalSavingAccrualUseCase).execute(userId);
 	}
 
 	@Test
@@ -149,13 +155,15 @@ class SyncBudgetStateOnReadUseCaseTest {
 			runTransactionAnalysisUseCase,
 			triggerBudgetAllocationUseCase,
 			budgetActualSpentRefreshService,
-			budgetRolloverResyncService
+			budgetRolloverResyncService,
+			applyDailyGoalSavingAccrualUseCase
 		);
 		inOrder.verify(syncLatestTransactionsUseCase).execute(userId, 3, false);
 		inOrder.verify(runTransactionAnalysisUseCase).execute(userId, 3);
 		inOrder.verify(triggerBudgetAllocationUseCase).execute(userId);
 		inOrder.verify(budgetActualSpentRefreshService).refresh(userId, today);
 		inOrder.verify(budgetRolloverResyncService).resync(userId);
+		inOrder.verify(applyDailyGoalSavingAccrualUseCase).execute(userId);
 	}
 
 	private BudgetWeek budgetWeek(Integer userId, Integer sequence, LocalDate startDate, LocalDate endDate) {
