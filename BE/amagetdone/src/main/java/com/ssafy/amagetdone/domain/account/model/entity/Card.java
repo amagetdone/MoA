@@ -15,11 +15,9 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @SuperBuilder
@@ -64,4 +62,60 @@ public class Card extends BaseEntity {
 
 	@Column(name = "maxBenefitLimit", nullable = false)
 	private Long maxBenefitLimit;
+
+	public static Card create(
+		Long cardUniqueNo,
+		Account withdrawalAccount,
+		String cvc,
+		String cardNo,
+		String name,
+		String issuerCode,
+		String cardIssuerName,
+		LocalDateTime cardExpiryDate,
+		String cardDescription,
+		String withdrawalDate,
+		Long baselinePerformance,
+		Long maxBenefitLimit
+	) {
+		return Card.builder()
+			.cardUniqueNo(cardUniqueNo)
+			.withdrawalAccount(withdrawalAccount)
+			.cvc(cvc)
+			.cardNo(cardNo)
+			.name(name)
+			.issuerCode(issuerCode)
+			.cardIssuerName(cardIssuerName)
+			.cardExpiryDate(cardExpiryDate)
+			.cardDescription(cardDescription)
+			.withdrawalDate(withdrawalDate)
+			.baselinePerformance(baselinePerformance)
+			.maxBenefitLimit(maxBenefitLimit)
+			.build();
+	}
+
+	public void sync(
+		Account withdrawalAccount,
+		String cvc,
+		String cardNo,
+		String name,
+		String issuerCode,
+		String cardIssuerName,
+		LocalDateTime cardExpiryDate,
+		String cardDescription,
+		String withdrawalDate,
+		Long baselinePerformance,
+		Long maxBenefitLimit
+	) {
+		this.withdrawalAccount = withdrawalAccount;
+		this.cvc = cvc;
+		this.cardNo = cardNo;
+		this.name = name;
+		this.issuerCode = issuerCode;
+		this.cardIssuerName = cardIssuerName;
+		this.cardExpiryDate = cardExpiryDate;
+		this.cardDescription = cardDescription;
+		this.withdrawalDate = withdrawalDate;
+		this.baselinePerformance = baselinePerformance;
+		this.maxBenefitLimit = maxBenefitLimit;
+	}
 }
