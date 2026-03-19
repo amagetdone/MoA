@@ -73,18 +73,34 @@ public class BudgetTestController {
 	}
 
 	@Operation(
-		summary = "Force goal saving daily accrual",
-		description = "Runs the daily goal saving accrual reconciliation for manual verification.",
+		summary = "Backfill goal saving accrual",
+		description = "Reconciles goal saving accrual from plan start through cutoff for manual catch-up verification.",
 		security = @SecurityRequirement(name = "bearerAuth")
 	)
-	@PostMapping("/savings-accrual/force")
-	public ApiResponse<GoalSavingAccrualForceDto.Response> forceSavingsAccrual(
+	@PostMapping("/savings-accrual/backfill")
+	public ApiResponse<GoalSavingAccrualForceDto.Response> backfillSavingsAccrual(
 		@AuthenticationPrincipal AuthenticatedMember authenticatedMember,
-		@RequestBody(required = false) GoalSavingAccrualForceDto.Request request
+		@RequestBody(required = false) GoalSavingAccrualForceDto.BackfillRequest request
 	) {
 		return ApiResponse.ok(
-			"Goal saving accrual force test succeeded.",
-			goalSavingAccrualForceTestService.force(authenticatedMember.userId(), request)
+			"Goal saving accrual backfill test succeeded.",
+			goalSavingAccrualForceTestService.backfill(authenticatedMember.userId(), request)
+		);
+	}
+
+	@Operation(
+		summary = "Apply goal saving accrual instantly",
+		description = "Applies one day, week, or month of goal saving immediately for manual verification.",
+		security = @SecurityRequirement(name = "bearerAuth")
+	)
+	@PostMapping("/savings-accrual/apply")
+	public ApiResponse<GoalSavingAccrualForceDto.Response> applySavingsAccrual(
+		@AuthenticationPrincipal AuthenticatedMember authenticatedMember,
+		@RequestBody(required = false) GoalSavingAccrualForceDto.ApplyRequest request
+	) {
+		return ApiResponse.ok(
+			"Goal saving accrual apply test succeeded.",
+			goalSavingAccrualForceTestService.apply(authenticatedMember.userId(), request)
 		);
 	}
 }

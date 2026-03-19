@@ -126,10 +126,11 @@ class BudgetTestControllerTest {
 	}
 
 	@Test
-	void forceSavingsAccrualReturnsUnifiedResponseWithDefaultWeekScope() throws Exception {
-		given(goalSavingAccrualForceTestService.force(eq(1), any()))
+	void backfillSavingsAccrualReturnsUnifiedResponseWithoutScope() throws Exception {
+		given(goalSavingAccrualForceTestService.backfill(eq(1), any()))
 			.willReturn(new GoalSavingAccrualForceDto.Response(
-				GoalSavingAccrualForceDto.Scope.WEEK,
+				GoalSavingAccrualForceDto.OperationType.BACKFILL,
+				null,
 				GoalSavingAccrualForceDto.TargetType.ALL,
 				null,
 				30_000L,
@@ -144,7 +145,7 @@ class BudgetTestControllerTest {
 				)
 			));
 
-		mockMvc.perform(post("/api/test/budget/savings-accrual/force")
+		mockMvc.perform(post("/api/test/budget/savings-accrual/backfill")
 				.contextPath("/api")
 				.with(csrf())
 				.with(authentication(
@@ -154,8 +155,9 @@ class BudgetTestControllerTest {
 				.content("{}"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.message").value("Goal saving accrual force test succeeded."))
-			.andExpect(jsonPath("$.data.appliedScope").value("WEEK"))
+			.andExpect(jsonPath("$.message").value("Goal saving accrual backfill test succeeded."))
+			.andExpect(jsonPath("$.data.operationType").value("BACKFILL"))
+			.andExpect(jsonPath("$.data.appliedScope").isEmpty())
 			.andExpect(jsonPath("$.data.targetType").value("ALL"))
 			.andExpect(jsonPath("$.data.appliedAmount").value(30000))
 			.andExpect(jsonPath("$.data.periodStartDate").value("2026-03-17"))
@@ -171,9 +173,10 @@ class BudgetTestControllerTest {
 	}
 
 	@Test
-	void forceSavingsAccrualReturnsSingleTargetResponseWhenPlanIdProvided() throws Exception {
-		given(goalSavingAccrualForceTestService.force(eq(1), any()))
+	void applySavingsAccrualReturnsSingleTargetResponseWhenPlanIdProvided() throws Exception {
+		given(goalSavingAccrualForceTestService.apply(eq(1), any()))
 			.willReturn(new GoalSavingAccrualForceDto.Response(
+				GoalSavingAccrualForceDto.OperationType.APPLY,
 				GoalSavingAccrualForceDto.Scope.DAY,
 				GoalSavingAccrualForceDto.TargetType.SINGLE,
 				11,
@@ -188,7 +191,7 @@ class BudgetTestControllerTest {
 				)
 			));
 
-		mockMvc.perform(post("/api/test/budget/savings-accrual/force")
+		mockMvc.perform(post("/api/test/budget/savings-accrual/apply")
 				.contextPath("/api")
 				.with(csrf())
 				.with(authentication(
@@ -202,17 +205,19 @@ class BudgetTestControllerTest {
 					}
 					"""))
 			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.message").value("Goal saving accrual apply test succeeded."))
+			.andExpect(jsonPath("$.data.operationType").value("APPLY"))
 			.andExpect(jsonPath("$.data.targetType").value("SINGLE"))
 			.andExpect(jsonPath("$.data.planId").value(11))
 			.andExpect(jsonPath("$.data.appliedScope").value("DAY"));
 	}
 
 	@Test
-	void forceSavingsAccrualReturnsNotFoundWhenPlanDoesNotBelongToUser() throws Exception {
-		given(goalSavingAccrualForceTestService.force(eq(1), any()))
+	void backfillSavingsAccrualReturnsNotFoundWhenPlanDoesNotBelongToUser() throws Exception {
+		given(goalSavingAccrualForceTestService.backfill(eq(1), any()))
 			.willThrow(new PlanException(PlanErrorCode.PLAN_NOT_FOUND));
 
-		mockMvc.perform(post("/api/test/budget/savings-accrual/force")
+		mockMvc.perform(post("/api/test/budget/savings-accrual/backfill")
 				.contextPath("/api")
 				.with(csrf())
 				.with(authentication(
@@ -221,8 +226,7 @@ class BudgetTestControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 					{
-					  "planId": 99,
-					  "scope": "WEEK"
+					  "planId": 99
 					}
 					"""))
 			.andExpect(status().isNotFound())
@@ -230,8 +234,8 @@ class BudgetTestControllerTest {
 	}
 
 	@Test
-	void forceSavingsAccrualRejectsInvalidScope() throws Exception {
-		mockMvc.perform(post("/api/test/budget/savings-accrual/force")
+	void applySavingsAccrualRejectsInvalidScope() throws Exception {
+		mockMvc.perform(post("/api/test/budget/savings-accrual/apply")
 				.contextPath("/api")
 				.with(csrf())
 				.with(authentication(
