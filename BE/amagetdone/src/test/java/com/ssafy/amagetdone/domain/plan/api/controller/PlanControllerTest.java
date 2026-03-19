@@ -72,7 +72,7 @@ class PlanControllerTest {
 			.willReturn(List.of(
 				new PlanListItemResponse(
 					1L,
-					"?꾩씠?⑤뱶 援щℓ",
+					"아이패드 구매",
 					320000L,
 					1000000L,
 					1,
@@ -82,7 +82,7 @@ class PlanControllerTest {
 				),
 				new PlanListItemResponse(
 					2L,
-					"?ы뻾 ?먭툑",
+					"여행 자금",
 					500000L,
 					1500000L,
 					2,
@@ -99,9 +99,9 @@ class PlanControllerTest {
 				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.message").value("紐⑺몴 紐⑸줉 議고쉶 ?깃났"))
+			.andExpect(jsonPath("$.message").value("목표 목록 조회 성공"))
 			.andExpect(jsonPath("$.data[0].planId").value(1))
-			.andExpect(jsonPath("$.data[0].title").value("?꾩씠?⑤뱶 援щℓ"))
+			.andExpect(jsonPath("$.data[0].title").value("아이패드 구매"))
 			.andExpect(jsonPath("$.data[0].achievementRate").value(32))
 			.andExpect(jsonPath("$.data[1].achievementRate").value(33.5));
 	}
@@ -312,7 +312,7 @@ class PlanControllerTest {
 					"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.message").value("紐⑺몴 ?곗꽑?쒖쐞媛 蹂寃쎈릺?덉뒿?덈떎."))
+			.andExpect(jsonPath("$.message").value("목표 우선순위가 변경되었습니다."))
 			.andExpect(jsonPath("$.data").isEmpty());
 	}
 }
