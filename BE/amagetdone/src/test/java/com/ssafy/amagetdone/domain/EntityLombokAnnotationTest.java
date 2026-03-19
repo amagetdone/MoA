@@ -38,8 +38,7 @@ class EntityLombokAnnotationTest {
 		Merchant.class
 	);
 
-	private static final List<Class<?>> SUPER_BUILDER_ENTITIES = List.of(
-		Card.class,
+	private static final List<Class<?>> SETTER_REQUIRED_SUPER_BUILDER_ENTITIES = List.of(
 		Pocket.class,
 		BudgetAdjustment.class,
 		BudgetMonth.class,
@@ -59,17 +58,32 @@ class EntityLombokAnnotationTest {
 		CardTransactionOverride.class
 	);
 
+	private static final List<Class<?>> NO_SETTER_SUPER_BUILDER_ENTITIES = List.of(
+		Card.class
+	);
+
 	@Test
-	void allEntitiesExposeRequiredLombokAnnotations() throws IOException {
+	void allEntitiesExposeRequiredReadAndConstructionAnnotations() throws IOException {
 		List<Class<?>> allEntities = List.copyOf(BUILDER_ENTITIES);
 		allEntities = new java.util.ArrayList<>(allEntities);
-		allEntities.addAll(SUPER_BUILDER_ENTITIES);
+		allEntities.addAll(SETTER_REQUIRED_SUPER_BUILDER_ENTITIES);
+		allEntities.addAll(NO_SETTER_SUPER_BUILDER_ENTITIES);
 
 		for (Class<?> entityClass : allEntities) {
 			assertSourceContains(entityClass, "@Getter");
-			assertSourceContains(entityClass, "@Setter");
 			assertSourceContains(entityClass, "@NoArgsConstructor");
 			assertSourceContains(entityClass, "@AllArgsConstructor");
+		}
+	}
+
+	@Test
+	void setterManagedEntitiesExposeSetterAnnotation() throws IOException {
+		List<Class<?>> setterManagedEntities = List.copyOf(BUILDER_ENTITIES);
+		setterManagedEntities = new java.util.ArrayList<>(setterManagedEntities);
+		setterManagedEntities.addAll(SETTER_REQUIRED_SUPER_BUILDER_ENTITIES);
+
+		for (Class<?> entityClass : setterManagedEntities) {
+			assertSourceContains(entityClass, "@Setter");
 		}
 	}
 
@@ -79,7 +93,11 @@ class EntityLombokAnnotationTest {
 			assertSourceContains(entityClass, "@Builder");
 		}
 
-		for (Class<?> entityClass : SUPER_BUILDER_ENTITIES) {
+		List<Class<?>> superBuilderEntities = List.copyOf(SETTER_REQUIRED_SUPER_BUILDER_ENTITIES);
+		superBuilderEntities = new java.util.ArrayList<>(superBuilderEntities);
+		superBuilderEntities.addAll(NO_SETTER_SUPER_BUILDER_ENTITIES);
+
+		for (Class<?> entityClass : superBuilderEntities) {
 			assertSourceContains(entityClass, "@SuperBuilder");
 		}
 	}

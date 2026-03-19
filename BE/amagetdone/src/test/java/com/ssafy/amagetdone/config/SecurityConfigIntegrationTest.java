@@ -176,6 +176,16 @@ class SecurityConfigIntegrationTest {
 			.andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "https://j14d101.p.ssafy.io"));
 	}
 
+	@Test
+	void preflightRequestFromLocalhostWithAnyPortSucceedsBeforeAuthentication() throws Exception {
+		mockMvc.perform(options("/api/v1/members/me/profile")
+				.contextPath("/api")
+				.header(ORIGIN, "http://localhost:4173")
+				.header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "PATCH"))
+			.andExpect(status().isOk())
+			.andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:4173"));
+	}
+
 	private MockHttpServletRequestBuilder apiPost(String path) {
 		return post("/api" + path).contextPath("/api");
 	}
