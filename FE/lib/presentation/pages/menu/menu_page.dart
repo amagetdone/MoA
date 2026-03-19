@@ -192,13 +192,13 @@ class MenuPage extends ConsumerWidget {
             ),
             _MenuListItem(
               icon: Icons.tune_outlined,
-              title: '주간 예산',
+              title: '주간 예산 설정',
               subtitle: '주간 예산 설정',
               onTap: () => context.push(AppRoutes.spendingBudget),
             ),
             _MenuListItem(
               icon: Icons.sort,
-              title: '목표 우선순위',
+              title: '목표 우선순위 설정',
               subtitle: '목표 우선순위 설정',
               onTap: () => context.push(AppRoutes.goalPriority),
             ),

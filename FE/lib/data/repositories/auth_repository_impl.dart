@@ -80,6 +80,12 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<bool> isLoggedIn() => localDataSource.hasTokens();
 
   @override
+  Future<AuthResult> loginWithTest() async {
+    final result = await remoteDataSource.loginWithTest();
+    return _saveTokensAndConvert(result);
+  }
+
+  @override
   Future<AuthResult?> autoLogin() async {
     final hasTokens = await localDataSource.hasTokens();
     if (!hasTokens) return null;

@@ -17,7 +17,8 @@ class AuthLoading extends AuthState {
 
 class AuthAuthenticated extends AuthState {
   final AuthResult authResult;
-  const AuthAuthenticated(this.authResult);
+  final bool isTest;
+  const AuthAuthenticated(this.authResult, {this.isTest = false});
 }
 
 class AuthAutoLoginSuccess extends AuthState {
@@ -44,6 +45,16 @@ class AuthViewModel extends StateNotifier<AuthState> {
     try {
       final result = await _repository.loginWithKakao();
       state = AuthAuthenticated(result);
+    } catch (e) {
+      state = AuthError(e.toString());
+    }
+  }
+
+  Future<void> loginWithTest() async {
+    state = const AuthLoading();
+    try {
+      final result = await _repository.loginWithTest();
+      state = AuthAuthenticated(result, isTest: true);
     } catch (e) {
       state = AuthError(e.toString());
     }

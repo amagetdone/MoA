@@ -50,7 +50,7 @@ class SpendingAnalysisPage extends ConsumerWidget {
                       fontSize: 14.sp,
                     ),
                   ),
-                  SizedBox(height: 24.h),
+                  SizedBox(height: 16.h),
                   Row(
                     children: [
                       MoreChip(
@@ -65,23 +65,22 @@ class SpendingAnalysisPage extends ConsumerWidget {
                         onTap: () => viewModel.togglePeriod(false),
                       ),
                       const Spacer(),
-                      if (!state.isWeekly)
-                        Flexible(
-                          child: GestureDetector(
-                            onTap: () => context.push(AppRoutes.spendingPattern),
-                            child: Text(
-                              '지난 3개월 소비분석 >',
-                              style: AppTextStyles.caption.copyWith(
-                                color: AppColors.orange500,
-                                fontSize: 12.sp,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                      Flexible(
+                        child: GestureDetector(
+                          onTap: () => context.push(AppRoutes.spendingPattern),
+                          child: Text(
+                            '지난 3개월 소비분석 >',
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.orange500,
+                              fontSize: 12.sp,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                      ),
                     ],
                   ),
-                  SizedBox(height: 20.h),
+                  SizedBox(height: 16.h),
 
                   _SpendingSummaryCard(state: state),
                   SizedBox(height: 16.h),
