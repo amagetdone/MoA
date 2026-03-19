@@ -8,13 +8,19 @@ import org.springframework.stereotype.Component;
 @Component
 public class GetWeeklySavingsDetailUseCase {
 
+	private final SyncBudgetStateOnReadUseCase syncBudgetStateOnReadUseCase;
 	private final WeeklySavingsDetailQueryService weeklySavingsDetailQueryService;
 
-	public GetWeeklySavingsDetailUseCase(WeeklySavingsDetailQueryService weeklySavingsDetailQueryService) {
+	public GetWeeklySavingsDetailUseCase(
+		SyncBudgetStateOnReadUseCase syncBudgetStateOnReadUseCase,
+		WeeklySavingsDetailQueryService weeklySavingsDetailQueryService
+	) {
+		this.syncBudgetStateOnReadUseCase = syncBudgetStateOnReadUseCase;
 		this.weeklySavingsDetailQueryService = weeklySavingsDetailQueryService;
 	}
 
 	public WeeklySavingsDetailDto.Response execute(Integer userId, String yearWeek) {
+		syncBudgetStateOnReadUseCase.execute(userId);
 		return weeklySavingsDetailQueryService.getDetail(userId, yearWeek);
 	}
 }

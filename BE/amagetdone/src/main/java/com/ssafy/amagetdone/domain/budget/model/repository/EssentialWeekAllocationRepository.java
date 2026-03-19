@@ -10,4 +10,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface EssentialWeekAllocationRepository extends JpaRepository<EssentialWeekAllocation, Integer> {
 
 	List<EssentialWeekAllocation> findByBudgetWeek(BudgetWeek budgetWeek);
+
+	List<EssentialWeekAllocation> findAllByBudgetWeekIn(List<BudgetWeek> budgetWeeks);
 }
