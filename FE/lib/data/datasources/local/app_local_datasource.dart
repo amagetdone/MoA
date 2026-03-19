@@ -31,9 +31,12 @@ abstract class AppLocalDataSource {
   Future<Goal> createGoal(Goal goal);
   Future<Goal> updateGoal(Goal goal);
   Future<List<Goal>> saveGoalPriority(List<Goal> goals);
+  Future<List<Goal>> replaceGoals(List<Goal> goals);
   Future<Uint8List?> getGoalSketchVideo(String goalId);
   Future<SpendingSnapshotDto> getSpendingSnapshotDto();
-  Future<SpendingSnapshotDto> updateSpendingSnapshotDto(SpendingSnapshotDto snapshot);
+  Future<SpendingSnapshotDto> updateSpendingSnapshotDto(
+    SpendingSnapshotDto snapshot,
+  );
 }
 
 class AppLocalDataSourceImpl implements AppLocalDataSource {
@@ -335,6 +338,15 @@ class AppLocalDataSourceImpl implements AppLocalDataSource {
 
     await _persistSnapshot(snapshot.copyWith(goals: updatedGoals));
     return updatedGoals;
+  }
+
+  @override
+  Future<List<Goal>> replaceGoals(List<Goal> goals) async {
+    final snapshot = await _loadSnapshot();
+    final orderedGoals = List<Goal>.from(goals)
+      ..sort((a, b) => a.priority.compareTo(b.priority));
+    await _persistSnapshot(snapshot.copyWith(goals: orderedGoals));
+    return orderedGoals;
   }
 
   @override

@@ -6,6 +6,11 @@ import 'package:more_app/domain/entities/spending.dart';
 abstract class GoalRepository {
   Future<List<Goal>> fetchGoals();
   Future<Goal?> findGoalById(String id);
+  Future<GoalWeeklyPlanPage> fetchGoalWeeklyPlans(
+    String id, {
+    int page = 0,
+    int size = 100,
+  });
   Future<Map<String, List<DailySpending>>> fetchGoalSavingsHistoryByGoalId();
   Future<Uint8List?> getGoalSketchVideo(String goalId);
   Future<Goal> createGoal(Goal goal);

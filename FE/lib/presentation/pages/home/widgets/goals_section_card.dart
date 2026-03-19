@@ -103,6 +103,7 @@ class _GoalItem extends StatelessWidget {
         children: [
           // 목표 영상 썸네일
           GoalVideoThumb(
+            goalId: goal.id,
             assetPath: goal.sketchVideoAssetPath,
             iconName: goal.iconName,
             progressRate: goal.progressRate,
