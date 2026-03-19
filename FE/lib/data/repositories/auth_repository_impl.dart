@@ -53,6 +53,11 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<void> resetSocialLoginState() async {
+    await socialAuthDataSource.resetPendingLogins();
+  }
+
+  @override
   Future<void> logout() async {
     final refreshTokenValue = await localDataSource.getRefreshToken();
     if (refreshTokenValue != null) {
@@ -97,8 +102,6 @@ class AuthRepositoryImpl implements AuthRepository {
       final result = await remoteDataSource.refreshToken(
         refreshToken: refreshTokenValue,
       );
-
-      print('[AutoLogin] status=${result.status}, account=${result.account}, plan=${result.plan}');
 
       await localDataSource.saveAccessToken(result.accessToken);
       await localDataSource.saveRefreshToken(result.refreshToken);

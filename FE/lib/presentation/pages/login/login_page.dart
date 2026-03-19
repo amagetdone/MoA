@@ -1,18 +1,126 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
+import 'package:more_app/core/utils/web_window_focus_listener.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/viewmodels/auth_viewmodel.dart';
 
-class LoginPage extends ConsumerWidget {
+class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends ConsumerState<LoginPage>
+    with WidgetsBindingObserver {
+  Timer? _interruptedLoginTimer;
+  bool _backgroundedDuringLogin = false;
+  WebWindowFocusListener? _webWindowFocusListener;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
+    if (kIsWeb) {
+      _webWindowFocusListener = WebWindowFocusListener(
+        onFocus: _handleWindowFocus,
+        onBlur: _handleWindowBlur,
+      )..attach();
+    }
+  }
+
+  @override
+  void dispose() {
+    _interruptedLoginTimer?.cancel();
+    _webWindowFocusListener?.detach();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  void _scheduleInterruptedLoginReset() {
+    _interruptedLoginTimer?.cancel();
+    _interruptedLoginTimer = Timer(const Duration(milliseconds: 600), () {
+      if (!mounted) {
+        return;
+      }
+
+      if (ref.read(authViewModelProvider) is AuthLoading) {
+        ref.read(authViewModelProvider.notifier).resetInterruptedLogin();
+      }
+
+      _backgroundedDuringLogin = false;
+    });
+  }
+
+  void _handleWindowBlur() {
+    if (!mounted) {
+      return;
+    }
+
+    if (ref.read(authViewModelProvider) is AuthLoading) {
+      _backgroundedDuringLogin = true;
+      _interruptedLoginTimer?.cancel();
+    }
+  }
+
+  void _handleWindowFocus() {
+    if (!mounted || !_backgroundedDuringLogin) {
+      return;
+    }
+
+    _scheduleInterruptedLoginReset();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!kIsWeb) {
+      return;
+    }
+
+    final authState = ref.read(authViewModelProvider);
+    final isLoading = authState is AuthLoading;
+
+    if (!isLoading) {
+      _backgroundedDuringLogin = false;
+      _interruptedLoginTimer?.cancel();
+      return;
+    }
+
+    switch (state) {
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+        _backgroundedDuringLogin = true;
+        _interruptedLoginTimer?.cancel();
+        break;
+      case AppLifecycleState.resumed:
+        if (!_backgroundedDuringLogin) {
+          return;
+        }
+
+        _scheduleInterruptedLoginReset();
+        break;
+      case AppLifecycleState.detached:
+        break;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     ref.listen<AuthState>(authViewModelProvider, (prev, next) {
+      if (next is! AuthLoading) {
+        _interruptedLoginTimer?.cancel();
+        _backgroundedDuringLogin = false;
+      }
+
       if (next is AuthAuthenticated) {
         final result = next.authResult;
         if (result.status == 'TEMP') {
@@ -20,13 +128,8 @@ class LoginPage extends ConsumerWidget {
         } else if (next.isTest) {
           context.go(AppRoutes.home);
         } else {
-          // TODO: 온보딩 테스트용 - 원래는 AppRoutes.home
           context.go(AppRoutes.onboarding);
         }
-      } else if (next is AuthError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.message)),
-        );
       }
     });
 
@@ -41,26 +144,19 @@ class LoginPage extends ConsumerWidget {
           child: Column(
             children: [
               const Spacer(flex: 3),
-
-              // 로고
               Image.asset(
                 'assets/images/logo/applogo.png',
                 width: 80.w,
                 height: 80.w,
               ),
               SizedBox(height: 16.h),
-
-              // 앱 이름
               Text(
                 '모아',
                 style: AppTextStyles.headingXl.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
-
               const Spacer(flex: 4),
-
-              // 카카오 로그인 버튼
               _SocialLoginButton(
                 onPressed:
                     isLoading
@@ -75,8 +171,6 @@ class LoginPage extends ConsumerWidget {
                 iconPath: 'assets/images/logo/kakaologo.png',
               ),
               SizedBox(height: 12.h),
-
-              // 구글 로그인 버튼
               _SocialLoginButton(
                 onPressed:
                     isLoading
