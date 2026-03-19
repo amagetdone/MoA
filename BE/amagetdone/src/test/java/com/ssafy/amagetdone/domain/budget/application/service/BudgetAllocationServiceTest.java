@@ -168,6 +168,32 @@ class BudgetAllocationServiceTest {
 	}
 
 	@Test
+	void allocateBudgetFillsHigherPriorityPlansFirstWhenWeeklyFreeBudgetIsInsufficient() {
+		User user = user(1);
+		LocalDate serviceStartDate = LocalDate.of(2026, 3, 2);
+		BudgetMonth marchBudgetMonth = budgetMonth(user, LocalDate.of(2026, 3, 1));
+		EssentialExpenseMonth essential = essentialExpenseMonth(250, marchBudgetMonth, 1_000_000L);
+		Plan topPriorityPlan = plan(10, user, "Top Priority", 140_000L, 2, 1, serviceStartDate);
+		Plan middlePriorityPlan = plan(11, user, "Middle Priority", 120_000L, 2, 2, serviceStartDate);
+		Plan lowPriorityPlan = plan(12, user, "Low Priority", 100_000L, 2, 3, serviceStartDate);
+
+		BudgetAllocationService.AllocationResult result = budgetAllocationService.allocateBudget(
+			user,
+			serviceStartDate,
+			1_530_000L,
+			List.of(essential),
+			List.of(topPriorityPlan, middlePriorityPlan, lowPriorityPlan)
+		);
+
+		assertEquals(70_000L, planAllocation(result.planAllocations(), 1, "Top Priority").getFinalAmount());
+		assertEquals(49_677L, planAllocation(result.planAllocations(), 1, "Middle Priority").getFinalAmount());
+		assertEquals(0L, planAllocation(result.planAllocations(), 1, "Low Priority").getFinalAmount());
+		assertEquals(70_000L, planAllocation(result.planAllocations(), 2, "Top Priority").getFinalAmount());
+		assertEquals(49_677L, planAllocation(result.planAllocations(), 2, "Middle Priority").getFinalAmount());
+		assertEquals(0L, planAllocation(result.planAllocations(), 2, "Low Priority").getFinalAmount());
+	}
+
+	@Test
 	void allocateBudgetWithNoPlansLeavesSavingAtZeroAndFreeBudgetAsIncomeMinusEssential() {
 		User user = user(1);
 		LocalDate serviceStartDate = LocalDate.of(2026, 3, 6);

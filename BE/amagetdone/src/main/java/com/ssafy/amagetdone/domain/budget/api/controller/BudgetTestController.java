@@ -2,6 +2,8 @@ package com.ssafy.amagetdone.domain.budget.api.controller;
 
 import com.ssafy.amagetdone.domain.budget.api.dto.BudgetWeekSeedRequest;
 import com.ssafy.amagetdone.domain.budget.api.dto.BudgetWeekSeedResponse;
+import com.ssafy.amagetdone.domain.budget.api.dto.WeeklySavingsDetailDto;
+import com.ssafy.amagetdone.domain.budget.application.service.BudgetCurrentWeekGoalAllocationTestService;
 import com.ssafy.amagetdone.domain.budget.application.service.BudgetWeekSeedService;
 import com.ssafy.amagetdone.global.response.ApiResponse;
 import com.ssafy.amagetdone.global.security.AuthenticatedMember;
@@ -24,9 +26,14 @@ import jakarta.validation.Valid;
 public class BudgetTestController {
 
 	private final BudgetWeekSeedService budgetWeekSeedService;
+	private final BudgetCurrentWeekGoalAllocationTestService budgetCurrentWeekGoalAllocationTestService;
 
-	public BudgetTestController(BudgetWeekSeedService budgetWeekSeedService) {
+	public BudgetTestController(
+		BudgetWeekSeedService budgetWeekSeedService,
+		BudgetCurrentWeekGoalAllocationTestService budgetCurrentWeekGoalAllocationTestService
+	) {
 		this.budgetWeekSeedService = budgetWeekSeedService;
+		this.budgetCurrentWeekGoalAllocationTestService = budgetCurrentWeekGoalAllocationTestService;
 	}
 
 	@Operation(
@@ -42,6 +49,21 @@ public class BudgetTestController {
 		return ApiResponse.ok(
 			"Budget week seed test succeeded.",
 			budgetWeekSeedService.seed(authenticatedMember.userId(), request)
+		);
+	}
+
+	@Operation(
+		summary = "Force current-week goal savings allocation",
+		description = "Re-runs the goal savings allocation pipeline and returns the current week's allocation result for manual verification.",
+		security = @SecurityRequirement(name = "bearerAuth")
+	)
+	@PostMapping("/weeks/current/savings-allocation/force")
+	public ApiResponse<WeeklySavingsDetailDto.Response> forceCurrentWeekSavingsAllocation(
+		@AuthenticationPrincipal AuthenticatedMember authenticatedMember
+	) {
+		return ApiResponse.ok(
+			"Current week goal savings allocation test succeeded.",
+			budgetCurrentWeekGoalAllocationTestService.forceCurrentWeekAllocation(authenticatedMember.userId())
 		);
 	}
 }

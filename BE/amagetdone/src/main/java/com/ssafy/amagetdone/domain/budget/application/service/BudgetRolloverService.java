@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class BudgetRolloverService {
 
 	private static final int MAX_ROLLOVER_STEP = 4;
-	private static final String ROLLOVER_ADJUSTMENT_REASON = "Free-budget rollover applied after step limit";
+	private static final String ROLLOVER_ADJUSTMENT_REASON = "Free-budget shortage deducted from goal savings";
 
 	private final BudgetWeekRepository budgetWeekRepository;
 	private final BudgetRolloverRepository budgetRolloverRepository;
@@ -44,8 +44,19 @@ public class BudgetRolloverService {
 			return;
 		}
 
+		List<PlanWeekAllocation> sourceAllocations = planWeekAllocationRepository.findByBudgetWeek(sourceWeek);
+		long deductedFromSourceWeek = deductFromPlans(sourceWeek, sourceAllocations, excessAmount);
+		if (deductedFromSourceWeek > 0L) {
+			budgetWeekRepository.save(sourceWeek);
+		}
+
+		long remainingRolloverAmount = excessAmount - deductedFromSourceWeek;
+		if (remainingRolloverAmount <= 0L) {
+			return;
+		}
+
 		BudgetWeek currentSourceWeek = sourceWeek;
-		long rolloverAmount = excessAmount;
+		long rolloverAmount = remainingRolloverAmount;
 		int rolloverStep = 1;
 
 		while (rolloverAmount > 0L) {

@@ -80,6 +80,21 @@ class PlanStatusSchedulerTest {
 	}
 
 	@Test
+	void retriggersAllocationForActivePlanOwnersAtWeekStart() {
+		createSchedulerWithClock(Clock.fixed(Instant.parse("2026-03-22T15:30:00Z"), ZoneId.of("Asia/Seoul")));
+		Plan firstUserPlan = planWithStatuses(1, PlanStatus.ACTIVE, PlanAiPipelineStatus.SUCCEEDED);
+		Plan sameUserPlan = planWithStatuses(1, PlanStatus.ACTIVE, PlanAiPipelineStatus.SUCCEEDED);
+		Plan secondUserPlan = planWithStatuses(2, PlanStatus.ACTIVE, PlanAiPipelineStatus.SUCCEEDED);
+
+		given(planRepository.findAllByStatus(PlanStatus.ACTIVE)).willReturn(List.of(firstUserPlan, sameUserPlan, secondUserPlan));
+
+		planStatusScheduler.reallocateActivePlansForWeekStart(LocalDate.of(2026, 3, 23));
+
+		verify(triggerBudgetAllocationUseCase).execute(1);
+		verify(triggerBudgetAllocationUseCase).execute(2);
+	}
+
+	@Test
 	void doesNotTriggerAllocationWhenNothingWasActivated() {
 		createSchedulerWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
 
