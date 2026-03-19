@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:more_app/presentation/viewmodels/spending_viewmodel.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
@@ -9,11 +11,13 @@ import 'package:more_app/presentation/widgets/common/more_card.dart';
 import 'package:more_app/presentation/pages/spending/widgets/category_list.dart';
 import 'package:more_app/domain/entities/spending.dart';
 
-class SpendingPatternPage extends StatelessWidget {
+class SpendingPatternPage extends ConsumerWidget {
   const SpendingPatternPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final touchedIndex = ref.watch(spendingViewModelProvider).touchedPieIndex;
+    final viewModel = ref.read(spendingViewModelProvider.notifier);
     // 확장 기능을 테스트하기 위해 카테고리 데이터를 늘립니다.
     final List<SpendingCategory> mockCategories = [
       SpendingCategory(
@@ -60,7 +64,9 @@ class SpendingPatternPage extends StatelessWidget {
         showBack: true,
         showNotification: true,
       ),
-      body: SingleChildScrollView(
+      body: Scrollbar(
+        thumbVisibility: false,
+        child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
         child: Column(
@@ -107,26 +113,40 @@ class SpendingPatternPage extends StatelessWidget {
                           PieChartData(
                             sectionsSpace: 4,
                             centerSpaceRadius: 65.r,
-                            sections: [
-                              PieChartSectionData(value: 20, color: const Color(0xFFE57373), radius: 28.r, showTitle: false),
-                              PieChartSectionData(value: 40, color: const Color(0xFFFFB74D), radius: 28.r, showTitle: false),
-                              PieChartSectionData(value: 20, color: const Color(0xFFFFD54F), radius: 28.r, showTitle: false),
-                              PieChartSectionData(value: 20, color: const Color(0xFF81C784), radius: 28.r, showTitle: false),
-                            ],
+                            pieTouchData: PieTouchData(
+                              touchCallback: (event, response) {
+                                if (!event.isInterestedForInteractions ||
+                                    response == null ||
+                                    response.touchedSection == null) {
+                                  viewModel.setTouchedPieIndex(null);
+                                  return;
+                                }
+                                final idx = response.touchedSection!.touchedSectionIndex;
+                                viewModel.setTouchedPieIndex(idx >= 0 ? idx : null);
+                              },
+                            ),
+                            sections: _buildSections(touchedIndex),
                           ),
                         ),
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              '1,900,000원',
+                              touchedIndex != null
+                                  ? CurrencyFormatter.formatKRW(_sectionAmounts()[touchedIndex])
+                                  : '1,900,000원',
                               style: AppTextStyles.bodyMd.copyWith(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16.sp,
+                                color: touchedIndex != null
+                                    ? _sectionColors()[touchedIndex]
+                                    : AppColors.textPrimary,
                               ),
                             ),
                             Text(
-                              '총지출',
+                              touchedIndex != null
+                                  ? _sectionLabels()[touchedIndex]
+                                  : '총지출',
                               style: AppTextStyles.caption.copyWith(
                                 color: AppColors.textTertiary,
                                 fontSize: 12.sp,
@@ -223,8 +243,38 @@ class SpendingPatternPage extends StatelessWidget {
             SizedBox(height: 60.h),
           ],
         ),
+        ),
       ),
     );
+  }
+  static const _colors = [
+    Color(0xFFE57373),
+    Color(0xFFFFB74D),
+    Color(0xFFFFD54F),
+    Color(0xFF81C784),
+  ];
+
+  static const _labels = ['고정비', '변동비', '자유소비', '저축액'];
+
+  static const _percents = [20.0, 40.0, 20.0, 20.0];
+
+  static const _total = 1900000;
+
+  List<Color> _sectionColors() => _colors;
+  List<String> _sectionLabels() => _labels;
+  List<int> _sectionAmounts() =>
+      _percents.map((p) => (_total * p / 100).round()).toList();
+
+  List<PieChartSectionData> _buildSections(int? touchedIndex) {
+    return List.generate(_colors.length, (i) {
+      final isTouched = touchedIndex == i;
+      return PieChartSectionData(
+        value: _percents[i],
+        color: _colors[i],
+        radius: isTouched ? 36.r : 28.r,
+        showTitle: false,
+      );
+    });
   }
 }
 

@@ -14,6 +14,7 @@ abstract class AppColors {
 
   // Orange
   static const Color orange50 = Color(0xFFFFF8F0);
+  static const Color orange100 = Color(0xFFFFF6ED);
   static const Color orange300 = Color(0xFFE8A86B);
   static const Color orange500 = Color(0xFFE8873B);
   static const Color orange600 = Color(0xFFD07730);
@@ -30,6 +31,7 @@ abstract class AppColors {
   static const Color bgPrimary = gray50;
   static const Color bgSurface = white;
   static const Color bgAccent = orange50;
+  static const Color bgInsight = orange100;
 
   // Text
   static const Color textPrimary = gray900;
