@@ -65,6 +65,7 @@ public class SecurityConfig {
 		CorsConfiguration configuration = new CorsConfiguration();
 		configuration.setAllowCredentials(true);
 		configuration.setAllowedOrigins(parseAllowedOrigins(allowedOriginsValue));
+		configuration.setAllowedOriginPatterns(localhostOriginPatterns());
 		configuration.setAllowedMethods(List.of(
 			HttpMethod.GET.name(),
 			HttpMethod.POST.name(),
@@ -145,5 +146,9 @@ public class SecurityConfig {
 			.map(String::trim)
 			.filter(origin -> !origin.isBlank())
 			.toList();
+	}
+
+	private List<String> localhostOriginPatterns() {
+		return List.of("http://localhost:*", "https://localhost:*");
 	}
 }
