@@ -21,6 +21,7 @@ import com.ssafy.amagetdone.domain.member.api.dto.LogoutDto;
 import com.ssafy.amagetdone.domain.member.api.dto.ProfileCompletionDto;
 import com.ssafy.amagetdone.domain.member.api.dto.RefreshTokenDto;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
+import com.ssafy.amagetdone.domain.member.api.dto.TestSocialAuthDto;
 import com.ssafy.amagetdone.domain.member.application.service.MemberAuthService;
 import com.ssafy.amagetdone.domain.member.application.service.MemberProfileImageService;
 import com.ssafy.amagetdone.domain.member.application.service.MemberProfileService;
@@ -74,7 +75,7 @@ class SecurityConfigIntegrationTest {
 	void socialTestIgnoresInvalidAuthorizationHeader() throws Exception {
 		given(jwtAccessTokenReader.readUserId(INVALID_BEARER))
 			.willThrow(new MemberException(MemberErrorCode.INVALID_ACCESS_TOKEN));
-		given(memberAuthService.authenticateTest())
+		given(memberAuthService.authenticateTest(new TestSocialAuthDto.Request(1)))
 			.willReturn(new SocialAuthDto.Response("TEMP", false, false, "access-token", "refresh-token"));
 
 		mockMvc.perform(apiPost("/v1/auth/social/test")

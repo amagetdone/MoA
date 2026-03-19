@@ -15,11 +15,13 @@ import java.util.List;
 
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
-import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
+import com.ssafy.amagetdone.domain.member.api.dto.TestSocialAuthDto;
 import com.ssafy.amagetdone.domain.member.application.usecase.FindOrCreateSocialUserUseCase;
+import com.ssafy.amagetdone.domain.member.application.usecase.EnsureFinMemberLinkedUseCase;
 import com.ssafy.amagetdone.domain.member.application.usecase.IssueMemberTokensUseCase;
 import com.ssafy.amagetdone.domain.member.application.usecase.ResetTestSocialUserUseCase;
-import com.ssafy.amagetdone.domain.member.application.usecase.EnsureFinMemberLinkedUseCase;
+import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
+import com.ssafy.amagetdone.domain.member.infra.client.MockSocialAuthClient;
 import com.ssafy.amagetdone.domain.member.infra.client.SocialAuthClient;
 import com.ssafy.amagetdone.domain.member.infra.client.SocialUserIdentity;
 import com.ssafy.amagetdone.domain.member.model.entity.SocialAccount;
@@ -48,7 +50,7 @@ class MemberAuthServiceTest {
 	private SocialAuthClient googleSocialAuthClient;
 
 	@Mock
-	private SocialAuthClient testSocialAuthClient;
+	private MockSocialAuthClient testSocialAuthClient;
 
 	@Mock
 	private FindOrCreateSocialUserUseCase findOrCreateSocialUserUseCase;
@@ -73,6 +75,7 @@ class MemberAuthServiceTest {
 		ListAppender<ILoggingEvent> appender = attachAppender();
 		MemberAuthService memberAuthService = new MemberAuthService(
 			List.of(kakaoSocialAuthClient, googleSocialAuthClient, testSocialAuthClient),
+			testSocialAuthClient,
 			findOrCreateSocialUserUseCase,
 			issueMemberTokensUseCase,
 			resetTestSocialUserUseCase,
@@ -111,6 +114,7 @@ class MemberAuthServiceTest {
 		ListAppender<ILoggingEvent> appender = attachAppender();
 		MemberAuthService memberAuthService = new MemberAuthService(
 			List.of(kakaoSocialAuthClient, googleSocialAuthClient, testSocialAuthClient),
+			testSocialAuthClient,
 			findOrCreateSocialUserUseCase,
 			issueMemberTokensUseCase,
 			resetTestSocialUserUseCase,
@@ -155,10 +159,11 @@ class MemberAuthServiceTest {
 	}
 
 	@Test
-	void authenticateTestUsesFixedTestIdentity() {
+	void authenticateTestUsesRequestedTestIdentity() {
 		ListAppender<ILoggingEvent> appender = attachAppender();
 		MemberAuthService memberAuthService = new MemberAuthService(
 			List.of(kakaoSocialAuthClient, googleSocialAuthClient, testSocialAuthClient),
+			testSocialAuthClient,
 			findOrCreateSocialUserUseCase,
 			issueMemberTokensUseCase,
 			resetTestSocialUserUseCase,
@@ -166,31 +171,31 @@ class MemberAuthServiceTest {
 			accountRepository,
 			planRepository
 		);
-		SocialUserIdentity identity = new SocialUserIdentity(SocialProvider.TEST, "test-social-user-001");
+		TestSocialAuthDto.Request request = new TestSocialAuthDto.Request(3);
+		SocialUserIdentity identity = new SocialUserIdentity(SocialProvider.TEST, "test-social-user-003");
 		User user = User.createPendingSocialUser();
 		setUserId(user, 10);
-		user.applyTestSocialProfile("tester", "test@test.com");
-		SocialAccount socialAccount = SocialAccount.create(user, SocialProvider.TEST, "test-social-user-001");
+		user.applyTestSocialProfile("tester3", "test3@test.com");
+		SocialAccount socialAccount = SocialAccount.create(user, SocialProvider.TEST, "test-social-user-003");
 		MemberTokenPair tokenPair = new MemberTokenPair("access-token", "refresh-token");
 
-		given(testSocialAuthClient.supports(SocialProvider.TEST)).willReturn(true);
-		given(testSocialAuthClient.fetchIdentity(any())).willReturn(identity);
+		given(testSocialAuthClient.fetchIdentity(request)).willReturn(identity);
 		given(findOrCreateSocialUserUseCase.execute(identity))
 			.willReturn(new FindOrCreateSocialUserUseCase.Result(user, socialAccount, true));
-		given(ensureFinMemberLinkedUseCase.execute(10, "test@test.com")).willReturn("ssafy-user-key");
+		given(ensureFinMemberLinkedUseCase.execute(10, "test3@test.com")).willReturn("ssafy-user-key");
 		given(issueMemberTokensUseCase.execute(user, SocialProvider.TEST)).willReturn(tokenPair);
 		given(accountRepository.existsLinkedAccountByUserId(10)).willReturn(false);
 		given(planRepository.existsByUserId(10)).willReturn(false);
 
-		SocialAuthDto.Response response = memberAuthService.authenticateTest();
+		SocialAuthDto.Response response = memberAuthService.authenticateTest(request);
 
 		assertEquals("TEMP", response.status());
 		assertEquals("access-token", response.accessToken());
-		assertEquals("test@test.com", user.getEmail());
+		assertEquals("test3@test.com", user.getEmail());
 		assertEquals("ssafy-user-key", user.getUserKey());
 		assertTrue(containsLog(appender, "provider=TEST"));
 		verify(findOrCreateSocialUserUseCase).execute(identity);
-		verify(ensureFinMemberLinkedUseCase).execute(10, "test@test.com");
+		verify(ensureFinMemberLinkedUseCase).execute(10, "test3@test.com");
 	}
 
 	@Test
@@ -198,6 +203,7 @@ class MemberAuthServiceTest {
 		ListAppender<ILoggingEvent> appender = attachAppender();
 		MemberAuthService memberAuthService = new MemberAuthService(
 			List.of(kakaoSocialAuthClient, googleSocialAuthClient, testSocialAuthClient),
+			testSocialAuthClient,
 			findOrCreateSocialUserUseCase,
 			issueMemberTokensUseCase,
 			resetTestSocialUserUseCase,
