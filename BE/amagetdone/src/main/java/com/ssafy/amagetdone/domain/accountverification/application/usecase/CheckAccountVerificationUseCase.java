@@ -1,3 +1,4 @@
+// Responsibility: Completes 1-won verification and persists the verified linked-account state.
 package com.ssafy.amagetdone.domain.accountverification.application.usecase;
 
 import java.time.LocalDateTime;
@@ -108,8 +109,7 @@ public class CheckAccountVerificationUseCase {
 			matched.bankName(),
 			matched.currency()
 		);
-		account.markVerified();
-		account.markActive();
+		account.markVerifiedLinked();
 		return accountRepository.save(account);
 	}
 }

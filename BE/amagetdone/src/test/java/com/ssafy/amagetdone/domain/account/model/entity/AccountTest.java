@@ -1,3 +1,4 @@
+// Responsibility: Verifies account entity state transitions for local linked-account lifecycle rules.
 package com.ssafy.amagetdone.domain.account.model.entity;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -77,5 +78,50 @@ class AccountTest {
 
 		account.markActive();
 		assertTrue(account.isActive());
+	}
+
+	@Test
+	void softDeleteMarksAccountUnverifiedInactiveAndDeleted() {
+		User user = User.createPendingSocialUser();
+		Account account = Account.create(
+			user,
+			"0011234567890123",
+			"001-1-abc",
+			"데모 계좌",
+			"수시입출금",
+			"001",
+			"한국은행",
+			"KRW"
+		);
+		account.markVerified();
+		account.markActive();
+
+		account.softDelete();
+
+		assertFalse(account.isVerified());
+		assertFalse(account.isActive());
+		assertTrue(account.isDeleted());
+	}
+
+	@Test
+	void verifiedRelinkRestoresDeletedAccount() {
+		User user = User.createPendingSocialUser();
+		Account account = Account.create(
+			user,
+			"0011234567890123",
+			"001-1-abc",
+			"데모 계좌",
+			"수시입출금",
+			"001",
+			"한국은행",
+			"KRW"
+		);
+		account.softDelete();
+
+		account.markVerifiedLinked();
+
+		assertTrue(account.isVerified());
+		assertTrue(account.isActive());
+		assertFalse(account.isDeleted());
 	}
 }

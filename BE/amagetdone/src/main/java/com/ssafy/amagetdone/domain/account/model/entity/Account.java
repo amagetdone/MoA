@@ -1,3 +1,4 @@
+// Responsibility: Stores local linked-account state and account lifecycle transitions.
 package com.ssafy.amagetdone.domain.account.model.entity;
 
 import com.ssafy.amagetdone.domain.member.model.entity.User;
@@ -117,12 +118,24 @@ public class Account extends BaseEntity {
 		this.verified = true;
 	}
 
+	public void markVerifiedLinked() {
+		this.verified = true;
+		this.active = true;
+		setDeleted(false);
+	}
+
 	public void markActive() {
 		this.active = true;
 	}
 
 	public void markInactive() {
 		this.active = false;
+	}
+
+	public void softDelete() {
+		this.verified = false;
+		this.active = false;
+		setDeleted(true);
 	}
 
 	public String getId() {

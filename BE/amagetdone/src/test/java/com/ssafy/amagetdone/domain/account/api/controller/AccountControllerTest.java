@@ -1,3 +1,4 @@
+// Responsibility: Verifies account controller authorization-to-service delegation.
 package com.ssafy.amagetdone.domain.account.api.controller;
 
 import static org.assertj.core.api.Assertions.*;
@@ -31,5 +32,21 @@ class AccountControllerTest {
 		assertThat(result.data()).isEqualTo(response);
 		verify(jwtAccessTokenReader).readUserId("Bearer access-token");
 		verify(accountService).confirmAccount(7, request);
+	}
+
+	@Test
+	void deleteAccountReadsUserIdFromAuthorizationHeader() {
+		AccountService accountService = mock(AccountService.class);
+		JwtAccessTokenReader jwtAccessTokenReader = mock(JwtAccessTokenReader.class);
+		AccountController controller = new AccountController(accountService, jwtAccessTokenReader);
+
+		when(jwtAccessTokenReader.readUserId("Bearer access-token")).thenReturn(7);
+
+		ApiResponse<Void> result = controller.deleteAccount("Bearer access-token", "0011234567890123");
+
+		assertThat(result.status()).isEqualTo("ok");
+		assertThat(result.data()).isNull();
+		verify(jwtAccessTokenReader).readUserId("Bearer access-token");
+		verify(accountService).deleteAccount(7, "0011234567890123");
 	}
 }

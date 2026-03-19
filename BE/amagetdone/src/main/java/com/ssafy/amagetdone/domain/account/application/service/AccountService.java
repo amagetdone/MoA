@@ -1,3 +1,4 @@
+// Responsibility: Orchestrates account-related application operations for controllers and admin flows.
 package com.ssafy.amagetdone.domain.account.application.service;
 
 import java.util.List;
@@ -20,9 +21,11 @@ import com.ssafy.amagetdone.domain.account.infra.client.SsafyDemandDepositAccoun
 import com.ssafy.amagetdone.domain.account.infra.client.dto.DemandDepositAccountDto;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
+import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +33,7 @@ public class AccountService {
 
 	private final FindAccountUserUseCase findAccountUserUseCase;
 	private final FindUserAccountUseCase findUserAccountUseCase;
+	private final AccountRepository accountRepository;
 	private final ConfirmAccountOwnershipUseCase confirmAccountOwnershipUseCase;
 	private final SsafyDemandDepositAccountApiClient ssafyDemandDepositAccountApiClient;
 	private final RegisterDemandDepositProductUseCase registerDemandDepositProductUseCase;
@@ -60,6 +64,13 @@ public class AccountService {
 
 	public AccountDto.ConfirmAccountResponse confirmAccount(Integer userId, AccountDto.ConfirmAccountRequest request) {
 		return confirmAccountOwnershipUseCase.execute(userId, request);
+	}
+
+	@Transactional
+	public void deleteAccount(Integer userId, String accountNo) {
+		Account account = findUserAccountUseCase.execute(userId, accountNo);
+		account.softDelete();
+		accountRepository.save(account);
 	}
 
 	public AccountAdminDto.ProductResponse registerProduct(AccountAdminDto.ProductCreateRequest request) {
