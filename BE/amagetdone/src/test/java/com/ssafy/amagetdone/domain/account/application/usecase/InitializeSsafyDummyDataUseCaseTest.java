@@ -29,6 +29,7 @@ import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.account.model.repository.CardRepository;
 import com.ssafy.amagetdone.domain.account.model.repository.CategoryRepository;
 import com.ssafy.amagetdone.domain.account.model.repository.MerchantRepository;
+import com.ssafy.amagetdone.domain.account.support.util.LocalCardUniqueNoMapper;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.transaction.model.entity.AccountTransactionOverride;
 import com.ssafy.amagetdone.domain.transaction.model.entity.CardTransactionOverride;
@@ -74,6 +75,8 @@ class InitializeSsafyDummyDataUseCaseTest {
 
 	@Mock
 	private SsafyAdminCreditCardApiClient ssafyAdminCreditCardApiClient;
+
+	private final LocalCardUniqueNoMapper localCardUniqueNoMapper = new LocalCardUniqueNoMapper();
 
 	@Test
 	void executeCreatesVariedTransactionsAcrossPreviousThreeCompletedMonths() {
@@ -211,7 +214,8 @@ class InitializeSsafyDummyDataUseCaseTest {
 			accountTransactionOverrideRepository,
 			cardTransactionOverrideRepository,
 			ssafyAdminDemandDepositApiClient,
-			ssafyAdminCreditCardApiClient
+			ssafyAdminCreditCardApiClient,
+			localCardUniqueNoMapper
 		);
 		ReflectionTestUtils.setField(useCase, "clock", Clock.fixed(Instant.parse(instant), ZoneId.of("Asia/Seoul")));
 		return useCase;

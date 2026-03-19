@@ -23,6 +23,7 @@ import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.account.model.repository.CardRepository;
 import com.ssafy.amagetdone.domain.account.model.repository.CategoryRepository;
 import com.ssafy.amagetdone.domain.account.model.repository.MerchantRepository;
+import com.ssafy.amagetdone.domain.account.support.util.LocalCardUniqueNoMapper;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.transaction.model.entity.AccountTransactionOverride;
 import com.ssafy.amagetdone.domain.transaction.model.entity.CardTransactionOverride;
@@ -50,6 +51,7 @@ public class InitializeSsafyDummyDataUseCase {
 	private final CardTransactionOverrideRepository cardTransactionOverrideRepository;
 	private final SsafyAdminDemandDepositApiClient ssafyAdminDemandDepositApiClient;
 	private final SsafyAdminCreditCardApiClient ssafyAdminCreditCardApiClient;
+	private final LocalCardUniqueNoMapper localCardUniqueNoMapper;
 
 	private Clock clock = Clock.systemDefaultZone();
 
@@ -62,7 +64,8 @@ public class InitializeSsafyDummyDataUseCase {
 		AccountTransactionOverrideRepository accountTransactionOverrideRepository,
 		CardTransactionOverrideRepository cardTransactionOverrideRepository,
 		SsafyAdminDemandDepositApiClient ssafyAdminDemandDepositApiClient,
-		SsafyAdminCreditCardApiClient ssafyAdminCreditCardApiClient
+		SsafyAdminCreditCardApiClient ssafyAdminCreditCardApiClient,
+		LocalCardUniqueNoMapper localCardUniqueNoMapper
 	) {
 		this.findAccountUserByUserKeyUseCase = findAccountUserByUserKeyUseCase;
 		this.accountRepository = accountRepository;
@@ -73,6 +76,7 @@ public class InitializeSsafyDummyDataUseCase {
 		this.cardTransactionOverrideRepository = cardTransactionOverrideRepository;
 		this.ssafyAdminDemandDepositApiClient = ssafyAdminDemandDepositApiClient;
 		this.ssafyAdminCreditCardApiClient = ssafyAdminCreditCardApiClient;
+		this.localCardUniqueNoMapper = localCardUniqueNoMapper;
 	}
 
 	@Transactional
@@ -145,20 +149,20 @@ public class InitializeSsafyDummyDataUseCase {
 	}
 
 	private Card saveCard(Account withdrawalAccount, AdminCreditCardDto.CreatedCard createdCard) {
-		Card card = Card.builder()
-			.cardUniqueNo(toLocalCardUniqueNo(createdCard.cardUniqueNo()))
-			.withdrawalAccount(withdrawalAccount)
-			.cvc(createdCard.cvc())
-			.cardNo(createdCard.cardNo())
-			.name(createdCard.cardName())
-			.issuerCode(createdCard.cardIssuerCode())
-			.cardIssuerName(createdCard.cardIssuerName())
-			.cardExpiryDate(LocalDate.parse(createdCard.cardExpiryDate(), java.time.format.DateTimeFormatter.BASIC_ISO_DATE).atStartOfDay())
-			.cardDescription(createdCard.cardDescription() == null ? "" : createdCard.cardDescription())
-			.withdrawalDate(createdCard.withdrawalDate())
-			.baselinePerformance(createdCard.baselinePerformance())
-			.maxBenefitLimit(createdCard.maxBenefitLimit())
-			.build();
+		Card card = Card.create(
+			localCardUniqueNoMapper.toLocalId(createdCard.cardUniqueNo()),
+			withdrawalAccount,
+			createdCard.cvc(),
+			createdCard.cardNo(),
+			createdCard.cardName(),
+			createdCard.cardIssuerCode(),
+			createdCard.cardIssuerName(),
+			LocalDate.parse(createdCard.cardExpiryDate(), java.time.format.DateTimeFormatter.BASIC_ISO_DATE).atStartOfDay(),
+			createdCard.cardDescription() == null ? "" : createdCard.cardDescription(),
+			createdCard.withdrawalDate(),
+			createdCard.baselinePerformance(),
+			createdCard.maxBenefitLimit()
+		);
 		return cardRepository.save(card);
 	}
 
@@ -359,11 +363,6 @@ public class InitializeSsafyDummyDataUseCase {
 
 	private boolean hasText(String value) {
 		return value != null && !value.isBlank();
-	}
-
-	private Long toLocalCardUniqueNo(String cardUniqueNo) {
-		long hashed = Math.abs((long)cardUniqueNo.hashCode());
-		return hashed == 0 ? 1L : hashed;
 	}
 
 	private void validateRequest(AccountAdminDto.DataInitRequest request) {

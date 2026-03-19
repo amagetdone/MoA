@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -12,6 +13,9 @@ import java.util.Optional;
 
 import com.ssafy.amagetdone.domain.account.infra.client.SsafyDemandDepositAccountApiClient;
 import com.ssafy.amagetdone.domain.account.infra.client.dto.DemandDepositAccountDto;
+import com.ssafy.amagetdone.domain.account.application.usecase.SyncLinkedCardsUseCase;
+import com.ssafy.amagetdone.domain.account.exception.AccountErrorCode;
+import com.ssafy.amagetdone.domain.account.exception.AccountException;
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.accountverification.api.dto.AccountVerificationDto;
@@ -44,6 +48,9 @@ class CheckAccountVerificationUseCaseTest {
 
 	@Mock
 	private SsafyDemandDepositAccountApiClient ssafyDemandDepositAccountApiClient;
+
+	@Mock
+	private SyncLinkedCardsUseCase syncLinkedCardsUseCase;
 
 	@InjectMocks
 	private CheckAccountVerificationUseCase checkAccountVerificationUseCase;
@@ -81,9 +88,7 @@ class CheckAccountVerificationUseCaseTest {
 		);
 		when(ssafyDemandDepositAccountApiClient.inquireAccount(any())).thenReturn(accountDetail);
 
-		Account savedAccount = mock(Account.class);
-		when(savedAccount.isVerified()).thenReturn(true);
-		when(accountRepository.save(any(Account.class))).thenReturn(savedAccount);
+		when(accountRepository.save(any(Account.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		AccountVerificationDto.CheckVerificationResponse result =
 			checkAccountVerificationUseCase.execute(7, request);
@@ -91,6 +96,7 @@ class CheckAccountVerificationUseCaseTest {
 		assertThat(result.verificationId()).isEqualTo(12L);
 		assertThat(result.status()).isEqualTo("SUCCESS");
 		assertThat(result.verified()).isTrue();
+		verify(syncLinkedCardsUseCase).execute(7, "user-key", "0011234567890123");
 		verify(accountVerificationRepository).save(verification);
 		verify(accountRepository).save(any(Account.class));
 	}
@@ -152,6 +158,7 @@ class CheckAccountVerificationUseCaseTest {
 
 		assertThat(result.verified()).isTrue();
 		assertThat(existingAccount.isActive()).isTrue();
+		verify(syncLinkedCardsUseCase).execute(7, "user-key", "0011234567890123");
 	}
 
 	@Test
@@ -183,5 +190,103 @@ class CheckAccountVerificationUseCaseTest {
 		verify(accountVerificationRepository).save(verification);
 		assertThat(verification.getStatus().name()).isEqualTo("FAILED");
 		assertThat(verification.getFailureReason()).isEqualTo(AccountVerificationErrorCode.AUTH_CODE_MISMATCH.message());
+		verify(syncLinkedCardsUseCase, never()).execute(any(), any(), any());
+	}
+
+	@Test
+	void checkVerificationSucceedsWhenSsafyCardListIsEmpty() {
+		User user = mock(User.class);
+		when(user.getId()).thenReturn(7);
+		when(user.getUserKey()).thenReturn("user-key");
+
+		AccountVerification verification = AccountVerification.createRequested(
+			user,
+			"0011234567890123",
+			"AMAGETDONE",
+			88L,
+			LocalDateTime.of(2026, 3, 13, 9, 0)
+		);
+		ReflectionTestUtils.setField(verification, "id", 12L);
+
+		when(accountVerificationRepository.findTopByUser_IdAndAccountNoOrderByCreatedAtDesc(7, "0011234567890123"))
+			.thenReturn(Optional.of(verification));
+		when(ssafyAccountVerificationApiClient.checkVerification(any()))
+			.thenReturn(new AccountVerificationClientDto.CheckVerificationResponse("SUCCESS", 88L, "0011234567890123"));
+		when(accountRepository.findByUserIdAndAccountNo(7, "0011234567890123"))
+			.thenReturn(Optional.empty());
+		when(ssafyDemandDepositAccountApiClient.inquireAccount(any())).thenReturn(new DemandDepositAccountDto.AccountDetailResponse(
+			"001",
+			"싸피은행",
+			"테스트유저",
+			"0011234567890123",
+			"수시입출금",
+			"001",
+			"수시입출금",
+			"20260101",
+			"20290101",
+			10000000L,
+			5000000L,
+			100000L,
+			"KRW"
+		));
+
+		when(accountRepository.save(any(Account.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		AccountVerificationDto.CheckVerificationResponse result = checkAccountVerificationUseCase.execute(
+			7,
+			new AccountVerificationDto.CheckVerificationRequest("0011234567890123", "1234")
+		);
+
+		assertThat(result.status()).isEqualTo("SUCCESS");
+		verify(syncLinkedCardsUseCase).execute(7, "user-key", "0011234567890123");
+	}
+
+	@Test
+	void checkVerificationFailsWhenLinkedCardSyncFails() {
+		User user = mock(User.class);
+		when(user.getId()).thenReturn(7);
+		when(user.getUserKey()).thenReturn("user-key");
+
+		AccountVerification verification = AccountVerification.createRequested(
+			user,
+			"0011234567890123",
+			"AMAGETDONE",
+			88L,
+			LocalDateTime.of(2026, 3, 13, 9, 0)
+		);
+
+		when(accountVerificationRepository.findTopByUser_IdAndAccountNoOrderByCreatedAtDesc(7, "0011234567890123"))
+			.thenReturn(Optional.of(verification));
+		when(ssafyAccountVerificationApiClient.checkVerification(any()))
+			.thenReturn(new AccountVerificationClientDto.CheckVerificationResponse("SUCCESS", 88L, "0011234567890123"));
+		when(accountRepository.findByUserIdAndAccountNo(7, "0011234567890123"))
+			.thenReturn(Optional.empty());
+		when(ssafyDemandDepositAccountApiClient.inquireAccount(any())).thenReturn(new DemandDepositAccountDto.AccountDetailResponse(
+			"001",
+			"싸피은행",
+			"테스트유저",
+			"0011234567890123",
+			"수시입출금",
+			"001",
+			"수시입출금",
+			"20260101",
+			"20290101",
+			10000000L,
+			5000000L,
+			100000L,
+			"KRW"
+		));
+		when(accountRepository.save(any(Account.class))).thenAnswer(invocation -> invocation.getArgument(0));
+		org.mockito.Mockito.doThrow(new AccountException(AccountErrorCode.LINKED_CARD_SYNC_FAILED))
+			.when(syncLinkedCardsUseCase)
+			.execute(7, "user-key", "0011234567890123");
+
+		assertThatThrownBy(() -> checkAccountVerificationUseCase.execute(
+			7,
+			new AccountVerificationDto.CheckVerificationRequest("0011234567890123", "1234")
+		))
+			.isInstanceOf(AccountException.class)
+			.extracting("errorCode")
+			.isEqualTo(AccountErrorCode.LINKED_CARD_SYNC_FAILED);
 	}
 }

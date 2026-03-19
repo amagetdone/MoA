@@ -2,6 +2,7 @@ package com.ssafy.amagetdone.domain.accountverification.application.usecase;
 
 import java.time.LocalDateTime;
 
+import com.ssafy.amagetdone.domain.account.application.usecase.SyncLinkedCardsUseCase;
 import com.ssafy.amagetdone.domain.account.infra.client.SsafyDemandDepositAccountApiClient;
 import com.ssafy.amagetdone.domain.account.infra.client.dto.DemandDepositAccountDto;
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
@@ -26,17 +27,20 @@ public class CheckAccountVerificationUseCase {
 	private final AccountRepository accountRepository;
 	private final SsafyAccountVerificationApiClient ssafyAccountVerificationApiClient;
 	private final SsafyDemandDepositAccountApiClient ssafyDemandDepositAccountApiClient;
+	private final SyncLinkedCardsUseCase syncLinkedCardsUseCase;
 
 	public CheckAccountVerificationUseCase(
 		AccountVerificationRepository accountVerificationRepository,
 		AccountRepository accountRepository,
 		SsafyAccountVerificationApiClient ssafyAccountVerificationApiClient,
-		SsafyDemandDepositAccountApiClient ssafyDemandDepositAccountApiClient
+		SsafyDemandDepositAccountApiClient ssafyDemandDepositAccountApiClient,
+		SyncLinkedCardsUseCase syncLinkedCardsUseCase
 	) {
 		this.accountVerificationRepository = accountVerificationRepository;
 		this.accountRepository = accountRepository;
 		this.ssafyAccountVerificationApiClient = ssafyAccountVerificationApiClient;
 		this.ssafyDemandDepositAccountApiClient = ssafyDemandDepositAccountApiClient;
+		this.syncLinkedCardsUseCase = syncLinkedCardsUseCase;
 	}
 
 	@Transactional
@@ -63,6 +67,7 @@ public class CheckAccountVerificationUseCase {
 			accountVerificationRepository.save(verification);
 
 			Account account = registerVerifiedAccount(user, verification.getAccountNo());
+			syncLinkedCardsUseCase.execute(user.getId(), user.getUserKey(), account.getAccountNo());
 
 			return new AccountVerificationDto.CheckVerificationResponse(
 				verification.getId(),

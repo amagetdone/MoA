@@ -79,6 +79,31 @@ public enum AccountErrorCode implements ErrorCode {
 		HttpStatus.BAD_GATEWAY,
 		"ACCOUNT_018",
 		"Invalid credit card transaction API response"
+	),
+	LINKED_CARD_QUERY_API_CALL_FAILED(
+		HttpStatus.BAD_GATEWAY,
+		"ACCOUNT_020",
+		"Linked card query API call failed"
+	),
+	INVALID_LINKED_CARD_QUERY_API_RESPONSE(
+		HttpStatus.BAD_GATEWAY,
+		"ACCOUNT_021",
+		"Invalid linked card query API response"
+	),
+	LINKED_ACCOUNT_CARD_NOT_FOUND(
+		HttpStatus.BAD_GATEWAY,
+		"ACCOUNT_022",
+		"Linked account card not found"
+	),
+	LINKED_CARD_SYNC_FAILED(
+		HttpStatus.BAD_GATEWAY,
+		"ACCOUNT_023",
+		"Linked card sync failed"
+	),
+	INVALID_LINKED_CARD_UNIQUE_NO(
+		HttpStatus.BAD_REQUEST,
+		"ACCOUNT_024",
+		"Invalid linked card unique number"
 	);
 
 	private final HttpStatus httpStatus;

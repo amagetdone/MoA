@@ -11,6 +11,7 @@ import com.ssafy.amagetdone.domain.budget.api.dto.WeeklyEssentialExpenseDetailDt
 import com.ssafy.amagetdone.domain.budget.api.dto.WeeklyEssentialExpenseDto;
 import com.ssafy.amagetdone.domain.budget.api.dto.WeeklyFreeSpendingDetailDto;
 import com.ssafy.amagetdone.domain.budget.api.dto.WeeklySavingsDetailDto;
+import com.ssafy.amagetdone.global.docs.schema.BudgetHomeApiResponseSchema;
 import com.ssafy.amagetdone.global.response.ApiResponse;
 import com.ssafy.amagetdone.global.security.AuthenticatedMember;
 
@@ -68,7 +69,11 @@ public interface BudgetDocsController {
 
 	@Operation(summary = "홈 화면 통합 조회", description = "로그인한 사용자의 홈 화면 통합 정보를 반환합니다.")
 	@ApiResponses({
-		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "홈 화면 통합 조회 성공"),
+		@io.swagger.v3.oas.annotations.responses.ApiResponse(
+			responseCode = "200",
+			description = "홈 화면 통합 조회 성공",
+			content = @Content(schema = @Schema(implementation = BudgetHomeApiResponseSchema.class))
+		),
 		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증이 필요합니다.", content = @Content)
 	})
 	ApiResponse<BudgetHomeDto.Response> getBudgetHome(
