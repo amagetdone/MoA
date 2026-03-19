@@ -11,4 +11,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface BudgetMonthRepository extends JpaRepository<BudgetMonth, Integer> {
 
 	Optional<BudgetMonth> findByUserAndBaseDate(User user, LocalDate baseDate);
+
+	Optional<BudgetMonth> findByUser_IdAndBaseDate(Integer userId, LocalDate baseDate);
 }
