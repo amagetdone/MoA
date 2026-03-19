@@ -243,7 +243,7 @@ class _SpendingInsightBox extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-       color: const Color(0xFFFFF6ED),
+        color: AppColors.bgInsight,
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Row(
