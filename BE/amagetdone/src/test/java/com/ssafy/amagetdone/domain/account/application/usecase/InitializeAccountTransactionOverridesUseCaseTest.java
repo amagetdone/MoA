@@ -88,7 +88,8 @@ class InitializeAccountTransactionOverridesUseCaseTest {
 		assertThat(response.transactionCount()).isEqualTo(captor.getValue().size());
 		assertThat(captor.getValue())
 			.extracting(AccountTransactionOverride::getTransactionDateTime)
-			.allMatch(dateTime -> YearMonth.from(dateTime).equals(YearMonth.of(2025, 12)));
+			.map(YearMonth::from)
+			.contains(YearMonth.of(2025, 12), YearMonth.of(2026, 1), YearMonth.of(2026, 2), YearMonth.of(2026, 3));
 	}
 
 	@Test
