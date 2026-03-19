@@ -1,5 +1,7 @@
 package com.ssafy.amagetdone.domain.transaction.infra.client;
 
+import java.util.List;
+
 import com.ssafy.amagetdone.domain.transaction.exception.TransactionErrorCode;
 import com.ssafy.amagetdone.domain.transaction.exception.TransactionException;
 import com.ssafy.amagetdone.domain.transaction.infra.client.dto.CardTransactionDto;
@@ -76,7 +78,14 @@ public class SsafyCardTransactionApiClient {
 		}
 
 		if (record == null || record.transactionList() == null) {
-			throw new TransactionException(TransactionErrorCode.INVALID_CARD_TRANSACTION_API_RESPONSE);
+			return new CardTransactionDto.Response(
+				record != null ? record.cardIssuerCode() : null,
+				record != null ? record.cardIssuerName() : null,
+				record != null ? record.cardName() : null,
+				record != null ? record.cardNo() : null,
+				record != null ? record.estimatedBalance() : null,
+				List.of()
+			);
 		}
 
 		return new CardTransactionDto.Response(
