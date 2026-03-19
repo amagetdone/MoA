@@ -1,6 +1,8 @@
 package com.ssafy.amagetdone.domain.transaction.application.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
@@ -19,6 +21,7 @@ import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.vo.UserStatus;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionListDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.SyncLatestTransactionsUseCase;
 import com.ssafy.amagetdone.domain.transaction.model.entity.AccountTransactionOverride;
 import com.ssafy.amagetdone.domain.transaction.model.entity.CardTransactionOverride;
@@ -212,6 +215,54 @@ class TransactionQueryServiceTest {
 		);
 
 		assertEquals("타이짬뽕인동점", response.items().get(0).merchantText());
+	}
+
+	@Test
+	void getWeeklyTransactionAnalysisReturnsEmptyResponseWhenSnapshotIsMissing() {
+		TransactionQueryService queryService = new TransactionQueryService(
+			accountTransactionOverrideRepository,
+			cardTransactionOverrideRepository,
+			transactionAnalysisResultRepository,
+			transactionAnalysisMetadataRepository,
+			essentialExpenseSnapshotWeekRepository,
+			essentialExpenseSnapshotWeekCategoryRepository,
+			syncLatestTransactionsUseCase
+		);
+
+		User user = User.builder()
+			.id(1)
+			.email("tester@example.com")
+			.nickname("tester")
+			.status(UserStatus.ACTIVE)
+			.build();
+		TransactionAnalysisMetadata latestMetadata = TransactionAnalysisMetadata.builder()
+			.id(1)
+			.user(user)
+			.requestedMonths(3)
+			.windowStartAt(LocalDateTime.of(2025, 12, 1, 0, 0))
+			.windowEndAt(LocalDateTime.of(2026, 2, 28, 23, 59, 59))
+			.transactionCount(9)
+			.latestTransactionAt(LocalDateTime.of(2026, 2, 20, 12, 0))
+			.analyzedAt(LocalDateTime.of(2026, 3, 1, 0, 0))
+			.build();
+
+		given(transactionAnalysisMetadataRepository.findTopByUser_IdOrderByAnalyzedAtDesc(1))
+			.willReturn(Optional.of(latestMetadata));
+		given(essentialExpenseSnapshotWeekRepository.findByUser_IdAndYearWeekAndAnalyzedAt(1, "2026-W12",
+			latestMetadata.getAnalyzedAt()))
+			.willReturn(Optional.empty());
+
+		WeeklyTransactionAnalysisDto.Response response = queryService.getWeeklyTransactionAnalysis(1, "2026-W12");
+
+		assertEquals("2026-W12", response.yearWeek());
+		assertEquals(0L, response.expenseAmount());
+		assertEquals(0L, response.essentialAmount());
+		assertEquals(0L, response.fixedEssentialAmount());
+		assertEquals(0L, response.variableEssentialAmount());
+		assertTrue(response.categoryExpenses().isEmpty());
+		assertNull(response.weekStartDate());
+		assertNull(response.weekEndDate());
+		assertNull(response.lastAnalyzedAt());
 	}
 
 	private AccountTransactionOverride accountTransaction(

@@ -248,10 +248,20 @@ public class TransactionQueryService {
 	}
 
 	public WeeklyTransactionAnalysisDto.Response getWeeklyTransactionAnalysis(Integer userId, String yearWeek) {
-		TransactionAnalysisMetadata latestMetadata = getLatestMetadata(userId);
+		TransactionAnalysisMetadata latestMetadata = transactionAnalysisMetadataRepository
+			.findTopByUser_IdOrderByAnalyzedAtDesc(userId)
+			.orElse(null);
+		if (latestMetadata == null) {
+			return WeeklyTransactionAnalysisDto.Response.empty(yearWeek);
+		}
+
 		EssentialExpenseSnapshotWeek snapshotWeek = essentialExpenseSnapshotWeekRepository
 			.findByUser_IdAndYearWeekAndAnalyzedAt(userId, yearWeek, latestMetadata.getAnalyzedAt())
-			.orElseThrow(() -> new TransactionException(TransactionErrorCode.TRANSACTION_ANALYSIS_RESULT_NOT_FOUND));
+			.orElse(null);
+		if (snapshotWeek == null) {
+			return WeeklyTransactionAnalysisDto.Response.empty(yearWeek);
+		}
+
 		List<Projection> projections = loadProjections(
 			userId,
 			snapshotWeek.getWeekStartDate().atStartOfDay(),

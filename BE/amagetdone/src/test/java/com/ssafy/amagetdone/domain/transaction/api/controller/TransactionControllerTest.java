@@ -256,6 +256,37 @@ class TransactionControllerTest {
 	}
 
 	@Test
+	void getWeeklyAnalysisReturnsEmptyStateWhenDataIsMissing() throws Exception {
+		given(transactionAnalysisResponseFacade.getWeeklyAnalysis(1, "2026-W12"))
+			.willReturn(new WeeklyTransactionAnalysisDto.Response(
+				"2026-W12",
+				null,
+				null,
+				0L,
+				0L,
+				0L,
+				0L,
+				List.of(),
+				null
+			));
+
+		mockMvc.perform(apiGet("/transactions/analysis/weeks/2026-W12")
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
+				)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("주간 분석 결과를 조회했습니다."))
+			.andExpect(jsonPath("$.data.yearWeek").value("2026-W12"))
+			.andExpect(jsonPath("$.data.expenseAmount").value(0))
+			.andExpect(jsonPath("$.data.essentialAmount").value(0))
+			.andExpect(jsonPath("$.data.fixedEssentialAmount").value(0))
+			.andExpect(jsonPath("$.data.variableEssentialAmount").value(0))
+			.andExpect(jsonPath("$.data.categoryExpenses").isArray())
+			.andExpect(jsonPath("$.data.categoryExpenses").isEmpty());
+	}
+
+	@Test
 	void getMonthlyAnalysisReturnsMonthlyEssentialAmountDerivedFromWeeklySnapshots() throws Exception {
 		given(transactionAnalysisResponseFacade.getMonthlyAnalysis(1, "2026-03"))
 			.willReturn(new MonthlyTransactionAnalysisDto.Response(
