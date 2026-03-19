@@ -9,7 +9,9 @@ public enum AccountErrorCode implements ErrorCode {
 	USER_NOT_FOUND(HttpStatus.NOT_FOUND, "ACCOUNT_002", "User not found"),
 	USER_KEY_REQUIRED(HttpStatus.BAD_REQUEST, "ACCOUNT_003", "User key is required"),
 	ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "ACCOUNT_004", "Account not found"),
+	CARD_NOT_FOUND(HttpStatus.NOT_FOUND, "ACCOUNT_020", "Card not found"),
 	INVALID_DATA_INIT_REQUEST(HttpStatus.BAD_REQUEST, "ACCOUNT_019", "Invalid data init request"),
+	TRANSACTION_INIT_SEED_NOT_FOUND(HttpStatus.INTERNAL_SERVER_ERROR, "ACCOUNT_021", "Transaction init seed not found"),
 	DEMAND_DEPOSIT_PRODUCT_API_CALL_FAILED(
 		HttpStatus.BAD_GATEWAY,
 		"ACCOUNT_005",
@@ -82,27 +84,27 @@ public enum AccountErrorCode implements ErrorCode {
 	),
 	LINKED_CARD_QUERY_API_CALL_FAILED(
 		HttpStatus.BAD_GATEWAY,
-		"ACCOUNT_020",
+		"ACCOUNT_022",
 		"Linked card query API call failed"
 	),
 	INVALID_LINKED_CARD_QUERY_API_RESPONSE(
 		HttpStatus.BAD_GATEWAY,
-		"ACCOUNT_021",
+		"ACCOUNT_023",
 		"Invalid linked card query API response"
 	),
 	LINKED_ACCOUNT_CARD_NOT_FOUND(
 		HttpStatus.BAD_GATEWAY,
-		"ACCOUNT_022",
+		"ACCOUNT_024",
 		"Linked account card not found"
 	),
 	LINKED_CARD_SYNC_FAILED(
 		HttpStatus.BAD_GATEWAY,
-		"ACCOUNT_023",
+		"ACCOUNT_025",
 		"Linked card sync failed"
 	),
 	INVALID_LINKED_CARD_UNIQUE_NO(
 		HttpStatus.BAD_REQUEST,
-		"ACCOUNT_024",
+		"ACCOUNT_026",
 		"Invalid linked card unique number"
 	);
 

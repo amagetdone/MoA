@@ -5,10 +5,14 @@ import java.util.List;
 import com.ssafy.amagetdone.domain.account.api.dto.AccountAdminDto;
 import com.ssafy.amagetdone.domain.account.api.dto.AccountDto;
 import com.ssafy.amagetdone.domain.account.application.usecase.ConfirmAccountOwnershipUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.DepositAccountUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.FindAccountUserUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.FindUserAccountUseCase;
-import com.ssafy.amagetdone.domain.account.application.usecase.InitializeSsafyDummyDataUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.InitializeAccountTransactionOverridesUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.InitializeCardTransactionOverridesUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.InquireAccountBalanceUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountsUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountTransactionsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListDemandDepositProductsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ReconcileLinkedAccountsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.RegisterDemandDepositProductUseCase;
@@ -17,9 +21,11 @@ import com.ssafy.amagetdone.domain.account.infra.client.dto.DemandDepositAccount
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class AccountService {
 
 	private final FindAccountUserUseCase findAccountUserUseCase;
@@ -28,31 +34,11 @@ public class AccountService {
 	private final SsafyDemandDepositAccountApiClient ssafyDemandDepositAccountApiClient;
 	private final RegisterDemandDepositProductUseCase registerDemandDepositProductUseCase;
 	private final ListDemandDepositProductsUseCase listDemandDepositProductsUseCase;
-	private final InitializeSsafyDummyDataUseCase initializeSsafyDummyDataUseCase;
+	private final InitializeAccountTransactionOverridesUseCase initializeAccountTransactionOverridesUseCase;
+	private final InitializeCardTransactionOverridesUseCase initializeCardTransactionOverridesUseCase;
 	private final ListAccountsUseCase listAccountsUseCase;
 	private final ReconcileLinkedAccountsUseCase reconcileLinkedAccountsUseCase;
 
-	public AccountService(
-		FindAccountUserUseCase findAccountUserUseCase,
-		FindUserAccountUseCase findUserAccountUseCase,
-		ConfirmAccountOwnershipUseCase confirmAccountOwnershipUseCase,
-		SsafyDemandDepositAccountApiClient ssafyDemandDepositAccountApiClient,
-		RegisterDemandDepositProductUseCase registerDemandDepositProductUseCase,
-		ListDemandDepositProductsUseCase listDemandDepositProductsUseCase,
-		InitializeSsafyDummyDataUseCase initializeSsafyDummyDataUseCase,
-		ListAccountsUseCase listAccountsUseCase,
-		ReconcileLinkedAccountsUseCase reconcileLinkedAccountsUseCase
-	) {
-		this.findAccountUserUseCase = findAccountUserUseCase;
-		this.findUserAccountUseCase = findUserAccountUseCase;
-		this.confirmAccountOwnershipUseCase = confirmAccountOwnershipUseCase;
-		this.ssafyDemandDepositAccountApiClient = ssafyDemandDepositAccountApiClient;
-		this.registerDemandDepositProductUseCase = registerDemandDepositProductUseCase;
-		this.listDemandDepositProductsUseCase = listDemandDepositProductsUseCase;
-		this.initializeSsafyDummyDataUseCase = initializeSsafyDummyDataUseCase;
-		this.listAccountsUseCase = listAccountsUseCase;
-		this.reconcileLinkedAccountsUseCase = reconcileLinkedAccountsUseCase;
-	}
 
 	public List<AccountDto.BankAccountResponse> getBankAccounts(Integer userId) {
 		User user = findAccountUserUseCase.execute(userId);
@@ -96,8 +82,16 @@ public class AccountService {
 		);
 	}
 
-	public AccountAdminDto.DataInitResponse initializeDummyData(AccountAdminDto.DataInitRequest request) {
-		return initializeSsafyDummyDataUseCase.execute(request);
+	public AccountAdminDto.TransactionInitResponse initializeAccountTransactions(
+		AccountAdminDto.AccountTransactionInitRequest request
+	) {
+		return initializeAccountTransactionOverridesUseCase.execute(request);
+	}
+
+	public AccountAdminDto.TransactionInitResponse initializeCardTransactions(
+		AccountAdminDto.CardTransactionInitRequest request
+	) {
+		return initializeCardTransactionOverridesUseCase.execute(request);
 	}
 
 	public List<AccountDto.AccountSummaryResponse> syncAccounts(Integer userId) {

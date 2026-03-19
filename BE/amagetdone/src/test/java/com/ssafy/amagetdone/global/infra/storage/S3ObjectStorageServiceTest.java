@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -36,6 +37,7 @@ class S3ObjectStorageServiceTest {
 	void setUp() {
 		storageService = new S3ObjectStorageService(amazonS3);
 		ReflectionTestUtils.setField(storageService, "bucket", "test-bucket");
+		ReflectionTestUtils.setField(storageService, "region", "ap-northeast-2");
 	}
 
 	@Test
@@ -74,6 +76,17 @@ class S3ObjectStorageServiceTest {
 		storageService.delete("plan/sample.png");
 
 		verify(amazonS3).deleteObject("test-bucket", "plan/sample.png");
+	}
+
+	@Test
+	void getUrlBuildsStableRegionalVirtualHostedStyleUrl() {
+		String url = storageService.getUrl("profile/sample image.png");
+
+		assertEquals(
+			"https://test-bucket.s3.ap-northeast-2.amazonaws.com/profile/sample%20image.png",
+			url
+		);
+		verify(amazonS3, never()).getUrl(any(), any());
 	}
 
 	@Test

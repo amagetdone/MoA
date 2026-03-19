@@ -5,15 +5,26 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanCreateResponse;
+import com.ssafy.amagetdone.domain.plan.api.dto.PlanDetailResponse;
 import com.ssafy.amagetdone.domain.plan.application.usecase.CreatePlanUseCase;
+import com.ssafy.amagetdone.domain.plan.application.usecase.GetPlanVideoDownloadUrlUseCase;
+import com.ssafy.amagetdone.domain.plan.application.usecase.GetPlanDetailUseCase;
+import com.ssafy.amagetdone.domain.plan.application.usecase.ListPlansUseCase;
+import com.ssafy.amagetdone.domain.plan.application.usecase.ListPlanWeeklyPlansUseCase;
+import com.ssafy.amagetdone.domain.plan.api.dto.PlanListItemResponse;
+import com.ssafy.amagetdone.domain.plan.api.dto.PlanWeeklyPlansPageResponse;
+import com.ssafy.amagetdone.domain.plan.exception.PlanErrorCode;
+import com.ssafy.amagetdone.domain.plan.exception.PlanException;
 import com.ssafy.amagetdone.global.config.SecurityConfig;
 import com.ssafy.amagetdone.global.security.AuthenticatedMember;
 
@@ -26,7 +37,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(PlanController.class)
+@WebMvcTest({PlanController.class, PlanVideoController.class})
 @Import(SecurityConfig.class)
 class PlanControllerTest {
 
@@ -37,7 +48,59 @@ class PlanControllerTest {
 	private CreatePlanUseCase createPlanUseCase;
 
 	@MockitoBean
+	private ListPlansUseCase listPlansUseCase;
+
+	@MockitoBean
+	private GetPlanVideoDownloadUrlUseCase getPlanVideoDownloadUrlUseCase;
+
+	@MockitoBean
+	private GetPlanDetailUseCase getPlanDetailUseCase;
+
+	@MockitoBean
+	private ListPlanWeeklyPlansUseCase listPlanWeeklyPlansUseCase;
+
+	@MockitoBean
 	private JwtAccessTokenReader jwtAccessTokenReader;
+
+	@Test
+	void listPlansReturnsActivePlanPayload() throws Exception {
+		given(listPlansUseCase.execute(1))
+			.willReturn(List.of(
+				new PlanListItemResponse(
+					1L,
+					"아이패드 구매",
+					320000L,
+					1000000L,
+					1,
+					3,
+					14L,
+					new java.math.BigDecimal("32")
+				),
+				new PlanListItemResponse(
+					2L,
+					"여행 자금",
+					500000L,
+					1500000L,
+					2,
+					5,
+					72L,
+					new java.math.BigDecimal("33.5")
+				)
+			));
+
+		mockMvc.perform(get("/api/v1/plans")
+				.contextPath("/api")
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+				)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("목표 목록 조회 성공"))
+			.andExpect(jsonPath("$.data[0].planId").value(1))
+			.andExpect(jsonPath("$.data[0].title").value("아이패드 구매"))
+			.andExpect(jsonPath("$.data[0].achievementRate").value(32))
+			.andExpect(jsonPath("$.data[1].achievementRate").value(33.5));
+	}
 
 	@Test
 	void createPlanReturnsCreatedPayload() throws Exception {
@@ -96,5 +159,105 @@ class PlanControllerTest {
 					}
 					"""))
 			.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void getPlanVideoDownloadUrlReturnsVideoUrl() throws Exception {
+		given(getPlanVideoDownloadUrlUseCase.execute(1, 10))
+			.willReturn("https://cdn.example.com/plan-10.mp4");
+
+		mockMvc.perform(get("/api/plans/10/video/download")
+				.contextPath("/api")
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+				)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.data").value("https://cdn.example.com/plan-10.mp4"));
+	}
+
+	@Test
+	void getPlanVideoDownloadUrlReturnsNotFoundWhenVideoMissing() throws Exception {
+		given(getPlanVideoDownloadUrlUseCase.execute(1, 10))
+			.willThrow(new PlanException(PlanErrorCode.PLAN_VIDEO_NOT_FOUND));
+
+		mockMvc.perform(get("/api/plans/10/video/download")
+				.contextPath("/api")
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+				)))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.errorCode").value("PLAN_004"));
+	}
+
+	@Test
+	void getPlanDetailReturnsDetailPayload() throws Exception {
+		given(getPlanDetailUseCase.execute(1, 1))
+			.willReturn(new PlanDetailResponse(
+				1,
+				"맥북 구매",
+				"맥북 프로 14인치",
+				1,
+				3_000_000L,
+				1_200_000L,
+				40,
+				60L,
+				new PlanDetailResponse.GraphData(
+					List.of(10, 11, 12),
+					List.of(50_000L, 70_000L, 60_000L),
+					List.of(40_000L, 60_000L, 50_000L)
+				),
+				List.of(
+					new PlanDetailResponse.WeeklyPlan(10, 50_000L),
+					new PlanDetailResponse.WeeklyPlan(11, 70_000L),
+					new PlanDetailResponse.WeeklyPlan(12, 60_000L)
+				),
+				11,
+				3
+			));
+
+		mockMvc.perform(get("/api/v1/plans/1")
+				.contextPath("/api")
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+				)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.planId").value(1))
+			.andExpect(jsonPath("$.data.graphData.weeks[0]").value(10))
+			.andExpect(jsonPath("$.data.weeklyPlans[0].week").value(10))
+			.andExpect(jsonPath("$.data.currentWeek").value(11))
+			.andExpect(jsonPath("$.data.totalWeeks").value(3));
+	}
+
+	@Test
+	void listPlanWeeklyPlansReturnsPagedPayload() throws Exception {
+		given(listPlanWeeklyPlansUseCase.execute(1, 1, 0, 3))
+			.willReturn(new PlanWeeklyPlansPageResponse(
+				1,
+				List.of(
+					new PlanWeeklyPlansPageResponse.WeeklyPlan(10, 50_000L),
+					new PlanWeeklyPlansPageResponse.WeeklyPlan(11, 70_000L),
+					new PlanWeeklyPlansPageResponse.WeeklyPlan(12, 60_000L)
+				),
+				0,
+				3,
+				21,
+				7,
+				true
+			));
+
+		mockMvc.perform(get("/api/v1/plans/1/weekly-plans")
+				.contextPath("/api")
+				.param("page", "0")
+				.param("size", "3")
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+				)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.planId").value(1))
+			.andExpect(jsonPath("$.data.weeklyPlans.length()").value(3))
+			.andExpect(jsonPath("$.data.page").value(0))
+			.andExpect(jsonPath("$.data.totalPages").value(7))
+			.andExpect(jsonPath("$.data.hasNext").value(true));
 	}
 }
