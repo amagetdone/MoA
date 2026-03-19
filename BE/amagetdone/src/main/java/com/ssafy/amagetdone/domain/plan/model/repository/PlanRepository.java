@@ -19,6 +19,8 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 
 	List<Plan> findAllByUser_IdAndStatus(Integer userId, PlanStatus status);
 
+	List<Plan> findAllByStatus(PlanStatus status);
+
 	long countByUser_IdAndStatus(Integer userId, PlanStatus status);
 
 	@Query("select coalesce(sum(p.savedAmount), 0) from Plan p where p.user.id = :userId")

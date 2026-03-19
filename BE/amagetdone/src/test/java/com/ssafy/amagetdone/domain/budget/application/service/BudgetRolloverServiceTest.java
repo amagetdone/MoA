@@ -125,6 +125,27 @@ class BudgetRolloverServiceTest {
 	}
 
 	@Test
+	void executeRolloverDeductsCurrentWeekLowerPriorityPlansBeforeRollingForward() {
+		User user = user(1);
+		BudgetWeek sourceWeek = budgetWeek(user, 1, 270L, 100L, 0L, 0L, 100L, 130L);
+		PlanWeekAllocation lowPriorityAllocation = allocation(sourceWeek, plan(user, 30, "Low Priority", 9), 20L);
+		PlanWeekAllocation highPriorityAllocation = allocation(sourceWeek, plan(user, 31, "High Priority", 3), 50L);
+		allocationsByWeek.put(sourceWeek, new ArrayList<>(List.of(lowPriorityAllocation, highPriorityAllocation)));
+
+		budgetRolloverService.executeRollover(sourceWeek);
+
+		assertEquals(0L, lowPriorityAllocation.getFinalAmount());
+		assertEquals(40L, highPriorityAllocation.getFinalAmount());
+		assertEquals(130L, sourceWeek.getFinalFreeAmount());
+		assertEquals(0, savedRollovers.size());
+		assertEquals(2, savedAdjustments.size());
+		assertEquals(lowPriorityAllocation.getPlan(), savedAdjustments.get(0).getPlan());
+		assertEquals(20L, savedAdjustments.get(0).getAdjustmentAmount());
+		assertEquals(highPriorityAllocation.getPlan(), savedAdjustments.get(1).getPlan());
+		assertEquals(10L, savedAdjustments.get(1).getAdjustmentAmount());
+	}
+
+	@Test
 	void executeRolloverDeductsLowerPriorityPlansWhenStepFourWouldOverflow() {
 		User user = user(1);
 		BudgetWeek sourceWeek = budgetWeek(user, 1, 0L, 0L, 0L, 0L, 100L, 150L);

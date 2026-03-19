@@ -20,6 +20,19 @@ public final class WeeklyTransactionAnalysisDto {
 		List<CategoryExpense> categoryExpenses,
 		LocalDateTime lastAnalyzedAt
 	) {
+		public static Response empty(String yearWeek) {
+			return new Response(
+				yearWeek,
+				null,
+				null,
+				0L,
+				0L,
+				0L,
+				0L,
+				List.of(),
+				null
+			);
+		}
 	}
 
 	public record CategoryExpense(

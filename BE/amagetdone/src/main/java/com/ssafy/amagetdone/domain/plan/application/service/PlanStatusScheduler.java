@@ -1,6 +1,7 @@
 package com.ssafy.amagetdone.domain.plan.application.service;
 
 import java.time.Clock;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -39,6 +40,12 @@ public class PlanStatusScheduler {
 		activateStartedPlans(LocalDate.now(clock));
 	}
 
+	@Scheduled(cron = "0 10 0 * * MON", zone = "Asia/Seoul")
+	@Transactional
+	public void reallocateActivePlansForWeekStart() {
+		reallocateActivePlansForWeekStart(LocalDate.now(clock));
+	}
+
 	@EventListener(ApplicationReadyEvent.class)
 	@Transactional
 	public void activateStartedPlansOnStartup() {
@@ -62,5 +69,20 @@ public class PlanStatusScheduler {
 				}
 			});
 		activatedUserIds.forEach(triggerBudgetAllocationUseCase::execute);
+	}
+
+	@Transactional
+	void reallocateActivePlansForWeekStart(LocalDate today) {
+		if (today == null || today.getDayOfWeek() != DayOfWeek.MONDAY) {
+			return;
+		}
+
+		Set<Integer> activeUserIds = new LinkedHashSet<>();
+		planRepository.findAllByStatus(PlanStatus.ACTIVE).forEach(plan -> {
+			if (plan.getUser() != null && plan.getUser().getId() != null) {
+				activeUserIds.add(plan.getUser().getId());
+			}
+		});
+		activeUserIds.forEach(triggerBudgetAllocationUseCase::execute);
 	}
 }
