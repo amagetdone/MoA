@@ -42,7 +42,7 @@ class PlanCreationBudgetSummaryServiceTest {
 	private PlanWeekAllocationRepository planWeekAllocationRepository;
 
 	@Test
-	void buildsWeeklyMissionAndBudgetBucketsForCreatedPlan() {
+	void usesActualPlanAllocationForWeeklyMissionAndSavingAmountWhenPresent() {
 		Clock clock = Clock.fixed(Instant.parse("2026-03-19T00:00:00Z"), ZoneId.of("Asia/Seoul"));
 		PlanCreationBudgetSummaryService service = new PlanCreationBudgetSummaryService(
 			budgetWeekRepository,
@@ -72,7 +72,7 @@ class PlanCreationBudgetSummaryServiceTest {
 			.weekStartDate(LocalDate.of(2026, 3, 16))
 			.weekEndDate(LocalDate.of(2026, 3, 22))
 			.plannedIncomeAmount(1_500_000L)
-			.plannedSavingAmount(300_000L)
+			.plannedSavingAmount(0L)
 			.finalFreeAmount(200_000L)
 			.build();
 
@@ -113,6 +113,94 @@ class PlanCreationBudgetSummaryServiceTest {
 		assertEquals(300_000L, response.weeklyBudget().variableExpense().totalAmount());
 		assertEquals("식비", response.weeklyBudget().variableExpense().items().get(0).category());
 		assertEquals(200_000L, response.weeklyBudget().freeAmount());
+	}
+
+	@Test
+	void usesSameFallbackWeeklySavingAmountForMissionAndBudgetWhenAllocationIsMissing() {
+		Clock clock = Clock.fixed(Instant.parse("2026-03-19T00:00:00Z"), ZoneId.of("Asia/Seoul"));
+		PlanCreationBudgetSummaryService service = new PlanCreationBudgetSummaryService(
+			budgetWeekRepository,
+			essentialWeekAllocationRepository,
+			planWeekAllocationRepository,
+			clock
+		);
+
+		User user = User.createPendingSocialUser();
+		ReflectionTestUtils.setField(user, "id", 1);
+
+		Plan plan = Plan.create(
+			user,
+			"유럽여행",
+			"여행 자금 모으기",
+			7_200_000L,
+			LocalDate.of(2026, 3, 19),
+			LocalDate.of(2026, 8, 31),
+			1
+		);
+		ReflectionTestUtils.setField(plan, "id", 24);
+		plan.setStatus(PlanStatus.ACTIVE);
+
+		BudgetWeek budgetWeek = BudgetWeek.builder()
+			.user(user)
+			.weekSequence(12)
+			.weekStartDate(LocalDate.of(2026, 3, 16))
+			.weekEndDate(LocalDate.of(2026, 3, 22))
+			.plannedIncomeAmount(1_500_000L)
+			.plannedSavingAmount(0L)
+			.finalFreeAmount(200_000L)
+			.build();
+
+		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(
+			user,
+			LocalDate.of(2026, 3, 19),
+			LocalDate.of(2026, 3, 19)
+		)).willReturn(Optional.of(budgetWeek));
+
+		given(essentialWeekAllocationRepository.findByBudgetWeek(budgetWeek)).willReturn(List.of());
+		given(planWeekAllocationRepository.findByBudgetWeek(budgetWeek)).willReturn(List.of());
+
+		PlanCreateResponse response = service.build(plan);
+
+		assertEquals(300_000L, response.weeklyMission().weeklySavingsAmount());
+		assertEquals(300_000L, response.weeklyBudget().savingAmount());
+	}
+
+	@Test
+	void usesSameFallbackWeeklySavingAmountForMissionAndBudgetWhenSummaryWeekIsMissing() {
+		Clock clock = Clock.fixed(Instant.parse("2026-03-19T00:00:00Z"), ZoneId.of("Asia/Seoul"));
+		PlanCreationBudgetSummaryService service = new PlanCreationBudgetSummaryService(
+			budgetWeekRepository,
+			essentialWeekAllocationRepository,
+			planWeekAllocationRepository,
+			clock
+		);
+
+		User user = User.createPendingSocialUser();
+		ReflectionTestUtils.setField(user, "id", 1);
+
+		Plan plan = Plan.create(
+			user,
+			"유럽여행",
+			"여행 자금 모으기",
+			7_200_000L,
+			LocalDate.of(2026, 3, 19),
+			LocalDate.of(2026, 8, 31),
+			1
+		);
+		ReflectionTestUtils.setField(plan, "id", 24);
+		plan.setStatus(PlanStatus.ACTIVE);
+
+		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(
+			user,
+			LocalDate.of(2026, 3, 19),
+			LocalDate.of(2026, 3, 19)
+		)).willReturn(Optional.empty());
+		given(budgetWeekRepository.findFirstByUserOrderByWeekEndDateDesc(user)).willReturn(Optional.empty());
+
+		PlanCreateResponse response = service.build(plan);
+
+		assertEquals(300_000L, response.weeklyMission().weeklySavingsAmount());
+		assertEquals(300_000L, response.weeklyBudget().savingAmount());
 	}
 
 	private EssentialWeekAllocation allocation(

@@ -7,7 +7,10 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Optional;
 
 import com.ssafy.amagetdone.domain.member.model.entity.User;
@@ -55,15 +58,20 @@ class CreatePlanUseCaseTest {
 	private ApplicationEventPublisher applicationEventPublisher;
 
 	private CreatePlanUseCase createPlanUseCase;
+	private Clock clock;
 
 	private void createUseCase() {
+		if (clock == null) {
+			clock = Clock.fixed(Instant.parse("2026-03-19T00:00:00Z"), ZoneId.of("Asia/Seoul"));
+		}
 		createPlanUseCase = new CreatePlanUseCase(
 			userRepository,
 			planRepository,
 			planPriorityService,
 			triggerBudgetAllocationUseCase,
 			planCreationBudgetSummaryService,
-			applicationEventPublisher
+			applicationEventPublisher,
+			clock
 		);
 	}
 
@@ -79,7 +87,8 @@ class CreatePlanUseCaseTest {
 			ReflectionTestUtils.setField(plan, "id", 10);
 			return plan;
 		});
-		given(planCreationBudgetSummaryService.build(any(Plan.class))).willReturn(summaryResponse(10, "Europe trip fund", 150_000L, 22));
+		given(planCreationBudgetSummaryService.build(any(Plan.class)))
+			.willReturn(summaryResponse(10, "Europe trip fund", 150_000L, 22, "WAITING"));
 
 		PlanCreateResponse response = createPlanUseCase.execute(1, new PlanCreateRequest(
 			"Europe trip fund",
@@ -104,7 +113,7 @@ class CreatePlanUseCaseTest {
 	}
 
 	@Test
-	void createsWaitingPlanWhenStartDateIsTodayUntilAiPipelineSucceeds() {
+	void createsActivePlanWhenStartDateIsToday() {
 		createUseCase();
 		User user = User.createPendingSocialUser();
 		ReflectionTestUtils.setField(user, "id", 1);
@@ -116,7 +125,8 @@ class CreatePlanUseCaseTest {
 			ReflectionTestUtils.setField(plan, "id", 11);
 			return plan;
 		});
-		given(planCreationBudgetSummaryService.build(any(Plan.class))).willReturn(summaryResponse(11, "Immediate plan", 100_000L, 3));
+		given(planCreationBudgetSummaryService.build(any(Plan.class)))
+			.willReturn(summaryResponse(11, "Immediate plan", 100_000L, 3, "ACTIVE"));
 
 		PlanCreateResponse response = createPlanUseCase.execute(1, new PlanCreateRequest(
 			"Immediate plan",
@@ -129,16 +139,17 @@ class CreatePlanUseCaseTest {
 
 		assertEquals(11, response.planId());
 		assertEquals(100_000L, response.weeklyMission().weeklySavingsAmount());
-		assertEquals("WAITING", response.status());
+		assertEquals("ACTIVE", response.status());
 		ArgumentCaptor<Plan> planCaptor = ArgumentCaptor.forClass(Plan.class);
 		verify(planRepository).save(planCaptor.capture());
-		assertEquals(com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus.WAITING, planCaptor.getValue().getStatus());
+		assertEquals(com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus.ACTIVE, planCaptor.getValue().getStatus());
 		verify(triggerBudgetAllocationUseCase).execute(1);
 		verify(applicationEventPublisher).publishEvent(new PlanCreatedEvent(11, 1));
 	}
 
 	@Test
-	void createsWaitingPlanUsingKstDateEvenWhenSystemDefaultZoneIsUtc() {
+	void createsActivePlanUsingKstDateEvenWhenSystemDefaultZoneIsUtc() {
+		clock = Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul"));
 		createUseCase();
 		User user = User.createPendingSocialUser();
 		ReflectionTestUtils.setField(user, "id", 1);
@@ -149,7 +160,8 @@ class CreatePlanUseCaseTest {
 			ReflectionTestUtils.setField(plan, "id", 12);
 			return plan;
 		});
-		given(planCreationBudgetSummaryService.build(any(Plan.class))).willReturn(summaryResponse(12, "KST plan", 100_000L, 2));
+		given(planCreationBudgetSummaryService.build(any(Plan.class)))
+			.willReturn(summaryResponse(12, "KST plan", 100_000L, 2, "ACTIVE"));
 
 		PlanCreateResponse response = createPlanUseCase.execute(1, new PlanCreateRequest(
 			"KST plan",
@@ -160,13 +172,49 @@ class CreatePlanUseCaseTest {
 			1
 		));
 
-		assertEquals("WAITING", response.status());
+		assertEquals("ACTIVE", response.status());
 		assertEquals(12, response.planId());
 		assertEquals(100_000L, response.weeklyMission().weeklySavingsAmount());
 		verify(triggerBudgetAllocationUseCase).execute(1);
 	}
 
-	private PlanCreateResponse summaryResponse(int planId, String planTitle, long weeklySavingsAmount, int weeksToGoal) {
+	@Test
+	void keepsPlanWaitingWhenStartDateIsInFuture() {
+		createUseCase();
+		User user = User.createPendingSocialUser();
+		ReflectionTestUtils.setField(user, "id", 1);
+
+		given(userRepository.findById(1)).willReturn(Optional.of(user));
+		given(planRepository.save(any(Plan.class))).willAnswer(invocation -> {
+			Plan plan = invocation.getArgument(0);
+			ReflectionTestUtils.setField(plan, "id", 13);
+			return plan;
+		});
+		given(planCreationBudgetSummaryService.build(any(Plan.class))).willReturn(summaryResponse(13, "Future plan", 100_000L, 2, "WAITING"));
+
+		PlanCreateResponse response = createPlanUseCase.execute(1, new PlanCreateRequest(
+			"Future plan",
+			"Starts later",
+			100000L,
+			LocalDate.of(2026, 3, 26),
+			LocalDate.of(2026, 4, 8),
+			1
+		));
+
+		assertEquals("WAITING", response.status());
+		ArgumentCaptor<Plan> planCaptor = ArgumentCaptor.forClass(Plan.class);
+		verify(planRepository).save(planCaptor.capture());
+		assertEquals(com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus.WAITING, planCaptor.getValue().getStatus());
+		verify(triggerBudgetAllocationUseCase).execute(1);
+	}
+
+	private PlanCreateResponse summaryResponse(
+		int planId,
+		String planTitle,
+		long weeklySavingsAmount,
+		int weeksToGoal,
+		String status
+	) {
 		return new PlanCreateResponse(
 			planId,
 			planTitle,
@@ -192,7 +240,7 @@ class CreatePlanUseCaseTest {
 				),
 				200_000L
 			),
-			"WAITING"
+			status
 		);
 	}
 }

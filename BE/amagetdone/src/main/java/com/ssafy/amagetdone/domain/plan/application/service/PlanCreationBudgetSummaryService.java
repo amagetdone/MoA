@@ -42,14 +42,15 @@ public class PlanCreationBudgetSummaryService {
 
 	public PlanCreateResponse build(Plan plan) {
 		BudgetWeek summaryWeek = resolveSummaryWeek(plan);
+		long weeklySavingAmount = resolveBaseWeeklyAmount(plan);
 		if (summaryWeek == null) {
 			return new PlanCreateResponse(
 				plan.getId(),
 				plan.getTitle(),
-				new PlanCreateResponse.WeeklyMission(resolveBaseWeeklyAmount(plan), zero(plan.getTargetWeeks())),
+				new PlanCreateResponse.WeeklyMission(weeklySavingAmount, zero(plan.getTargetWeeks())),
 				new PlanCreateResponse.WeeklyBudget(
 					0L,
-					0L,
+					weeklySavingAmount,
 					new PlanCreateResponse.BudgetBucket(0L, List.of()),
 					new PlanCreateResponse.BudgetBucket(0L, List.of()),
 					0L
@@ -60,14 +61,15 @@ public class PlanCreationBudgetSummaryService {
 
 		List<EssentialWeekAllocation> essentials = essentialWeekAllocationRepository.findByBudgetWeek(summaryWeek);
 		List<PlanWeekAllocation> savings = planWeekAllocationRepository.findByBudgetWeek(summaryWeek);
+		weeklySavingAmount = resolveWeeklySavingAmount(plan, savings);
 
 		return new PlanCreateResponse(
 			plan.getId(),
 			plan.getTitle(),
-			new PlanCreateResponse.WeeklyMission(resolveWeeklySavingsAmount(plan, savings), zero(plan.getTargetWeeks())),
+			new PlanCreateResponse.WeeklyMission(weeklySavingAmount, zero(plan.getTargetWeeks())),
 			new PlanCreateResponse.WeeklyBudget(
 				zero(summaryWeek.getPlannedIncomeAmount()),
-				zero(summaryWeek.getPlannedSavingAmount()),
+				weeklySavingAmount,
 				toBudgetBucket(essentials, ExpenseScope.FIXED),
 				toBudgetBucket(essentials, ExpenseScope.VARIABLE),
 				zero(summaryWeek.getFinalFreeAmount())
@@ -102,7 +104,7 @@ public class PlanCreationBudgetSummaryService {
 		return new PlanCreateResponse.BudgetBucket(totalAmount, items);
 	}
 
-	private long resolveWeeklySavingsAmount(Plan plan, List<PlanWeekAllocation> savings) {
+	private long resolveWeeklySavingAmount(Plan plan, List<PlanWeekAllocation> savings) {
 		return savings.stream()
 			.filter(allocation -> allocation.getPlan() != null)
 			.filter(allocation -> plan.getId() != null && plan.getId().equals(allocation.getPlan().getId()))
