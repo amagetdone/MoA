@@ -19,9 +19,9 @@ public class BudgetSummaryQueryService {
 	private final PlanRepository planRepository;
 
 	public BudgetSummaryDto.Response getSummary(Integer userId) {
-		long activePlanCount = planRepository.countByUser_IdAndStatus(userId, PlanStatus.ACTIVE);
-		long completedPlanCount = planRepository.countByUser_IdAndStatus(userId, PlanStatus.COMPLETED);
-		long totalSavedAmount = Optional.ofNullable(planRepository.sumSavedAmountByUserId(userId)).orElse(0L);
+		long activePlanCount = planRepository.countByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE);
+		long completedPlanCount = planRepository.countByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.COMPLETED);
+		long totalSavedAmount = Optional.ofNullable(planRepository.sumSavedAmountByUserIdAndDeletedFalse(userId)).orElse(0L);
 
 		return new BudgetSummaryDto.Response(activePlanCount, completedPlanCount, totalSavedAmount);
 	}

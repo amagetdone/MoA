@@ -41,7 +41,7 @@ class PlanImageServiceTest {
 	void replacePlanImageDeletesOldKeyAndStoresNewKey() {
 		Plan plan = newPlan(2, 1, "plan/old.png");
 		MockMultipartFile file = new MockMultipartFile("image", "new.png", "image/png", "abc".getBytes());
-		given(planRepository.findByIdAndUserId(2, 1)).willReturn(Optional.of(plan));
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(2, 1)).willReturn(Optional.of(plan));
 		given(storageService.upload(file, ImageCategory.PLAN)).willReturn("plan/new.png");
 
 		String objectKey = planImageService.replacePlanImage(1, 2, file);
@@ -56,7 +56,7 @@ class PlanImageServiceTest {
 	void replacePlanImageSkipsDeleteWhenOldKeyMissing() {
 		Plan plan = newPlan(2, 1, null);
 		MockMultipartFile file = new MockMultipartFile("image", "new.png", "image/png", "abc".getBytes());
-		given(planRepository.findByIdAndUserId(2, 1)).willReturn(Optional.of(plan));
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(2, 1)).willReturn(Optional.of(plan));
 		given(storageService.upload(file, ImageCategory.PLAN)).willReturn("plan/new.png");
 
 		planImageService.replacePlanImage(1, 2, file);
@@ -67,7 +67,7 @@ class PlanImageServiceTest {
 	@Test
 	void replacePlanImageThrowsWhenPlanMissing() {
 		MockMultipartFile file = new MockMultipartFile("image", "new.png", "image/png", "abc".getBytes());
-		given(planRepository.findByIdAndUserId(2, 1)).willReturn(Optional.empty());
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(2, 1)).willReturn(Optional.empty());
 
 		PlanException exception = assertThrows(
 			PlanException.class,
@@ -80,7 +80,7 @@ class PlanImageServiceTest {
 	@Test
 	void loadPlanImageBytesReadsStoredKey() {
 		Plan plan = newPlan(2, 1, "plan/current.png");
-		given(planRepository.findByIdAndUserId(2, 1)).willReturn(Optional.of(plan));
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(2, 1)).willReturn(Optional.of(plan));
 		given(storageService.loadBytes("plan/current.png")).willReturn("abc".getBytes());
 
 		byte[] bytes = planImageService.loadPlanImageBytes(1, 2);

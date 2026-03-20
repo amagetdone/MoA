@@ -25,7 +25,7 @@ public class ListPlansUseCase {
 	public List<PlanListItemResponse> execute(Integer userId) {
 		LocalDate today = LocalDate.now();
 
-		return planRepository.findAllByUser_IdAndStatus(userId, PlanStatus.ACTIVE).stream()
+		return planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE).stream()
 			.sorted(Comparator.comparing(Plan::getPriority)
 				.thenComparing(Plan::getTitle, Comparator.nullsLast(String::compareTo)))
 			.map(plan -> PlanListItemResponse.from(plan, today))

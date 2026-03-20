@@ -18,6 +18,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PlanPriorityService {
 
+	private static final List<PlanStatus> PRIORITY_MANAGED_STATUSES = List.of(
+		PlanStatus.WAITING,
+		PlanStatus.ACTIVE,
+		PlanStatus.PAUSED
+	);
+
 	private final PlanRepository planRepository;
 
 	public PlanPriorityService(PlanRepository planRepository) {
@@ -26,13 +32,26 @@ public class PlanPriorityService {
 
 	@Transactional
 	public void shiftPriorities(Integer userId, Integer priority) {
-		planRepository.findAllByUserIdAndPriorityGreaterThanEqualOrderByPriorityAsc(userId, priority)
+		planRepository.findAllByUserIdAndDeletedFalseAndStatusInAndPriorityGreaterThanEqualOrderByPriorityAsc(
+			userId,
+			PRIORITY_MANAGED_STATUSES,
+			priority
+		)
 			.forEach(plan -> plan.shiftPriority(1));
 	}
 
 	@Transactional
+	public void compactPrioritiesAfterDeletion(Integer userId, Integer priority) {
+		planRepository.findAllByUserIdAndDeletedFalseAndStatusInAndPriorityGreaterThanOrderByPriorityAsc(
+			userId,
+			PRIORITY_MANAGED_STATUSES,
+			priority
+		).forEach(plan -> plan.shiftPriority(-1));
+	}
+
+	@Transactional
 	public void updatePriorities(Integer userId, List<PriorityUpdateCommand> commands) {
-		List<Plan> plans = planRepository.findAllByUser_IdAndStatus(userId, PlanStatus.ACTIVE);
+		List<Plan> plans = planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE);
 		validateCommands(commands, plans);
 
 		Map<Integer, Integer> requestedPrioritiesByPlanId = new HashMap<>();

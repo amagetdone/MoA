@@ -19,7 +19,7 @@ public class GetPlanVideoDownloadUrlUseCase {
 
 	@Transactional(readOnly = true)
 	public String execute(Integer userId, Integer planId) {
-		Plan plan = planRepository.findByIdAndUserId(planId, userId)
+		Plan plan = planRepository.findByIdAndUserIdAndDeletedFalse(planId, userId)
 			.orElseThrow(() -> new PlanException(PlanErrorCode.PLAN_NOT_FOUND));
 
 		if (plan.getVideoUrl() == null || plan.getVideoUrl().isBlank()) {

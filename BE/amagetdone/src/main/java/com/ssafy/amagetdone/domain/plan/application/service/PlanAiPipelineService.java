@@ -9,6 +9,7 @@ import com.ssafy.amagetdone.domain.plan.infra.client.PyanClient;
 import com.ssafy.amagetdone.domain.plan.infra.client.dto.PyanGenerateResponse;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
 import com.ssafy.amagetdone.global.infra.storage.ImageCategory;
 import com.ssafy.amagetdone.global.infra.storage.S3StorageService;
 
@@ -25,6 +26,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDate;
 
+import jakarta.persistence.EntityManager;
+
 @Service
 @ConditionalOnBean({ PlanAiClient.class, PyanClient.class })
 public class PlanAiPipelineService {
@@ -37,6 +40,7 @@ public class PlanAiPipelineService {
 	private final S3StorageService storageService;
 	private final PyanClient pyanClient;
 	private final Clock clock;
+	private final EntityManager entityManager;
 
 	public PlanAiPipelineService(
 		PlanRepository planRepository,
@@ -44,7 +48,8 @@ public class PlanAiPipelineService {
 		PlanAiClient planAiClient,
 		S3StorageService storageService,
 		PyanClient pyanClient,
-		Clock clock
+		Clock clock,
+		EntityManager entityManager
 	) {
 		this.planRepository = planRepository;
 		this.memberProfileImageService = memberProfileImageService;
@@ -52,11 +57,12 @@ public class PlanAiPipelineService {
 		this.storageService = storageService;
 		this.pyanClient = pyanClient;
 		this.clock = clock;
+		this.entityManager = entityManager;
 	}
 
 	@Transactional
 	public void start(Integer planId, Integer userId) {
-		Plan plan = planRepository.findByIdAndUserId(planId, userId)
+		Plan plan = planRepository.findByIdAndUserIdAndDeletedFalse(planId, userId)
 			.orElseThrow(() -> new PlanException(PlanErrorCode.PLAN_NOT_FOUND));
 
 		try {
@@ -92,6 +98,11 @@ public class PlanAiPipelineService {
 			log.info("event=PYAN_REQUEST_STARTED planId={} userId={} goalId={}", planId, userId, goalId);
 			PyanGenerateResponse response = pyanClient.generate(generatedImageBytes, goalId);
 			String videoUrl = resolveCompressedDownloadUrl(response);
+			entityManager.refresh(plan);
+			if (plan.isDeleted() || plan.getStatus() == PlanStatus.CANCELLED) {
+				log.info("event=PLAN_AI_PIPELINE_ABORTED planId={} userId={} reason=deleted_or_cancelled", planId, userId);
+				return;
+			}
 			plan.updateVideoUrl(videoUrl);
 			plan.markAiSucceeded();
 			if (plan.getStartDate() != null && !plan.getStartDate().isAfter(LocalDate.now(clock))) {
@@ -106,10 +117,18 @@ public class PlanAiPipelineService {
 				videoUrl
 			);
 		} catch (Exception exception) {
-			plan.markAiFailed();
-			planRepository.saveAndFlush(plan);
-			log.error("event=PLAN_AI_PIPELINE_FAILED planId={} userId={} message={}", planId, userId,
-				exception.getMessage(), exception);
+			entityManager.refresh(plan);
+			if (!plan.isDeleted() && plan.getStatus() != PlanStatus.CANCELLED) {
+				plan.markAiFailed();
+				planRepository.saveAndFlush(plan);
+			}
+			log.error(
+				"event=PLAN_AI_PIPELINE_FAILED planId={} userId={} message={}",
+				planId,
+				userId,
+				exception.getMessage(),
+				exception
+			);
 		}
 	}
 

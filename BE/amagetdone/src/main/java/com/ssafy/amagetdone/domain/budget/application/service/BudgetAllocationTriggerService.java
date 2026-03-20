@@ -56,7 +56,7 @@ public class BudgetAllocationTriggerService {
 
 		List<EssentialExpenseMonth> essentials = essentialExpenseMonthRepository
 			.findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(userId);
-		List<Plan> activePlans = planRepository.findAllByUser_IdAndStatus(userId, PlanStatus.ACTIVE);
+		List<Plan> activePlans = planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE);
 
 		return allocateBudgetUseCase.execute(
 			userReference,

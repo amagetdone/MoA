@@ -72,7 +72,7 @@ class MemberTokenServiceTest {
 		given(refreshTokenStore.exists(1, "refresh-token")).willReturn(true);
 		given(userRepository.findById(1)).willReturn(Optional.of(user));
 		given(accountRepository.existsLinkedAccountByUserId(1)).willReturn(true);
-		given(planRepository.existsByUserId(1)).willReturn(false);
+		given(planRepository.existsByUserIdAndDeletedFalse(1)).willReturn(false);
 		given(jwtTokenIssuer.issue(1, SocialProvider.KAKAO, 0L))
 			.willReturn(new MemberTokenPair("new-access-token", "new-refresh-token"));
 

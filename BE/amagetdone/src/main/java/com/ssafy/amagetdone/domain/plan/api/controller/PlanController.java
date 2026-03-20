@@ -9,6 +9,7 @@ import com.ssafy.amagetdone.domain.plan.api.dto.PlanListItemResponse;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanPriorityUpdateRequest;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanWeeklyPlansPageResponse;
 import com.ssafy.amagetdone.domain.plan.application.usecase.CreatePlanUseCase;
+import com.ssafy.amagetdone.domain.plan.application.usecase.DeletePlanUseCase;
 import com.ssafy.amagetdone.domain.plan.application.usecase.GetPlanDetailUseCase;
 import com.ssafy.amagetdone.domain.plan.application.usecase.ListPlanWeeklyPlansUseCase;
 import com.ssafy.amagetdone.domain.plan.application.usecase.ListPlansUseCase;
@@ -21,6 +22,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,6 +40,7 @@ import jakarta.validation.Valid;
 public class PlanController {
 
 	private final CreatePlanUseCase createPlanUseCase;
+	private final DeletePlanUseCase deletePlanUseCase;
 	private final ListPlansUseCase listPlansUseCase;
 	private final GetPlanDetailUseCase getPlanDetailUseCase;
 	private final ListPlanWeeklyPlansUseCase listPlanWeeklyPlansUseCase;
@@ -45,12 +48,14 @@ public class PlanController {
 
 	public PlanController(
 		CreatePlanUseCase createPlanUseCase,
+		DeletePlanUseCase deletePlanUseCase,
 		ListPlansUseCase listPlansUseCase,
 		GetPlanDetailUseCase getPlanDetailUseCase,
 		ListPlanWeeklyPlansUseCase listPlanWeeklyPlansUseCase,
 		UpdatePlanPrioritiesUseCase updatePlanPrioritiesUseCase
 	) {
 		this.createPlanUseCase = createPlanUseCase;
+		this.deletePlanUseCase = deletePlanUseCase;
 		this.listPlansUseCase = listPlansUseCase;
 		this.getPlanDetailUseCase = getPlanDetailUseCase;
 		this.listPlanWeeklyPlansUseCase = listPlanWeeklyPlansUseCase;
@@ -104,6 +109,16 @@ public class PlanController {
 			"목표가 생성되었습니다.",
 			createPlanUseCase.execute(authenticatedMember.userId(), request)
 		);
+	}
+
+	@Operation(summary = "목표 삭제", security = @SecurityRequirement(name = "bearerAuth"))
+	@DeleteMapping("/{planId}")
+	public ApiResponse<Void> deletePlan(
+		@AuthenticationPrincipal AuthenticatedMember authenticatedMember,
+		@PathVariable Integer planId
+	) {
+		deletePlanUseCase.execute(authenticatedMember.userId(), planId);
+		return ApiResponse.ok("목표가 삭제되었습니다.", null);
 	}
 
 	@Operation(summary = "목표 우선순위 변경", security = @SecurityRequirement(name = "bearerAuth"))
