@@ -48,7 +48,8 @@ public record BudgetHomeApiResponseSchema(
 		String accountId,
 		String bankName,
 		String accountNo,
-		long balanceAmount
+		long balanceAmount,
+		boolean verified
 	) {
 	}
 

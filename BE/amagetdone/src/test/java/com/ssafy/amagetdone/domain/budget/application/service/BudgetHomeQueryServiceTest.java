@@ -115,6 +115,35 @@ class BudgetHomeQueryServiceTest {
 	}
 
 	@Test
+	void getHomeIncludesVerifiedFlagForEachAssetSummaryAccount() {
+		LocalDate today = LocalDate.now();
+		User user = user(1);
+		BudgetWeek currentWeek = budgetWeek(user, today, today.plusDays(6), 90_000L, 15_000L);
+		Account verifiedAccount = linkedAccount(user, "111-111-111111", "Shinhan");
+		Account unverifiedAccount = unverifiedActiveAccount(user, "222-222-222222", "KB");
+
+		given(entityManager.getReference(User.class, 1)).willReturn(user);
+		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(user, today, today))
+			.willReturn(Optional.of(currentWeek));
+		given(planRepository.findAll()).willReturn(List.of());
+		given(planWeekAllocationRepository.findByBudgetWeek(currentWeek)).willReturn(List.of());
+		given(listAccountsUseCase.execute(1)).willReturn(List.of(verifiedAccount, unverifiedAccount));
+		given(inquireAccountBalanceUseCase.execute(1, "111-111-111111"))
+			.willReturn(balance("111-111-111111", 2_000_000L));
+		given(inquireAccountBalanceUseCase.execute(1, "222-222-222222"))
+			.willReturn(balance("222-222-222222", 500_000L));
+
+		BudgetHomeDto.Response response = service.getHome(1);
+
+		assertThat(response.assetSummary().accounts())
+			.extracting("accountNo", "verified")
+			.containsExactly(
+				org.assertj.core.groups.Tuple.tuple("111-111-111111", true),
+				org.assertj.core.groups.Tuple.tuple("222-222-222222", false)
+			);
+	}
+
+	@Test
 	void getHomeReturnsZeroAssetSummaryWhenNoLinkedAccountsExist() {
 		LocalDate today = LocalDate.now();
 		User user = user(1);
@@ -195,6 +224,19 @@ class BudgetHomeQueryServiceTest {
 		);
 		account.markVerifiedLinked();
 		return account;
+	}
+
+	private Account unverifiedActiveAccount(User user, String accountNo, String bankName) {
+		return Account.create(
+			user,
+			accountNo,
+			"DEMAND",
+			"입출금통장",
+			"수시입출금",
+			"001",
+			bankName,
+			"KRW"
+		);
 	}
 
 	private DemandDepositBalanceDto.Response balance(String accountNo, long amount) {
