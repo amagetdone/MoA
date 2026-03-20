@@ -11,6 +11,7 @@ class HomeDashboard {
   final int daysRemaining;
   final int dailyAvailable;
   final int weeklySaved;
+  final int savingTargetAmount;
   final int savingProgressRate;
 
   const HomeDashboard({
@@ -23,6 +24,7 @@ class HomeDashboard {
     this.daysRemaining = 0,
     this.dailyAvailable = 0,
     this.weeklySaved = 0,
+    this.savingTargetAmount = 0,
     this.savingProgressRate = 0,
   });
 }

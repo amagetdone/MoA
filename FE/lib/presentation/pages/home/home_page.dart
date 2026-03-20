@@ -11,7 +11,9 @@ import 'package:more_app/presentation/pages/home/widgets/asset_card.dart';
 import 'package:more_app/presentation/pages/home/widgets/goals_section_card.dart';
 import 'package:more_app/presentation/pages/home/widgets/savings_card.dart';
 import 'package:more_app/presentation/pages/home/widgets/spending_card.dart';
+import 'package:more_app/presentation/pages/home/widgets/spending_rose_chart.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
+import 'package:more_app/presentation/viewmodels/spending_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 import 'package:more_app/presentation/widgets/common/more_empty_state.dart';
@@ -161,32 +163,56 @@ class _HomePageState extends ConsumerState<HomePage> {
     final topGoals = _sortedGoals(state.activeGoals).take(3).toList();
 
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 28.h),
+      padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 24.h),
       child: Column(
         children: [
-          // 예산 카드
-          SpendingCard(
-            totalAmount: state.weeklyBudget,
-            usedAmount: state.weeklySpent,
-            remainingAmount: state.weeklyRemaining,
-            daysRemaining: state.daysRemaining,
-            dailyAvailable: state.dailyAvailable,
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                Expanded(
+                  child: SpendingCard(
+                    totalAmount: state.weeklyBudget,
+                    usedAmount: state.weeklySpent,
+                    remainingAmount: state.weeklyRemaining,
+                    daysRemaining: state.daysRemaining,
+                    dailyAvailable: state.dailyAvailable,
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: SavingsCard(
+                    weeklySaved: state.weeklySaved,
+                    savingTargetAmount: state.savingTargetAmount,
+                    savingProgressRate: state.savingProgressRate,
+                  ),
+                ),
+              ],
+            ),
           ),
-          SizedBox(height: 12.h),
+          SizedBox(height: 8.h),
 
-          // 저축 카드
-          SavingsCard(
-            weeklySaved: state.weeklySaved,
-            savingProgressRate: state.savingProgressRate,
-          ),
-          SizedBox(height: 12.h),
-
-          // 총자산 / 계좌 카드
           AssetCard(
             totalAsset: state.totalAsset,
             accounts: orderedAccounts,
           ),
-          SizedBox(height: 12.h),
+          SizedBox(height: 8.h),
+
+          // 이번 주 소비 rose 차트
+          // TODO: 테스트용 1월 1주차 하드코딩 - 원복 필요
+          Builder(builder: (context) {
+            final spendingState = ref.watch(spendingViewModelProvider);
+            if (!spendingState.isLoading && spendingState.categories.isNotEmpty) {
+              const weekLabel = '1월 1주차';
+              return Padding(
+                padding: EdgeInsets.only(bottom: 8.h),
+                child: SpendingRoseChart(
+                  categories: spendingState.categories,
+                  weekLabel: weekLabel,
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          }),
 
           // 목표 카드
           showGoalEmptyState

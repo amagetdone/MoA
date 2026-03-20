@@ -25,6 +25,7 @@ class HomeState {
   final int daysRemaining;
   final int dailyAvailable;
   final int weeklySaved;
+  final int savingTargetAmount;
   final int savingProgressRate;
 
   const HomeState({
@@ -40,6 +41,7 @@ class HomeState {
     this.daysRemaining = 0,
     this.dailyAvailable = 0,
     this.weeklySaved = 0,
+    this.savingTargetAmount = 0,
     this.savingProgressRate = 0,
   });
 
@@ -57,6 +59,7 @@ class HomeState {
     int? daysRemaining,
     int? dailyAvailable,
     int? weeklySaved,
+    int? savingTargetAmount,
     int? savingProgressRate,
   }) {
     return HomeState(
@@ -74,6 +77,7 @@ class HomeState {
       daysRemaining: daysRemaining ?? this.daysRemaining,
       dailyAvailable: dailyAvailable ?? this.dailyAvailable,
       weeklySaved: weeklySaved ?? this.weeklySaved,
+      savingTargetAmount: savingTargetAmount ?? this.savingTargetAmount,
       savingProgressRate: savingProgressRate ?? this.savingProgressRate,
     );
   }
@@ -99,8 +103,13 @@ class HomeViewModel extends StateNotifier<HomeState> {
       final dashboard = results[0] as HomeDashboard;
       final accountDashboard = results[1] as AccountDashboard;
 
+      // 홈 API 계좌가 있으면 잔액 포함된 홈 API 것을 사용, 없으면 계좌 API 것 사용
+      final accounts = dashboard.accounts.isNotEmpty
+          ? dashboard.accounts
+          : accountDashboard.accounts;
+
       HomeStatus status;
-      if (accountDashboard.accounts.isEmpty && dashboard.activeGoals.isEmpty) {
+      if (accounts.isEmpty && dashboard.activeGoals.isEmpty) {
         status = HomeStatus.noAccount;
       } else if (dashboard.activeGoals.isEmpty) {
         status = HomeStatus.noGoal;
@@ -111,7 +120,7 @@ class HomeViewModel extends StateNotifier<HomeState> {
       state = state.copyWith(
         isLoading: false,
         status: status,
-        accounts: accountDashboard.accounts,
+        accounts: accounts,
         activeGoals: dashboard.activeGoals,
         totalAsset: dashboard.totalAsset,
         weeklyBudget: dashboard.weeklyBudget,
@@ -120,6 +129,7 @@ class HomeViewModel extends StateNotifier<HomeState> {
         daysRemaining: dashboard.daysRemaining,
         dailyAvailable: dashboard.dailyAvailable,
         weeklySaved: dashboard.weeklySaved,
+        savingTargetAmount: dashboard.savingTargetAmount,
         savingProgressRate: dashboard.savingProgressRate,
       );
     } catch (error) {

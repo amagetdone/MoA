@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:more_app/data/datasources/remote/home_remote_datasource.dart';
+import 'package:more_app/domain/entities/account.dart';
 import 'package:more_app/domain/entities/goal.dart';
 import 'package:more_app/domain/entities/home_dashboard.dart';
 
@@ -17,6 +18,20 @@ class RealHomeRemoteDataSource implements HomeRemoteDataSource {
     final weeklySaving = data['weeklySaving'] as Map<String, dynamic>? ?? {};
     final assetSummary = data['assetSummary'] as Map<String, dynamic>? ?? {};
     final plansRaw = data['plans'] as List<dynamic>? ?? [];
+
+    final assetAccountsRaw = assetSummary['accounts'] as List<dynamic>? ?? [];
+    final assetAccounts = assetAccountsRaw.asMap().entries.map((entry) {
+      final a = entry.value as Map<String, dynamic>;
+      return Account(
+        id: a['accountNo'] as String? ?? '',
+        bankName: a['bankName'] as String? ?? '',
+        accountNumber: a['accountNo'] as String? ?? '',
+        accountName: a['bankName'] as String? ?? '',
+        balance: (a['balanceAmount'] as num?)?.toInt() ?? 0,
+        isPrimary: entry.key == 0,
+        verified: a['verified'] as bool? ?? true,
+      );
+    }).toList();
 
     final now = DateTime.now();
     final activeGoals = plansRaw.map((e) {
@@ -37,7 +52,7 @@ class RealHomeRemoteDataSource implements HomeRemoteDataSource {
     }).toList();
 
     return HomeDashboard(
-      accounts: const [],
+      accounts: assetAccounts,
       activeGoals: activeGoals,
       totalAsset: (assetSummary['totalAssetAmount'] as num?)?.toInt() ?? 0,
       weeklyBudget: (freeSpending['totalAmount'] as num?)?.toInt() ?? 0,
@@ -46,6 +61,8 @@ class RealHomeRemoteDataSource implements HomeRemoteDataSource {
       daysRemaining: (freeSpending['daysRemaining'] as num?)?.toInt() ?? 0,
       dailyAvailable: (freeSpending['dailyAvailable'] as num?)?.toInt() ?? 0,
       weeklySaved: (weeklySaving['thisWeekSavingAmount'] as num?)?.toInt() ?? 0,
+      savingTargetAmount: ((weeklySaving['thisWeekSavingAmount'] as num?)?.toInt() ?? 0) +
+          ((weeklySaving['remainingToTargetAmount'] as num?)?.toInt() ?? 0),
       savingProgressRate: (weeklySaving['progressRate'] as num?)?.toInt() ?? 0,
     );
   }

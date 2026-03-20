@@ -48,22 +48,22 @@ class _AccountManagePageState extends ConsumerState<AccountManagePage> {
         showNotification: !widget.isOnboarding,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
+        padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 20.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               widget.isOnboarding ? '계좌 추가' : '계좌 관리',
-              style: AppTextStyles.headingLg.copyWith(fontSize: 24.sp, fontWeight: FontWeight.bold),
+              style: AppTextStyles.headingMd.copyWith(fontSize: 20.sp, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 6.h),
+            SizedBox(height: 4.h),
             Text(
               accounts.isEmpty
                   ? '연결된 계좌가 없어요.'
                   : '총 ${accounts.length}개의 계좌가 연결되었어요.',
-              style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary, fontSize: 14.sp),
+              style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary, fontSize: 12.sp),
             ),
-            SizedBox(height: 24.h),
+            SizedBox(height: 20.h),
 
             if (accounts.isNotEmpty) ...[
               Text('연결된 계좌', style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.bold)),

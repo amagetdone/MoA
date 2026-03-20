@@ -137,17 +137,17 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
               thumbVisibility: false,
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('주간 예산 설정', style: AppTextStyles.headingLg),
-                    SizedBox(height: 12.h),
+                    Text('주간 예산 설정', style: AppTextStyles.headingMd.copyWith(fontSize: 20.sp, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 4.h),
                     Text(
                       '주간 예산에 따라 소비분석과 계획 수립을 진행합니다.',
-                      style: AppTextStyles.bodySm.copyWith(
+                      style: AppTextStyles.caption.copyWith(
                         color: AppColors.textTertiary,
-                        fontSize: 14.sp,
+                        fontSize: 12.sp,
                         height: 1.4,
                       ),
                     ),
@@ -217,7 +217,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           ),
                           if (_isFixedExpanded && setup.fixedEssentials.isNotEmpty) ...[
                             SizedBox(height: 16.h),
-                            _EssentialCategoryList(essentials: setup.fixedEssentials),
+                            _EssentialCategoryList(essentials: setup.fixedEssentials, sectionTotal: setup.fixedExpenseAmount),
                           ],
                           SizedBox(height: 40.h),
 
@@ -232,7 +232,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           ),
                           if (_isVariableExpanded && setup.variableEssentials.isNotEmpty) ...[
                             SizedBox(height: 16.h),
-                            _EssentialCategoryList(essentials: setup.variableEssentials),
+                            _EssentialCategoryList(essentials: setup.variableEssentials, sectionTotal: setup.variableExpenseAmount),
                           ],
                           SizedBox(height: 32.h),
                           const Divider(color: Color(0xFF333333), thickness: 1.5),
@@ -378,15 +378,16 @@ class _BudgetSectionHeader extends StatelessWidget {
 
 class _EssentialCategoryList extends StatelessWidget {
   final List<BudgetEssential> essentials;
+  final int sectionTotal;
 
-  const _EssentialCategoryList({required this.essentials});
+  const _EssentialCategoryList({required this.essentials, required this.sectionTotal});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: essentials.map((e) {
-        final ratio = e.plannedAmount > 0
-            ? (e.actualSpentAmount / e.plannedAmount).clamp(0.0, 1.0)
+        final ratio = sectionTotal > 0
+            ? (e.plannedAmount / sectionTotal).clamp(0.0, 1.0)
             : 0.0;
         final isOver = e.plannedAmount > 0 && e.actualSpentAmount > e.plannedAmount;
 
@@ -406,7 +407,7 @@ class _EssentialCategoryList extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '${CurrencyFormatter.formatKRW(e.actualSpentAmount)} / ${CurrencyFormatter.formatKRW(e.plannedAmount)}',
+                    '${CurrencyFormatter.formatKRW(e.plannedAmount)} / ${CurrencyFormatter.formatKRW(sectionTotal)}',
                     style: AppTextStyles.caption.copyWith(
                       color: isOver ? Colors.red : AppColors.textTertiary,
                       fontSize: 11.sp,

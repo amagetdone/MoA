@@ -68,17 +68,17 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
         thumbVisibility: false,
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('소비 패턴 분석', style: AppTextStyles.headingLg),
-              SizedBox(height: 8.h),
+              Text('소비 패턴 분석', style: AppTextStyles.headingMd.copyWith(fontSize: 20.sp, fontWeight: FontWeight.bold)),
+              SizedBox(height: 4.h),
               Text(
                 '지난 3개월 간 소비내역을 기반으로 분석된 내용입니다.',
-                style: AppTextStyles.bodySm.copyWith(
+                style: AppTextStyles.caption.copyWith(
                   color: AppColors.textTertiary,
-                  fontSize: 14.sp,
+                  fontSize: 12.sp,
                 ),
               ),
               SizedBox(height: 24.h),

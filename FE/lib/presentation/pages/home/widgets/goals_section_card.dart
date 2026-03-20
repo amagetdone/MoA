@@ -17,25 +17,22 @@ class GoalsSectionCard extends StatelessWidget {
     required this.onViewAll,
   });
 
-  /// 달성률 순 정렬된 상위 목표 리스트 (최대 3개)
   final List<Goal> goals;
   final VoidCallback onViewAll;
 
   @override
   Widget build(BuildContext context) {
     return MoreCard(
-      padding: EdgeInsets.fromLTRB(22.w, 20.h, 22.w, 20.h),
+      padding: EdgeInsets.all(16.w),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── 헤더 ──
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
                 '목표',
-                style: AppTextStyles.headingMd.copyWith(
+                style: AppTextStyles.bodyMd.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -45,15 +42,15 @@ class GoalsSectionCard extends StatelessWidget {
                   children: [
                     Text(
                       '전체보기',
-                      style: AppTextStyles.bodySm.copyWith(
+                      style: AppTextStyles.caption.copyWith(
                         color: AppColors.textTertiary,
                         fontWeight: FontWeight.w500,
+                        fontSize: 11.sp,
                       ),
                     ),
-                    SizedBox(width: 2.w),
                     Icon(
                       Icons.chevron_right,
-                      size: 16.w,
+                      size: 14.w,
                       color: AppColors.textTertiary,
                     ),
                   ],
@@ -61,20 +58,17 @@ class GoalsSectionCard extends StatelessWidget {
               ),
             ],
           ),
-
-          SizedBox(height: 16.h),
-
-          // ── 목표 리스트 ──
+          SizedBox(height: 12.h),
           for (int i = 0; i < goals.length; i++) ...[
             _GoalItem(key: ValueKey(goals[i].id), goal: goals[i]),
             if (i < goals.length - 1) ...[
-              SizedBox(height: 12.h),
+              SizedBox(height: 8.h),
               Divider(
                 height: 1.h,
                 thickness: 1.h,
-                color: AppColors.gray500.withValues(alpha: 0.15),
+                color: AppColors.gray500.withValues(alpha: 0.1),
               ),
-              SizedBox(height: 12.h),
+              SizedBox(height: 8.h),
             ],
           ],
         ],
@@ -97,36 +91,28 @@ class _GoalItem extends StatelessWidget {
 
     return InkWell(
       onTap: () => context.push(AppRoutes.goalDetailLocation(goal.id)),
-      borderRadius: BorderRadius.circular(10.r),
+      borderRadius: BorderRadius.circular(8.r),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // 목표 영상 썸네일
           GoalVideoThumb(
             goalId: goal.id,
             assetPath: goal.sketchVideoAssetPath,
             iconName: goal.iconName,
             progressRate: goal.progressRate,
-            size: 48.w,
-            borderRadius: 14.r,
+            size: 40.w,
+            borderRadius: 12.r,
           ),
-
-          SizedBox(width: 14.w),
-
-          // 우측: 이름 / 프로그레스 / 금액
+          SizedBox(width: 12.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 목표명 + D-day + 달성률
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
                       child: Text(
                         goal.name,
-                        style: AppTextStyles.bodyLg.copyWith(
+                        style: AppTextStyles.bodySm.copyWith(
                           fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary,
                         ),
@@ -134,57 +120,46 @@ class _GoalItem extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    SizedBox(width: 8.w),
-                    Row(
-                      children: [
-                        Text(
-                          '$percent%',
-                          style: AppTextStyles.bodySm.copyWith(
-                            color: AppColors.orange500,
-                            fontWeight: FontWeight.w700,
-                          ),
+                    SizedBox(width: 6.w),
+                    Text(
+                      '$percent%',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.orange500,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11.sp,
+                      ),
+                    ),
+                    SizedBox(width: 4.w),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 1.h),
+                      decoration: BoxDecoration(
+                        color: AppColors.gray500.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(999.r),
+                      ),
+                      child: Text(
+                        dDayText,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textTertiary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 10.sp,
                         ),
-                        SizedBox(width: 6.w),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 7.w,
-                            vertical: 2.h,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.gray500.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(999.r),
-                          ),
-                          child: Text(
-                            dDayText,
-                            style: AppTextStyles.bodySm.copyWith(
-                              color: AppColors.textTertiary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
-
-                SizedBox(height: 8.h),
-
-                // 프로그레스 바
+                SizedBox(height: 6.h),
                 MoreProgressBar(
                   progress: goal.progressRate,
                   color: AppColors.orange500,
-                  backgroundColor: AppColors.gray500.withValues(alpha: 0.15),
-                  height: 6.h,
+                  backgroundColor: AppColors.gray500.withValues(alpha: 0.12),
+                  height: 4.h,
                 ),
-
-                SizedBox(height: 5.h),
-
-                // 금액
+                SizedBox(height: 4.h),
                 Text(
                   '${CurrencyFormatter.formatKRW(goal.currentAmount)} / ${CurrencyFormatter.formatKRW(goal.targetAmount)}',
-                  style: AppTextStyles.bodySm.copyWith(
+                  style: AppTextStyles.caption.copyWith(
                     color: AppColors.textTertiary,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 10.sp,
                   ),
                 ),
               ],

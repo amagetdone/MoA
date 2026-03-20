@@ -51,17 +51,17 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
               child: SingleChildScrollView(
               primary: true,
               physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
+              padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 20.w),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('지출 내역', style: AppTextStyles.headingLg.copyWith(fontSize: 24.sp, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 6.h),
+                  Text('지출 내역', style: AppTextStyles.headingMd.copyWith(fontSize: 20.sp, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 4.h),
                   Text(
                     '주, 월 단위로 소비 내역을 확인할 수 있어요.',
-                    style: AppTextStyles.bodySm.copyWith(
+                    style: AppTextStyles.caption.copyWith(
                       color: AppColors.textTertiary,
-                      fontSize: 14.sp,
+                      fontSize: 12.sp,
                     ),
                   ),
                   SizedBox(height: 16.h),

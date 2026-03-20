@@ -33,7 +33,12 @@ class HomeRepositoryImpl implements HomeRepository {
         totalAsset: dashboard.totalAsset,
         weeklyBudget: dashboard.weeklyBudget,
         weeklySpent: dashboard.weeklySpent,
+        weeklyRemaining: dashboard.weeklyRemaining,
+        daysRemaining: dashboard.daysRemaining,
+        dailyAvailable: dashboard.dailyAvailable,
         weeklySaved: dashboard.weeklySaved,
+        savingTargetAmount: dashboard.savingTargetAmount,
+        savingProgressRate: dashboard.savingProgressRate,
       );
     } catch (_) {
       final snapshot = await _localDataSource.getCachedSnapshot();

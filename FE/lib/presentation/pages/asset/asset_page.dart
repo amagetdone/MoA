@@ -212,8 +212,8 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('총 자산', style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary)),
-                                Text(CurrencyFormatter.formatKRW(ref.watch(homeViewModelProvider).totalAsset), style: AppTextStyles.headingLg),
+                                Text('총 자산', style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
+                                Text(CurrencyFormatter.formatKRW(ref.watch(homeViewModelProvider).totalAsset), style: AppTextStyles.headingMd),
                               ],
                             ),
                             const Spacer(),
@@ -240,7 +240,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('거래내역', style: AppTextStyles.bodyLg.copyWith(fontWeight: FontWeight.bold)),
+                      Text('거래내역', style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold)),
                       SizedBox(height: 16.h),
                       GestureDetector(
                         behavior: HitTestBehavior.opaque,

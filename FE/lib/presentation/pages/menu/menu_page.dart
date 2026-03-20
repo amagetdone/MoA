@@ -56,7 +56,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
       backgroundColor: AppColors.bgPrimary,
       appBar: const MoreAppBar(showBack: false, showLogo: true, showNotification: true),
       body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -98,7 +98,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                         children: [
                           Text(
                             state.userName,
-                            style: AppTextStyles.headingMd.copyWith(
+                            style: AppTextStyles.bodyLg.copyWith(
                               color: AppColors.textPrimary,
                               fontWeight: FontWeight.w700,
                             ),
@@ -170,14 +170,13 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                 ),
               ],
             ),
-            SizedBox(height: 24.h),
+            SizedBox(height: 20.h),
 
-            // Menu section header
             Padding(
-              padding: EdgeInsets.only(left: 4.w, bottom: 12.h),
+              padding: EdgeInsets.only(left: 4.w, bottom: 10.h),
               child: Text(
                 '전체 메뉴',
-                style: AppTextStyles.headingMd.copyWith(
+                style: AppTextStyles.bodyLg.copyWith(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w700,
                 ),

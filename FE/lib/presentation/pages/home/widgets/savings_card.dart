@@ -3,87 +3,78 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
-import 'package:more_app/presentation/widgets/common/more_card.dart';
-import 'package:more_app/presentation/widgets/common/more_progress_bar.dart';
+import 'package:more_app/presentation/pages/home/widgets/spending_card.dart';
 
 class SavingsCard extends StatelessWidget {
   const SavingsCard({
     super.key,
     required this.weeklySaved,
+    required this.savingTargetAmount,
     required this.savingProgressRate,
   });
 
   final int weeklySaved;
+  final int savingTargetAmount;
   final int savingProgressRate;
 
   @override
   Widget build(BuildContext context) {
-    final progressRatio = (savingProgressRate / 100).clamp(0.0, 1.0);
+    // 저축액 / 총 저축 목표 비율 → 아래에서 위로 초록 차오름
+    final fillRatio = savingTargetAmount > 0
+        ? (weeklySaved / savingTargetAmount).clamp(0.0, 1.0)
+        : 0.0;
 
-    return MoreCard(
-      padding: EdgeInsets.fromLTRB(22.w, 22.h, 22.w, 18.h),
+    return GaugeCard(
+      fillRatio: fillRatio,
+      fillColor: const Color(0xFF69BD5F).withValues(alpha: 0.15),
+      fillFromTop: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 46.w,
-                height: 46.w,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD7EEDD),
-                  borderRadius: BorderRadius.circular(16.r),
-                ),
-                child: Icon(
-                  Icons.savings_outlined,
-                  color: AppColors.textPrimary,
-                  size: 24.w,
+              Text(
+                '이번 주 저축',
+                style: AppTextStyles.bodySm.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              SizedBox(width: 14.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '이번 주 저축액',
-                      style: AppTextStyles.bodyLg.copyWith(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    SizedBox(height: 4.h),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        CurrencyFormatter.formatKRW(weeklySaved),
-                        style: AppTextStyles.headingLg.copyWith(
-                          color: const Color(0xFF53A65A),
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ],
+              SizedBox(height: 6.h),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  CurrencyFormatter.formatKRW(weeklySaved),
+                  style: AppTextStyles.headingMd.copyWith(
+                    color: const Color(0xFF53A65A),
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 18.h),
-          MoreProgressBar(
-            progress: progressRatio,
-            color: const Color(0xFF69BD5F),
-            backgroundColor: AppColors.gray100.withValues(alpha: 0.9),
-            height: 14.h,
-          ),
-          SizedBox(height: 12.h),
-          Text(
-            '$savingProgressRate% 달성',
-            style: AppTextStyles.bodySm.copyWith(
-              color: AppColors.textTertiary,
-              fontWeight: FontWeight.w500,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '/ ${CurrencyFormatter.formatKRW(savingTargetAmount)}',
+                style: TextStyle(
+                  color: AppColors.textTertiary,
+                  fontSize: 11.sp,
+                ),
+              ),
+              SizedBox(height: 2.h),
+              Text(
+                '$savingProgressRate% 달성',
+                style: TextStyle(
+                  color: AppColors.textTertiary,
+                  fontSize: 10.sp,
+                ),
+              ),
+            ],
           ),
         ],
       ),
