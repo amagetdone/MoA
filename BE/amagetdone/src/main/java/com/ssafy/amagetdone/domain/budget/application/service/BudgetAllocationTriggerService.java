@@ -34,6 +34,19 @@ public class BudgetAllocationTriggerService {
 
 	public void trigger(Integer userId) {
 		LocalDate baseMonth = LocalDate.now(clock).withDayOfMonth(1);
+		triggerHistorical(userId, baseMonth, baseMonth.withDayOfMonth(baseMonth.lengthOfMonth()));
+	}
+
+	public BudgetAllocationService.AllocationResult triggerHistorical(
+		Integer userId,
+		LocalDate serviceStartDate,
+		LocalDate allocationEndDate
+	) {
+		if (userId == null || serviceStartDate == null || allocationEndDate == null || allocationEndDate.isBefore(serviceStartDate)) {
+			return new BudgetAllocationService.AllocationResult(List.of(), List.of(), List.of(), List.of(), List.of());
+		}
+
+		LocalDate baseMonth = serviceStartDate.withDayOfMonth(1);
 		refreshEssentialExpenseMonthFromAnalysisUseCase.execute(userId, baseMonth);
 
 		User userReference = userReference(userId);
@@ -45,7 +58,14 @@ public class BudgetAllocationTriggerService {
 			.findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(userId);
 		List<Plan> activePlans = planRepository.findAllByUser_IdAndStatus(userId, PlanStatus.ACTIVE);
 
-		allocateBudgetUseCase.execute(userReference, baseMonth, monthlyIncome, essentials, activePlans);
+		return allocateBudgetUseCase.execute(
+			userReference,
+			serviceStartDate,
+			monthlyIncome,
+			essentials,
+			activePlans,
+			allocationEndDate
+		);
 	}
 
 	private User userReference(Integer userId) {

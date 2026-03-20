@@ -16,8 +16,12 @@ public class GoalSavingAccrualForceTestService {
 
 	private final ApplyDailyGoalSavingAccrualUseCase applyDailyGoalSavingAccrualUseCase;
 	private final ApplyGoalSavingAccrualForceUseCase applyGoalSavingAccrualForceUseCase;
+	private final BudgetHistoricalRebuildService budgetHistoricalRebuildService;
 
 	public GoalSavingAccrualForceDto.Response backfill(Integer userId, GoalSavingAccrualForceDto.BackfillRequest request) {
+		if (request != null && request.planId() != null) {
+			return budgetHistoricalRebuildService.rebuild(userId, request.planId());
+		}
 		return applyDailyGoalSavingAccrualUseCase.backfill(userId, request);
 	}
 
