@@ -112,12 +112,23 @@ public class BudgetHomeQueryService {
 	}
 
 	private BudgetHomeDto.AssetSummary toAssetSummary(Integer userId) {
-		long totalAssetAmount = listAccountsUseCase.execute(userId).stream()
-			.map(Account::getAccountNo)
-			.mapToLong(accountNo -> inquireBalance(userId, accountNo))
+		List<BudgetHomeDto.AssetAccount> accounts = listAccountsUseCase.execute(userId).stream()
+			.map(account -> toAssetAccount(userId, account))
+			.toList();
+		long totalAssetAmount = accounts.stream()
+			.mapToLong(BudgetHomeDto.AssetAccount::balanceAmount)
 			.sum();
 
-		return BudgetHomeDto.AssetSummary.of(totalAssetAmount);
+		return BudgetHomeDto.AssetSummary.of(totalAssetAmount, accounts);
+	}
+
+	private BudgetHomeDto.AssetAccount toAssetAccount(Integer userId, Account account) {
+		return BudgetHomeDto.AssetAccount.of(
+			account.getId() == null ? account.getAccountNo() : account.getId(),
+			account.getBankName(),
+			account.getAccountNo(),
+			inquireBalance(userId, account.getAccountNo())
+		);
 	}
 
 	private long inquireBalance(Integer userId, String accountNo) {
