@@ -189,7 +189,7 @@ class _KebabMenu extends ConsumerWidget {
             ),
           );
           if (confirmed == true) {
-            ref.read(goalViewModelProvider.notifier).removeGoal(goal.id);
+            await ref.read(goalViewModelProvider.notifier).removeGoal(goal.id);
           }
         }
       },
