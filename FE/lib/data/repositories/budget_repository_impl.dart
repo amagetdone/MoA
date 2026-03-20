@@ -55,19 +55,32 @@ class BudgetRepositoryImpl implements BudgetRepository {
       debugPrint('[Budget] getWeekSetup ERROR: $e');
     }
 
-    final fixedAmount = setup.essentials
+    final fixedEssentials = setup.essentials
         .where((e) => e.expenseScope == 'FIXED')
-        .fold(0, (sum, e) => sum + e.plannedAmount);
-    final variableAmount = setup.essentials
+        .map((e) => BudgetEssential(
+              categoryName: e.categoryName,
+              plannedAmount: e.plannedAmount,
+              actualSpentAmount: e.actualSpentAmount,
+            ))
+        .toList();
+    final variableEssentials = setup.essentials
         .where((e) => e.expenseScope == 'VARIABLE')
-        .fold(0, (sum, e) => sum + e.plannedAmount);
+        .map((e) => BudgetEssential(
+              categoryName: e.categoryName,
+              plannedAmount: e.plannedAmount,
+              actualSpentAmount: e.actualSpentAmount,
+            ))
+        .toList();
 
     return BudgetSetup(
       monthlyIncome: income,
       savingsAmount: setup.plannedSavingAmount,
-      fixedExpenseAmount: fixedAmount,
-      variableExpenseAmount: variableAmount,
+      fixedExpenseAmount: fixedEssentials.fold(0, (sum, e) => sum + e.plannedAmount),
+      variableExpenseAmount: variableEssentials.fold(0, (sum, e) => sum + e.plannedAmount),
       freeAmount: setup.plannedFreeAmount,
+      remainingFreeAmount: setup.remainingFreeAmount,
+      fixedEssentials: fixedEssentials,
+      variableEssentials: variableEssentials,
     );
   }
 
