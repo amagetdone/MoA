@@ -14,8 +14,10 @@ import java.util.Set;
 import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetMonth;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseMonth;
+import com.ssafy.amagetdone.domain.budget.model.entity.EssentialWeekAllocation;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetMonthRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseMonthRepository;
+import com.ssafy.amagetdone.domain.budget.model.repository.EssentialWeekAllocationRepository;
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetMonthStatus;
 import com.ssafy.amagetdone.domain.budget.model.vo.ExpenseScope;
 import com.ssafy.amagetdone.domain.budget.model.vo.SourceProvider;
@@ -40,17 +42,20 @@ public class EssentialExpenseMonthRefreshService {
 	private final TransactionAnalysisResultRepository transactionAnalysisResultRepository;
 	private final BudgetMonthRepository budgetMonthRepository;
 	private final EssentialExpenseMonthRepository essentialExpenseMonthRepository;
+	private final EssentialWeekAllocationRepository essentialWeekAllocationRepository;
 
 	public EssentialExpenseMonthRefreshService(
 		TransactionAnalysisMetadataRepository transactionAnalysisMetadataRepository,
 		TransactionAnalysisResultRepository transactionAnalysisResultRepository,
 		BudgetMonthRepository budgetMonthRepository,
-		EssentialExpenseMonthRepository essentialExpenseMonthRepository
+		EssentialExpenseMonthRepository essentialExpenseMonthRepository,
+		EssentialWeekAllocationRepository essentialWeekAllocationRepository
 	) {
 		this.transactionAnalysisMetadataRepository = transactionAnalysisMetadataRepository;
 		this.transactionAnalysisResultRepository = transactionAnalysisResultRepository;
 		this.budgetMonthRepository = budgetMonthRepository;
 		this.essentialExpenseMonthRepository = essentialExpenseMonthRepository;
+		this.essentialWeekAllocationRepository = essentialWeekAllocationRepository;
 	}
 
 	public void refresh(Integer userId, LocalDate baseMonth) {
@@ -101,6 +106,11 @@ public class EssentialExpenseMonthRefreshService {
 			.map(Map.Entry::getValue)
 			.toList();
 		if (!rowsToDelete.isEmpty()) {
+			List<EssentialWeekAllocation> weekAllocationsToDelete = essentialWeekAllocationRepository
+				.findAllByEssentialExpenseMonthIn(rowsToDelete);
+			if (!weekAllocationsToDelete.isEmpty()) {
+				essentialWeekAllocationRepository.deleteAll(weekAllocationsToDelete);
+			}
 			essentialExpenseMonthRepository.deleteAll(rowsToDelete);
 		}
 
