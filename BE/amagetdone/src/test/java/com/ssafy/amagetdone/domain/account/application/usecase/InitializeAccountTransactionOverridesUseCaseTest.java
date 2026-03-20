@@ -5,9 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -84,12 +84,18 @@ class InitializeAccountTransactionOverridesUseCaseTest {
 		verify(accountTransactionOverrideRepository).saveAll(captor.capture());
 		assertThat(response.targetType()).isEqualTo("account");
 		assertThat(response.targetNo()).isEqualTo("0012345678901234");
-		assertThat(response.baseMonth()).isEqualTo("2025-12");
 		assertThat(response.transactionCount()).isEqualTo(captor.getValue().size());
+		assertThat(captor.getValue().size()).isBetween(40, 80);
 		assertThat(captor.getValue())
 			.extracting(AccountTransactionOverride::getTransactionDateTime)
 			.map(YearMonth::from)
 			.contains(YearMonth.of(2025, 12), YearMonth.of(2026, 1), YearMonth.of(2026, 2), YearMonth.of(2026, 3));
+		assertThat(captor.getValue())
+			.extracting(AccountTransactionOverride::getTransactionDateTime)
+			.map(dateTime -> dateTime.toLocalDate())
+			.contains(LocalDate.of(2026, 3, 20));
+		assertThat(countDirectSpendingLikeTransactions(captor.getValue())).isGreaterThanOrEqualTo(20);
+		assertThat(countTransferLikeTransactions(captor.getValue())).isLessThanOrEqualTo(8);
 	}
 
 	@Test
@@ -140,12 +146,37 @@ class InitializeAccountTransactionOverridesUseCaseTest {
 
 		ArgumentCaptor<List<String>> captor = listCaptor();
 		verify(transactionCategoryAssignmentService).assignCategories(captor.capture());
-		assertThat(captor.getValue()).contains("정00");
-		assertThat(captor.getValue()).doesNotContain("지역농축협(8801)");
+		assertThat(captor.getValue()).contains("버거킹구미인동점");
+		assertThat(captor.getValue()).doesNotContain("생활비계좌");
 	}
 
 	@SuppressWarnings("unchecked")
 	private <T> ArgumentCaptor<List<T>> listCaptor() {
 		return (ArgumentCaptor<List<T>>) (ArgumentCaptor<?>)ArgumentCaptor.forClass(List.class);
+	}
+
+	private long countDirectSpendingLikeTransactions(List<AccountTransactionOverride> transactions) {
+		return transactions.stream()
+			.map(transaction -> transaction.getTransactionSummary() + " " + transaction.getTransactionMemo())
+			.filter(text -> text.contains("버거")
+				|| text.contains("김밥")
+				|| text.contains("마라")
+				|| text.contains("국밥")
+				|| text.contains("카페")
+				|| text.contains("택시")
+				|| text.contains("버스")
+				|| text.contains("지하철"))
+			.count();
+	}
+
+	private long countTransferLikeTransactions(List<AccountTransactionOverride> transactions) {
+		return transactions.stream()
+			.map(transaction -> transaction.getTransactionSummary() + " " + transaction.getTransactionMemo())
+			.filter(text -> text.contains("펌뱅킹")
+				|| text.contains("오픈뱅킹")
+				|| text.contains("자금결제부")
+				|| text.contains("카드결제")
+				|| text.matches(".*김\\d\\d.*"))
+			.count();
 	}
 }

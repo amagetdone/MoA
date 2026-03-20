@@ -25,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class InitializeCardTransactionOverridesUseCase {
 
-	private static final String BASE_MONTH = "2025-12";
 	private static final String CANCELED_STATUS = "\uCDE8\uC18C";
 	private static final String PURCHASED_STATUS = "\uB9E4\uC785";
 
@@ -90,7 +89,6 @@ public class InitializeCardTransactionOverridesUseCase {
 		return new AccountAdminDto.TransactionInitResponse(
 			"card",
 			card.getCardNo(),
-			BASE_MONTH,
 			seeds.size()
 		);
 	}
