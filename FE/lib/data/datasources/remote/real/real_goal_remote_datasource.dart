@@ -130,6 +130,11 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
   }
 
   @override
+  Future<void> deleteGoal(String id) async {
+    await _dio.delete('v1/plans/$id');
+  }
+
+  @override
   Future<GoalWeeklyPlanPage> fetchGoalWeeklyPlans(
     String id, {
     int page = 0,

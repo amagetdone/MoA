@@ -4,6 +4,7 @@ import 'package:more_app/domain/entities/spending.dart';
 abstract class GoalRemoteDataSource {
   Future<List<Goal>> fetchGoals();
   Future<Goal?> findGoalById(String id);
+  Future<void> deleteGoal(String id);
   Future<GoalWeeklyPlanPage> fetchGoalWeeklyPlans(
     String id, {
     int page = 0,
