@@ -34,7 +34,8 @@ public final class AccountDto {
 		String bankName,
 		String accountName,
 		String alias,
-		boolean verified
+		boolean verified,
+		Long accountBalance
 	) {
 	}
 

@@ -10,10 +10,12 @@ import com.ssafy.amagetdone.domain.account.api.dto.AccountAdminDto;
 import com.ssafy.amagetdone.domain.account.api.dto.AccountDto;
 import com.ssafy.amagetdone.domain.account.application.usecase.ConfirmAccountOwnershipUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.FindUserAccountUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.InquireAccountBalanceUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListAccountsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ListDemandDepositProductsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.ReconcileLinkedAccountsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.RegisterDemandDepositProductUseCase;
+import com.ssafy.amagetdone.domain.account.infra.client.dto.DemandDepositBalanceDto;
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
@@ -41,6 +43,9 @@ class AccountServiceTest {
 
 	@Mock
 	private ReconcileLinkedAccountsUseCase reconcileLinkedAccountsUseCase;
+
+	@Mock
+	private InquireAccountBalanceUseCase inquireAccountBalanceUseCase;
 
 	@Mock
 	private FindUserAccountUseCase findUserAccountUseCase;
@@ -73,16 +78,65 @@ class AccountServiceTest {
 			"한국은행",
 			"데모 수시입출금",
 			null,
-			true
+			true,
+			120000L
 		);
 		when(reconcileLinkedAccountsUseCase.execute(7)).thenReturn(List.of(account));
-		when(listAccountsUseCase.toResponses(List.of(account))).thenReturn(List.of(response));
+		when(account.getAccountNo()).thenReturn("0011234567890123");
+		DemandDepositBalanceDto.Response balance = new DemandDepositBalanceDto.Response(
+			"001",
+			"0011234567890123",
+			120000L,
+			"20260320",
+			"20360320",
+			"20260320",
+			"KRW"
+		);
+		when(inquireAccountBalanceUseCase.execute(7, "0011234567890123")).thenReturn(balance);
+		when(listAccountsUseCase.toResponses(List.of(account), List.of(balance))).thenReturn(List.of(response));
 
 		List<AccountDto.AccountSummaryResponse> result = accountService.getAccounts(7);
 
 		assertThat(result).containsExactly(response);
 		verify(reconcileLinkedAccountsUseCase).execute(7);
-		verify(listAccountsUseCase).toResponses(List.of(account));
+		verify(inquireAccountBalanceUseCase).execute(7, "0011234567890123");
+		verify(listAccountsUseCase).toResponses(List.of(account), List.of(balance));
+	}
+
+	@Test
+	void getAccountIncludesLiveBalanceInResponse() {
+		User user = User.createPendingSocialUser();
+		Account account = Account.create(
+			user,
+			"0011234567890123",
+			null,
+			"생활비 계좌",
+			"수시입출금",
+			"001",
+			"한국은행",
+			"KRW"
+		);
+		account.markVerifiedLinked();
+
+		when(findUserAccountUseCase.execute(7, "0011234567890123")).thenReturn(account);
+		when(inquireAccountBalanceUseCase.execute(7, "0011234567890123")).thenReturn(
+			new DemandDepositBalanceDto.Response(
+				"001",
+				"0011234567890123",
+				45000L,
+				"20260320",
+				"20360320",
+				"20260320",
+				"KRW"
+			)
+		);
+
+		AccountDto.AccountSummaryResponse result = accountService.getAccount(7, "0011234567890123");
+
+		assertThat(result.accountNo()).isEqualTo("0011234567890123");
+		assertThat(result.accountBalance()).isEqualTo(45000L);
+		verify(findUserAccountUseCase).execute(7, "0011234567890123");
+		verify(inquireAccountBalanceUseCase).execute(7, "0011234567890123");
 	}
 
 	@Test

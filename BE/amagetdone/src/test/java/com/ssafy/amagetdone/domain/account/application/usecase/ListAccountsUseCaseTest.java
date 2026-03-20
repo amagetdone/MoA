@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 
+import com.ssafy.amagetdone.domain.account.api.dto.AccountDto;
+import com.ssafy.amagetdone.domain.account.infra.client.dto.DemandDepositBalanceDto;
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
@@ -47,6 +49,29 @@ class ListAccountsUseCaseTest {
 				org.assertj.core.groups.Tuple.tuple(activeUnverified.getAccountNo(), false, true),
 				org.assertj.core.groups.Tuple.tuple(activeVerified.getAccountNo(), true, true)
 			);
+	}
+
+	@Test
+	void toResponsesIncludesMatchedBalanceByAccountNumber() {
+		User user = persistUser("balance-user@example.com");
+		Account account = persistAccount(user, "111-111-111111", "신한은행", true, true);
+
+		List<AccountDto.AccountSummaryResponse> result = listAccountsUseCase.toResponses(
+			List.of(account),
+			List.of(new DemandDepositBalanceDto.Response(
+				"001",
+				"111-111-111111",
+				32000L,
+				"20260320",
+				"20360320",
+				"20260320",
+				"KRW"
+			))
+		);
+
+		assertThat(result).hasSize(1);
+		assertThat(result.get(0).accountNo()).isEqualTo("111-111-111111");
+		assertThat(result.get(0).accountBalance()).isEqualTo(32000L);
 	}
 
 	private User persistUser(String email) {
