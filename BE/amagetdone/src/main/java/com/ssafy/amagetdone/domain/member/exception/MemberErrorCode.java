@@ -23,7 +23,8 @@ public enum MemberErrorCode implements ErrorCode {
 	FINANCIAL_MEMBER_CREATE_FAILED(HttpStatus.BAD_GATEWAY, "MEMBER_017", "Financial member create failed"),
 	FINANCIAL_MEMBER_SEARCH_FAILED(HttpStatus.BAD_GATEWAY, "MEMBER_018", "Financial member search failed"),
 	FINANCIAL_API_KEY_MISSING(HttpStatus.INTERNAL_SERVER_ERROR, "MEMBER_019", "Financial api key is missing"),
-	FINANCIAL_MEMBER_ALREADY_LINKED(HttpStatus.CONFLICT, "MEMBER_020", "Financial member already linked to another user");
+	FINANCIAL_MEMBER_ALREADY_LINKED(HttpStatus.CONFLICT, "MEMBER_020", "Financial member already linked to another user"),
+	TEST_SOCIAL_USER_REQUIRED(HttpStatus.FORBIDDEN, "MEMBER_021", "Test social user required");
 
 	private final HttpStatus httpStatus;
 	private final String code;
