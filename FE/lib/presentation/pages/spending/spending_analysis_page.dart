@@ -98,7 +98,7 @@ class SpendingAnalysisPage extends ConsumerWidget {
                           child: SpendingLineChart(
                             data: state.isWeekly
                                 ? state.dailySpendings
-                                : state.monthlySpendings,
+                                : state.monthlyComparisons,
                             isWeekly: state.isWeekly,
                           ),
                         ),

@@ -17,9 +17,9 @@ class RealAccountRemoteDataSource implements AccountRemoteDataSource {
     final accounts = dataList.asMap().entries.map((entry) {
       final json = entry.value as Map<String, dynamic>;
       return Account(
-        id: json['accountNo'] as String,
-        bankName: json['bankName'] as String,
-        accountNumber: json['accountNo'] as String,
+        id: json['accountNo'] as String? ?? '',
+        bankName: json['bankName'] as String? ?? '',
+        accountNumber: json['accountNo'] as String? ?? '',
         accountName: json['accountName'] as String? ?? '',
         balance: 0,
         isPrimary: entry.key == 0,
@@ -118,6 +118,7 @@ class RealAccountRemoteDataSource implements AccountRemoteDataSource {
         balanceAfter: 0,
         memo: item['expenseType'] as String?,
         accountId: item['sourceId'] as String?,
+        sourceType: item['sourceType'] as String?,
       );
     }).toList();
   }

@@ -123,6 +123,46 @@ class RealSpendingRemoteDataSource implements SpendingRemoteDataSource {
   }
 
   @override
+  Future<MonthlyTransactionSummary> fetchMonthlyTransactionSummary(DateTime monthStart) async {
+    final monthEnd = DateTime(monthStart.year, monthStart.month + 1, 0);
+    String fmt(DateTime d) =>
+        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+    final response = await _dio.get(
+      '/transactions',
+      queryParameters: {
+        'fromDate': fmt(monthStart),
+        'toDate': fmt(monthEnd),
+        'page': 0,
+        'size': 1000,
+      },
+    );
+
+    final items = (response.data['items'] as List<dynamic>? ?? []);
+    int incomeTotal = 0;
+    final categoryMap = <String, int>{};
+
+    for (final item in items) {
+      final direction = item['direction'] as String? ?? '';
+      final amount = (item['amount'] as num?)?.toInt() ?? 0;
+      if (amount <= 0) continue;
+
+      if (direction == 'IN') {
+        incomeTotal += amount;
+      } else if (direction == 'OUT') {
+        final categoryObj = item['category'] as Map<String, dynamic>?;
+        final categoryName = categoryObj?['name'] as String? ?? '기타';
+        categoryMap[categoryName] = (categoryMap[categoryName] ?? 0) + amount;
+      }
+    }
+
+    return MonthlyTransactionSummary(
+      incomeTotal: incomeTotal,
+      categoryAmounts: categoryMap,
+    );
+  }
+
+  @override
   Future<SpendingSnapshotDto> fetchSpendingSnapshotDto() {
     throw UnimplementedError();
   }
