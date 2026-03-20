@@ -119,6 +119,7 @@ class SpendingAnalysisPage extends ConsumerWidget {
                         SizedBox(height: 20.h),
                         CategoryList(
                           categories: state.categories,
+                          totalAmount: state.totalSpent,
                         ),
                       ],
                     ),
