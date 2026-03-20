@@ -114,7 +114,7 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
                                   28.h,
                                 ),
                                 itemCount: filteredGoals.length,
-                                separatorBuilder: (_, __) =>
+                                separatorBuilder: (context, index) =>
                                     SizedBox(height: 12.h),
                                 itemBuilder: (context, index) =>
                                     GoalCard(goal: filteredGoals[index]),
