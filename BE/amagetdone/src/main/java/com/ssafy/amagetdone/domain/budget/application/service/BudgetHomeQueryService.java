@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.ssafy.amagetdone.domain.account.application.usecase.InquireAccountBalanceUseCase;
@@ -52,7 +53,7 @@ public class BudgetHomeQueryService {
 			toFreeSpending(budgetWeek, today),
 			toWeeklySaving(currentWeekAllocations, selectedPlans),
 			toAssetSummary(userId),
-			toPlanCards(selectedPlans, today)
+			toPlanCards(selectedPlans, today, currentWeekAllocations)
 		);
 	}
 
@@ -139,18 +140,35 @@ public class BudgetHomeQueryService {
 		return zero(response.accountBalance());
 	}
 
-	private List<BudgetHomeDto.PlanCard> toPlanCards(List<Plan> selectedPlans, LocalDate today) {
+	private List<BudgetHomeDto.PlanCard> toPlanCards(
+		List<Plan> selectedPlans,
+		LocalDate today,
+		List<PlanWeekAllocation> currentWeekAllocations
+	) {
+		Map<Integer, Long> weeklyAmountByPlanId = currentWeekAllocations.stream()
+			.filter(a -> a.getPlan() != null && a.getPlan().getId() != null)
+			.collect(java.util.stream.Collectors.toMap(
+				a -> a.getPlan().getId(),
+				a -> zero(a.getFinalAmount()),
+				Long::sum
+			));
+
 		return selectedPlans.stream()
-			.map(plan -> BudgetHomeDto.PlanCard.of(
-				plan.getId() == null ? null : Long.valueOf(plan.getId()),
-				plan.getTitle(),
-				plan.getPriority(),
-				calculateDDay(today, plan.getEndDate()),
-				zero(plan.getSavedAmount()),
-				zero(plan.getTargetAmount()),
-				calculateProgressRate(zero(plan.getSavedAmount()), zero(plan.getTargetAmount())),
-				plan.getPlanUrl()
-			))
+			.map(plan -> {
+				long savedAmount = zero(plan.getSavedAmount());
+				long totalTargetAmount = zero(plan.getTargetAmount());
+				long weeklyAmount = weeklyAmountByPlanId.getOrDefault(plan.getId(), 0L);
+				return BudgetHomeDto.PlanCard.of(
+					plan.getId() == null ? null : Long.valueOf(plan.getId()),
+					plan.getTitle(),
+					plan.getPriority(),
+					calculateDDay(today, plan.getEndDate()),
+					savedAmount,
+					weeklyAmount,
+					calculateProgressRate(savedAmount, totalTargetAmount),
+					plan.getPlanUrl()
+				);
+			})
 			.toList();
 	}
 

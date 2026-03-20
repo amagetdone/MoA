@@ -156,6 +156,14 @@ public class Plan extends BaseEntity {
 		this.setDeleted(true);
 	}
 
+	public void extendEndDate(int additionalWeeks) {
+		if (additionalWeeks <= 0) {
+			return;
+		}
+		this.endDate = this.endDate.plusWeeks(additionalWeeks);
+		this.targetWeeks = calculateTargetWeeks(this.startDate, this.endDate);
+	}
+
 	public void markAiProcessing() {
 		this.aiPipelineStatus = PlanAiPipelineStatus.PROCESSING;
 	}

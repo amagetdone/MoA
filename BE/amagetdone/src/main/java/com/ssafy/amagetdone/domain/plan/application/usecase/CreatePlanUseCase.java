@@ -5,6 +5,7 @@ import java.time.LocalDate;
 
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.repository.UserRepository;
+import com.ssafy.amagetdone.domain.budget.application.service.WeeklyGoalSavingAccrualService;
 import com.ssafy.amagetdone.domain.budget.application.usecase.TriggerBudgetAllocationUseCase;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanCreateRequest;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanCreateResponse;
@@ -15,6 +16,7 @@ import com.ssafy.amagetdone.domain.plan.exception.PlanErrorCode;
 import com.ssafy.amagetdone.domain.plan.exception.PlanException;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,7 @@ public class CreatePlanUseCase {
 	private final PlanRepository planRepository;
 	private final PlanPriorityService planPriorityService;
 	private final TriggerBudgetAllocationUseCase triggerBudgetAllocationUseCase;
+	private final WeeklyGoalSavingAccrualService weeklyGoalSavingAccrualService;
 	private final PlanCreationBudgetSummaryService planCreationBudgetSummaryService;
 	private final ApplicationEventPublisher applicationEventPublisher;
 	private final Clock clock;
@@ -36,6 +39,7 @@ public class CreatePlanUseCase {
 		PlanRepository planRepository,
 		PlanPriorityService planPriorityService,
 		TriggerBudgetAllocationUseCase triggerBudgetAllocationUseCase,
+		WeeklyGoalSavingAccrualService weeklyGoalSavingAccrualService,
 		PlanCreationBudgetSummaryService planCreationBudgetSummaryService,
 		ApplicationEventPublisher applicationEventPublisher,
 		Clock clock
@@ -44,6 +48,7 @@ public class CreatePlanUseCase {
 		this.planRepository = planRepository;
 		this.planPriorityService = planPriorityService;
 		this.triggerBudgetAllocationUseCase = triggerBudgetAllocationUseCase;
+		this.weeklyGoalSavingAccrualService = weeklyGoalSavingAccrualService;
 		this.planCreationBudgetSummaryService = planCreationBudgetSummaryService;
 		this.applicationEventPublisher = applicationEventPublisher;
 		this.clock = clock;
@@ -69,6 +74,9 @@ public class CreatePlanUseCase {
 
 		Plan savedPlan = planRepository.save(plan);
 		triggerBudgetAllocationUseCase.execute(userId);
+		if (savedPlan.getStatus() == PlanStatus.ACTIVE) {
+			weeklyGoalSavingAccrualService.applyImmediateAccrual(userId, savedPlan.getId());
+		}
 		PlanCreateResponse response = planCreationBudgetSummaryService.build(savedPlan);
 
 		applicationEventPublisher.publishEvent(new PlanCreatedEvent(savedPlan.getId(), userId));

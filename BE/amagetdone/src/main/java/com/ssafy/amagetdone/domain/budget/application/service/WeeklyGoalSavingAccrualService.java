@@ -1,0 +1,172 @@
+package com.ssafy.amagetdone.domain.budget.application.service;
+
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+
+import com.ssafy.amagetdone.domain.budget.model.entity.BudgetAdjustment;
+import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
+import com.ssafy.amagetdone.domain.budget.model.repository.BudgetAdjustmentRepository;
+import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
+import com.ssafy.amagetdone.domain.budget.model.vo.BudgetAdjustmentType;
+import com.ssafy.amagetdone.domain.member.model.entity.User;
+import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
+import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
+import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
+import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
+
+import jakarta.persistence.EntityManager;
+import lombok.RequiredArgsConstructor;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@Transactional
+@RequiredArgsConstructor
+public class WeeklyGoalSavingAccrualService {
+
+	private static final String WEEKLY_ACCRUAL_REASON = "Weekly goal saving accrual applied";
+
+	private final BudgetWeekRepository budgetWeekRepository;
+	private final PlanWeekAllocationRepository planWeekAllocationRepository;
+	private final BudgetAdjustmentRepository budgetAdjustmentRepository;
+	private final PlanRepository planRepository;
+	private final EntityManager entityManager;
+	private final Clock clock;
+
+	public void applyWeeklyAccrual(Integer userId) {
+		LocalDate today = LocalDate.now(clock);
+		BudgetWeek currentWeek = findCurrentWeek(userId, today);
+		if (currentWeek == null) {
+			return;
+		}
+
+		List<PlanWeekAllocation> unaccrued = findUnaccruedAllocations(currentWeek);
+		if (unaccrued.isEmpty()) {
+			return;
+		}
+
+		long pool = calculatePool(currentWeek);
+		applyAccruals(unaccrued, pool, currentWeek);
+	}
+
+	public void applyImmediateAccrual(Integer userId, Integer planId) {
+		LocalDate today = LocalDate.now(clock);
+		BudgetWeek currentWeek = findCurrentWeek(userId, today);
+		if (currentWeek == null) {
+			return;
+		}
+
+		List<PlanWeekAllocation> unaccrued = findUnaccruedAllocations(currentWeek).stream()
+			.filter(a -> a.getPlan() != null && Objects.equals(a.getPlan().getId(), planId))
+			.toList();
+		if (unaccrued.isEmpty()) {
+			return;
+		}
+
+		long pool = calculatePool(currentWeek);
+		applyAccruals(unaccrued, pool, currentWeek);
+	}
+
+	private BudgetWeek findCurrentWeek(Integer userId, LocalDate today) {
+		User userReference = entityManager.getReference(User.class, userId);
+		return budgetWeekRepository
+			.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(userReference, today, today)
+			.orElse(null);
+	}
+
+	private List<PlanWeekAllocation> findUnaccruedAllocations(BudgetWeek budgetWeek) {
+		return planWeekAllocationRepository.findByBudgetWeekAndActualAmountIsNull(budgetWeek).stream()
+			.filter(a -> a.getPlan() != null)
+			.filter(a -> a.getPlan().getStatus() == PlanStatus.ACTIVE)
+			.sorted(Comparator.comparing((PlanWeekAllocation a) -> a.getPlan().getPriority(),
+					Comparator.nullsLast(Integer::compareTo))
+				.thenComparing(a -> a.getPlan().getId(), Comparator.nullsLast(Integer::compareTo)))
+			.toList();
+	}
+
+	private long calculatePool(BudgetWeek week) {
+		long totalBudget = zero(week.getPlannedIncomeAmount())
+			- zero(week.getPlannedEssentialAmount())
+			- zero(week.getRolloverInAmount())
+			+ zero(week.getManualAdjustmentAmount());
+
+		long alreadyAccrued = planWeekAllocationRepository.findByBudgetWeek(week).stream()
+			.filter(a -> a.getActualAmount() != null)
+			.mapToLong(a -> zero(a.getActualAmount()))
+			.sum();
+
+		return Math.max(totalBudget - alreadyAccrued, 0L);
+	}
+
+	private void applyAccruals(List<PlanWeekAllocation> allocations, long pool, BudgetWeek budgetWeek) {
+		long remaining = pool;
+		LocalDateTime now = LocalDateTime.now(clock);
+
+		for (PlanWeekAllocation allocation : allocations) {
+			Plan plan = allocation.getPlan();
+			long desired = zero(allocation.getFinalAmount());
+
+			long accrual = Math.min(desired, Math.max(remaining, 0L));
+			allocation.setActualAmount(accrual);
+
+			if (accrual > 0L) {
+				plan.setSavedAmount(zero(plan.getSavedAmount()) + accrual);
+				budgetAdjustmentRepository.save(BudgetAdjustment.builder()
+					.budgetWeek(budgetWeek)
+					.plan(plan)
+					.adjustmentType(BudgetAdjustmentType.PLAN_SAVED_AUTO_ADD)
+					.adjustmentAmount(accrual)
+					.reason(WEEKLY_ACCRUAL_REASON)
+					.build());
+				remaining -= accrual;
+			}
+
+			if (accrual < desired) {
+				long shortfall = desired - accrual;
+				extendPlanForShortfall(plan, shortfall);
+			}
+
+			if (zero(plan.getSavedAmount()) >= zero(plan.getTargetAmount())) {
+				plan.setStatus(PlanStatus.COMPLETED);
+			}
+		}
+
+		planWeekAllocationRepository.saveAll(allocations);
+		List<Plan> updatedPlans = allocations.stream()
+			.map(PlanWeekAllocation::getPlan)
+			.filter(Objects::nonNull)
+			.distinct()
+			.toList();
+		planRepository.saveAll(updatedPlans);
+	}
+
+	private void extendPlanForShortfall(Plan plan, long shortfallAmount) {
+		if (shortfallAmount <= 0L) {
+			return;
+		}
+
+		int targetWeeks = plan.getTargetWeeks() == null || plan.getTargetWeeks() <= 0 ? 1 : plan.getTargetWeeks();
+		long targetAmount = zero(plan.getTargetAmount());
+		if (targetAmount <= 0L) {
+			return;
+		}
+
+		long weeklyRate = targetAmount / targetWeeks;
+		if (weeklyRate <= 0L) {
+			return;
+		}
+
+		int additionalWeeks = (int) Math.ceil((double) shortfallAmount / weeklyRate);
+		plan.extendEndDate(additionalWeeks);
+	}
+
+	private long zero(Long amount) {
+		return amount == null ? 0L : amount;
+	}
+}

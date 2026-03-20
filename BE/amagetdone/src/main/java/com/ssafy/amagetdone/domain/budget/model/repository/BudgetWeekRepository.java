@@ -27,6 +27,12 @@ public interface BudgetWeekRepository extends JpaRepository<BudgetWeek, Integer>
 
 	Optional<BudgetWeek> findTopByUserIdOrderByWeekSequenceDesc(Integer userId);
 
+	Optional<BudgetWeek> findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByWeekSequenceAsc(
+		Integer userId,
+		LocalDate weekStartDate,
+		LocalDate weekEndDate
+	);
+
 	Optional<BudgetWeek> findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(User user, LocalDate date, LocalDate date2);
 
 	List<BudgetWeek> findByUserAndWeekStartDateBetweenOrderByWeekSequence(User user, LocalDate start, LocalDate end);
