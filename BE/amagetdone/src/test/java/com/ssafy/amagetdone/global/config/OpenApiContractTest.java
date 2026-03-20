@@ -78,6 +78,8 @@ class OpenApiContractTest {
 		Schema wrapperDataSchema = BudgetHomeApiResponseSchema.BudgetHomeResponseSchema.class.getAnnotation(Schema.class);
 		Map<String, Class<?>> components = Arrays.stream(BudgetHomeApiResponseSchema.BudgetHomeResponseSchema.class.getRecordComponents())
 			.collect(Collectors.toMap(RecordComponent::getName, RecordComponent::getType));
+		Map<String, Class<?>> assetSummaryComponents = Arrays.stream(BudgetHomeApiResponseSchema.AssetSummarySchema.class.getRecordComponents())
+			.collect(Collectors.toMap(RecordComponent::getName, RecordComponent::getType));
 
 		assertNotNull(apiResponseSchema);
 		assertNotNull(budgetHomeSchema);
@@ -91,6 +93,9 @@ class OpenApiContractTest {
 		assertEquals(BudgetHomeApiResponseSchema.WeeklySavingSchema.class, components.get("weeklySaving"));
 		assertEquals(BudgetHomeApiResponseSchema.AssetSummarySchema.class, components.get("assetSummary"));
 		assertEquals(java.util.List.class, components.get("plans"));
+		assertEquals(2, assetSummaryComponents.size());
+		assertEquals(long.class, assetSummaryComponents.get("totalAssetAmount"));
+		assertEquals(java.util.List.class, assetSummaryComponents.get("accounts"));
 	}
 
 	private RecordComponent dataComponent() {

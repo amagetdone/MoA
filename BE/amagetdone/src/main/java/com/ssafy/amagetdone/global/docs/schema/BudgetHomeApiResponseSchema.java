@@ -39,7 +39,16 @@ public record BudgetHomeApiResponseSchema(
 	}
 
 	public record AssetSummarySchema(
-		long totalAssetAmount
+		long totalAssetAmount,
+		List<AssetAccountSchema> accounts
+	) {
+	}
+
+	public record AssetAccountSchema(
+		String accountId,
+		String bankName,
+		String accountNo,
+		long balanceAmount
 	) {
 	}
 

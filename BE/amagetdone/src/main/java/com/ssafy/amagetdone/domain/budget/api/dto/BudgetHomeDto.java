@@ -85,15 +85,45 @@ public final class BudgetHomeDto {
 	}
 
 	public record AssetSummary(
-		long totalAssetAmount
+		long totalAssetAmount,
+		List<AssetAccount> accounts
 	) {
 
 		public static AssetSummary of(Long totalAssetAmount) {
-			return new AssetSummary(zero(totalAssetAmount));
+			return of(totalAssetAmount, null);
+		}
+
+		public static AssetSummary of(Long totalAssetAmount, List<AssetAccount> accounts) {
+			return new AssetSummary(
+				zero(totalAssetAmount),
+				copyOfOrEmpty(accounts)
+			);
 		}
 
 		public static AssetSummary empty() {
-			return of(null);
+			return of(null, null);
+		}
+	}
+
+	public record AssetAccount(
+		String accountId,
+		String bankName,
+		String accountNo,
+		long balanceAmount
+	) {
+
+		public static AssetAccount of(
+			String accountId,
+			String bankName,
+			String accountNo,
+			Long balanceAmount
+		) {
+			return new AssetAccount(
+				accountId,
+				bankName,
+				accountNo,
+				zero(balanceAmount)
+			);
 		}
 	}
 
