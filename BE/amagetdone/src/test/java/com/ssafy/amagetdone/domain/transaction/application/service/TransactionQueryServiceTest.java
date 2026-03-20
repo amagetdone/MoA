@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -248,13 +249,15 @@ class TransactionQueryServiceTest {
 
 		given(transactionAnalysisMetadataRepository.findTopByUser_IdOrderByAnalyzedAtDesc(1))
 			.willReturn(Optional.of(latestMetadata));
-		given(essentialExpenseSnapshotWeekRepository.findByUser_IdAndYearWeekAndAnalyzedAt(1, "2026-W12",
+		given(essentialExpenseSnapshotWeekRepository.findByUser_IdAndYearWeekAndAnalyzedAt(1, "2026-W13",
 			latestMetadata.getAnalyzedAt()))
 			.willReturn(Optional.empty());
 
-		WeeklyTransactionAnalysisDto.Response response = queryService.getWeeklyTransactionAnalysis(1, "2026-W12");
+		WeeklyTransactionAnalysisDto.Response response = queryService.getWeeklyTransactionAnalysis(1, "2026-03-4");
 
-		assertEquals("2026-W12", response.yearWeek());
+		verify(essentialExpenseSnapshotWeekRepository)
+			.findByUser_IdAndYearWeekAndAnalyzedAt(1, "2026-W13", latestMetadata.getAnalyzedAt());
+		assertEquals("2026-03-4", response.yearWeek());
 		assertEquals(0L, response.expenseAmount());
 		assertEquals(0L, response.essentialAmount());
 		assertEquals(0L, response.fixedEssentialAmount());

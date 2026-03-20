@@ -1,9 +1,12 @@
 package com.ssafy.amagetdone.domain.transaction.application.service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
+import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -188,6 +191,73 @@ public class TransactionQueryService {
 		);
 	}
 
+	public TransactionAnalysisDto.OnboardingResult getMonthlyExecutionAnalysisResult(
+		Integer userId,
+		TransactionAnalysisMetadata metadata,
+		YearMonth month
+	) {
+		List<Projection> projections = loadProjections(
+			userId,
+			metadata.getWindowStartAt(),
+			metadata.getWindowEndAt(),
+			metadata.getAnalyzedAt()
+		);
+
+		long totalIncomeAmount = projections.stream()
+			.filter(this::isIncome)
+			.mapToLong(projection -> projection.transaction().getTransactionBalance())
+			.sum();
+		long totalExpenseAmount = projections.stream()
+			.filter(this::isPureExpense)
+			.mapToLong(projection -> projection.transaction().getTransactionBalance())
+			.sum();
+		long totalFixedExpenseAmount = projections.stream()
+			.filter(this::isPureExpense)
+			.filter(projection -> resolveExpenseScope(projection) == ExpenseScope.FIXED)
+			.mapToLong(projection -> projection.transaction().getTransactionBalance())
+			.sum();
+		long totalVariableExpenseAmount = projections.stream()
+			.filter(this::isPureExpense)
+			.filter(projection -> resolveExpenseScope(projection) == ExpenseScope.VARIABLE)
+			.mapToLong(projection -> projection.transaction().getTransactionBalance())
+			.sum();
+		int requestedMonths = metadata.getRequestedMonths() == null || metadata.getRequestedMonths() <= 0
+			? 1
+			: metadata.getRequestedMonths();
+
+		long averageIncome = Math.round(totalIncomeAmount / (double) requestedMonths);
+		long averageExpense = Math.round(totalExpenseAmount / (double) requestedMonths);
+		long remainingAmount = averageIncome - averageExpense;
+		double fixedExpenseRatio = totalExpenseAmount == 0L ? 0d : round((totalFixedExpenseAmount * 100d) / totalExpenseAmount);
+		double variableExpenseRatio = totalExpenseAmount == 0L ? 0d : round((totalVariableExpenseAmount * 100d) / totalExpenseAmount);
+
+		List<TransactionAnalysisDto.CategoryExpense> categoryExpenses = projections.stream()
+			.filter(this::isPureExpense)
+			.collect(Collectors.groupingBy(
+				this::resolveCategory,
+				Collectors.summingLong(projection -> projection.transaction().getTransactionBalance())
+			))
+			.entrySet().stream()
+			.sorted((left, right) -> Long.compare(right.getValue(), left.getValue()))
+			.map(entry -> new TransactionAnalysisDto.CategoryExpense(
+				entry.getKey().getId(),
+				entry.getKey().getName(),
+				Math.round(entry.getValue() / (double) requestedMonths)
+			))
+			.toList();
+
+		return new TransactionAnalysisDto.OnboardingResult(
+			month + " 소비 분석을 완료했어요.",
+			averageIncome,
+			averageExpense,
+			remainingAmount,
+			fixedExpenseRatio,
+			variableExpenseRatio,
+			buildOnboardingInsightMessage(averageIncome, averageExpense),
+			categoryExpenses
+		);
+	}
+
 	public TransactionListDto.Response listTransactions(Integer userId, TransactionListDto.Query query) {
 		LocalDate resolvedToDate = query.toDate() == null ? LocalDate.now() : query.toDate();
 		LocalDate resolvedFromDate = query.fromDate() == null ? resolvedToDate.minusMonths(1) : query.fromDate();
@@ -248,18 +318,20 @@ public class TransactionQueryService {
 	}
 
 	public WeeklyTransactionAnalysisDto.Response getWeeklyTransactionAnalysis(Integer userId, String yearWeek) {
+		String externalYearMonthWeek = normalizeYearMonthWeek(yearWeek);
+		String internalYearWeek = toInternalYearWeek(externalYearMonthWeek);
 		TransactionAnalysisMetadata latestMetadata = transactionAnalysisMetadataRepository
 			.findTopByUser_IdOrderByAnalyzedAtDesc(userId)
 			.orElse(null);
 		if (latestMetadata == null) {
-			return WeeklyTransactionAnalysisDto.Response.empty(yearWeek);
+			return WeeklyTransactionAnalysisDto.Response.empty(externalYearMonthWeek);
 		}
 
 		EssentialExpenseSnapshotWeek snapshotWeek = essentialExpenseSnapshotWeekRepository
-			.findByUser_IdAndYearWeekAndAnalyzedAt(userId, yearWeek, latestMetadata.getAnalyzedAt())
+			.findByUser_IdAndYearWeekAndAnalyzedAt(userId, internalYearWeek, latestMetadata.getAnalyzedAt())
 			.orElse(null);
 		if (snapshotWeek == null) {
-			return WeeklyTransactionAnalysisDto.Response.empty(yearWeek);
+			return WeeklyTransactionAnalysisDto.Response.empty(externalYearMonthWeek);
 		}
 
 		List<Projection> projections = loadProjections(
@@ -278,7 +350,7 @@ public class TransactionQueryService {
 			.toList();
 
 		return new WeeklyTransactionAnalysisDto.Response(
-			snapshotWeek.getYearWeek(),
+			toExternalYearMonthWeek(snapshotWeek.getWeekStartDate()),
 			snapshotWeek.getWeekStartDate(),
 			snapshotWeek.getWeekEndDate(),
 			projections.stream()
@@ -356,6 +428,58 @@ public class TransactionQueryService {
 	private TransactionAnalysisMetadata getLatestMetadata(Integer userId) {
 		return transactionAnalysisMetadataRepository.findTopByUser_IdOrderByAnalyzedAtDesc(userId)
 			.orElseThrow(() -> new TransactionException(TransactionErrorCode.TRANSACTION_ANALYSIS_RESULT_NOT_FOUND));
+	}
+
+	private String normalizeYearMonthWeek(String value) {
+		if (value == null || value.isBlank()) {
+			throw new IllegalArgumentException("yearWeek must follow yyyy-MM-w.");
+		}
+		String[] tokens = value.split("-");
+		if (tokens.length != 3) {
+			throw new IllegalArgumentException("yearWeek must follow yyyy-MM-w.");
+		}
+		try {
+			YearMonth targetMonth = YearMonth.of(Integer.parseInt(tokens[0]), Integer.parseInt(tokens[1]));
+			int weekOfMonth = Integer.parseInt(tokens[2]);
+			LocalDate weekStartDate = resolveWeekStartDate(targetMonth, weekOfMonth);
+			return toExternalYearMonthWeek(weekStartDate);
+		} catch (RuntimeException exception) {
+			throw new IllegalArgumentException("yearWeek must follow yyyy-MM-w.", exception);
+		}
+	}
+
+	private String toInternalYearWeek(String yearMonthWeek) {
+		String[] tokens = yearMonthWeek.split("-");
+		YearMonth targetMonth = YearMonth.of(Integer.parseInt(tokens[0]), Integer.parseInt(tokens[1]));
+		int weekOfMonth = Integer.parseInt(tokens[2]);
+		LocalDate weekStartDate = resolveWeekStartDate(targetMonth, weekOfMonth);
+		WeekFields weekFields = WeekFields.ISO;
+		return "%04d-W%02d".formatted(
+			weekStartDate.get(weekFields.weekBasedYear()),
+			weekStartDate.get(weekFields.weekOfWeekBasedYear())
+		);
+	}
+
+	private LocalDate resolveWeekStartDate(YearMonth targetMonth, int weekOfMonth) {
+		if (weekOfMonth <= 0) {
+			throw new IllegalArgumentException("yearWeek must follow yyyy-MM-w.");
+		}
+		LocalDate firstWeekStartDate = targetMonth.atDay(1).with(TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY));
+		LocalDate weekStartDate = firstWeekStartDate.plusWeeks(weekOfMonth - 1L);
+		if (!YearMonth.from(weekStartDate).equals(targetMonth)) {
+			throw new IllegalArgumentException("yearWeek must follow yyyy-MM-w.");
+		}
+		return weekStartDate;
+	}
+
+	private String toExternalYearMonthWeek(LocalDate weekStartDate) {
+		YearMonth targetMonth = YearMonth.from(weekStartDate);
+		LocalDate firstWeekStartDate = targetMonth.atDay(1).with(TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY));
+		long weekIndex = ChronoUnit.WEEKS.between(firstWeekStartDate, weekStartDate) + 1L;
+		if (weekIndex <= 0) {
+			throw new IllegalArgumentException("yearWeek must follow yyyy-MM-w.");
+		}
+		return targetMonth + "-" + weekIndex;
 	}
 
 	private List<Projection> loadProjections(

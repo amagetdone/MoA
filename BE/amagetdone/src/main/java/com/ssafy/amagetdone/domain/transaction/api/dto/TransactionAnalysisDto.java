@@ -8,8 +8,7 @@ public final class TransactionAnalysisDto {
 	}
 
 	public record Request(
-		Integer months,
-		Boolean relabel
+		Integer months
 	) {
 	}
 

@@ -14,6 +14,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
@@ -121,6 +122,41 @@ class TransactionAnalysisServiceTest {
 		assertEquals(3, metadata.getRequestedMonths());
 		assertEquals(0, metadata.getTransactionCount());
 		verifyNoInteractions(merchantInferenceApiClient);
+	}
+
+	@Test
+	void analyzeTransactionsForMonthUsesExactMonthWindow() {
+		TransactionAnalysisService service = serviceWithClock("2026-03-17T10:15:30Z");
+		User user = user(1, "user-key-1");
+
+		given(accountTransactionOverrideRepository.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(
+			any(),
+			any(),
+			any()
+		)).willReturn(List.of());
+		given(cardTransactionOverrideRepository
+			.findAllByCard_WithdrawalAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of());
+		given(userRepository.getReferenceById(1)).willReturn(user);
+		given(accountRepository.findAllByUser_Id(1)).willReturn(List.of());
+		given(transactionAnalysisResultRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
+		given(transactionAnalysisMetadataRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
+
+		TransactionAnalysisMetadata metadata = service.analyzeTransactions(1, YearMonth.of(2026, 2));
+
+		ArgumentCaptor<LocalDateTime> fromCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+		ArgumentCaptor<LocalDateTime> toCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+		verify(accountTransactionOverrideRepository)
+			.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(
+				any(),
+				fromCaptor.capture(),
+				toCaptor.capture()
+			);
+		assertEquals(LocalDateTime.of(2026, 2, 1, 0, 0), fromCaptor.getValue());
+		assertEquals(LocalDateTime.of(2026, 2, 28, 23, 59, 59, 999_999_999), toCaptor.getValue());
+		assertEquals(LocalDateTime.of(2026, 2, 1, 0, 0), metadata.getWindowStartAt());
+		assertEquals(LocalDateTime.of(2026, 2, 28, 23, 59, 59, 999_999_999), metadata.getWindowEndAt());
+		assertEquals(1, metadata.getRequestedMonths());
 	}
 
 	@Test
