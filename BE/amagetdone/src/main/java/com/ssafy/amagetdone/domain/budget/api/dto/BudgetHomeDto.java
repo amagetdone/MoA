@@ -85,23 +85,19 @@ public final class BudgetHomeDto {
 	}
 
 	public record AssetSummary(
-		long totalAssetAmount,
-		List<AssetAccount> accounts
+		long totalAssetAmount
 	) {
 
 		public static AssetSummary of(Long totalAssetAmount) {
-			return of(totalAssetAmount, null);
+			return new AssetSummary(zero(totalAssetAmount));
 		}
 
 		public static AssetSummary of(Long totalAssetAmount, List<AssetAccount> accounts) {
-			return new AssetSummary(
-				zero(totalAssetAmount),
-				copyOfOrEmpty(accounts)
-			);
+			return of(totalAssetAmount);
 		}
 
 		public static AssetSummary empty() {
-			return of(null, null);
+			return of(null);
 		}
 	}
 
