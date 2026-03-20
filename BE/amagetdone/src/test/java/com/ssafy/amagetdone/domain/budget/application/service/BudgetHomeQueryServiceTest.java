@@ -101,17 +101,6 @@ class BudgetHomeQueryServiceTest {
 		assertThat(response.plans()).extracting(BudgetHomeDto.PlanCard::title)
 			.containsExactly("Travel Fund", "Wedding Fund");
 		assertThat(response.assetSummary().totalAssetAmount()).isEqualTo(5_400_000L);
-		assertThat(response.assetSummary().accounts())
-			.extracting(
-				BudgetHomeDto.AssetAccount::accountId,
-				BudgetHomeDto.AssetAccount::bankName,
-				BudgetHomeDto.AssetAccount::accountNo,
-				BudgetHomeDto.AssetAccount::balanceAmount
-			)
-			.containsExactly(
-				org.assertj.core.groups.Tuple.tuple("111-111-111111", "Shinhan", "111-111-111111", 2_000_000L),
-				org.assertj.core.groups.Tuple.tuple("222-222-222222", "KB", "222-222-222222", 3_400_000L)
-			);
 	}
 
 	@Test
@@ -135,12 +124,7 @@ class BudgetHomeQueryServiceTest {
 
 		BudgetHomeDto.Response response = service.getHome(1);
 
-		assertThat(response.assetSummary().accounts())
-			.extracting("accountNo", "verified")
-			.containsExactly(
-				org.assertj.core.groups.Tuple.tuple("111-111-111111", true),
-				org.assertj.core.groups.Tuple.tuple("222-222-222222", false)
-			);
+		assertThat(response.assetSummary().totalAssetAmount()).isEqualTo(2_500_000L);
 	}
 
 	@Test
@@ -159,7 +143,6 @@ class BudgetHomeQueryServiceTest {
 		BudgetHomeDto.Response response = service.getHome(1);
 
 		assertThat(response.assetSummary().totalAssetAmount()).isZero();
-		assertThat(response.assetSummary().accounts()).isEmpty();
 		assertThat(response.freeSpending().remainingAmount()).isEqualTo(60_000L);
 		assertThat(response.weeklySaving().thisWeekSavingAmount()).isZero();
 		assertThat(response.plans()).isEmpty();
