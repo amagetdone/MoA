@@ -98,7 +98,7 @@ class BudgetAllocationTriggerServiceTest {
 		inOrder.verify(refreshEssentialExpenseMonthFromAnalysisUseCase).execute(userId, baseMonth);
 		inOrder.verify(budgetMonthRepository).findByUser_IdAndBaseDate(userId, baseMonth);
 		inOrder.verify(essentialExpenseMonthRepository).findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(userId);
-		inOrder.verify(planRepository).findAllByUser_IdAndStatus(userId, PlanStatus.ACTIVE);
+		inOrder.verify(planRepository).findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE);
 		inOrder.verify(allocateBudgetUseCase).execute(
 			any(User.class),
 			eq(baseMonth),
