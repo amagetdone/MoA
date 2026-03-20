@@ -24,10 +24,11 @@ class AssetPage extends ConsumerStatefulWidget {
 }
 
 class _AssetPageState extends ConsumerState<AssetPage> {
-  bool _isCreditExpanded = false;
   String? _selectedAccountNo;
   int _periodIdx = 1; // 0:1개월, 1:3개월, 2:6개월, 3:지난달
-  String _filterLabel = '3개월·전체·계좌';
+  int _typeIdx = 0;   // 0:전체, 1:입금만, 2:출금만
+  int _creditIdx = 0; // 0:포함, 1:미포함, 2:카드만
+  String _filterLabel = '3개월·전체·전체계좌';
 
   @override
   void initState() {
@@ -88,12 +89,23 @@ class _AssetPageState extends ConsumerState<AssetPage> {
         accounts: accounts,
         selectedAccountNo: _selectedAccountNo,
         initialPeriodIdx: _periodIdx,
-        onApply: ({required int periodIdx, required String? accountNo}) {
+        initialTypeIdx: _typeIdx,
+        initialCreditIdx: _creditIdx,
+        onApply: ({
+          required int periodIdx,
+          required String? accountNo,
+          required int typeIdx,
+          required int creditIdx,
+        }) {
           setState(() {
             _periodIdx = periodIdx;
             _selectedAccountNo = accountNo;
+            _typeIdx = typeIdx;
+            _creditIdx = creditIdx;
             final periods = ['1개월', '3개월', '6개월', '지난달'];
-            _filterLabel = '${periods[periodIdx]}·전체·계좌';
+            final types = ['전체', '입금만', '출금만'];
+            final credits = ['포함', '미포함', '카드만'];
+            _filterLabel = '${periods[periodIdx]}·${types[typeIdx]}·${credits[creditIdx]}';
           });
           _fetchTransactions();
         },
@@ -114,7 +126,18 @@ class _AssetPageState extends ConsumerState<AssetPage> {
   Widget build(BuildContext context) {
     final accountState = ref.watch(accountViewModelProvider);
     final accounts = accountState.accounts;
-    final transactions = accountState.transactions;
+
+    var transactions = accountState.transactions;
+    // 거래 유형 필터
+    if (_typeIdx == 1) transactions = transactions.where((t) => t.type == TransactionType.income).toList();
+    if (_typeIdx == 2) transactions = transactions.where((t) => t.type == TransactionType.expense).toList();
+    // 신용카드 포함 여부 필터
+    if (_creditIdx == 1) transactions = transactions.where((t) => t.sourceType != 'CARD').toList();
+    if (_creditIdx == 2) transactions = transactions.where((t) => t.sourceType == 'CARD').toList();
+    // 계좌 필터
+    if (_selectedAccountNo != null) {
+      transactions = transactions.where((t) => t.accountId == _selectedAccountNo).toList();
+    }
     final grouped = _groupByDate(transactions);
 
     // 계좌 목록 로드 후 대표계좌 자동 선택
@@ -202,31 +225,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                             ),
                           ],
                         ),
-                        SizedBox(height: 24.h),
-                        const Divider(color: Color(0xFFEEEEEE)),
-                        SizedBox(height: 16.h),
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () => setState(() => _isCreditExpanded = !_isCreditExpanded),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(_isCreditExpanded ? Icons.arrow_drop_down : Icons.arrow_right, size: 24),
-                                  Text('신용카드 결제 예정', style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.w500)),
-                                ],
-                              ),
-                              Text('- 1,200,000원', style: AppTextStyles.bodyMd.copyWith(color: const Color(0xFFE57373), fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                        ),
-                        if (_isCreditExpanded) ...[
-                          SizedBox(height: 16.h),
-                          _buildCreditItem('신한은행', '-550,000원', '03.25 결제 예정'),
-                          _buildCreditItem('기업은행', '-400,000원', '04.05 결제 예정'),
-                          _buildCreditItem('카카오뱅크', '-250,000원', '04.05 결제 예정'),
-                        ],
+                        // TODO: 신용카드 결제 예정 API 미지원으로 임시 숨김
                       ],
                     ),
                   ),
@@ -283,25 +282,6 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCreditItem(String bank, String amount, String date) {
-    return Padding(
-      padding: EdgeInsets.only(left: 32.w, bottom: 12.h),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(bank, style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary)),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(amount, style: AppTextStyles.bodySm.copyWith(fontWeight: FontWeight.w600, color: const Color(0xFFAAAAAA))),
-              Text(date, style: AppTextStyles.caption.copyWith(color: const Color(0xFFCCCCCC), fontSize: 10.sp)),
-            ],
           ),
         ],
       ),
@@ -380,13 +360,22 @@ class _AssetFilterBottomSheet extends StatefulWidget {
   final List<Account> accounts;
   final String? selectedAccountNo;
   final int initialPeriodIdx;
-  final void Function({required int periodIdx, required String? accountNo}) onApply;
+  final int initialTypeIdx;
+  final int initialCreditIdx;
+  final void Function({
+    required int periodIdx,
+    required String? accountNo,
+    required int typeIdx,
+    required int creditIdx,
+  }) onApply;
 
   const _AssetFilterBottomSheet({
     required this.accounts,
     required this.selectedAccountNo,
     required this.onApply,
     this.initialPeriodIdx = 1,
+    this.initialTypeIdx = 0,
+    this.initialCreditIdx = 0,
   });
 
   @override
@@ -404,6 +393,8 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
   void initState() {
     super.initState();
     _periodIdx = widget.initialPeriodIdx;
+    _typeIdx = widget.initialTypeIdx;
+    _creditIdx = widget.initialCreditIdx;
     _selectedAccountNo = widget.selectedAccountNo;
   }
 
@@ -471,6 +462,8 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
                 widget.onApply(
                   periodIdx: _periodIdx,
                   accountNo: _selectedAccountNo,
+                  typeIdx: _typeIdx,
+                  creditIdx: _creditIdx,
                 );
                 Navigator.pop(context);
               },

@@ -15,6 +15,8 @@ import 'package:more_app/data/datasources/remote/real/real_goal_remote_datasourc
 import 'package:more_app/data/datasources/remote/seed/seed_data_store.dart';
 import 'package:more_app/data/datasources/remote/real/real_home_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/real/real_menu_remote_datasource.dart';
+import 'package:more_app/data/datasources/remote/budget_remote_datasource.dart';
+import 'package:more_app/data/datasources/remote/real/real_budget_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/real/real_spending_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/social_auth_datasource.dart';
 import 'package:more_app/data/datasources/remote/social_auth_datasource_impl.dart';
@@ -26,12 +28,14 @@ import 'package:more_app/data/repositories/auth_repository_impl.dart';
 import 'package:more_app/data/repositories/goal_repository_impl.dart';
 import 'package:more_app/data/repositories/home_repository_impl.dart';
 import 'package:more_app/data/repositories/menu_repository_impl.dart';
+import 'package:more_app/data/repositories/budget_repository_impl.dart';
 import 'package:more_app/data/repositories/spending_repository_impl.dart';
 import 'package:more_app/domain/repositories/account_repository.dart';
 import 'package:more_app/domain/repositories/auth_repository.dart';
 import 'package:more_app/domain/repositories/goal_repository.dart';
 import 'package:more_app/domain/repositories/home_repository.dart';
 import 'package:more_app/domain/repositories/menu_repository.dart';
+import 'package:more_app/domain/repositories/budget_repository.dart';
 import 'package:more_app/domain/repositories/spending_repository.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 
@@ -98,6 +102,16 @@ final spendingRemoteDataSourceProvider =
     Provider<SpendingRemoteDataSource>((ref) {
   return RealSpendingRemoteDataSource(
     dio: ref.read(apiClientProvider).dio,
+  );
+});
+
+final budgetRemoteDataSourceProvider = Provider<BudgetRemoteDataSource>((ref) {
+  return RealBudgetRemoteDataSource(dio: ref.read(apiClientProvider).dio);
+});
+
+final budgetRepositoryProvider = Provider<BudgetRepository>((ref) {
+  return BudgetRepositoryImpl(
+    remoteDataSource: ref.read(budgetRemoteDataSourceProvider),
   );
 });
 

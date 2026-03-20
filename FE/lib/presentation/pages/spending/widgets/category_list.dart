@@ -9,10 +9,12 @@ import 'package:more_app/presentation/widgets/common/more_progress_bar.dart';
 
 class CategoryList extends StatefulWidget {
   final List<SpendingCategory> categories;
+  final int? totalAmount;
 
   const CategoryList({
     super.key,
     required this.categories,
+    this.totalAmount,
   });
 
   @override
@@ -33,9 +35,15 @@ class _CategoryListState extends State<CategoryList> {
     return Column(
       children: [
         ...displayItems.map((category) {
-          final ratio = category.budget > 0
-              ? (category.amount / category.budget).clamp(0.0, 1.0)
-              : 0.0;
+          final bool useTotalRatio = widget.totalAmount != null && widget.totalAmount! > 0;
+          final ratio = useTotalRatio
+              ? (category.amount / widget.totalAmount!).clamp(0.0, 1.0)
+              : category.budget > 0
+                  ? (category.amount / category.budget).clamp(0.0, 1.0)
+                  : 0.0;
+          final percentLabel = useTotalRatio
+              ? '${(ratio * 100).round()}%'
+              : null;
 
           return Padding(
             padding: EdgeInsets.only(bottom: 24.h),
@@ -58,22 +66,36 @@ class _CategoryListState extends State<CategoryList> {
                   ),
                 ),
                 SizedBox(width: 8.w),
-                // 2. 우측 예산 금액 및 바 그래프
+                // 2. 우측 금액 및 바 그래프
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      // 실제 지출 금액 (우측 상단)
-                      Text(
-                        CurrencyFormatter.formatKRW(category.amount),
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.textSecondary,
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text(
+                            CurrencyFormatter.formatKRW(category.amount),
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.textSecondary,
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          if (percentLabel != null) ...[
+                            SizedBox(width: 6.w),
+                            Text(
+                              percentLabel,
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.orange500,
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       SizedBox(height: 6.h),
-                      // 진행 바 (회색 바탕에 주황색 채움)
                       MoreProgressBar(
                         progress: ratio,
                         color: AppColors.orange500,

@@ -10,6 +10,7 @@ class SpendingState {
   final List<SpendingCategory> categories;
   final List<DailySpending> dailySpendings;
   final List<DailySpending> monthlySpendings;
+  final List<DailySpending> monthlyComparisons;
   final int weeklyBudget;
   final int monthlyIncome;
   final int monthlySavingsGoal;
@@ -27,6 +28,7 @@ class SpendingState {
     this.categories = const [],
     this.dailySpendings = const [],
     this.monthlySpendings = const [],
+    this.monthlyComparisons = const [],
     this.weeklyBudget = 0,
     this.monthlyIncome = 0,
     this.monthlySavingsGoal = 0,
@@ -60,6 +62,7 @@ class SpendingState {
     List<SpendingCategory>? categories,
     List<DailySpending>? dailySpendings,
     List<DailySpending>? monthlySpendings,
+    List<DailySpending>? monthlyComparisons,
     int? weeklyBudget,
     int? monthlyIncome,
     int? monthlySavingsGoal,
@@ -79,6 +82,7 @@ class SpendingState {
       categories: categories ?? this.categories,
       dailySpendings: dailySpendings ?? this.dailySpendings,
       monthlySpendings: monthlySpendings ?? this.monthlySpendings,
+      monthlyComparisons: monthlyComparisons ?? this.monthlyComparisons,
       weeklyBudget: weeklyBudget ?? this.weeklyBudget,
       monthlyIncome: monthlyIncome ?? this.monthlyIncome,
       monthlySavingsGoal: monthlySavingsGoal ?? this.monthlySavingsGoal,
@@ -139,12 +143,34 @@ class SpendingViewModel extends StateNotifier<SpendingState> {
           weeklyExpenseAmount: dailySpendings.fold<int>(0, (sum, d) => sum + d.amount),
         );
       } else {
-        final result = await _repository.fetchMonthlyAnalysis(state.selectedMonthStart);
-        final monthlySpendings = await _repository.fetchMonthlyDailySpending(state.selectedMonthStart);
+        final selected = state.selectedMonthStart;
+        final prev1 = DateTime(selected.year, selected.month - 1, 1);
+        final prev2 = DateTime(selected.year, selected.month - 2, 1);
+
+        final result = await _repository.fetchMonthlyAnalysis(selected);
+        final monthlySpendings = await _repository.fetchMonthlyDailySpending(selected);
+        final currentTotal = monthlySpendings.fold<int>(0, (sum, d) => sum + d.amount);
+
+        final priorTotals = await Future.wait([prev2, prev1].map((m) async {
+          try {
+            final spendings = await _repository.fetchMonthlyDailySpending(m);
+            return spendings.fold<int>(0, (sum, d) => sum + d.amount);
+          } catch (_) {
+            return 0;
+          }
+        }));
+
+        final comparisons = [
+          DailySpending(date: prev2, amount: priorTotals[0]),
+          DailySpending(date: prev1, amount: priorTotals[1]),
+          DailySpending(date: selected, amount: currentTotal),
+        ];
+
         state = state.copyWith(
           categories: result.categories,
           monthlySpendings: monthlySpendings,
-          monthlyExpenseAmount: monthlySpendings.fold<int>(0, (sum, d) => sum + d.amount),
+          monthlyComparisons: comparisons,
+          monthlyExpenseAmount: currentTotal,
         );
       }
     } catch (e) {

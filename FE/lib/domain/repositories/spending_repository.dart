@@ -9,6 +9,7 @@ abstract class SpendingRepository {
   Future<MonthlyAnalysisResult> fetchMonthlyAnalysis(DateTime monthStart);
   Future<List<DailySpending>> fetchMonthlyDailySpending(DateTime monthStart);
   Future<SpendingOverview> fetchSpendingOverview();
+  Future<SpendingPatternResult> fetchThreeMonthPattern(DateTime currentMonth);
   Future<SpendingOverview> updateBudgetPlan({
     required int monthlyIncome,
     required int monthlySavingsGoal,

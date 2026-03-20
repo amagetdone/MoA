@@ -65,6 +65,11 @@ class SeedSpendingRemoteDataSource implements SpendingRemoteDataSource {
   }
 
   @override
+  Future<MonthlyTransactionSummary> fetchMonthlyTransactionSummary(DateTime monthStart) async {
+    return const MonthlyTransactionSummary();
+  }
+
+  @override
   Future<SpendingSnapshotDto> fetchSpendingSnapshotDto() async {
     await Future.delayed(const Duration(milliseconds: 220));
     final snapshot = _dataStore.clone(await _dataStore.ensureSessionSnapshot());

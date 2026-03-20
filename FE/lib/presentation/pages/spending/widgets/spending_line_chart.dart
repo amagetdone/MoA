@@ -6,6 +6,16 @@ import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/domain/entities/spending.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
 
+double _niceInterval(double maxVal, bool isWeekly) {
+  // 주간: 4칸, 월간 비교: 3칸 기준으로 nice step 계산
+  final raw = maxVal / (isWeekly ? 4.0 : 3.0);
+  const steps = [10000.0, 20000.0, 50000.0, 100000.0, 200000.0, 500000.0, 1000000.0, 2000000.0, 5000000.0];
+  for (final step in steps) {
+    if (raw <= step) return step;
+  }
+  return steps.last;
+}
+
 class SpendingLineChart extends StatelessWidget {
   final List<DailySpending> data;
   final bool isWeekly;
@@ -31,14 +41,10 @@ class SpendingLineChart extends StatelessWidget {
         .map((e) => FlSpot(e.key.toDouble(), e.value.amount.toDouble()))
         .toList();
 
-    final yInterval = isWeekly ? 50000.0 : 500000.0;
-    final maxY = (((maxVal * 1.3) / yInterval).ceil() * yInterval).toDouble();
-
-    String fmtY(double v) {
-      if (v == 0) return '0';
-      if (v >= 10000) return '${(v / 10000).toStringAsFixed(0)}만';
-      return '${(v / 1000).toStringAsFixed(0)}천';
-    }
+    final yInterval = _niceInterval(maxVal.toDouble(), isWeekly);
+    final ceilSteps = (maxVal / yInterval).ceil();
+    final isExactMultiple = maxVal.toDouble() % yInterval == 0.0;
+    final maxY = (isExactMultiple ? ceilSteps + 1 : ceilSteps) * yInterval;
 
     final barData = LineChartBarData(
       spots: spots,
@@ -79,40 +85,11 @@ class SpendingLineChart extends StatelessWidget {
         Expanded(
           child: LineChart(
             LineChartData(
-              clipData: const FlClipData.all(),
-              gridData: FlGridData(
-                show: true,
-                drawVerticalLine: false,
-                horizontalInterval: yInterval,
-                getDrawingHorizontalLine: (_) => FlLine(
-                  color: AppColors.borderDefault,
-                  strokeWidth: 1,
-                ),
-              ),
+              gridData: const FlGridData(show: false),
               titlesData: FlTitlesData(
                 topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 36.w,
-                    interval: yInterval,
-                    getTitlesWidget: (value, meta) {
-                      if (value == meta.max) return const SizedBox.shrink();
-                      return Padding(
-                        padding: EdgeInsets.only(right: 4.w),
-                        child: Text(
-                          fmtY(value),
-                          style: AppTextStyles.caption.copyWith(
-                            color: AppColors.textTertiary,
-                            fontSize: 10.sp,
-                          ),
-                          textAlign: TextAlign.right,
-                        ),
-                      );
-                    },
-                  ),
-                ),
+                leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,

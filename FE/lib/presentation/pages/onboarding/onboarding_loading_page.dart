@@ -70,9 +70,11 @@ class _OnboardingLoadingPageState extends ConsumerState<OnboardingLoadingPage>
       // 수입 다이얼로그
       final income = await _showIncomeDialog();
       if (!mounted) return;
-      await ref
-          .read(onboardingViewModelProvider.notifier)
-          .saveIncome(income ?? 0);
+      try {
+        await ref
+            .read(onboardingViewModelProvider.notifier)
+            .saveIncome(income ?? 0);
+      } catch (_) {}
       if (!mounted) return;
 
       // phase 1: "지난 3개월 거래내역 기반으로 소비패턴을 분석 중입니다."

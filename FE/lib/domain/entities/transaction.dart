@@ -8,6 +8,7 @@ class Transaction {
   final int balanceAfter;
   final String? memo;
   final String? accountId;
+  final String? sourceType; // 'ACCOUNT' or 'CARD'
 
   const Transaction({
     required this.id,
@@ -19,6 +20,7 @@ class Transaction {
     required this.balanceAfter,
     this.memo,
     this.accountId,
+    this.sourceType,
   });
 }
 

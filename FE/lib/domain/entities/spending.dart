@@ -74,3 +74,25 @@ class MonthlyAnalysisResult {
     this.expenseAmount = 0,
   });
 }
+
+class SpendingPatternResult {
+  final int totalIncome;
+  final int totalExpense;
+  final int fixedAmount;
+  final int variableAmount;
+  final int freeAmount;
+  final int savingsAmount;
+  final List<SpendingCategory> categories;
+  final String topCategoryName;
+
+  const SpendingPatternResult({
+    this.totalIncome = 0,
+    this.totalExpense = 0,
+    this.fixedAmount = 0,
+    this.variableAmount = 0,
+    this.freeAmount = 0,
+    this.savingsAmount = 0,
+    this.categories = const [],
+    this.topCategoryName = '',
+  });
+}
