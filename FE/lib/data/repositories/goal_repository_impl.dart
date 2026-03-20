@@ -41,6 +41,15 @@ class GoalRepositoryImpl implements GoalRepository {
   }
 
   @override
+  Future<void> deleteGoal(String id) async {
+    try {
+      await _remoteDataSource.deleteGoal(id);
+    } finally {
+      await _localDataSource.removeGoal(id);
+    }
+  }
+
+  @override
   Future<GoalWeeklyPlanPage> fetchGoalWeeklyPlans(
     String id, {
     int page = 0,

@@ -30,6 +30,7 @@ abstract class AppLocalDataSource {
   Future<List<DailySpending>> getGoalSavingsHistory(String goalId);
   Future<Goal> createGoal(Goal goal);
   Future<Goal> updateGoal(Goal goal);
+  Future<void> removeGoal(String id);
   Future<List<Goal>> saveGoalPriority(List<Goal> goals);
   Future<List<Goal>> replaceGoals(List<Goal> goals);
   Future<Uint8List?> getGoalSketchVideo(String goalId);
@@ -319,6 +320,29 @@ class AppLocalDataSourceImpl implements AppLocalDataSource {
     updatedGoals[index] = goal;
     await _persistSnapshot(snapshot.copyWith(goals: updatedGoals));
     return goal;
+  }
+
+  @override
+  Future<void> removeGoal(String id) async {
+    final snapshot = await _loadSnapshot();
+    final updatedGoals = snapshot.goals.where((item) => item.id != id).toList();
+    final updatedHistory = Map<String, List<DailySpending>>.from(
+      snapshot.goalSavingsHistoryByGoalId,
+    )..remove(id);
+
+    await _persistSnapshot(
+      snapshot.copyWith(
+        goals: updatedGoals,
+        goalSavingsHistoryByGoalId: updatedHistory,
+      ),
+    );
+
+    await _ensureStorageReady();
+    if (_storageReady) {
+      await _goalSketchVideoBox?.delete(id);
+    } else {
+      _memorySketchVideos.remove(id);
+    }
   }
 
   @override

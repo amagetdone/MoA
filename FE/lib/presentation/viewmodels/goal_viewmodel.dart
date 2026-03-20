@@ -146,10 +146,19 @@ class GoalViewModel extends StateNotifier<GoalState> {
     );
   }
 
-  void removeGoal(String goalId) {
-    state = state.copyWith(
-      goals: state.goals.where((g) => g.id != goalId).toList(),
-    );
+  Future<void> removeGoal(String goalId) async {
+    try {
+      await _repository.deleteGoal(goalId);
+      final updatedHistory = Map<String, List<DailySpending>>.from(
+        state.savingsHistoryByGoalId,
+      )..remove(goalId);
+      state = state.copyWith(
+        goals: state.goals.where((g) => g.id != goalId).toList(),
+        savingsHistoryByGoalId: updatedHistory,
+      );
+    } catch (error) {
+      state = state.copyWith(errorMessage: error.toString());
+    }
   }
 
   Future<void> reorderGoals(List<Goal> reordered) async {

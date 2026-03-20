@@ -66,6 +66,24 @@ class MockApiGoalRemoteDataSource implements GoalRemoteDataSource {
   }
 
   @override
+  Future<void> deleteGoal(String id) async {
+    await _ensureLoaded();
+    await Future.delayed(const Duration(milliseconds: 180));
+
+    final planId = int.tryParse(id);
+    if (planId == null) {
+      return;
+    }
+
+    _planListItems.removeWhere(
+      (item) => ((item['planId'] as num?)?.toInt() ?? 0) == planId,
+    );
+    _planDetails.remove(planId);
+    _seededWeeklyPlanPages.remove(planId);
+    _videoUrls.remove(planId);
+  }
+
+  @override
   Future<GoalWeeklyPlanPage> fetchGoalWeeklyPlans(
     String id, {
     int page = 0,

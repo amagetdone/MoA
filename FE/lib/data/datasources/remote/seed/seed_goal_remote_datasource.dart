@@ -46,6 +46,22 @@ class SeedGoalRemoteDataSource implements GoalRemoteDataSource {
   }
 
   @override
+  Future<void> deleteGoal(String id) async {
+    await Future.delayed(const Duration(milliseconds: 180));
+    await _dataStore.mutate((snapshot) {
+      final updatedGoals = snapshot.goals.where((item) => item.id != id).toList();
+      final updatedHistory = Map<String, List<DailySpending>>.from(
+        snapshot.goalSavingsHistoryByGoalId,
+      )..remove(id);
+
+      return snapshot.copyWith(
+        goals: updatedGoals,
+        goalSavingsHistoryByGoalId: updatedHistory,
+      );
+    });
+  }
+
+  @override
   Future<GoalWeeklyPlanPage> fetchGoalWeeklyPlans(
     String id, {
     int page = 0,
