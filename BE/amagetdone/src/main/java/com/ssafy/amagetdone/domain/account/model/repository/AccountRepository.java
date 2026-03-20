@@ -36,7 +36,6 @@ public interface AccountRepository extends JpaRepository<Account, String> {
 		select a
 		from Account a
 		where a.user.id = :userId
-			and a.verified = true
 			and a.active = true
 		order by a.accountNo asc
 		""")
