@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:graphic/graphic.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
@@ -31,13 +32,19 @@ class SpendingRoseChart extends StatefulWidget {
 }
 
 class _SpendingRoseChartState extends State<SpendingRoseChart> {
-  int? _tappedIndex;
+  int? _selectedIndex;
 
   List<_RoseEntry> _buildEntries() {
     if (widget.categories.isEmpty) return [];
 
-    // 금액 기준 내림차순 정렬
-    final sorted = [...widget.categories]..sort((a, b) => b.amount.compareTo(a.amount));
+    // 같은 이름 카테고리 합치기
+    final merged = <String, int>{};
+    for (final c in widget.categories) {
+      merged[c.name] = (merged[c.name] ?? 0) + c.amount;
+    }
+
+    final sorted = merged.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
 
     final entries = <_RoseEntry>[];
     int othersAmount = 0;
@@ -45,12 +52,12 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
     for (int i = 0; i < sorted.length; i++) {
       if (i < 5) {
         entries.add(_RoseEntry(
-          name: sorted[i].name,
-          amount: sorted[i].amount,
+          name: sorted[i].key,
+          amount: sorted[i].value,
           color: _petalColors[i],
         ));
       } else {
-        othersAmount += sorted[i].amount;
+        othersAmount += sorted[i].value;
       }
     }
 
@@ -73,6 +80,16 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
     if (entries.isEmpty || total == 0) {
       return const SizedBox.shrink();
     }
+
+    final chartData = entries
+        .asMap()
+        .entries
+        .map((e) => {
+          'name': e.value.name,
+          'value': e.value.amount,
+          'index': e.key.toString(),
+        })
+        .toList();
 
     return MoreCard(
       padding: EdgeInsets.all(16.w),
@@ -97,27 +114,82 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
           ),
           SizedBox(height: 16.h),
 
-          // Rose chart
           SizedBox(
-            height: 220.h,
-            child: GestureDetector(
-              onTapDown: (details) => _handleTap(details, entries, total),
-              onTapUp: (_) {},
-              child: CustomPaint(
-                size: Size.infinite,
-                painter: _RosePainter(
-                  entries: entries,
-                  total: total,
-                  tappedIndex: _tappedIndex,
+            height: 240.h,
+            child: Chart(
+              data: chartData,
+              variables: {
+                'name': Variable(
+                  accessor: (Map map) => map['name'] as String,
                 ),
+                'value': Variable(
+                  accessor: (Map map) => map['value'] as num,
+                  scale: LinearScale(min: 0, marginMax: 0.1),
+                ),
+                'index': Variable(
+                  accessor: (Map map) => map['index'] as String,
+                ),
+              },
+              marks: [
+                IntervalMark(
+                  shape: ShapeEncode(
+                    value: RectShape(
+                      borderRadius: BorderRadius.all(Radius.circular(6.r)),
+                    ),
+                  ),
+                  color: ColorEncode(
+                    variable: 'index',
+                    values: entries.length >= 2
+                        ? entries.map((e) => e.color).toList()
+                        : [entries.first.color, entries.first.color],
+                  ),
+                  elevation: ElevationEncode(value: 3),
+                  transition: Transition(
+                    duration: const Duration(milliseconds: 800),
+                    curve: Curves.elasticOut,
+                  ),
+                  entrance: {MarkEntrance.y},
+                ),
+              ],
+              coord: PolarCoord(startRadius: 0.15),
+              selections: {
+                'tap': PointSelection(
+                  on: {GestureType.tap},
+                  toggle: true,
+                ),
+              },
+              tooltip: TooltipGuide(
+                renderer: (size, anchor, selectedTuples) {
+                  if (selectedTuples.isEmpty) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted && _selectedIndex != null) {
+                        setState(() => _selectedIndex = null);
+                      }
+                    });
+                    return [];
+                  }
+
+                  final tuple = selectedTuples.values.first;
+                  final idxStr = tuple['index']?.toString() ?? '';
+                  final idx = int.tryParse(idxStr) ?? -1;
+
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && _selectedIndex != idx) {
+                      setState(() => _selectedIndex = idx);
+                    }
+                  });
+
+                  // 투명 요소 반환 (기본 툴팁 숨김, 우리 커스텀 UI 사용)
+                  return [];
+                },
               ),
             ),
           ),
 
           // 선택된 카테고리 정보
-          if (_tappedIndex != null && _tappedIndex! < entries.length) ...[
-            SizedBox(height: 12.h),
-            _SelectedInfo(entry: entries[_tappedIndex!], total: total),
+          if (_selectedIndex != null && _selectedIndex! < entries.length) ...[
+            SizedBox(height: 8.h),
+            _SelectedInfo(entry: entries[_selectedIndex!], total: total),
           ],
 
           SizedBox(height: 12.h),
@@ -127,7 +199,9 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
             spacing: 12.w,
             runSpacing: 6.h,
             children: entries.map((e) {
-              final percent = total > 0 ? (e.amount / total * 100).toStringAsFixed(0) : '0';
+              final percent = total > 0
+                  ? (e.amount / total * 100).toStringAsFixed(0)
+                  : '0';
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -155,35 +229,6 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
       ),
     );
   }
-
-  void _handleTap(TapDownDetails details, List<_RoseEntry> entries, int total) {
-    final box = context.findRenderObject() as RenderBox;
-    final size = box.size;
-    // chart area: 16.w padding, starts after header (~40h)
-    final chartCenter = Offset(size.width / 2, 16.w + 40.h + 220.h / 2);
-    final tapPos = details.localPosition;
-    final dx = tapPos.dx - chartCenter.dx;
-    final dy = tapPos.dy - chartCenter.dy;
-    final dist = math.sqrt(dx * dx + dy * dy);
-    final maxRadius = math.min(220.h, size.width - 32.w) / 2 * 0.85;
-
-    if (dist > maxRadius || dist < 15) {
-      setState(() => _tappedIndex = null);
-      return;
-    }
-
-    var angle = math.atan2(dy, dx);
-    if (angle < 0) angle += 2 * math.pi;
-    // painter starts at -pi/2, so adjust
-    angle = (angle + math.pi / 2) % (2 * math.pi);
-
-    final sweepAngle = 2 * math.pi / entries.length;
-    final index = (angle / sweepAngle).floor();
-
-    setState(() {
-      _tappedIndex = index == _tappedIndex ? null : index;
-    });
-  }
 }
 
 class _SelectedInfo extends StatelessWidget {
@@ -193,7 +238,9 @@ class _SelectedInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final percent = total > 0 ? (entry.amount / total * 100).toStringAsFixed(1) : '0';
+    final percent = total > 0
+        ? (entry.amount / total * 100).toStringAsFixed(1)
+        : '0';
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
       decoration: BoxDecoration(
@@ -205,7 +252,10 @@ class _SelectedInfo extends StatelessWidget {
           Container(
             width: 10.w,
             height: 10.w,
-            decoration: BoxDecoration(color: entry.color, shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: entry.color,
+              shape: BoxShape.circle,
+            ),
           ),
           SizedBox(width: 8.w),
           Text(
@@ -236,77 +286,9 @@ class _RoseEntry {
   final String name;
   final int amount;
   final Color color;
-  const _RoseEntry({required this.name, required this.amount, required this.color});
-}
-
-class _RosePainter extends CustomPainter {
-  _RosePainter({
-    required this.entries,
-    required this.total,
-    this.tappedIndex,
+  const _RoseEntry({
+    required this.name,
+    required this.amount,
+    required this.color,
   });
-
-  final List<_RoseEntry> entries;
-  final int total;
-  final int? tappedIndex;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (entries.isEmpty || total == 0) return;
-
-    final center = Offset(size.width / 2, size.height / 2);
-    final maxRadius = math.min(size.width, size.height) / 2 * 0.85;
-    final minRadius = maxRadius * 0.2;
-    final sweepAngle = 2 * math.pi / entries.length;
-    final gap = 0.04; // 꽃잎 사이 간격 (radian)
-
-    // 최대 금액 기준으로 반지름 계산
-    final maxAmount = entries.map((e) => e.amount).reduce(math.max);
-
-    for (int i = 0; i < entries.length; i++) {
-      final entry = entries[i];
-      final ratio = maxAmount > 0 ? entry.amount / maxAmount : 0.0;
-      final radius = minRadius + (maxRadius - minRadius) * ratio;
-      final isTapped = tappedIndex == i;
-      final startAngle = -math.pi / 2 + sweepAngle * i + gap / 2;
-      final actualSweep = sweepAngle - gap;
-
-      final paint = Paint()
-        ..color = isTapped ? entry.color : entry.color.withValues(alpha: 0.75)
-        ..style = PaintingStyle.fill;
-
-      // 선택 시 살짝 바깥으로
-      var drawCenter = center;
-      if (isTapped) {
-        final midAngle = startAngle + actualSweep / 2;
-        drawCenter = Offset(
-          center.dx + math.cos(midAngle) * 6,
-          center.dy + math.sin(midAngle) * 6,
-        );
-      }
-
-      final path = Path()
-        ..moveTo(drawCenter.dx, drawCenter.dy)
-        ..arcTo(
-          Rect.fromCircle(center: drawCenter, radius: isTapped ? radius + 4 : radius),
-          startAngle,
-          actualSweep,
-          false,
-        )
-        ..close();
-
-      // 그림자
-      if (isTapped) {
-        canvas.drawShadow(path, Colors.black, 4, false);
-      }
-
-      canvas.drawPath(path, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _RosePainter oldDelegate) {
-    return oldDelegate.tappedIndex != tappedIndex ||
-        oldDelegate.entries != entries;
-  }
 }

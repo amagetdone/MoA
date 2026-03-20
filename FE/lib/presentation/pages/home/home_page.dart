@@ -12,6 +12,7 @@ import 'package:more_app/presentation/pages/home/widgets/goals_section_card.dart
 import 'package:more_app/presentation/pages/home/widgets/savings_card.dart';
 import 'package:more_app/presentation/pages/home/widgets/spending_card.dart';
 import 'package:more_app/presentation/pages/home/widgets/spending_rose_chart.dart';
+import 'package:more_app/domain/entities/spending.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/spending_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
@@ -198,11 +199,12 @@ class _HomePageState extends ConsumerState<HomePage> {
           SizedBox(height: 8.h),
 
           // 이번 주 소비 rose 차트
-          // TODO: 테스트용 1월 1주차 하드코딩 - 원복 필요
           Builder(builder: (context) {
             final spendingState = ref.watch(spendingViewModelProvider);
             if (!spendingState.isLoading && spendingState.categories.isNotEmpty) {
-              const weekLabel = '1월 1주차';
+              final weekStart = spendingState.selectedWeekStart;
+              final weekOfMonth = ((weekStart.day - 1) ~/ 7) + 1;
+              final weekLabel = '${weekStart.month}월 $weekOfMonth주차';
               return Padding(
                 padding: EdgeInsets.only(bottom: 8.h),
                 child: SpendingRoseChart(

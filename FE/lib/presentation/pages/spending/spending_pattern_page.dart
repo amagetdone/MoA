@@ -94,7 +94,7 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
                     const Divider(height: 32, color: Color(0xFFEEEEEE)),
                     _SummaryRow(
                       label: '잔여 금액',
-                      value: result.savingsAmount,
+                      value: result.totalIncome - result.totalExpense,
                       color: const Color(0xFF4CAF50),
                     ),
                   ],
