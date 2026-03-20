@@ -1,8 +1,11 @@
 package com.ssafy.amagetdone.domain.account.application.usecase;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.ssafy.amagetdone.domain.account.api.dto.AccountDto;
+import com.ssafy.amagetdone.domain.account.infra.client.dto.DemandDepositBalanceDto;
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 
@@ -22,6 +25,20 @@ public class ListAccountsUseCase {
 	}
 
 	public List<AccountDto.AccountSummaryResponse> toResponses(List<Account> accounts) {
+		return toResponses(accounts, List.of());
+	}
+
+	public List<AccountDto.AccountSummaryResponse> toResponses(
+		List<Account> accounts,
+		List<DemandDepositBalanceDto.Response> balances
+	) {
+		Map<String, Long> balancesByAccountNo = balances.stream()
+			.collect(Collectors.toMap(
+				DemandDepositBalanceDto.Response::accountNo,
+				DemandDepositBalanceDto.Response::accountBalance,
+				(left, right) -> left
+			));
+
 		return accounts.stream()
 			.map(account -> new AccountDto.AccountSummaryResponse(
 				account.getAccountNo(),
@@ -29,7 +46,8 @@ public class ListAccountsUseCase {
 				account.getBankName(),
 				account.getAccountName(),
 				account.getAlias(),
-				account.isVerified()
+				account.isVerified(),
+				balancesByAccountNo.get(account.getAccountNo())
 			))
 			.toList();
 	}

@@ -19,6 +19,7 @@ import com.ssafy.amagetdone.domain.account.application.usecase.ReconcileLinkedAc
 import com.ssafy.amagetdone.domain.account.application.usecase.RegisterDemandDepositProductUseCase;
 import com.ssafy.amagetdone.domain.account.infra.client.SsafyDemandDepositAccountApiClient;
 import com.ssafy.amagetdone.domain.account.infra.client.dto.DemandDepositAccountDto;
+import com.ssafy.amagetdone.domain.account.infra.client.dto.DemandDepositBalanceDto;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
@@ -42,6 +43,7 @@ public class AccountService {
 	private final InitializeCardTransactionOverridesUseCase initializeCardTransactionOverridesUseCase;
 	private final ListAccountsUseCase listAccountsUseCase;
 	private final ReconcileLinkedAccountsUseCase reconcileLinkedAccountsUseCase;
+	private final InquireAccountBalanceUseCase inquireAccountBalanceUseCase;
 
 
 	public List<AccountDto.BankAccountResponse> getBankAccounts(Integer userId) {
@@ -83,13 +85,15 @@ public class AccountService {
 
 	public AccountDto.AccountSummaryResponse getAccount(Integer userId, String accountNo) {
 		Account account = findUserAccountUseCase.execute(userId, accountNo);
+		DemandDepositBalanceDto.Response balance = inquireAccountBalanceUseCase.execute(userId, accountNo);
 		return new AccountDto.AccountSummaryResponse(
 			account.getAccountNo(),
 			account.getBankCode(),
 			account.getBankName(),
 			account.getAccountName(),
 			account.getAlias(),
-			account.isVerified()
+			account.isVerified(),
+			balance.accountBalance()
 		);
 	}
 
@@ -107,10 +111,17 @@ public class AccountService {
 
 	public List<AccountDto.AccountSummaryResponse> syncAccounts(Integer userId) {
 		List<Account> accounts = reconcileLinkedAccountsUseCase.execute(userId);
-		return listAccountsUseCase.toResponses(accounts);
+		return listAccountsUseCase.toResponses(accounts, inquireBalances(userId, accounts));
 	}
 
 	public List<AccountDto.AccountSummaryResponse> getAccounts(Integer userId) {
-		return listAccountsUseCase.toResponses(reconcileLinkedAccountsUseCase.execute(userId));
+		List<Account> accounts = reconcileLinkedAccountsUseCase.execute(userId);
+		return listAccountsUseCase.toResponses(accounts, inquireBalances(userId, accounts));
+	}
+
+	private List<DemandDepositBalanceDto.Response> inquireBalances(Integer userId, List<Account> accounts) {
+		return accounts.stream()
+			.map(account -> inquireAccountBalanceUseCase.execute(userId, account.getAccountNo()))
+			.toList();
 	}
 }

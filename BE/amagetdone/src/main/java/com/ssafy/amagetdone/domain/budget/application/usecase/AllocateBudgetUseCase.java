@@ -28,4 +28,22 @@ public class AllocateBudgetUseCase {
 	) {
 		return budgetAllocationService.allocateBudget(user, serviceStartDate, monthlyIncome, essentials, activePlans);
 	}
+
+	public BudgetAllocationService.AllocationResult execute(
+		User user,
+		LocalDate serviceStartDate,
+		Long monthlyIncome,
+		List<EssentialExpenseMonth> essentials,
+		List<Plan> activePlans,
+		LocalDate allocationEndDate
+	) {
+		return budgetAllocationService.allocateBudget(
+			user,
+			serviceStartDate,
+			monthlyIncome,
+			essentials,
+			activePlans,
+			allocationEndDate
+		);
+	}
 }

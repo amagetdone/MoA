@@ -54,6 +54,17 @@ public class BudgetAllocationService {
 		List<EssentialExpenseMonth> essentials,
 		List<Plan> activePlans
 	) {
+		return allocateBudget(user, serviceStartDate, monthlyIncome, essentials, activePlans, null);
+	}
+
+	public AllocationResult allocateBudget(
+		User user,
+		LocalDate serviceStartDate,
+		Long monthlyIncome,
+		List<EssentialExpenseMonth> essentials,
+		List<Plan> activePlans,
+		LocalDate allocationEndDateOverride
+	) {
 		Objects.requireNonNull(user, "user must not be null");
 		Objects.requireNonNull(serviceStartDate, "serviceStartDate must not be null");
 
@@ -61,7 +72,12 @@ public class BudgetAllocationService {
 		List<EssentialExpenseMonth> normalizedEssentials = normalizeEssentials(user, essentials);
 		List<Plan> normalizedPlans = normalizePlans(activePlans);
 
-		LocalDate allocationEndDate = resolveAllocationEnd(serviceStartDate, normalizedEssentials, normalizedPlans);
+		LocalDate allocationEndDate = allocationEndDateOverride != null
+			? allocationEndDateOverride
+			: resolveAllocationEnd(serviceStartDate, normalizedEssentials, normalizedPlans);
+		if (allocationEndDate.isBefore(serviceStartDate)) {
+			return new AllocationResult(List.of(), List.of(), List.of(), List.of(), List.of());
+		}
 		List<WeekFrame> weekFrames = buildWeekFrames(serviceStartDate, allocationEndDate);
 		Map<LocalDate, BudgetMonth> budgetMonthsByBaseDate = upsertBudgetMonths(
 			user,
