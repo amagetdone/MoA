@@ -23,7 +23,7 @@ class _FakeImageGenerationService:
         self.error = error
         self.calls: list[dict[str, str]] = []
 
-    def generate(
+    async def generate(
         self,
         *,
         user_prompt: str,

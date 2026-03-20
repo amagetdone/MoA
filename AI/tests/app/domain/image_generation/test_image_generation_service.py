@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 
+import anyio
 import pytest
 
 from app.core.config import Settings
@@ -50,7 +51,7 @@ class _FakeHttpClient:
         self.get_calls: list[dict[str, object]] = []
         self.post_calls: list[dict[str, object]] = []
 
-    def get(
+    async def get(
         self,
         url: str,
         *,
@@ -66,7 +67,7 @@ class _FakeHttpClient:
         )
         return self.get_response
 
-    def post(
+    async def post(
         self,
         path: str,
         *,
@@ -83,6 +84,13 @@ class _FakeHttpClient:
             }
         )
         return self.post_response
+
+
+def _run_async(awaitable, /):
+    async def runner():
+        return await awaitable
+
+    return anyio.run(runner)
 
 
 class _CapturingSpan:
@@ -188,9 +196,11 @@ def test_service_downloads_reference_image_and_extracts_generated_inline_data() 
         tracer=tracer,
     )
 
-    result = service.generate(
-        user_prompt=USER_PROMPT,
-        image_url=INPUT_IMAGE_URL,
+    result = _run_async(
+        service.generate(
+            user_prompt=USER_PROMPT,
+            image_url=INPUT_IMAGE_URL,
+        )
     )
 
     assert result == {
@@ -280,9 +290,11 @@ def test_service_accepts_camel_case_inline_data_from_upstream() -> None:
         tracer=_CapturingTracer(),
     )
 
-    result = service.generate(
-        user_prompt=USER_PROMPT,
-        image_url=INPUT_IMAGE_URL,
+    result = _run_async(
+        service.generate(
+            user_prompt=USER_PROMPT,
+            image_url=INPUT_IMAGE_URL,
+        )
     )
 
     assert result["image_base64"] == "camel-case-image"
@@ -309,9 +321,11 @@ def test_service_raises_when_reference_url_does_not_return_image_content_type() 
     )
 
     with pytest.raises(UpstreamImageGenerationError) as exc_info:
-        service.generate(
-            user_prompt=USER_PROMPT,
-            image_url=INPUT_IMAGE_URL,
+        _run_async(
+            service.generate(
+                user_prompt=USER_PROMPT,
+                image_url=INPUT_IMAGE_URL,
+            )
         )
 
     assert "Reference image URL did not return an image content type" in str(
@@ -345,9 +359,11 @@ def test_service_raises_when_generated_inline_data_is_missing() -> None:
     )
 
     with pytest.raises(UpstreamImageGenerationError):
-        service.generate(
-            user_prompt=USER_PROMPT,
-            image_url=INPUT_IMAGE_URL,
+        _run_async(
+            service.generate(
+                user_prompt=USER_PROMPT,
+                image_url=INPUT_IMAGE_URL,
+            )
         )
 
 
@@ -384,9 +400,11 @@ def test_service_reports_available_upstream_part_types_for_schema_debugging() ->
     )
 
     with pytest.raises(UpstreamImageGenerationError) as exc_info:
-        service.generate(
-            user_prompt=USER_PROMPT,
-            image_url=INPUT_IMAGE_URL,
+        _run_async(
+            service.generate(
+                user_prompt=USER_PROMPT,
+                image_url=INPUT_IMAGE_URL,
+            )
         )
 
     assert "available part types: ['text']" in str(exc_info.value)

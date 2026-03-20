@@ -24,12 +24,12 @@ router = APIRouter(prefix="/v1/image-generation", tags=["image-generation"])
         "예: S3 공개 URL"
     ),
 )
-def generate_image(
+async def generate_image(
     request: ImageGenerationRequest,
     service=Depends(get_image_generation_service),
 ) -> dict[str, str]:
     try:
-        return service.generate(
+        return await service.generate(
             user_prompt=request.user_prompt,
             image_url=str(request.image_url),
         )

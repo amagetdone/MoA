@@ -1,9 +1,9 @@
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 from app.core.config import Settings
 from app.domain.image_generation.agents.states.state import ImageGenerationState
 
-ImageGenerator = Callable[..., dict[str, str]]
+ImageGenerator = Callable[..., Awaitable[dict[str, str]]]
 
 
 def build_generate_image_node(
@@ -11,8 +11,8 @@ def build_generate_image_node(
     settings: Settings,
     image_generator: ImageGenerator,
 ):
-    def generate_image_node(state: ImageGenerationState) -> ImageGenerationState:
-        image_result = image_generator(
+    async def generate_image_node(state: ImageGenerationState) -> ImageGenerationState:
+        image_result = await image_generator(
             prompt=state["final_prompt"],
             model=settings.image_generation_model,
             image_base64=state["input_image_base64"],

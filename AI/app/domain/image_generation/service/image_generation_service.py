@@ -34,7 +34,7 @@ class ImageGenerationService:
             image_generator=self._generate_image,
         )
 
-    def generate(
+    async def generate(
         self,
         *,
         user_prompt: str,
@@ -50,8 +50,8 @@ class ImageGenerationService:
                 "image_source": "url",
             },
         ) as trace:
-            reference_image = self._download_reference_image(image_url)
-            result = self._graph.invoke(
+            reference_image = await self._download_reference_image(image_url)
+            result = await self._graph.ainvoke(
                 {
                     "user_prompt": user_prompt,
                     "input_image_base64": reference_image["image_base64"],
@@ -77,7 +77,7 @@ class ImageGenerationService:
             )
             return response
 
-    def _download_reference_image(self, image_url: str) -> dict[str, str]:
+    async def _download_reference_image(self, image_url: str) -> dict[str, str]:
         client = self._get_http_client()
 
         with self._tracer.start_as_current_span(
@@ -87,7 +87,7 @@ class ImageGenerationService:
             },
         ) as span:
             try:
-                response = client.get(
+                response = await client.get(
                     image_url,
                     headers={
                         "Accept": "image/*",
@@ -117,7 +117,7 @@ class ImageGenerationService:
                 "mime_type": mime_type,
             }
 
-    def _generate_image(
+    async def _generate_image(
         self,
         *,
         prompt: str,
@@ -143,7 +143,7 @@ class ImageGenerationService:
             },
         ) as span:
             try:
-                response = client.post(
+                response = await client.post(
                     f"/models/{model}:generateContent",
                     headers={
                         "Content-Type": "application/json",
@@ -190,11 +190,25 @@ class ImageGenerationService:
                 "AI_API_KEY and OPENAI_BASE_URL must be configured for image generation"
             )
 
-        self._http_client = httpx.Client(
+        self._http_client = httpx.AsyncClient(
             base_url=self._settings.openai_base_url,
             follow_redirects=True,
         )
         return self._http_client
+
+    async def aclose(self) -> None:
+        http_client = self._http_client
+        if http_client is None:
+            return
+
+        close = getattr(http_client, "aclose", None)
+        if callable(close):
+            await close()
+            return
+
+        close = getattr(http_client, "close", None)
+        if callable(close):
+            close()
 
     @staticmethod
     def _build_generate_content_request(

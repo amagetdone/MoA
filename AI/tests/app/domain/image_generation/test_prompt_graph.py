@@ -1,3 +1,5 @@
+import anyio
+
 from app.core.config import Settings
 from app.domain.image_generation.agents.graph import build_image_generation_graph
 from app.domain.image_generation.agents.prompts.image_generation_prompt import (
@@ -36,7 +38,7 @@ def test_image_generation_graph_builds_prompt_and_delegates_generation() -> None
     )
     upstream_calls: list[dict[str, str]] = []
 
-    def fake_image_generator(
+    async def fake_image_generator(
         *,
         prompt: str,
         model: str,
@@ -62,13 +64,16 @@ def test_image_generation_graph_builds_prompt_and_delegates_generation() -> None
         image_generator=fake_image_generator,
     )
 
-    result = graph.invoke(
-        {
-            "user_prompt": "Turn the reference image into a polished cyberpunk banana poster.",
-            "input_image_base64": "reference-image",
-            "input_mime_type": "image/jpeg",
-        }
-    )
+    async def run_graph() -> dict[str, str]:
+        return await graph.ainvoke(
+            {
+                "user_prompt": "Turn the reference image into a polished cyberpunk banana poster.",
+                "input_image_base64": "reference-image",
+                "input_mime_type": "image/jpeg",
+            }
+        )
+
+    result = anyio.run(run_graph)
 
     assert result["generated_image_base64"] == "base64-image"
     assert result["output_mime_type"] == "image/png"

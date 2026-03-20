@@ -39,7 +39,17 @@ def create_app(
             app.state.classifier = classifier_loader()
         if app.state.image_generation_service is None:
             app.state.image_generation_service = image_generation_service_loader()
-        yield
+        try:
+            yield
+        finally:
+            image_generation_service = getattr(
+                app.state,
+                "image_generation_service",
+                None,
+            )
+            close = getattr(image_generation_service, "aclose", None)
+            if callable(close):
+                await close()
 
     app = FastAPI(lifespan=lifespan, root_path=settings.api_root_path)
     app.state.classifier = classifier
