@@ -52,6 +52,9 @@ class CreatePlanUseCaseTest {
 	private TriggerBudgetAllocationUseCase triggerBudgetAllocationUseCase;
 
 	@Mock
+	private com.ssafy.amagetdone.domain.budget.application.service.WeeklyGoalSavingAccrualService weeklyGoalSavingAccrualService;
+
+	@Mock
 	private PlanCreationBudgetSummaryService planCreationBudgetSummaryService;
 
 	@Mock
@@ -69,6 +72,7 @@ class CreatePlanUseCaseTest {
 			planRepository,
 			planPriorityService,
 			triggerBudgetAllocationUseCase,
+			weeklyGoalSavingAccrualService,
 			planCreationBudgetSummaryService,
 			applicationEventPublisher,
 			clock
