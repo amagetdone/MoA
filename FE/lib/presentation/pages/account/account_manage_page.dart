@@ -12,13 +12,26 @@ import 'package:more_app/presentation/viewmodels/account_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 
-class AccountManagePage extends ConsumerWidget {
+class AccountManagePage extends ConsumerStatefulWidget {
   final bool isOnboarding;
 
   const AccountManagePage({super.key, this.isOnboarding = false});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AccountManagePage> createState() => _AccountManagePageState();
+}
+
+class _AccountManagePageState extends ConsumerState<AccountManagePage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(accountViewModelProvider.notifier).loadData();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final accountState = ref.watch(accountViewModelProvider);
     final accounts = accountState.accounts;
 
@@ -27,12 +40,12 @@ class AccountManagePage extends ConsumerWidget {
       appBar: MoreAppBar(
         title: '',
         showBack: true,
-        onBack: isOnboarding
+        onBack: widget.isOnboarding
             ? () => context.go(AppRoutes.onboarding)
             : () => context.pop(),
-        skipText: isOnboarding ? '건너뛰기' : null,
-        onSkip: isOnboarding ? () => context.go(AppRoutes.home) : null,
-        showNotification: !isOnboarding,
+        skipText: widget.isOnboarding ? '건너뛰기' : null,
+        onSkip: widget.isOnboarding ? () => context.go(AppRoutes.home) : null,
+        showNotification: !widget.isOnboarding,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
@@ -40,7 +53,7 @@ class AccountManagePage extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              isOnboarding ? '계좌 추가' : '계좌 관리',
+              widget.isOnboarding ? '계좌 추가' : '계좌 관리',
               style: AppTextStyles.headingLg.copyWith(fontSize: 24.sp, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 6.h),
@@ -188,7 +201,7 @@ class AccountManagePage extends ConsumerWidget {
             // 새로운 계좌 연결하기 카드
             GestureDetector(
               onTap: () {
-                final route = isOnboarding
+                final route = widget.isOnboarding
                     ? AppRoutes.onboardingAccountSelect
                     : AppRoutes.accountAdd;
                 context.push(route);
@@ -222,7 +235,7 @@ class AccountManagePage extends ConsumerWidget {
           ],
         ),
       ),
-      bottomNavigationBar: isOnboarding
+      bottomNavigationBar: widget.isOnboarding
           ? MoreBottomButton(
               text: '다음',
               progress: 4 / 7,

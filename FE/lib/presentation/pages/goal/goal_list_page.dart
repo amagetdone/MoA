@@ -9,11 +9,24 @@ import 'package:more_app/presentation/viewmodels/goal_viewmodel.dart';
 import 'package:more_app/presentation/pages/goal/widgets/goal_card.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 
-class GoalListPage extends ConsumerWidget {
+class GoalListPage extends ConsumerStatefulWidget {
   const GoalListPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GoalListPage> createState() => _GoalListPageState();
+}
+
+class _GoalListPageState extends ConsumerState<GoalListPage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(goalViewModelProvider.notifier).loadGoals();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final goalState = ref.watch(goalViewModelProvider);
     final viewModel = ref.read(goalViewModelProvider.notifier);
     final filteredGoals = goalState.filteredGoals;

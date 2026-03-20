@@ -1,18 +1,42 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
+import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
+import 'package:more_app/presentation/viewmodels/spending_viewmodel.dart';
+import 'package:more_app/presentation/viewmodels/goal_viewmodel.dart';
+import 'package:more_app/presentation/viewmodels/menu_viewmodel.dart';
 
-
-class MainShellPage extends StatelessWidget {
+class MainShellPage extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
 
   const MainShellPage({super.key, required this.navigationShell});
 
+  void _onTabSelected(WidgetRef ref, int index) {
+    // 탭 전환 시 해당 탭 데이터 갱신
+    switch (index) {
+      case 0:
+        ref.read(homeViewModelProvider.notifier).loadData();
+        break;
+      case 1:
+        ref.read(spendingViewModelProvider.notifier).loadData();
+        break;
+      case 2:
+        ref.read(goalViewModelProvider.notifier).loadGoals();
+        break;
+      case 3:
+        ref.read(menuViewModelProvider.notifier).loadData();
+        break;
+    }
+    navigationShell.goBranch(
+      index,
+      initialLocation: true,
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
@@ -40,12 +64,7 @@ class MainShellPage extends StatelessWidget {
               elevation: 0,
               height: 58.h,
               selectedIndex: navigationShell.currentIndex,
-              onDestinationSelected: (index) {
-                navigationShell.goBranch(
-                  index,
-                  initialLocation: true,
-                );
-              },
+              onDestinationSelected: (index) => _onTabSelected(ref, index),
               labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
               destinations: [
                 NavigationDestination(
