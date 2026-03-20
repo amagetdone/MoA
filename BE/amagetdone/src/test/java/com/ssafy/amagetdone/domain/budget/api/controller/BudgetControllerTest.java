@@ -180,8 +180,8 @@ class BudgetControllerTest {
 				BudgetHomeDto.AssetSummary.of(
 					5400000L,
 					List.of(
-						BudgetHomeDto.AssetAccount.of("111-111-111111", "신한은행", "111-111-111111", 2000000L),
-						BudgetHomeDto.AssetAccount.of("222-222-222222", "국민은행", "222-222-222222", 3400000L)
+						BudgetHomeDto.AssetAccount.of("111-111-111111", "신한은행", "111-111-111111", 2000000L, true),
+						BudgetHomeDto.AssetAccount.of("222-222-222222", "국민은행", "222-222-222222", 3400000L, false)
 					)
 				),
 				List.of(BudgetHomeDto.PlanCard.of(11L, "Travel Fund", 1, 45L, 680000L, 1000000L, 68L, "https://example.com/travel.png"))
@@ -200,6 +200,7 @@ class BudgetControllerTest {
 			.andExpect(jsonPath("$.data.assetSummary.accounts[0].bankName").value("신한은행"))
 			.andExpect(jsonPath("$.data.assetSummary.accounts[0].accountNo").value("111-111-111111"))
 			.andExpect(jsonPath("$.data.assetSummary.accounts[0].balanceAmount").value(2000000))
+			.andExpect(jsonPath("$.data.assetSummary.accounts[0].verified").value(true))
 			.andExpect(jsonPath("$.data.plans[0].title").value("Travel Fund"))
 			.andExpect(jsonPath("$.data.plans[0].priority").value(1));
 	}

@@ -109,20 +109,23 @@ public final class BudgetHomeDto {
 		String accountId,
 		String bankName,
 		String accountNo,
-		long balanceAmount
+		long balanceAmount,
+		boolean verified
 	) {
 
 		public static AssetAccount of(
 			String accountId,
 			String bankName,
 			String accountNo,
-			Long balanceAmount
+			Long balanceAmount,
+			boolean verified
 		) {
 			return new AssetAccount(
 				accountId,
 				bankName,
 				accountNo,
-				zero(balanceAmount)
+				zero(balanceAmount),
+				verified
 			);
 		}
 	}

@@ -127,7 +127,8 @@ public class BudgetHomeQueryService {
 			account.getId() == null ? account.getAccountNo() : account.getId(),
 			account.getBankName(),
 			account.getAccountNo(),
-			inquireBalance(userId, account.getAccountNo())
+			inquireBalance(userId, account.getAccountNo()),
+			account.isVerified()
 		);
 	}
 
