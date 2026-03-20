@@ -8,9 +8,11 @@ import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/spending_budget_viewmodel.dart';
+import 'package:more_app/domain/entities/budget.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
+import 'package:more_app/presentation/widgets/common/more_progress_bar.dart';
 
 class SpendingBudgetPage extends ConsumerStatefulWidget {
   const SpendingBudgetPage({super.key});
@@ -120,7 +122,10 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
 
     final setup = state.setup;
     final displayIncome = _editedIncome ?? setup.monthlyIncome;
-    final extraFunds = displayIncome - setup.savingsAmount - setup.fixedExpenseAmount - setup.variableExpenseAmount;
+    // 수입 수정 중이면 로컬 계산, 아니면 서버의 실제 잔여 여유자금 사용
+    final extraFunds = _editedIncome != null
+        ? displayIncome - setup.savingsAmount - setup.fixedExpenseAmount - setup.variableExpenseAmount
+        : setup.remainingFreeAmount;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
@@ -210,6 +215,10 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                             isExpanded: _isFixedExpanded,
                             onToggle: () => setState(() => _isFixedExpanded = !_isFixedExpanded),
                           ),
+                          if (_isFixedExpanded && setup.fixedEssentials.isNotEmpty) ...[
+                            SizedBox(height: 16.h),
+                            _EssentialCategoryList(essentials: setup.fixedEssentials),
+                          ],
                           SizedBox(height: 40.h),
 
                           _BudgetSectionHeader(
@@ -221,6 +230,10 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                             isExpanded: _isVariableExpanded,
                             onToggle: () => setState(() => _isVariableExpanded = !_isVariableExpanded),
                           ),
+                          if (_isVariableExpanded && setup.variableEssentials.isNotEmpty) ...[
+                            SizedBox(height: 16.h),
+                            _EssentialCategoryList(essentials: setup.variableEssentials),
+                          ],
                           SizedBox(height: 32.h),
                           const Divider(color: Color(0xFF333333), thickness: 1.5),
                           SizedBox(height: 32.h),
@@ -333,6 +346,14 @@ class _BudgetSectionHeader extends StatelessWidget {
                     label,
                     style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold, fontSize: 17.sp),
                   ),
+                  if (isExpandable) ...[
+                    SizedBox(width: 4.w),
+                    Icon(
+                      isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                      color: AppColors.textTertiary,
+                      size: 20.w,
+                    ),
+                  ],
                 ],
               ),
               FittedBox(
@@ -351,6 +372,59 @@ class _BudgetSectionHeader extends StatelessWidget {
           style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary, fontSize: 12.sp),
         ),
       ],
+    );
+  }
+}
+
+class _EssentialCategoryList extends StatelessWidget {
+  final List<BudgetEssential> essentials;
+
+  const _EssentialCategoryList({required this.essentials});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: essentials.map((e) {
+        final ratio = e.plannedAmount > 0
+            ? (e.actualSpentAmount / e.plannedAmount).clamp(0.0, 1.0)
+            : 0.0;
+        final isOver = e.plannedAmount > 0 && e.actualSpentAmount > e.plannedAmount;
+
+        return Padding(
+          padding: EdgeInsets.only(bottom: 16.h),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    e.categoryName,
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    '${CurrencyFormatter.formatKRW(e.actualSpentAmount)} / ${CurrencyFormatter.formatKRW(e.plannedAmount)}',
+                    style: AppTextStyles.caption.copyWith(
+                      color: isOver ? Colors.red : AppColors.textTertiary,
+                      fontSize: 11.sp,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 6.h),
+              MoreProgressBar(
+                progress: ratio,
+                color: isOver ? Colors.red : AppColors.orange500,
+                backgroundColor: const Color(0xFFF0F0F0),
+                height: 8.h,
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }
