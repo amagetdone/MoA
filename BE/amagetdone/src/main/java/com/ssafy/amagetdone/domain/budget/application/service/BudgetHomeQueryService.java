@@ -57,7 +57,9 @@ public class BudgetHomeQueryService {
 	}
 
 	private List<Plan> selectActivePlans(Integer userId) {
-		return planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE).stream()
+		return planRepository.findAll().stream()
+			.filter(plan -> plan.getUser() != null && userId.equals(plan.getUser().getId()))
+			.filter(plan -> plan.getStatus() == PlanStatus.ACTIVE)
 			.sorted(Comparator.comparing(Plan::getPriority)
 				.thenComparing(Plan::getTitle))
 			.limit(3L)
