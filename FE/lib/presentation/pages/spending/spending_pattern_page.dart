@@ -19,11 +19,24 @@ const _sectionColors = [
 ];
 const _sectionLabels = ['고정지출', '변동지출', '여유 자금'];
 
-class SpendingPatternPage extends ConsumerWidget {
+class SpendingPatternPage extends ConsumerStatefulWidget {
   const SpendingPatternPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SpendingPatternPage> createState() => _SpendingPatternPageState();
+}
+
+class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(spendingPatternViewModelProvider.notifier).loadData();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final patternState = ref.watch(spendingPatternViewModelProvider);
     final touchedIndex = ref.watch(spendingViewModelProvider).touchedPieIndex;
     final spendingViewModel = ref.read(spendingViewModelProvider.notifier);

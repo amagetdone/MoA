@@ -87,17 +87,15 @@ class SpendingCard extends StatelessWidget {
 
           SizedBox(height: 18.h),
 
-          // ── 프로그레스 바 ──
+          // ── 프로그레스 바 (왼쪽=사용(회색), 오른쪽=남은(오렌지)) ──
           ClipRRect(
             borderRadius: BorderRadius.circular(999.r),
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 7.h,
-              backgroundColor: AppColors.gray100,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                progress >= 0.9
-                    ? Colors.redAccent
-                    : AppColors.orange500,
+              backgroundColor: AppColors.orange500,
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppColors.gray100,
               ),
             ),
           ),

@@ -15,11 +15,24 @@ import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 import 'package:more_app/presentation/widgets/common/more_chip.dart';
 
-class SpendingAnalysisPage extends ConsumerWidget {
+class SpendingAnalysisPage extends ConsumerStatefulWidget {
   const SpendingAnalysisPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SpendingAnalysisPage> createState() => _SpendingAnalysisPageState();
+}
+
+class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(spendingViewModelProvider.notifier).loadData();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(spendingViewModelProvider);
     final viewModel = ref.read(spendingViewModelProvider.notifier);
 

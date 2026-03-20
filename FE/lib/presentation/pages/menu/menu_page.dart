@@ -11,11 +11,24 @@ import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 
-class MenuPage extends ConsumerWidget {
+class MenuPage extends ConsumerStatefulWidget {
   const MenuPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MenuPage> createState() => _MenuPageState();
+}
+
+class _MenuPageState extends ConsumerState<MenuPage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(menuViewModelProvider.notifier).loadData();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(menuViewModelProvider);
 
     if (state.isLoading) {
