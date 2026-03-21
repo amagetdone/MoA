@@ -147,7 +147,10 @@ public class DailyGoalSavingAccrualService {
 			);
 		}
 
-		List<PlanWeekAllocation> allocations = findAllocations(userId, planId, null, cutoffDate, planId == null);
+		LocalDate today = LocalDate.now(clock);
+		List<PlanWeekAllocation> allocations = findAllocations(userId, planId, null, cutoffDate, planId == null).stream()
+			.filter(a -> a.getBudgetWeek() != null && a.getBudgetWeek().getWeekEndDate().isBefore(today))
+			.toList();
 		if (allocations.isEmpty()) {
 			if (planId != null) {
 				var ownedPlan = planRepository.findByIdAndUserId(planId, userId);
