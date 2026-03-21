@@ -44,25 +44,25 @@ class PlanStatusSchedulerTest {
 	}
 
 	@Test
-	void activatesWaitingPlansWhoseStartDateHasArrived() {
+	void activatesWaitingPlansWhoseStartDateHasArrivedRegardlessOfAiPipelineStatus() {
 		createSchedulerWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
 		LocalDate today = LocalDate.of(2026, 3, 18);
 		Plan waitingPlan = planWithStatuses(1, PlanStatus.WAITING, PlanAiPipelineStatus.SUCCEEDED);
-		Plan sameUserWaitingPlan = planWithStatuses(1, PlanStatus.WAITING, PlanAiPipelineStatus.SUCCEEDED);
+		Plan failedAiPlan = planWithStatuses(1, PlanStatus.WAITING, PlanAiPipelineStatus.FAILED);
 		Plan pendingAiPlan = planWithStatuses(2, PlanStatus.WAITING, PlanAiPipelineStatus.PENDING);
 
-		given(planRepository.findAllByStatusAndStartDateLessThanEqualAndAiPipelineStatusAndDeletedFalse(
+		given(planRepository.findAllByStatusAndStartDateLessThanEqualAndDeletedFalse(
 			PlanStatus.WAITING,
-			today,
-			PlanAiPipelineStatus.SUCCEEDED
-		)).willReturn(List.of(waitingPlan, sameUserWaitingPlan));
+			today
+		)).willReturn(List.of(waitingPlan, failedAiPlan, pendingAiPlan));
 
 		planStatusScheduler.activateStartedPlans(today);
 
 		assertEquals(PlanStatus.ACTIVE, waitingPlan.getStatus());
-		assertEquals(PlanStatus.ACTIVE, sameUserWaitingPlan.getStatus());
-		assertEquals(PlanStatus.WAITING, pendingAiPlan.getStatus());
+		assertEquals(PlanStatus.ACTIVE, failedAiPlan.getStatus());
+		assertEquals(PlanStatus.ACTIVE, pendingAiPlan.getStatus());
 		verify(triggerBudgetAllocationUseCase).execute(1);
+		verify(triggerBudgetAllocationUseCase).execute(2);
 	}
 
 	@Test
@@ -71,10 +71,9 @@ class PlanStatusSchedulerTest {
 		LocalDate today = LocalDate.of(2026, 3, 19);
 		Plan waitingPlan = planWithStatuses(3, PlanStatus.WAITING, PlanAiPipelineStatus.SUCCEEDED);
 
-		given(planRepository.findAllByStatusAndStartDateLessThanEqualAndAiPipelineStatusAndDeletedFalse(
+		given(planRepository.findAllByStatusAndStartDateLessThanEqualAndDeletedFalse(
 			PlanStatus.WAITING,
-			today,
-			PlanAiPipelineStatus.SUCCEEDED
+			today
 		)).willReturn(List.of(waitingPlan));
 
 		planStatusScheduler.activateStartedPlansOnStartup();
@@ -103,10 +102,9 @@ class PlanStatusSchedulerTest {
 	void doesNotTriggerAllocationWhenNothingWasActivated() {
 		createSchedulerWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
 
-		given(planRepository.findAllByStatusAndStartDateLessThanEqualAndAiPipelineStatusAndDeletedFalse(
+		given(planRepository.findAllByStatusAndStartDateLessThanEqualAndDeletedFalse(
 			PlanStatus.WAITING,
-			LocalDate.of(2026, 3, 19),
-			PlanAiPipelineStatus.SUCCEEDED
+			LocalDate.of(2026, 3, 19)
 		)).willReturn(List.of());
 
 		planStatusScheduler.activateStartedPlans(LocalDate.of(2026, 3, 19));

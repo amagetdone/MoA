@@ -1,7 +1,7 @@
 package com.ssafy.amagetdone.domain.plan.application.service;
 
 import java.time.Clock;
-import java.time.LocalDate;
+
 import com.ssafy.amagetdone.domain.member.application.service.MemberProfileImageService;
 import com.ssafy.amagetdone.domain.plan.exception.PlanErrorCode;
 import com.ssafy.amagetdone.domain.plan.exception.PlanException;
@@ -111,9 +111,6 @@ public class PlanAiPipelineService {
 			}
 			plan.updateVideoUrl(videoUrl);
 			plan.markAiSucceeded();
-			if (plan.getStartDate() != null && !plan.getStartDate().isAfter(LocalDate.now(clock))) {
-				plan.activate();
-			}
 			log.info(
 				"event=PLAN_AI_PIPELINE_SUCCESS planId={} userId={} planImageKey={} videoUrl={}",
 				planId,
@@ -159,9 +156,6 @@ public class PlanAiPipelineService {
 			userId,
 			videoUrl,
 			PlanAiPipelineStatus.SUCCEEDED,
-			LocalDate.now(clock),
-			PlanStatus.WAITING,
-			PlanStatus.ACTIVE,
 			PlanStatus.CANCELLED
 		));
 	}

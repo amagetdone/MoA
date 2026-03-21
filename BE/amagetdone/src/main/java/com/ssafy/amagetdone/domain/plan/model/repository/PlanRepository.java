@@ -24,6 +24,8 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 
 	List<Plan> findAllByUser_IdAndStatusAndDeletedFalse(Integer userId, PlanStatus status);
 
+	List<Plan> findAllByUserIdAndDeletedFalseAndStatusIn(Integer userId, Collection<PlanStatus> statuses);
+
 	List<Plan> findAllByStatus(PlanStatus status);
 
 	List<Plan> findAllByStatusAndDeletedFalse(PlanStatus status);
@@ -61,12 +63,6 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 	List<Plan> findAllByStatusAndStartDateLessThanEqualAndDeletedFalse(PlanStatus status, LocalDate date);
 
 	List<Plan> findAllByStatusAndStartDateLessThanEqualAndAiPipelineStatus(
-		PlanStatus status,
-		LocalDate date,
-		PlanAiPipelineStatus aiPipelineStatus
-	);
-
-	List<Plan> findAllByStatusAndStartDateLessThanEqualAndAiPipelineStatusAndDeletedFalse(
 		PlanStatus status,
 		LocalDate date,
 		PlanAiPipelineStatus aiPipelineStatus
@@ -117,10 +113,6 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 		update Plan p
 		set p.videoUrl = :videoUrl,
 			p.aiPipelineStatus = :successStatus,
-			p.status = case
-				when p.startDate is not null and p.startDate <= :today and p.status = :waitingStatus then :activeStatus
-				else p.status
-			end,
 			p.version = p.version + 1
 		where p.id = :planId
 			and p.user.id = :userId
@@ -132,9 +124,6 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 		@Param("userId") Integer userId,
 		@Param("videoUrl") String videoUrl,
 		@Param("successStatus") PlanAiPipelineStatus successStatus,
-		@Param("today") LocalDate today,
-		@Param("waitingStatus") PlanStatus waitingStatus,
-		@Param("activeStatus") PlanStatus activeStatus,
 		@Param("cancelledStatus") PlanStatus cancelledStatus
 	);
 

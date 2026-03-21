@@ -29,18 +29,39 @@ class ListPlansUseCaseTest {
 	private ListPlansUseCase listPlansUseCase;
 
 	@Test
-	void returnsActivePlansOrderedByPriorityWithSummaryFields() {
-		Plan ipadPlan = instantiatePlan(1, "아이패드 구매", 320000L, 1000000L, 1, 3, LocalDate.now().plusDays(14));
-		Plan travelPlan = instantiatePlan(2, "여행 자금", 500000L, 1500000L, 2, 5, LocalDate.now().plusDays(72));
+	void returnsListedPlansOrderedByPriorityWithSummaryFields() {
+		Plan waitingPlan = instantiatePlan(
+			1,
+			"iPad purchase",
+			320000L,
+			1000000L,
+			1,
+			3,
+			LocalDate.now().plusDays(14),
+			PlanStatus.WAITING
+		);
+		Plan activePlan = instantiatePlan(
+			2,
+			"Travel fund",
+			500000L,
+			1500000L,
+			2,
+			5,
+			LocalDate.now().plusDays(72),
+			PlanStatus.ACTIVE
+		);
 
-		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(1, PlanStatus.ACTIVE))
-			.willReturn(List.of(travelPlan, ipadPlan));
+		given(planRepository.findAllByUserIdAndDeletedFalseAndStatusIn(
+			1,
+			List.of(PlanStatus.WAITING, PlanStatus.ACTIVE, PlanStatus.PAUSED)
+		))
+			.willReturn(List.of(activePlan, waitingPlan));
 
 		List<PlanListItemResponse> response = listPlansUseCase.execute(1);
 
 		assertEquals(2, response.size());
 		assertEquals(1L, response.get(0).planId());
-		assertEquals("아이패드 구매", response.get(0).title());
+		assertEquals("iPad purchase", response.get(0).title());
 		assertEquals(14L, response.get(0).dday());
 		assertEquals(0, response.get(0).achievementRate().compareTo(new java.math.BigDecimal("32")));
 		assertEquals(2L, response.get(1).planId());
@@ -55,7 +76,8 @@ class ListPlansUseCaseTest {
 		long targetAmount,
 		int priority,
 		int targetWeeks,
-		LocalDate endDate
+		LocalDate endDate,
+		PlanStatus status
 	) {
 		Plan plan = Plan.builder()
 			.user(User.createPendingSocialUser())
@@ -65,7 +87,7 @@ class ListPlansUseCaseTest {
 			.priority(priority)
 			.targetWeeks(targetWeeks)
 			.endDate(endDate)
-			.status(PlanStatus.ACTIVE)
+			.status(status)
 			.build();
 		ReflectionTestUtils.setField(plan, "id", id);
 		return plan;
