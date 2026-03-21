@@ -10,17 +10,23 @@
     {
       "categoryId": 10,
       "categoryName": "식비",
-      "amount": 131000
+      "plannedAmount": 131000,
+      "actualSpentAmount": 126000,
+      "remainingAmount": 5000
     },
     {
       "categoryId": 30,
       "categoryName": "교통",
-      "amount": 44000
+      "plannedAmount": 44000,
+      "actualSpentAmount": 38000,
+      "remainingAmount": 6000
     },
     {
       "categoryId": 20,
       "categoryName": "주거",
-      "amount": 79000
+      "plannedAmount": 79000,
+      "actualSpentAmount": 79000,
+      "remainingAmount": 0
     }
   ],
   "lastAnalyzedAt": "2026-03-16T09:00:00"

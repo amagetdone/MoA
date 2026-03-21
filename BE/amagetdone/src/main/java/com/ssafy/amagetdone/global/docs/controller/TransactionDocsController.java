@@ -114,7 +114,7 @@ public interface TransactionDocsController {
 	})
 	ApiResponse<WeeklyTransactionAnalysisDto.Response> getWeeklyAnalysis(
 		@Parameter(hidden = true) AuthenticatedMember authenticatedMember,
-		@Parameter(description = "Target week (yyyy-MM-w)") String yearWeek
+		@Parameter(description = "Target week (yyyy-Www or yyyy-MM-w)") String yearWeek
 	);
 
 	@Operation(summary = "Get monthly analysis", description = "Returns monthly transaction analysis result.")

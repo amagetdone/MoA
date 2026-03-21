@@ -61,6 +61,9 @@ public class PlanWeekAllocation extends BaseEntity {
 	@Column(name = "final_amount", nullable = false)
 	private Long finalAmount = 0L;
 
+	@Column(name = "actual_amount")
+	private Long actualAmount;
+
 	@Column(name = "note", length = 255)
 	private String note;
 
