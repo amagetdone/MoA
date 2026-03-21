@@ -6,16 +6,12 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
-import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.ssafy.amagetdone.domain.account.model.entity.Category;
@@ -59,9 +55,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class TransactionQueryService {
 
-	private static final Pattern ISO_YEAR_WEEK_PATTERN = Pattern.compile("^(\\d{4})-W(\\d{2})$");
-	private static final WeekFields ISO_WEEK_FIELDS = WeekFields.of(Locale.UK);
-	private static final String YEAR_WEEK_FORMAT_MESSAGE = "yearWeek must follow yyyy-Www or yyyy-MM-w.";
+	private static final String YEAR_WEEK_FORMAT_MESSAGE = "yearWeek must follow yyyy-MM-w.";
 
 	private final AccountTransactionOverrideRepository accountTransactionOverrideRepository;
 	private final CardTransactionOverrideRepository cardTransactionOverrideRepository;
@@ -331,7 +325,7 @@ public class TransactionQueryService {
 	}
 
 	public WeeklyTransactionAnalysisDto.Response getWeeklyTransactionAnalysis(Integer userId, String yearWeek) {
-		ParsedYearWeek parsedYearWeek = parseYearWeek(yearWeek);
+		ParsedYearWeek parsedYearWeek = parseYearMonthWeek(yearWeek);
 		TransactionAnalysisMetadata latestMetadata = transactionAnalysisMetadataRepository
 			.findTopByUser_IdOrderByAnalyzedAtDesc(userId)
 			.orElse(null);
@@ -464,21 +458,10 @@ public class TransactionQueryService {
 			.orElseThrow(() -> new TransactionException(TransactionErrorCode.TRANSACTION_ANALYSIS_RESULT_NOT_FOUND));
 	}
 
-	private ParsedYearWeek parseYearWeek(String value) {
+	private ParsedYearWeek parseYearMonthWeek(String value) {
 		if (value == null || value.isBlank()) {
 			throw new IllegalArgumentException(YEAR_WEEK_FORMAT_MESSAGE);
 		}
-
-		Matcher isoMatcher = ISO_YEAR_WEEK_PATTERN.matcher(value);
-		if (isoMatcher.matches()) {
-			LocalDate weekStartDate = parseIsoWeekStartDate(isoMatcher, value);
-			return new ParsedYearWeek(toIsoYearWeek(weekStartDate), weekStartDate);
-		}
-
-		return parseYearMonthWeek(value);
-	}
-
-	private ParsedYearWeek parseYearMonthWeek(String value) {
 		String[] tokens = value.split("-");
 		if (tokens.length != 3) {
 			throw new IllegalArgumentException(YEAR_WEEK_FORMAT_MESSAGE);
@@ -491,13 +474,6 @@ public class TransactionQueryService {
 		} catch (RuntimeException exception) {
 			throw new IllegalArgumentException(YEAR_WEEK_FORMAT_MESSAGE, exception);
 		}
-	}
-
-	private String toIsoYearWeek(LocalDate weekStartDate) {
-		return "%04d-W%02d".formatted(
-			weekStartDate.get(ISO_WEEK_FIELDS.weekBasedYear()),
-			weekStartDate.get(ISO_WEEK_FIELDS.weekOfWeekBasedYear())
-		);
 	}
 
 	private LocalDate resolveWeekStartDate(YearMonth targetMonth, int weekOfMonth) {
@@ -667,18 +643,6 @@ public class TransactionQueryService {
 
 	private long zero(Long amount) {
 		return amount == null ? 0L : amount;
-	}
-
-	private LocalDate parseIsoWeekStartDate(Matcher matcher, String yearWeek) {
-		try {
-			int weekBasedYear = Integer.parseInt(matcher.group(1));
-			int weekOfYear = Integer.parseInt(matcher.group(2));
-			return LocalDate.of(weekBasedYear, 1, 4)
-				.with(ISO_WEEK_FIELDS.weekOfWeekBasedYear(), weekOfYear)
-				.with(ISO_WEEK_FIELDS.dayOfWeek(), 1);
-		} catch (RuntimeException exception) {
-			throw new IllegalArgumentException("Invalid yearWeek: " + yearWeek);
-		}
 	}
 
 	private LocalDateTime findLastAnalyzedAt(List<Projection> projections) {

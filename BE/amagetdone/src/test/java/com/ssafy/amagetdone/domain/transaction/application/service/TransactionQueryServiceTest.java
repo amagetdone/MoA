@@ -2,6 +2,7 @@ package com.ssafy.amagetdone.domain.transaction.application.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -306,7 +307,7 @@ class TransactionQueryServiceTest {
 			))
 			.willReturn(Optional.empty());
 
-		WeeklyTransactionAnalysisDto.Response response = queryService.getWeeklyTransactionAnalysis(1, "2026-W12");
+		WeeklyTransactionAnalysisDto.Response response = queryService.getWeeklyTransactionAnalysis(1, "2026-03-3");
 
 		verify(budgetWeekRepository)
 			.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByWeekSequenceAsc(
@@ -314,7 +315,7 @@ class TransactionQueryServiceTest {
 				LocalDate.of(2026, 3, 22),
 				LocalDate.of(2026, 3, 16)
 			);
-		assertEquals("2026-W12", response.yearWeek());
+		assertEquals("2026-03-3", response.yearWeek());
 		assertEquals(0L, response.expenseAmount());
 		assertEquals(0L, response.essentialAmount());
 		assertEquals(0L, response.fixedEssentialAmount());
@@ -323,6 +324,18 @@ class TransactionQueryServiceTest {
 		assertNull(response.weekStartDate());
 		assertNull(response.weekEndDate());
 		assertNull(response.lastAnalyzedAt());
+	}
+
+	@Test
+	void getWeeklyTransactionAnalysisRejectsIsoYearWeekInput() {
+		TransactionQueryService queryService = transactionQueryService();
+
+		IllegalArgumentException exception = assertThrows(
+			IllegalArgumentException.class,
+			() -> queryService.getWeeklyTransactionAnalysis(1, "2026-W12")
+		);
+
+		assertEquals("yearWeek must follow yyyy-MM-w.", exception.getMessage());
 	}
 
 	private TransactionQueryService transactionQueryService() {
