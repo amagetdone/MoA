@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import java.time.Clock;
@@ -28,9 +29,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import jakarta.persistence.EntityManager;
 
 @ExtendWith(MockitoExtension.class)
 class PlanAiPipelineServiceTest {
@@ -51,11 +52,12 @@ class PlanAiPipelineServiceTest {
 	private PyanClient pyanClient;
 
 	@Mock
-	private EntityManager entityManager;
+	private PlatformTransactionManager transactionManager;
 
 	private PlanAiPipelineService planAiPipelineService;
 
 	private void createServiceWithClock(Clock clock) {
+		given(transactionManager.getTransaction(any())).willReturn(new SimpleTransactionStatus());
 		planAiPipelineService = new PlanAiPipelineService(
 			planRepository,
 			memberProfileImageService,
@@ -63,7 +65,7 @@ class PlanAiPipelineServiceTest {
 			storageService,
 			pyanClient,
 			clock,
-			entityManager
+			transactionManager
 		);
 	}
 
@@ -73,6 +75,7 @@ class PlanAiPipelineServiceTest {
 		Plan plan = instantiatePlan(10, 1, "Europe trip fund", "Summer travel savings");
 		ReflectionTestUtils.setField(plan, "startDate", LocalDate.of(2026, 3, 19));
 		given(planRepository.findByIdAndUserIdAndDeletedFalse(10, 1)).willReturn(Optional.of(plan));
+		stubSuccessfulStateUpdates(10, 1);
 		given(memberProfileImageService.loadProfileImageUrl(1)).willReturn("https://cdn.example.com/profile.png");
 		given(planAiClient.generatePlanImage(
 			"[Title] Europe trip fund [description] Summer travel savings",
@@ -108,6 +111,7 @@ class PlanAiPipelineServiceTest {
 			"https://cdn.example.com/profile.png"
 		);
 		verify(pyanClient).generate("generated-image".getBytes(), "plan-10");
+		verify(planRepository, never()).saveAndFlush(any());
 	}
 
 	@Test
@@ -116,6 +120,7 @@ class PlanAiPipelineServiceTest {
 		Plan plan = instantiatePlan(11, 1, "Europe trip fund", "Summer travel savings");
 		ReflectionTestUtils.setField(plan, "startDate", LocalDate.of(2026, 3, 20));
 		given(planRepository.findByIdAndUserIdAndDeletedFalse(11, 1)).willReturn(Optional.of(plan));
+		stubSuccessfulStateUpdates(11, 1);
 		given(memberProfileImageService.loadProfileImageUrl(1)).willReturn("https://cdn.example.com/profile.png");
 		given(planAiClient.generatePlanImage(
 			"[Title] Europe trip fund [description] Summer travel savings",
@@ -150,6 +155,8 @@ class PlanAiPipelineServiceTest {
 		createServiceWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
 		Plan plan = instantiatePlan(12, 1, "Europe trip fund", "Summer travel savings");
 		given(planRepository.findByIdAndUserIdAndDeletedFalse(12, 1)).willReturn(Optional.of(plan));
+		given(planRepository.markAiProcessing(eq(12), eq(1), any(), any())).willReturn(1);
+		given(planRepository.markAiFailed(eq(12), eq(1), any(), any())).willReturn(1);
 		given(memberProfileImageService.loadProfileImageUrl(1)).willReturn("https://cdn.example.com/profile.png");
 		given(planAiClient.generatePlanImage(
 			"[Title] Europe trip fund [description] Summer travel savings",
@@ -168,6 +175,9 @@ class PlanAiPipelineServiceTest {
 		createServiceWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
 		Plan plan = instantiatePlan(13, 1, "Europe trip fund", "Summer travel savings");
 		given(planRepository.findByIdAndUserIdAndDeletedFalse(13, 1)).willReturn(Optional.of(plan));
+		given(planRepository.markAiProcessing(eq(13), eq(1), any(), any())).willReturn(1);
+		given(planRepository.updateAiImageKey(eq(13), eq(1), eq("plan/generated.png"), any())).willReturn(1);
+		given(planRepository.markAiFailed(eq(13), eq(1), any(), any())).willReturn(1);
 		given(memberProfileImageService.loadProfileImageUrl(1)).willReturn("https://cdn.example.com/profile.png");
 		given(planAiClient.generatePlanImage(
 			"[Title] Europe trip fund [description] Summer travel savings",
@@ -204,6 +214,12 @@ class PlanAiPipelineServiceTest {
 		Plan plan = instantiatePlan(14, 1, "Europe trip fund", "Summer travel savings");
 		ReflectionTestUtils.setField(plan, "startDate", LocalDate.of(2026, 3, 18));
 		given(planRepository.findByIdAndUserIdAndDeletedFalse(14, 1)).willReturn(Optional.of(plan));
+		given(planRepository.markAiProcessing(eq(14), eq(1), any(), any())).willReturn(1);
+		given(planRepository.updateAiImageKey(eq(14), eq(1), eq("plan/generated.png"), any())).willReturn(1);
+		doAnswer(invocation -> {
+			plan.cancelAndDelete();
+			return 0;
+		}).when(planRepository).completeAiSuccess(eq(14), eq(1), eq("https://sketch.pyan.kr/cdn/compressed-14.mp4"), any(), any(), any(), any(), any());
 		given(memberProfileImageService.loadProfileImageUrl(1)).willReturn("https://cdn.example.com/profile.png");
 		given(planAiClient.generatePlanImage(
 			"[Title] Europe trip fund [description] Summer travel savings",
@@ -226,11 +242,6 @@ class PlanAiPipelineServiceTest {
 				"https://sketch.pyan.kr/cdn/original-14.mp4",
 				"https://sketch.pyan.kr/cdn/compressed-14.mp4"
 			));
-		doAnswer(invocation -> {
-			plan.cancelAndDelete();
-			return null;
-		}).when(entityManager).refresh(plan);
-
 		planAiPipelineService.start(14, 1);
 
 		assertEquals("CANCELLED", ReflectionTestUtils.getField(plan, "status").toString());
@@ -257,5 +268,11 @@ class PlanAiPipelineServiceTest {
 		} catch (ReflectiveOperationException exception) {
 			throw new IllegalStateException(exception);
 		}
+	}
+
+	private void stubSuccessfulStateUpdates(int planId, int userId) {
+		given(planRepository.markAiProcessing(eq(planId), eq(userId), any(), any())).willReturn(1);
+		given(planRepository.updateAiImageKey(eq(planId), eq(userId), any(), any())).willReturn(1);
+		given(planRepository.completeAiSuccess(eq(planId), eq(userId), any(), any(), any(), any(), any(), any())).willReturn(1);
 	}
 }

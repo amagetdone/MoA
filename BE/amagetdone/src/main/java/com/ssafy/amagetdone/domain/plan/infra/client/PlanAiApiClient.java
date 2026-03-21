@@ -37,7 +37,6 @@ public class PlanAiApiClient implements PlanAiClient {
 			.body(new PlanAiGenerateRequest(userPrompt, imageUrl))
 			.retrieve()
 			.body(JsonNode.class);
-		log.info("event=PLAN_AI_HTTP_RESPONSE url={} response={}", requestUrl, response);
 		logResponseSummary(requestUrl, response);
 
 		return extractBase64(response);
@@ -71,12 +70,21 @@ public class PlanAiApiClient implements PlanAiClient {
 	}
 
 	private void logResponseSummary(String requestUrl, JsonNode response) {
-		if (response == null || response.isNull() || response.isTextual()) {
+		if (response == null || response.isNull()) {
+			log.info("event=PLAN_AI_HTTP_RESPONSE_SUMMARY url={} responseType=empty", requestUrl);
+			return;
+		}
+		if (response.isTextual()) {
+			log.info(
+				"event=PLAN_AI_HTTP_RESPONSE_SUMMARY url={} responseType=text imageBase64Length={}",
+				requestUrl,
+				response.asText().isBlank() ? null : response.asText().length()
+			);
 			return;
 		}
 		String imageBase64 = textValue(response, "image_base64");
 		log.info(
-			"event=PLAN_AI_HTTP_RESPONSE_SUMMARY url={} mimeType={} model={} prompt={} imageBase64Length={}",
+			"event=PLAN_AI_HTTP_RESPONSE_SUMMARY url={} responseType=json mimeType={} model={} prompt={} imageBase64Length={}",
 			requestUrl,
 			textValue(response, "mime_type"),
 			textValue(response, "model"),

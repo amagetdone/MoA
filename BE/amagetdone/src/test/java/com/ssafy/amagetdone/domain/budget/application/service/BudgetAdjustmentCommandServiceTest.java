@@ -19,6 +19,8 @@ import com.ssafy.amagetdone.domain.budget.model.vo.BudgetAdjustmentType;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
+import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
 
 import jakarta.persistence.EntityManager;
@@ -44,6 +46,9 @@ class BudgetAdjustmentCommandServiceTest {
 	private BudgetAdjustmentRepository budgetAdjustmentRepository;
 
 	@Mock
+	private PlanRepository planRepository;
+
+	@Mock
 	private EntityManager entityManager;
 
 	private BudgetAdjustmentCommandService service;
@@ -54,6 +59,7 @@ class BudgetAdjustmentCommandServiceTest {
 			budgetWeekRepository,
 			planWeekAllocationRepository,
 			budgetAdjustmentRepository,
+			planRepository,
 			entityManager
 		);
 	}
@@ -80,7 +86,7 @@ class BudgetAdjustmentCommandServiceTest {
 
 		BudgetAdjustmentDto.Response response = service.saveAdjustment(1, "2026-W10", request);
 
-		assertThat(plan.getSavedAmount()).isEqualTo(115_000L);
+		verify(planRepository).adjustSavedAmount(11, 15_000L);
 		assertThat(budgetWeek.getFinalFreeAmount()).isEqualTo(105_000L);
 		assertThat(response.adjustmentType()).isEqualTo("PLAN_SAVED_ADD");
 		assertThat(response.planId()).isEqualTo(11);
@@ -116,6 +122,38 @@ class BudgetAdjustmentCommandServiceTest {
 		assertThatThrownBy(() -> service.saveAdjustment(1, "2026-W10", request))
 			.isInstanceOf(IllegalArgumentException.class)
 			.hasMessage("Adjustment amount exceeds remaining free budget");
+	}
+
+	@Test
+	void saveAdjustmentKeepsAiSuccessFieldsIntact() {
+		User user = user(1);
+		Plan plan = plan(user, 12, 100_000L);
+		ReflectionTestUtils.setField(plan, "planUrl", "plan/generated.png");
+		ReflectionTestUtils.setField(plan, "videoUrl", "https://cdn.example.com/plan.mp4");
+		ReflectionTestUtils.setField(plan, "aiPipelineStatus", PlanAiPipelineStatus.SUCCEEDED);
+		BudgetWeek budgetWeek = budgetWeek(user, 1, 120_000L, 20_000L);
+		PlanWeekAllocation allocation = allocation(plan, budgetWeek, 250_000L, 230_000L);
+		BudgetAdjustmentDto.Request request = new BudgetAdjustmentDto.Request(
+			BudgetAdjustmentType.PLAN_SAVED_ADD,
+			15_000L,
+			12,
+			"free budget to plan"
+		);
+
+		given(entityManager.getReference(User.class, 1)).willReturn(user);
+		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(user,
+			LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 2)))
+			.willReturn(Optional.of(budgetWeek));
+		given(planWeekAllocationRepository.findByBudgetWeek(budgetWeek)).willReturn(List.of(allocation));
+		given(budgetAdjustmentRepository.save(any(BudgetAdjustment.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+		service.saveAdjustment(1, "2026-W10", request);
+
+		assertThat(plan.getSavedAmount()).isEqualTo(100_000L);
+		assertThat(plan.getPlanUrl()).isEqualTo("plan/generated.png");
+		assertThat(plan.getVideoUrl()).isEqualTo("https://cdn.example.com/plan.mp4");
+		assertThat(plan.getAiPipelineStatus()).isEqualTo(PlanAiPipelineStatus.SUCCEEDED);
+		verify(planRepository).adjustSavedAmount(12, 15_000L);
 	}
 
 	private User user(int userId) {

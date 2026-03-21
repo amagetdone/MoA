@@ -3,10 +3,10 @@ package com.ssafy.amagetdone.domain.budget.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import java.time.Clock;
@@ -37,6 +37,7 @@ import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
 
 import org.junit.jupiter.api.Test;
@@ -171,12 +172,7 @@ class BudgetHistoricalRebuildServiceTest {
 		GoalSavingAccrualForceDto.Response response = service.rebuild(1, 11);
 
 		assertThat(response).isSameAs(rebuiltResponse);
-		assertThat(targetPlan.getSavedAmount()).isEqualTo(75_000L);
-		verify(planRepository).saveAll(argThat(plans -> {
-			java.util.List<Plan> savedPlans = new java.util.ArrayList<>();
-			plans.forEach(savedPlans::add);
-			return savedPlans.size() == 1 && savedPlans.contains(targetPlan);
-		}));
+		verify(planRepository).adjustSavedAmount(11, -45_000L);
 		verify(budgetAdjustmentRepository).deleteAll(List.of(staleAutoAdd, staleManualAdd));
 		verify(essentialWeekAllocationRepository).deleteAll(List.of(staleEssentialAllocation));
 		verify(planWeekAllocationRepository).deleteAll(List.of(stalePlanAllocation));
@@ -234,6 +230,70 @@ class BudgetHistoricalRebuildServiceTest {
 	}
 
 	@Test
+	void rebuildKeepsAiSuccessFieldsAndAvoidsWholePlanSave() {
+		User user = user(1);
+		Plan targetPlan = activePlan(user, 12, 120_000L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 6, 30));
+		ReflectionTestUtils.setField(targetPlan, "planUrl", "plan/generated.png");
+		ReflectionTestUtils.setField(targetPlan, "videoUrl", "https://cdn.example.com/plan.mp4");
+		ReflectionTestUtils.setField(targetPlan, "aiPipelineStatus", PlanAiPipelineStatus.SUCCEEDED);
+		BudgetWeek staleWeek = budgetWeek(user, 102, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 7));
+		BudgetAdjustment staleAutoAdd = BudgetAdjustment.builder()
+			.budgetWeek(staleWeek)
+			.plan(targetPlan)
+			.adjustmentType(BudgetAdjustmentType.PLAN_SAVED_AUTO_ADD)
+			.adjustmentAmount(30_000L)
+			.reason("Automatic daily goal saving accrual applied")
+			.build();
+
+		given(planRepository.findByIdAndUserId(12, 1)).willReturn(Optional.of(targetPlan));
+		given(budgetWeekRepository.findAll()).willReturn(List.of(staleWeek));
+		given(budgetMonthRepository.findAll()).willReturn(List.of());
+		given(budgetAdjustmentRepository.findAllByBudgetWeekIn(List.of(staleWeek))).willReturn(List.of(staleAutoAdd));
+		given(essentialWeekAllocationRepository.findAllByBudgetWeekIn(List.of(staleWeek))).willReturn(List.of());
+		given(planWeekAllocationRepository.findAllByBudgetWeekIn(List.of(staleWeek))).willReturn(List.of());
+		given(budgetAllocationTriggerService.triggerHistorical(1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 20)))
+			.willReturn(new BudgetAllocationService.AllocationResult(List.of(), List.of(), List.of(), List.of(), List.of()));
+		given(dailyGoalSavingAccrualService.backfillAccrual(1, new GoalSavingAccrualForceDto.BackfillRequest(null)))
+			.willReturn(new GoalSavingAccrualForceDto.Response(
+				GoalSavingAccrualForceDto.OperationType.BACKFILL,
+				null,
+				GoalSavingAccrualForceDto.TargetType.ALL,
+				null,
+				0L,
+				LocalDate.of(2026, 3, 20),
+				LocalDate.of(2026, 3, 19),
+				LocalDate.of(2026, 3, 1),
+				LocalDate.of(2026, 3, 19),
+				"UP_TO_2026-03-19",
+				List.of()
+			));
+
+		BudgetHistoricalRebuildService service = new BudgetHistoricalRebuildService(
+			planRepository,
+			budgetWeekRepository,
+			budgetMonthRepository,
+			budgetAdjustmentRepository,
+			budgetRolloverRepository,
+			essentialExpenseMonthRepository,
+			essentialWeekAllocationRepository,
+			planWeekAllocationRepository,
+			budgetAllocationTriggerService,
+			budgetActualSpentRefreshService,
+			budgetRolloverResyncService,
+			dailyGoalSavingAccrualService,
+			Clock.fixed(Instant.parse("2026-03-20T00:00:00Z"), ZoneId.of("Asia/Seoul"))
+		);
+
+		service.rebuild(1, 12);
+
+		assertThat(targetPlan.getPlanUrl()).isEqualTo("plan/generated.png");
+		assertThat(targetPlan.getVideoUrl()).isEqualTo("https://cdn.example.com/plan.mp4");
+		assertThat(targetPlan.getAiPipelineStatus()).isEqualTo(PlanAiPipelineStatus.SUCCEEDED);
+		verify(planRepository).adjustSavedAmount(12, -30_000L);
+		verify(planRepository, never()).saveAll(argThat(plans -> true));
+	}
+
+	@Test
 	void rebuildSeedsMissingPastBudgetMonthsAndEssentialsBeforeRunningHistoricalReplay() {
 		User user = user(1);
 		Plan targetPlan = activePlan(user, 11, 0L, LocalDate.of(2025, 12, 16), LocalDate.of(2026, 9, 1));
@@ -243,7 +303,7 @@ class BudgetHistoricalRebuildServiceTest {
 		firstExistingMonth.setTotalVariableEssentialAmount(152_800L);
 		EssentialExpenseMonth firstExistingEssential = EssentialExpenseMonth.builder()
 			.budgetMonth(firstExistingMonth)
-			.category(Category.create(1, "식비"))
+			.category(Category.create(1, "FOOD"))
 			.expenseScope("VARIABLE")
 			.amount(142_700L)
 			.sourceProvider(SourceProvider.ANALYZER)

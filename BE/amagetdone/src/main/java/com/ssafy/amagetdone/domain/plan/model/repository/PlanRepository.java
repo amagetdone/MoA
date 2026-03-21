@@ -10,6 +10,7 @@ import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -76,4 +77,97 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 	boolean existsByUserIdAndDeletedFalse(Integer userId);
 
 	void deleteByUserId(Integer userId);
+
+	@Modifying(flushAutomatically = true)
+	@Query("""
+		update Plan p
+		set p.aiPipelineStatus = :processingStatus,
+			p.version = p.version + 1
+		where p.id = :planId
+			and p.user.id = :userId
+			and p.deleted = false
+			and p.status <> :cancelledStatus
+		""")
+	int markAiProcessing(
+		@Param("planId") Integer planId,
+		@Param("userId") Integer userId,
+		@Param("processingStatus") PlanAiPipelineStatus processingStatus,
+		@Param("cancelledStatus") PlanStatus cancelledStatus
+	);
+
+	@Modifying(flushAutomatically = true)
+	@Query("""
+		update Plan p
+		set p.planUrl = :planUrl,
+			p.version = p.version + 1
+		where p.id = :planId
+			and p.user.id = :userId
+			and p.deleted = false
+			and p.status <> :cancelledStatus
+		""")
+	int updateAiImageKey(
+		@Param("planId") Integer planId,
+		@Param("userId") Integer userId,
+		@Param("planUrl") String planUrl,
+		@Param("cancelledStatus") PlanStatus cancelledStatus
+	);
+
+	@Modifying(flushAutomatically = true)
+	@Query("""
+		update Plan p
+		set p.videoUrl = :videoUrl,
+			p.aiPipelineStatus = :successStatus,
+			p.status = case
+				when p.startDate is not null and p.startDate <= :today and p.status = :waitingStatus then :activeStatus
+				else p.status
+			end,
+			p.version = p.version + 1
+		where p.id = :planId
+			and p.user.id = :userId
+			and p.deleted = false
+			and p.status <> :cancelledStatus
+		""")
+	int completeAiSuccess(
+		@Param("planId") Integer planId,
+		@Param("userId") Integer userId,
+		@Param("videoUrl") String videoUrl,
+		@Param("successStatus") PlanAiPipelineStatus successStatus,
+		@Param("today") LocalDate today,
+		@Param("waitingStatus") PlanStatus waitingStatus,
+		@Param("activeStatus") PlanStatus activeStatus,
+		@Param("cancelledStatus") PlanStatus cancelledStatus
+	);
+
+	@Modifying(flushAutomatically = true)
+	@Query("""
+		update Plan p
+		set p.aiPipelineStatus = :failedStatus,
+			p.aiRetryCount = p.aiRetryCount + 1,
+			p.version = p.version + 1
+		where p.id = :planId
+			and p.user.id = :userId
+			and p.deleted = false
+			and p.status <> :cancelledStatus
+		""")
+	int markAiFailed(
+		@Param("planId") Integer planId,
+		@Param("userId") Integer userId,
+		@Param("failedStatus") PlanAiPipelineStatus failedStatus,
+		@Param("cancelledStatus") PlanStatus cancelledStatus
+	);
+
+	@Modifying(flushAutomatically = true)
+	@Query("""
+		update Plan p
+		set p.savedAmount = case
+				when coalesce(p.savedAmount, 0) + :delta < 0 then 0
+				else coalesce(p.savedAmount, 0) + :delta
+			end,
+			p.version = p.version + 1
+		where p.id = :planId
+		""")
+	int adjustSavedAmount(
+		@Param("planId") Integer planId,
+		@Param("delta") Long delta
+	);
 }

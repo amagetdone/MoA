@@ -76,6 +76,12 @@ class GoalSavingAccrualApplyTestServiceTest {
 			savedAdjustments.add(adjustment);
 			return adjustment;
 		});
+		Mockito.lenient().when(planRepository.adjustSavedAmount(any(), any())).thenAnswer(invocation -> {
+			Integer planId = invocation.getArgument(0);
+			Long delta = invocation.getArgument(1);
+			updateTrackedPlanSavedAmount(planId, delta);
+			return 1;
+		});
 	}
 
 	@Test
@@ -95,8 +101,10 @@ class GoalSavingAccrualApplyTestServiceTest {
 		assertThat(response.operationType()).isEqualTo(GoalSavingAccrualForceDto.OperationType.APPLY);
 		assertThat(response.appliedScope()).isEqualTo(GoalSavingAccrualForceDto.Scope.DAY);
 		assertThat(response.appliedAmount()).isEqualTo(10_000L);
-		assertThat(plan.getSavedAmount()).isEqualTo(10_000L);
-		assertThat(response.plans()).singleElement().satisfies(detail -> assertThat(detail.accruedAmount()).isEqualTo(10_000L));
+		assertThat(response.plans()).singleElement().satisfies(detail -> {
+			assertThat(detail.accruedAmount()).isEqualTo(10_000L);
+			assertThat(detail.savedAmount()).isEqualTo(10_000L);
+		});
 		assertThat(savedAdjustments).singleElement().satisfies(adjustment -> {
 			assertThat(adjustment.getAdjustmentType()).isEqualTo(BudgetAdjustmentType.PLAN_SAVED_ADD);
 		});
@@ -117,12 +125,12 @@ class GoalSavingAccrualApplyTestServiceTest {
 		);
 
 		assertThat(response.appliedAmount()).isEqualTo(38_095L);
-		assertThat(plan.getSavedAmount()).isEqualTo(43_095L);
 		assertThat(response.periodStartDate()).isEqualTo(LocalDate.of(2026, 3, 16));
 		assertThat(response.periodEndDate()).isEqualTo(LocalDate.of(2026, 3, 22));
 		assertThat(response.plans()).singleElement().satisfies(detail -> {
 			assertThat(detail.finalAmount()).isEqualTo(38_095L);
 			assertThat(detail.accruedAmount()).isEqualTo(38_095L);
+			assertThat(detail.savedAmount()).isEqualTo(43_095L);
 		});
 	}
 
@@ -144,11 +152,11 @@ class GoalSavingAccrualApplyTestServiceTest {
 		);
 
 		assertThat(response.appliedAmount()).isEqualTo(55_000L);
-		assertThat(plan.getSavedAmount()).isEqualTo(55_000L);
 		assertThat(response.periodLabel()).isEqualTo("2026-03");
 		assertThat(response.plans()).singleElement().satisfies(detail -> {
 			assertThat(detail.finalAmount()).isEqualTo(55_000L);
 			assertThat(detail.accruedAmount()).isEqualTo(55_000L);
+			assertThat(detail.savedAmount()).isEqualTo(55_000L);
 		});
 	}
 
@@ -171,8 +179,7 @@ class GoalSavingAccrualApplyTestServiceTest {
 		assertThat(response.targetType()).isEqualTo(GoalSavingAccrualForceDto.TargetType.SINGLE);
 		assertThat(response.planId()).isEqualTo(24);
 		assertThat(response.plans()).hasSize(1);
-		assertThat(travel.getSavedAmount()).isEqualTo(20_000L);
-		assertThat(camera.getSavedAmount()).isEqualTo(0L);
+		assertThat(response.plans()).singleElement().satisfies(detail -> assertThat(detail.savedAmount()).isEqualTo(20_000L));
 	}
 
 	@Test
@@ -216,7 +223,7 @@ class GoalSavingAccrualApplyTestServiceTest {
 
 		assertThat(first.appliedAmount()).isEqualTo(42_000L);
 		assertThat(second.appliedAmount()).isEqualTo(42_000L);
-		assertThat(plan.getSavedAmount()).isEqualTo(84_000L);
+		assertThat(second.plans()).singleElement().satisfies(detail -> assertThat(detail.savedAmount()).isEqualTo(84_000L));
 	}
 
 	@Test
@@ -291,5 +298,18 @@ class GoalSavingAccrualApplyTestServiceTest {
 			.plannedAmount(finalAmount)
 			.finalAmount(finalAmount)
 			.build();
+	}
+
+	private void updateTrackedPlanSavedAmount(Integer planId, Long delta) {
+		if (planId == null || delta == null) {
+			return;
+		}
+		allocationsByWeekId.values().stream()
+			.flatMap(List::stream)
+			.map(PlanWeekAllocation::getPlan)
+			.filter(java.util.Objects::nonNull)
+			.filter(plan -> planId.equals(plan.getId()))
+			.findFirst()
+			.ifPresent(plan -> plan.setSavedAmount(Math.max(0L, (plan.getSavedAmount() == null ? 0L : plan.getSavedAmount()) + delta)));
 	}
 }
