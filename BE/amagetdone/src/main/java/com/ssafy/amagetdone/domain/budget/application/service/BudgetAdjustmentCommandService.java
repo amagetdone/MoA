@@ -16,6 +16,7 @@ import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetAdjustmentType;
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetWeekStatus;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
+import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
 
@@ -36,6 +37,7 @@ public class BudgetAdjustmentCommandService {
 	private final BudgetWeekRepository budgetWeekRepository;
 	private final PlanWeekAllocationRepository planWeekAllocationRepository;
 	private final BudgetAdjustmentRepository budgetAdjustmentRepository;
+	private final PlanRepository planRepository;
 	private final EntityManager entityManager;
 
 	public BudgetAdjustmentDto.Response saveAdjustment(Integer userId, String yearWeek, BudgetAdjustmentDto.Request request) {
@@ -81,9 +83,7 @@ public class BudgetAdjustmentCommandService {
 				if (remainingFreeBudget < adjustmentAmount) {
 					throw new IllegalArgumentException("Adjustment amount exceeds remaining free budget");
 				}
-				targetAllocation.getPlan().setSavedAmount(
-					zero(targetAllocation.getPlan().getSavedAmount()) + adjustmentAmount
-				);
+				planRepository.adjustSavedAmount(targetAllocation.getPlan().getId(), adjustmentAmount);
 				budgetWeek.setFinalFreeAmount(zero(budgetWeek.getFinalFreeAmount()) - adjustmentAmount);
 			}
 			case PLAN_DELAY, PLAN_EARLY_CLOSE, ROLLOVER_APPLIED -> throw new IllegalArgumentException(

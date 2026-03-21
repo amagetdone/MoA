@@ -129,8 +129,7 @@ public class BudgetHistoricalRebuildService {
 	}
 
 	private void resetPlanSavedAmounts(List<BudgetAdjustment> adjustments) {
-		Map<Integer, Plan> plansById = new LinkedHashMap<>();
-		Map<Integer, Long> signedAdjustmentsByPlanId = new LinkedHashMap<>();
+		Map<Integer, Long> savedAmountDeltasByPlanId = new LinkedHashMap<>();
 
 		for (BudgetAdjustment adjustment : adjustments) {
 			if (adjustment.getPlan() == null || adjustment.getPlan().getId() == null) {
@@ -140,21 +139,14 @@ public class BudgetHistoricalRebuildService {
 			if (signedAmount == 0L) {
 				continue;
 			}
-			plansById.putIfAbsent(adjustment.getPlan().getId(), adjustment.getPlan());
-			signedAdjustmentsByPlanId.merge(adjustment.getPlan().getId(), signedAmount, Long::sum);
+			savedAmountDeltasByPlanId.merge(adjustment.getPlan().getId(), -signedAmount, Long::sum);
 		}
 
-		if (plansById.isEmpty()) {
+		if (savedAmountDeltasByPlanId.isEmpty()) {
 			return;
 		}
 
-		for (Map.Entry<Integer, Plan> entry : plansById.entrySet()) {
-			long signedAmount = signedAdjustmentsByPlanId.getOrDefault(entry.getKey(), 0L);
-			Plan plan = entry.getValue();
-			plan.setSavedAmount(Math.max(0L, zero(plan.getSavedAmount()) - signedAmount));
-		}
-
-		planRepository.saveAll(plansById.values());
+		savedAmountDeltasByPlanId.forEach(planRepository::adjustSavedAmount);
 	}
 
 	private long signedSavedAdjustmentAmount(BudgetAdjustment adjustment) {
