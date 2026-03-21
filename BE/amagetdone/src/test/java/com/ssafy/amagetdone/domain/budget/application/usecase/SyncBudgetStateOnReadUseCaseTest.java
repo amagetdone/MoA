@@ -1,6 +1,7 @@
 package com.ssafy.amagetdone.domain.budget.application.usecase;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -102,7 +103,7 @@ class SyncBudgetStateOnReadUseCaseTest {
 
 		verify(triggerBudgetAllocationUseCase).execute(userId);
 		verify(syncLatestTransactionsUseCase).execute(userId, 3, false);
-		verify(runTransactionAnalysisUseCase, never()).execute(any(), any());
+		verify(runTransactionAnalysisUseCase, never()).execute(any(), anyInt());
 		verifyNoInteractions(budgetActualSpentRefreshService, budgetRolloverResyncService);
 		verify(applyDailyGoalSavingAccrualUseCase).execute(userId);
 	}
@@ -124,7 +125,7 @@ class SyncBudgetStateOnReadUseCaseTest {
 
 		verify(triggerBudgetAllocationUseCase).execute(userId);
 		verify(syncLatestTransactionsUseCase).execute(userId, 3, false);
-		verify(runTransactionAnalysisUseCase, never()).execute(any(), any());
+		verify(runTransactionAnalysisUseCase, never()).execute(any(), anyInt());
 		verify(applyDailyGoalSavingAccrualUseCase).execute(userId);
 	}
 

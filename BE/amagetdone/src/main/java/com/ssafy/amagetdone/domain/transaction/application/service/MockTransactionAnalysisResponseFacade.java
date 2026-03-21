@@ -42,6 +42,20 @@ public class MockTransactionAnalysisResponseFacade implements TransactionAnalysi
 	}
 
 	@Override
+	public TransactionAnalysisDto.OnboardingResult analyzeMonthlyTransactions(Integer userId, YearMonth month) {
+		return new TransactionAnalysisDto.OnboardingResult(
+			month + " 소비 분석을 완료했어요.",
+			onboardingResult.averageIncome(),
+			onboardingResult.averageExpense(),
+			onboardingResult.remainingAmount(),
+			onboardingResult.fixedExpenseRatio(),
+			onboardingResult.variableExpenseRatio(),
+			onboardingResult.insightMessage(),
+			onboardingResult.categoryExpenses()
+		);
+	}
+
+	@Override
 	public TransactionAnalysisDto.OnboardingResult getOnboardingAnalysis(Integer userId) {
 		return onboardingResult;
 	}

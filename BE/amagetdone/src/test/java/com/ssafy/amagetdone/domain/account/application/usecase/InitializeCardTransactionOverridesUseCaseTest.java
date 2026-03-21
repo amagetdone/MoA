@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.List;
@@ -108,12 +109,18 @@ class InitializeCardTransactionOverridesUseCaseTest {
 		verify(cardTransactionOverrideRepository).saveAll(captor.capture());
 		assertThat(response.targetType()).isEqualTo("card");
 		assertThat(response.targetNo()).isEqualTo("5241111122223333");
-		assertThat(response.baseMonth()).isEqualTo("2025-12");
 		assertThat(response.transactionCount()).isEqualTo(captor.getValue().size());
+		assertThat(captor.getValue().size()).isGreaterThanOrEqualTo(80);
 		assertThat(captor.getValue())
 			.extracting(CardTransactionOverride::getTransactionDateTime)
 			.map(YearMonth::from)
 			.contains(YearMonth.of(2025, 12), YearMonth.of(2026, 1), YearMonth.of(2026, 2), YearMonth.of(2026, 3));
+		assertThat(captor.getValue())
+			.extracting(CardTransactionOverride::getTransactionDateTime)
+			.map(dateTime -> dateTime.toLocalDate())
+			.contains(LocalDate.of(2026, 3, 20));
+		assertThat(countFoodMerchants(captor.getValue())).isGreaterThanOrEqualTo(35);
+		assertThat(countTransportMerchants(captor.getValue())).isGreaterThanOrEqualTo(15);
 	}
 
 	@Test
@@ -137,5 +144,34 @@ class InitializeCardTransactionOverridesUseCaseTest {
 	@SuppressWarnings("unchecked")
 	private <T> ArgumentCaptor<List<T>> listCaptor() {
 		return (ArgumentCaptor<List<T>>) (ArgumentCaptor<?>)ArgumentCaptor.forClass(List.class);
+	}
+
+	private long countFoodMerchants(List<CardTransactionOverride> transactions) {
+		return transactions.stream()
+			.map(transaction -> transaction.getMerchant().getName())
+			.filter(name -> name.contains("버거")
+				|| name.contains("김밥")
+				|| name.contains("맘스터치")
+				|| name.contains("한솥")
+				|| name.contains("국밥")
+				|| name.contains("마라")
+				|| name.contains("우동")
+				|| name.contains("덮밥")
+				|| name.contains("카페")
+				|| name.contains("치킨")
+				|| name.contains("토스트")
+				|| name.contains("분식"))
+			.count();
+	}
+
+	private long countTransportMerchants(List<CardTransactionOverride> transactions) {
+		return transactions.stream()
+			.map(transaction -> transaction.getMerchant().getName())
+			.filter(name -> name.contains("택시")
+				|| name.contains("지하철")
+				|| name.contains("버스")
+				|| name.contains("코레일")
+				|| name.contains("유페이"))
+			.count();
 	}
 }

@@ -15,6 +15,7 @@ import com.ssafy.amagetdone.domain.member.api.dto.LogoutDto;
 import com.ssafy.amagetdone.domain.member.api.dto.RefreshTokenDto;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
 import com.ssafy.amagetdone.domain.member.api.dto.TestSocialAuthDto;
+import com.ssafy.amagetdone.domain.account.application.usecase.SyncTestUserAssetsUseCase;
 import com.ssafy.amagetdone.domain.member.application.service.MemberAuthService;
 import com.ssafy.amagetdone.domain.member.application.service.MemberTokenService;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
@@ -45,6 +46,9 @@ class AuthControllerTest {
 
 	@MockitoBean
 	private JwtAccessTokenReader jwtAccessTokenReader;
+
+	@MockitoBean
+	private SyncTestUserAssetsUseCase syncTestUserAssetsUseCase;
 
 	@Test
 	void socialAuthReturnsJwtPayloadForKakao() throws Exception {
@@ -136,6 +140,23 @@ class AuthControllerTest {
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.message").value("\uD14C\uC2A4\uD2B8 \uC18C\uC15C \uC0AC\uC6A9\uC790\uB97C \uCD08\uAE30\uD654\uD588\uC2B5\uB2C8\uB2E4."))
 			.andExpect(jsonPath("$.data.success").value(true));
+	}
+
+	@Test
+	void socialTestSyncAssetsReturnsSuccess() throws Exception {
+		given(jwtAccessTokenReader.readUserId("Bearer access-token")).willReturn(7);
+		willDoNothing().given(syncTestUserAssetsUseCase).execute(7);
+
+		mockMvc.perform(apiPost("/v1/auth/social/test/sync-assets")
+				.header("Authorization", "Bearer access-token"))
+			.andExpect(status().isOk())
+			.andExpect(content().encoding("UTF-8"))
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("\uD14C\uC2A4\uD2B8 \uAE08\uC735 \uC790\uC0B0 \uB3D9\uAE30\uD654\uC5D0 \uC131\uACF5\uD588\uC2B5\uB2C8\uB2E4."))
+			.andExpect(jsonPath("$.data.success").value(true));
+
+		verify(jwtAccessTokenReader).readUserId("Bearer access-token");
+		verify(syncTestUserAssetsUseCase).execute(7);
 	}
 
 	@Test

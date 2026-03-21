@@ -22,7 +22,6 @@ class AdminDataInitControllerTest {
 		AccountAdminDto.TransactionInitResponse response = new AccountAdminDto.TransactionInitResponse(
 			"account",
 			"0016174648358792",
-			"2025-12",
 			109
 		);
 		when(accountService.initializeAccountTransactions(request)).thenReturn(response);
@@ -44,7 +43,6 @@ class AdminDataInitControllerTest {
 		AccountAdminDto.TransactionInitResponse response = new AccountAdminDto.TransactionInitResponse(
 			"card",
 			"5241111122223333",
-			"2025-12",
 			36
 		);
 		when(accountService.initializeCardTransactions(request)).thenReturn(response);

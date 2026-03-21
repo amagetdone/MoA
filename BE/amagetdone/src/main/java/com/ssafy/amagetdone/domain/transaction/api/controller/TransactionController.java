@@ -105,6 +105,22 @@ public class TransactionController implements TransactionDocsController {
 		);
 	}
 
+	@PostMapping("/analysis/monthly")
+	public ApiResponse<TransactionAnalysisDto.Response> analyzeMonthlyTransactions(
+		@AuthenticationPrincipal AuthenticatedMember authenticatedMember,
+		@RequestParam(name = "month") String month
+	) {
+		return ApiResponse.ok(
+			"해당 월 거래 분석을 완료했습니다.",
+			TransactionAnalysisDto.Response.from(
+				transactionAnalysisResponseFacade.analyzeMonthlyTransactions(
+					authenticatedMember.userId(),
+					parseYearMonth(month)
+				)
+			)
+		);
+	}
+
 	@PostMapping("/sync")
 	public ApiResponse<TransactionSyncDto.Response> syncTransactions(
 		@AuthenticationPrincipal AuthenticatedMember authenticatedMember,

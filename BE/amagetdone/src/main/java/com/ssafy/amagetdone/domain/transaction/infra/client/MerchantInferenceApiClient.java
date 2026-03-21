@@ -1,5 +1,6 @@
 package com.ssafy.amagetdone.domain.transaction.infra.client;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import com.ssafy.amagetdone.domain.transaction.exception.TransactionErrorCode;
@@ -15,6 +16,10 @@ import org.springframework.web.client.RestClientException;
 public class MerchantInferenceApiClient {
 
 	private static final String BATCH_PATH = "/v1/merchant/batch";
+	private static final MediaType APPLICATION_JSON_UTF8 = new MediaType(
+		MediaType.APPLICATION_JSON,
+		StandardCharsets.UTF_8
+	);
 
 	private final RestClient restClient;
 	private final MerchantInferenceApiProperties properties;
@@ -35,7 +40,7 @@ public class MerchantInferenceApiClient {
 		try {
 			response = restClient.post()
 				.uri(properties.getBaseUrl() + BATCH_PATH)
-				.contentType(MediaType.APPLICATION_JSON)
+				.contentType(APPLICATION_JSON_UTF8)
 				.body(new MerchantInferenceDto.Request(merchantTexts))
 				.retrieve()
 				.body(MerchantInferenceDto.Response.class);
