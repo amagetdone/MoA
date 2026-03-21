@@ -79,7 +79,7 @@ class BudgetActualSpentRefreshServiceTest {
 
 		given(transactionAnalysisMetadataRepository.findTopByUser_IdOrderByAnalyzedAtDesc(userId))
 			.willReturn(Optional.of(metadata(userId, analyzedAt)));
-		given(budgetWeekRepository.findAll()).willReturn(List.of(week1, week2));
+		given(budgetWeekRepository.findAllByUser_IdOrderByWeekStartDateAsc(userId)).willReturn(List.of(week1, week2));
 		given(transactionAnalysisResultRepository.findAllByUserIdAndAnalyzedAtAndTransactionDateTimeBetweenOrderByTransactionDateTimeAsc(
 			userId,
 			analyzedAt,
@@ -116,7 +116,7 @@ class BudgetActualSpentRefreshServiceTest {
 
 		given(transactionAnalysisMetadataRepository.findTopByUser_IdOrderByAnalyzedAtDesc(userId))
 			.willReturn(Optional.of(metadata(userId, analyzedAt)));
-		given(budgetWeekRepository.findAll()).willReturn(List.of(week));
+		given(budgetWeekRepository.findAllByUser_IdOrderByWeekStartDateAsc(userId)).willReturn(List.of(week));
 		given(transactionAnalysisResultRepository.findAllByUserIdAndAnalyzedAtAndTransactionDateTimeBetweenOrderByTransactionDateTimeAsc(
 			userId,
 			analyzedAt,

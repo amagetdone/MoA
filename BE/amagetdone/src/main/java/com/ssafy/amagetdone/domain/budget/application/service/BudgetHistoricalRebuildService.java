@@ -76,11 +76,8 @@ public class BudgetHistoricalRebuildService {
 		}
 
 		List<BudgetMonth> budgetMonths = budgetMonthsWithSeedFallback(userId, serviceStartDate, today);
-		List<BudgetWeek> affectedWeeks = budgetWeekRepository.findAll().stream()
-			.filter(week -> week != null)
-			.filter(week -> week.getUser() != null && Objects.equals(week.getUser().getId(), userId))
+		List<BudgetWeek> affectedWeeks = budgetWeekRepository.findAllByUser_IdOrderByWeekStartDateAsc(userId).stream()
 			.filter(week -> overlaps(week, serviceStartDate, today))
-			.sorted(java.util.Comparator.comparing(BudgetWeek::getWeekStartDate))
 			.toList();
 
 		List<BudgetMonth> affectedMonths = budgetMonths.stream()
@@ -135,10 +132,7 @@ public class BudgetHistoricalRebuildService {
 	}
 
 	private List<BudgetMonth> budgetMonthsWithSeedFallback(Integer userId, LocalDate serviceStartDate, LocalDate today) {
-		List<BudgetMonth> existingMonths = budgetMonthRepository.findAll().stream()
-			.filter(month -> month != null)
-			.filter(month -> month.getUser() != null && Objects.equals(month.getUser().getId(), userId))
-			.toList();
+		List<BudgetMonth> existingMonths = budgetMonthRepository.findAllByUser_IdOrderByBaseDateAsc(userId);
 		if (existingMonths.isEmpty()) {
 			return existingMonths;
 		}

@@ -318,13 +318,10 @@ public class DailyGoalSavingAccrualService {
 		LocalDate rangeEndDate,
 		boolean activeOnly
 	) {
-		List<BudgetWeek> candidateWeeks = budgetWeekRepository.findAll().stream()
-			.filter(Objects::nonNull)
-			.filter(week -> week.getUser() != null && Objects.equals(week.getUser().getId(), userId))
+		List<BudgetWeek> candidateWeeks = budgetWeekRepository.findAllByUser_IdOrderByWeekStartDateAsc(userId).stream()
 			.filter(week -> week.getStatus() != BudgetWeekStatus.CLOSED)
 			.filter(week -> rangeEndDate == null || !week.getWeekStartDate().isAfter(rangeEndDate))
 			.filter(week -> rangeStartDate == null || overlaps(week, rangeStartDate, rangeEndDate == null ? week.getWeekEndDate() : rangeEndDate))
-			.sorted(Comparator.comparing(BudgetWeek::getWeekStartDate))
 			.toList();
 		if (candidateWeeks.isEmpty()) {
 			return List.of();

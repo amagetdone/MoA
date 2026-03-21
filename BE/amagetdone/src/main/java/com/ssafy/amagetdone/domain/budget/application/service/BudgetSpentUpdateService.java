@@ -35,6 +35,7 @@ public class BudgetSpentUpdateService {
 
 		Map<LocalDate, Optional<BudgetWeek>> budgetWeeksByDate = new HashMap<>();
 		Map<BudgetWeek, List<EssentialWeekAllocation>> essentialAllocationsByBudgetWeek = new HashMap<>();
+		java.util.Set<BudgetWeek> resetWeeks = new java.util.HashSet<>();
 
 		for (TransactionAnalysisResult analysisResult : analysisResults) {
 			if (analysisResult == null || analysisResult.getTransaction() == null
@@ -56,10 +57,20 @@ public class BudgetSpentUpdateService {
 				continue;
 			}
 
+			BudgetWeek targetBudgetWeek = budgetWeek.get();
+			if (resetWeeks.add(targetBudgetWeek)) {
+				targetBudgetWeek.setActualSpentAmount(0L);
+				List<EssentialWeekAllocation> allocations = essentialAllocationsByBudgetWeek.computeIfAbsent(
+					targetBudgetWeek,
+					essentialWeekAllocationRepository::findByBudgetWeek
+				);
+				allocations.forEach(allocation -> allocation.setActualSpentAmount(0L));
+			}
+
 			if (analysisResult.isAnalysisIncluded()) {
 				updateEssentialSpentAmount(
 					analysisResult,
-					budgetWeek.get(),
+					targetBudgetWeek,
 					spentAmount,
 					essentialAllocationsByBudgetWeek
 				);
@@ -67,7 +78,6 @@ public class BudgetSpentUpdateService {
 			}
 
 			if (analysisResult.getExcludedReason() == TransactionExcludedReason.NON_ESSENTIAL) {
-				BudgetWeek targetBudgetWeek = budgetWeek.get();
 				targetBudgetWeek.setActualSpentAmount(normalizeAmount(targetBudgetWeek.getActualSpentAmount()) + spentAmount);
 			}
 		}

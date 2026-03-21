@@ -41,11 +41,8 @@ public class BudgetActualSpentRefreshService {
 			return;
 		}
 
-		List<BudgetWeek> openWeeks = budgetWeekRepository.findAll().stream()
-			.filter(budgetWeek -> budgetWeek != null)
-			.filter(budgetWeek -> budgetWeek.getUser() != null && java.util.Objects.equals(budgetWeek.getUser().getId(), userId))
+		List<BudgetWeek> openWeeks = budgetWeekRepository.findAllByUser_IdOrderByWeekStartDateAsc(userId).stream()
 			.filter(budgetWeek -> budgetWeek.getStatus() != BudgetWeekStatus.CLOSED)
-			.sorted(Comparator.comparing(BudgetWeek::getWeekStartDate))
 			.toList();
 		refresh(userId, openWeeks, today.atStartOfDay(), today.atTime(LocalTime.MAX));
 	}
@@ -55,12 +52,9 @@ public class BudgetActualSpentRefreshService {
 			return;
 		}
 
-		List<BudgetWeek> targetWeeks = budgetWeekRepository.findAll().stream()
-			.filter(budgetWeek -> budgetWeek != null)
-			.filter(budgetWeek -> budgetWeek.getUser() != null && java.util.Objects.equals(budgetWeek.getUser().getId(), userId))
+		List<BudgetWeek> targetWeeks = budgetWeekRepository.findAllByUser_IdOrderByWeekStartDateAsc(userId).stream()
 			.filter(budgetWeek -> budgetWeek.getStatus() != BudgetWeekStatus.CLOSED)
 			.filter(budgetWeek -> overlaps(budgetWeek, fromDate, toDate))
-			.sorted(Comparator.comparing(BudgetWeek::getWeekStartDate))
 			.toList();
 		refresh(userId, targetWeeks, fromDate.atStartOfDay(), toDate.atTime(LocalTime.MAX));
 	}
