@@ -8,6 +8,7 @@ import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysi
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetExpenseSummaryUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyExecutionAnalysisResultUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyExpenseUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyTransactionAnalysisUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetOnboardingAnalysisResultUseCase;
@@ -33,6 +34,7 @@ public class RealTransactionAnalysisResponseFacade implements TransactionAnalysi
 	private final GetMonthlyExpenseUseCase getMonthlyExpenseUseCase;
 	private final RunTransactionAnalysisUseCase runTransactionAnalysisUseCase;
 	private final GetOnboardingAnalysisResultUseCase getOnboardingAnalysisResultUseCase;
+	private final GetMonthlyExecutionAnalysisResultUseCase getMonthlyExecutionAnalysisResultUseCase;
 	private final GetWeeklyTransactionAnalysisUseCase getWeeklyTransactionAnalysisUseCase;
 	private final GetMonthlyTransactionAnalysisUseCase getMonthlyTransactionAnalysisUseCase;
 
@@ -40,6 +42,15 @@ public class RealTransactionAnalysisResponseFacade implements TransactionAnalysi
 	public TransactionAnalysisDto.OnboardingResult analyzeTransactions(Integer userId, Integer months) {
 		runTransactionAnalysisUseCase.execute(userId, months);
 		return getOnboardingAnalysisResultUseCase.execute(userId);
+	}
+
+	@Override
+	public TransactionAnalysisDto.OnboardingResult analyzeMonthlyTransactions(Integer userId, YearMonth month) {
+		return getMonthlyExecutionAnalysisResultUseCase.execute(
+			userId,
+			runTransactionAnalysisUseCase.execute(userId, month),
+			month
+		);
 	}
 
 	@Override

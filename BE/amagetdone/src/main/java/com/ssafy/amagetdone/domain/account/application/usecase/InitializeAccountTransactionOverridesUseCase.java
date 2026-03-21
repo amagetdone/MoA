@@ -24,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class InitializeAccountTransactionOverridesUseCase {
 
-	private static final String BASE_MONTH = "2025-12";
 	private static final String DEPOSIT_TYPE_NAME = "\uC785\uAE08";
 	private static final String WITHDRAWAL_TYPE_NAME = "\uCD9C\uAE08";
 
@@ -86,7 +85,6 @@ public class InitializeAccountTransactionOverridesUseCase {
 		return new AccountAdminDto.TransactionInitResponse(
 			"account",
 			account.getAccountNo(),
-			BASE_MONTH,
 			seeds.size()
 		);
 	}

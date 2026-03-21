@@ -163,8 +163,7 @@ class TransactionControllerTest {
 				.contentType(APPLICATION_JSON)
 				.content("""
 					{
-					  "months": 6,
-					  "relabel": false
+					  "months": 6
 					}
 					"""))
 			.andExpect(status().isOk())
@@ -173,6 +172,37 @@ class TransactionControllerTest {
 			.andExpect(jsonPath("$.data.summaryText").value("최근 3개월 소비 분석을 완료했어요."))
 			.andExpect(jsonPath("$.data.averageIncome").value(3_000_000))
 			.andExpect(jsonPath("$.data.averageExpense").value(1_900_000))
+			.andExpect(jsonPath("$.data.categoryExpenses[0].categoryName").value("Food"));
+	}
+
+	@Test
+	void analyzeMonthlyTransactionsReturnsMonthlyOnboardingResponse() throws Exception {
+		given(transactionAnalysisResponseFacade.analyzeMonthlyTransactions(1, YearMonth.of(2026, 2)))
+			.willReturn(new TransactionAnalysisDto.OnboardingResult(
+				"2026-02 소비 분석을 완료했어요.",
+				2_100_000L,
+				1_320_000L,
+				780_000L,
+				40.0,
+				60.0,
+				"현재 소비 흐름은 안정적이에요.",
+				List.of(
+					new TransactionAnalysisDto.CategoryExpense(10, "Food", 700_000L),
+					new TransactionAnalysisDto.CategoryExpense(1, "Transport", 120_000L)
+				)
+			));
+
+		mockMvc.perform(apiPost("/transactions/analysis/monthly")
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
+				))
+				.param("month", "2026-02"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("해당 월 거래 분석을 완료했습니다."))
+			.andExpect(jsonPath("$.data.summaryText").value("2026-02 소비 분석을 완료했어요."))
+			.andExpect(jsonPath("$.data.averageIncome").value(2_100_000))
+			.andExpect(jsonPath("$.data.averageExpense").value(1_320_000))
 			.andExpect(jsonPath("$.data.categoryExpenses[0].categoryName").value("Food"));
 	}
 
@@ -223,9 +253,9 @@ class TransactionControllerTest {
 
 	@Test
 	void getWeeklyAnalysisReturnsEssentialBreakdownAndCategoryExpenses() throws Exception {
-		given(transactionAnalysisResponseFacade.getWeeklyAnalysis(1, "2026-W10"))
+		given(transactionAnalysisResponseFacade.getWeeklyAnalysis(1, "2026-03-2"))
 			.willReturn(new WeeklyTransactionAnalysisDto.Response(
-				"2026-W10",
+				"2026-03-2",
 				LocalDate.of(2026, 3, 2),
 				LocalDate.of(2026, 3, 8),
 				152000L,
@@ -240,14 +270,14 @@ class TransactionControllerTest {
 				LocalDateTime.of(2026, 3, 13, 15, 20)
 			));
 
-		mockMvc.perform(apiGet("/transactions/analysis/weeks/2026-W10")
+		mockMvc.perform(apiGet("/transactions/analysis/weeks/2026-03-2")
 				.with(authentication(
 					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
 				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.message").value("주간 분석 결과를 조회했습니다."))
-			.andExpect(jsonPath("$.data.yearWeek").value("2026-W10"))
+			.andExpect(jsonPath("$.data.yearWeek").value("2026-03-2"))
 			.andExpect(jsonPath("$.data.expenseAmount").value(152000))
 			.andExpect(jsonPath("$.data.essentialAmount").value(155000))
 			.andExpect(jsonPath("$.data.fixedEssentialAmount").value(72000))
@@ -260,9 +290,9 @@ class TransactionControllerTest {
 
 	@Test
 	void getWeeklyAnalysisReturnsEmptyStateWhenDataIsMissing() throws Exception {
-		given(transactionAnalysisResponseFacade.getWeeklyAnalysis(1, "2026-W12"))
+		given(transactionAnalysisResponseFacade.getWeeklyAnalysis(1, "2026-03-4"))
 			.willReturn(new WeeklyTransactionAnalysisDto.Response(
-				"2026-W12",
+				"2026-03-4",
 				null,
 				null,
 				0L,
@@ -273,14 +303,14 @@ class TransactionControllerTest {
 				null
 			));
 
-		mockMvc.perform(apiGet("/transactions/analysis/weeks/2026-W12")
+		mockMvc.perform(apiGet("/transactions/analysis/weeks/2026-03-4")
 				.with(authentication(
 					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
 				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.message").value("주간 분석 결과를 조회했습니다."))
-			.andExpect(jsonPath("$.data.yearWeek").value("2026-W12"))
+			.andExpect(jsonPath("$.data.yearWeek").value("2026-03-4"))
 			.andExpect(jsonPath("$.data.expenseAmount").value(0))
 			.andExpect(jsonPath("$.data.essentialAmount").value(0))
 			.andExpect(jsonPath("$.data.fixedEssentialAmount").value(0))

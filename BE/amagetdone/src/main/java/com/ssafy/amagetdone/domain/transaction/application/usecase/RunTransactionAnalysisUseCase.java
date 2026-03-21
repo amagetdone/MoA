@@ -1,5 +1,7 @@
 package com.ssafy.amagetdone.domain.transaction.application.usecase;
 
+import java.time.YearMonth;
+
 import com.ssafy.amagetdone.domain.transaction.application.service.TransactionAnalysisService;
 import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisMetadata;
 
@@ -16,5 +18,9 @@ public class RunTransactionAnalysisUseCase {
 
 	public TransactionAnalysisMetadata execute(Integer userId, Integer months) {
 		return transactionAnalysisService.analyzeTransactions(userId, months);
+	}
+
+	public TransactionAnalysisMetadata execute(Integer userId, YearMonth month) {
+		return transactionAnalysisService.analyzeTransactions(userId, month);
 	}
 }

@@ -12,6 +12,8 @@ public interface TransactionAnalysisResponseFacade {
 
 	TransactionAnalysisDto.OnboardingResult analyzeTransactions(Integer userId, Integer months);
 
+	TransactionAnalysisDto.OnboardingResult analyzeMonthlyTransactions(Integer userId, YearMonth month);
+
 	TransactionAnalysisDto.OnboardingResult getOnboardingAnalysis(Integer userId);
 
 	ExpenseSummaryDto.Response getExpenseSummary(Integer userId, YearMonth fromMonth, YearMonth toMonth, String bucket);

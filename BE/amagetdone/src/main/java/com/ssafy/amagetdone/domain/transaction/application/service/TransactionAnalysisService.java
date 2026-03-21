@@ -65,7 +65,19 @@ public class TransactionAnalysisService {
 	@Transactional
 	public TransactionAnalysisMetadata analyzeTransactions(Integer userId, Integer months) {
 		int requestedMonths = normalizeRequestedMonths(months);
-		AnalysisWindow analysisWindow = resolveCompletedMonthWindow(requestedMonths);
+		return analyzeTransactions(userId, requestedMonths, resolveCompletedMonthWindow(requestedMonths));
+	}
+
+	@Transactional
+	public TransactionAnalysisMetadata analyzeTransactions(Integer userId, YearMonth month) {
+		return analyzeTransactions(userId, 1, resolveMonthWindow(month));
+	}
+
+	private TransactionAnalysisMetadata analyzeTransactions(
+		Integer userId,
+		int requestedMonths,
+		AnalysisWindow analysisWindow
+	) {
 		List<TransactionOverride> sourceTransactions = loadTransactions(
 			userId,
 			analysisWindow.windowStartAt(),
@@ -147,6 +159,14 @@ public class TransactionAnalysisService {
 		return new AnalysisWindow(
 			startMonth.atDay(1).atStartOfDay(),
 			latestCompletedMonth.atEndOfMonth().atTime(LocalTime.MAX)
+		);
+	}
+
+	private AnalysisWindow resolveMonthWindow(YearMonth month) {
+		YearMonth targetMonth = month == null ? YearMonth.from(LocalDateTime.now(clock)) : month;
+		return new AnalysisWindow(
+			targetMonth.atDay(1).atStartOfDay(),
+			targetMonth.atEndOfMonth().atTime(LocalTime.MAX)
 		);
 	}
 
