@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 
-@Tag(name = "Budget Test", description = "Local manual test endpoints for budget week seed flows")
+@Tag(name = "예산 테스트", description = "예산 주차 시드 및 저축 테스트용 수동 호출 문서")
 @RestController
 @RequestMapping("/test/budget")
 public class BudgetTestController {
@@ -42,8 +42,8 @@ public class BudgetTestController {
 	}
 
 	@Operation(
-		summary = "Seed budget weeks",
-		description = "Creates Monday-Sunday budget_week rows for the authenticated user so plan creation can be tested.",
+		summary = "예산 주차 시드 생성",
+		description = "인증된 사용자의 예산 주차 데이터를 월요일부터 일요일 기준으로 생성해 목표 생성 흐름을 수동 검증합니다.",
 		security = @SecurityRequirement(name = "bearerAuth")
 	)
 	@PostMapping("/weeks/seed")
@@ -58,8 +58,8 @@ public class BudgetTestController {
 	}
 
 	@Operation(
-		summary = "Force current-week goal savings allocation",
-		description = "Re-runs the goal savings allocation pipeline and returns the current week's allocation result for manual verification.",
+		summary = "현재 주차 목표 저축 배분 강제 실행",
+		description = "목표 저축 배분 파이프라인을 다시 실행하고 현재 주차 배분 결과를 반환해 수동 검증합니다.",
 		security = @SecurityRequirement(name = "bearerAuth")
 	)
 	@PostMapping("/weeks/current/savings-allocation/force")
@@ -73,8 +73,8 @@ public class BudgetTestController {
 	}
 
 	@Operation(
-		summary = "Backfill goal saving accrual",
-		description = "Reconciles goal saving accrual from plan start through cutoff for manual catch-up verification.",
+		summary = "목표 저축 적립 백필 실행",
+		description = "목표 시작일부터 기준 시점까지의 저축 적립을 재정산해 누락 적립 여부를 수동 검증합니다.",
 		security = @SecurityRequirement(name = "bearerAuth")
 	)
 	@PostMapping("/savings-accrual/backfill")
@@ -89,8 +89,8 @@ public class BudgetTestController {
 	}
 
 	@Operation(
-		summary = "Apply goal saving accrual instantly",
-		description = "Applies one day, week, or month of goal saving immediately for manual verification.",
+		summary = "목표 저축 적립 즉시 적용",
+		description = "하루, 일주일 또는 한 달치 목표 저축 적립을 즉시 반영해 수동 검증합니다.",
 		security = @SecurityRequirement(name = "bearerAuth")
 	)
 	@PostMapping("/savings-accrual/apply")
