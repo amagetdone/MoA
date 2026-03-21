@@ -11,6 +11,8 @@ public interface PlanWeekAllocationRepository extends JpaRepository<PlanWeekAllo
 
 	List<PlanWeekAllocation> findByBudgetWeek(BudgetWeek budgetWeek);
 
+	List<PlanWeekAllocation> findByBudgetWeekAndActualAmountIsNull(BudgetWeek budgetWeek);
+
 	List<PlanWeekAllocation> findAllByBudgetWeekIn(List<BudgetWeek> budgetWeeks);
 
 	List<PlanWeekAllocation> findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(Integer planId);

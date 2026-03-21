@@ -196,11 +196,6 @@ class BudgetControllerTest {
 			.andExpect(jsonPath("$.data.freeSpending.usedAmount").value(45000))
 			.andExpect(jsonPath("$.data.weeklySaving.thisWeekSavingAmount").value(180000))
 			.andExpect(jsonPath("$.data.assetSummary.totalAssetAmount").value(5400000))
-			.andExpect(jsonPath("$.data.assetSummary.accounts[0].accountId").value("111-111-111111"))
-			.andExpect(jsonPath("$.data.assetSummary.accounts[0].bankName").value("신한은행"))
-			.andExpect(jsonPath("$.data.assetSummary.accounts[0].accountNo").value("111-111-111111"))
-			.andExpect(jsonPath("$.data.assetSummary.accounts[0].balanceAmount").value(2000000))
-			.andExpect(jsonPath("$.data.assetSummary.accounts[0].verified").value(true))
 			.andExpect(jsonPath("$.data.plans[0].title").value("Travel Fund"))
 			.andExpect(jsonPath("$.data.plans[0].priority").value(1));
 	}

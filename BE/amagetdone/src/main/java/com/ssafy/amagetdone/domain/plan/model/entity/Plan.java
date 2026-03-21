@@ -103,6 +103,7 @@ public class Plan extends BaseEntity {
 	private LocalDate endDate;
 
 	@Version
+	@ColumnDefault("0")
 	@Column(name = "version", nullable = false)
 	private Long version;
 
@@ -159,6 +160,14 @@ public class Plan extends BaseEntity {
 	public void cancelAndDelete() {
 		this.status = PlanStatus.CANCELLED;
 		this.setDeleted(true);
+	}
+
+	public void extendEndDate(int additionalWeeks) {
+		if (additionalWeeks <= 0) {
+			return;
+		}
+		this.endDate = this.endDate.plusWeeks(additionalWeeks);
+		this.targetWeeks = calculateTargetWeeks(this.startDate, this.endDate);
 	}
 
 	public void markAiProcessing() {

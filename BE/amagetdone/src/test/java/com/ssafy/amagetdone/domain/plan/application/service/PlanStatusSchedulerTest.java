@@ -13,6 +13,7 @@ import java.time.ZoneId;
 
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
+import com.ssafy.amagetdone.domain.budget.application.service.WeeklyGoalSavingAccrualService;
 import com.ssafy.amagetdone.domain.budget.application.usecase.TriggerBudgetAllocationUseCase;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
@@ -33,10 +34,13 @@ class PlanStatusSchedulerTest {
 	@Mock
 	private TriggerBudgetAllocationUseCase triggerBudgetAllocationUseCase;
 
+	@Mock
+	private WeeklyGoalSavingAccrualService weeklyGoalSavingAccrualService;
+
 	private PlanStatusScheduler planStatusScheduler;
 
 	private void createSchedulerWithClock(Clock clock) {
-		planStatusScheduler = new PlanStatusScheduler(planRepository, triggerBudgetAllocationUseCase, clock);
+		planStatusScheduler = new PlanStatusScheduler(planRepository, triggerBudgetAllocationUseCase, weeklyGoalSavingAccrualService, clock);
 	}
 
 	@Test

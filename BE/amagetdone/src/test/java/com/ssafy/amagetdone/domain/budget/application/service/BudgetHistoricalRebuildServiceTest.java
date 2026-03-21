@@ -2,7 +2,7 @@ package com.ssafy.amagetdone.domain.budget.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.inOrder;
@@ -16,17 +16,21 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
+import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.domain.budget.api.dto.GoalSavingAccrualForceDto;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetAdjustment;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetMonth;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
+import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseMonth;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialWeekAllocation;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetAdjustmentRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetMonthRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetRolloverRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
+import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseMonthRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialWeekAllocationRepository;
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetAdjustmentType;
+import com.ssafy.amagetdone.domain.budget.model.vo.SourceProvider;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.plan.exception.PlanException;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
@@ -60,6 +64,9 @@ class BudgetHistoricalRebuildServiceTest {
 
 	@Mock
 	private BudgetRolloverRepository budgetRolloverRepository;
+
+	@Mock
+	private EssentialExpenseMonthRepository essentialExpenseMonthRepository;
 
 	@Mock
 	private EssentialWeekAllocationRepository essentialWeekAllocationRepository;
@@ -152,6 +159,7 @@ class BudgetHistoricalRebuildServiceTest {
 			budgetMonthRepository,
 			budgetAdjustmentRepository,
 			budgetRolloverRepository,
+			essentialExpenseMonthRepository,
 			essentialWeekAllocationRepository,
 			planWeekAllocationRepository,
 			budgetAllocationTriggerService,
@@ -207,6 +215,7 @@ class BudgetHistoricalRebuildServiceTest {
 			budgetMonthRepository,
 			budgetAdjustmentRepository,
 			budgetRolloverRepository,
+			essentialExpenseMonthRepository,
 			essentialWeekAllocationRepository,
 			planWeekAllocationRepository,
 			budgetAllocationTriggerService,
@@ -265,6 +274,7 @@ class BudgetHistoricalRebuildServiceTest {
 			budgetMonthRepository,
 			budgetAdjustmentRepository,
 			budgetRolloverRepository,
+			essentialExpenseMonthRepository,
 			essentialWeekAllocationRepository,
 			planWeekAllocationRepository,
 			budgetAllocationTriggerService,
@@ -281,6 +291,89 @@ class BudgetHistoricalRebuildServiceTest {
 		assertThat(targetPlan.getAiPipelineStatus()).isEqualTo(PlanAiPipelineStatus.SUCCEEDED);
 		verify(planRepository).adjustSavedAmount(12, -30_000L);
 		verify(planRepository, never()).saveAll(argThat(plans -> true));
+	}
+
+	@Test
+	void rebuildSeedsMissingPastBudgetMonthsAndEssentialsBeforeRunningHistoricalReplay() {
+		User user = user(1);
+		Plan targetPlan = activePlan(user, 11, 0L, LocalDate.of(2025, 12, 16), LocalDate.of(2026, 9, 1));
+		BudgetMonth firstExistingMonth = budgetMonth(user, 201, LocalDate.of(2026, 3, 1));
+		firstExistingMonth.setTotalIncomeAmount(2_134_524L);
+		firstExistingMonth.setTotalFixedEssentialAmount(26_400L);
+		firstExistingMonth.setTotalVariableEssentialAmount(152_800L);
+		EssentialExpenseMonth firstExistingEssential = EssentialExpenseMonth.builder()
+			.budgetMonth(firstExistingMonth)
+			.category(Category.create(1, "FOOD"))
+			.expenseScope("VARIABLE")
+			.amount(142_700L)
+			.sourceProvider(SourceProvider.ANALYZER)
+			.build();
+		GoalSavingAccrualForceDto.Response rebuiltResponse = new GoalSavingAccrualForceDto.Response(
+			GoalSavingAccrualForceDto.OperationType.BACKFILL,
+			null,
+			GoalSavingAccrualForceDto.TargetType.SINGLE,
+			11,
+			0L,
+			LocalDate.of(2026, 3, 20),
+			LocalDate.of(2026, 3, 19),
+			LocalDate.of(2025, 12, 16),
+			LocalDate.of(2026, 3, 19),
+			"UP_TO_2026-03-19",
+			List.of()
+		);
+
+		given(planRepository.findByIdAndUserId(11, 1)).willReturn(Optional.of(targetPlan));
+		given(budgetWeekRepository.findAll()).willReturn(List.of());
+		given(budgetMonthRepository.findAll()).willReturn(List.of(firstExistingMonth));
+		given(budgetMonthRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
+		given(essentialExpenseMonthRepository.findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(1))
+			.willReturn(List.of(firstExistingEssential));
+		given(essentialExpenseMonthRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
+		given(budgetAllocationTriggerService.triggerHistorical(1, LocalDate.of(2025, 12, 16), LocalDate.of(2026, 3, 20)))
+			.willReturn(new BudgetAllocationService.AllocationResult(List.of(), List.of(), List.of(), List.of(), List.of()));
+		given(dailyGoalSavingAccrualService.backfillAccrual(1, new GoalSavingAccrualForceDto.BackfillRequest(null)))
+			.willReturn(rebuiltResponse);
+
+		BudgetHistoricalRebuildService service = new BudgetHistoricalRebuildService(
+			planRepository,
+			budgetWeekRepository,
+			budgetMonthRepository,
+			budgetAdjustmentRepository,
+			budgetRolloverRepository,
+			essentialExpenseMonthRepository,
+			essentialWeekAllocationRepository,
+			planWeekAllocationRepository,
+			budgetAllocationTriggerService,
+			budgetActualSpentRefreshService,
+			budgetRolloverResyncService,
+			dailyGoalSavingAccrualService,
+			Clock.fixed(Instant.parse("2026-03-20T00:00:00Z"), ZoneId.of("Asia/Seoul"))
+		);
+
+		service.rebuild(1, 11);
+
+		verify(budgetMonthRepository).saveAll(argThat(months -> {
+			java.util.List<BudgetMonth> savedMonths = new java.util.ArrayList<>();
+			months.forEach(savedMonths::add);
+			return savedMonths.stream().map(BudgetMonth::getBaseDate).toList().containsAll(List.of(
+				LocalDate.of(2025, 12, 1),
+				LocalDate.of(2026, 1, 1),
+				LocalDate.of(2026, 2, 1),
+				LocalDate.of(2026, 3, 1)
+			));
+		}));
+		verify(essentialExpenseMonthRepository).saveAll(argThat(rows -> {
+			java.util.List<EssentialExpenseMonth> savedRows = new java.util.ArrayList<>();
+			rows.forEach(savedRows::add);
+			return savedRows.stream()
+				.map(row -> row.getBudgetMonth().getBaseDate())
+				.toList()
+				.containsAll(List.of(
+					LocalDate.of(2025, 12, 1),
+					LocalDate.of(2026, 1, 1),
+					LocalDate.of(2026, 2, 1)
+				));
+		}));
 	}
 
 	private User user(int userId) {

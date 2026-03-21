@@ -38,7 +38,9 @@ public final class WeeklyTransactionAnalysisDto {
 	public record CategoryExpense(
 		Integer categoryId,
 		String categoryName,
-		Long amount
+		Long plannedAmount,
+		Long actualSpentAmount,
+		Long remainingAmount
 	) {
 	}
 }

@@ -6,7 +6,9 @@ import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+import com.ssafy.amagetdone.domain.budget.application.service.WeeklyGoalSavingAccrualService;
 import com.ssafy.amagetdone.domain.budget.application.usecase.TriggerBudgetAllocationUseCase;
+import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
@@ -22,15 +24,18 @@ public class PlanStatusScheduler {
 
 	private final PlanRepository planRepository;
 	private final TriggerBudgetAllocationUseCase triggerBudgetAllocationUseCase;
+	private final WeeklyGoalSavingAccrualService weeklyGoalSavingAccrualService;
 	private final Clock clock;
 
 	public PlanStatusScheduler(
 		PlanRepository planRepository,
 		TriggerBudgetAllocationUseCase triggerBudgetAllocationUseCase,
+		WeeklyGoalSavingAccrualService weeklyGoalSavingAccrualService,
 		Clock clock
 	) {
 		this.planRepository = planRepository;
 		this.triggerBudgetAllocationUseCase = triggerBudgetAllocationUseCase;
+		this.weeklyGoalSavingAccrualService = weeklyGoalSavingAccrualService;
 		this.clock = clock;
 	}
 
@@ -55,6 +60,7 @@ public class PlanStatusScheduler {
 	@Transactional
 	void activateStartedPlans(LocalDate today) {
 		Set<Integer> activatedUserIds = new LinkedHashSet<>();
+		java.util.List<Plan> activatedPlans = new java.util.ArrayList<>();
 		planRepository.findAllByStatusAndStartDateLessThanEqualAndAiPipelineStatusAndDeletedFalse(
 				PlanStatus.WAITING,
 				today,
@@ -63,12 +69,19 @@ public class PlanStatusScheduler {
 			.forEach(plan -> {
 				if (plan.getStatus() == PlanStatus.WAITING) {
 					plan.activate();
+					activatedPlans.add(plan);
 					if (plan.getUser() != null && plan.getUser().getId() != null) {
 						activatedUserIds.add(plan.getUser().getId());
 					}
 				}
 			});
 		activatedUserIds.forEach(triggerBudgetAllocationUseCase::execute);
+		activatedPlans.forEach(plan -> {
+			if (plan.getUser() != null && plan.getUser().getId() != null) {
+				weeklyGoalSavingAccrualService.applyImmediateAccrual(
+					plan.getUser().getId(), plan.getId());
+			}
+		});
 	}
 
 	@Transactional
