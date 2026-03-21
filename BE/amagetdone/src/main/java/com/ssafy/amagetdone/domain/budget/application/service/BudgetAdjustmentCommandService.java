@@ -162,12 +162,21 @@ public class BudgetAdjustmentCommandService {
 		long finalSavingAmount = planAllocations.stream()
 			.mapToLong(allocation -> zero(allocation.getFinalAmount()))
 			.sum();
+		long planSavedAmount = sumPlanSavedAmount(budgetWeek);
 
 		return zero(budgetWeek.getPlannedIncomeAmount())
 			- zero(budgetWeek.getPlannedEssentialAmount())
 			- finalSavingAmount
 			- zero(budgetWeek.getRolloverInAmount())
-			+ zero(budgetWeek.getManualAdjustmentAmount());
+			+ zero(budgetWeek.getManualAdjustmentAmount())
+			- planSavedAmount;
+	}
+
+	private long sumPlanSavedAmount(BudgetWeek budgetWeek) {
+		return budgetAdjustmentRepository.findByBudgetWeekOrderByCreatedAtDesc(budgetWeek).stream()
+			.filter(adjustment -> adjustment.getAdjustmentType() == BudgetAdjustmentType.PLAN_SAVED_ADD)
+			.mapToLong(adjustment -> zero(adjustment.getAdjustmentAmount()))
+			.sum();
 	}
 
 	private long calculateRemainingFreeBudget(BudgetWeek budgetWeek) {

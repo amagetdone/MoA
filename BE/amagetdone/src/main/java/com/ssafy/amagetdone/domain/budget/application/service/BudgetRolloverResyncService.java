@@ -32,11 +32,8 @@ public class BudgetRolloverResyncService {
 	private final ExecuteRolloverUseCase executeRolloverUseCase;
 
 	public void resync(Integer userId) {
-		List<BudgetWeek> openWeeks = budgetWeekRepository.findAll().stream()
-			.filter(budgetWeek -> budgetWeek != null)
-			.filter(budgetWeek -> budgetWeek.getUser() != null && java.util.Objects.equals(budgetWeek.getUser().getId(), userId))
+		List<BudgetWeek> openWeeks = budgetWeekRepository.findAllByUser_IdOrderByWeekSequenceAsc(userId).stream()
 			.filter(budgetWeek -> budgetWeek.getStatus() != BudgetWeekStatus.CLOSED)
-			.sorted(java.util.Comparator.comparing(BudgetWeek::getWeekSequence))
 			.toList();
 		if (openWeeks.isEmpty()) {
 			return;
@@ -79,7 +76,7 @@ public class BudgetRolloverResyncService {
 				(left, right) -> left
 			));
 
-		for (BudgetAdjustment adjustment : budgetAdjustmentRepository.findByBudgetWeekOrderByCreatedAtDesc(budgetWeek)) {
+		for (BudgetAdjustment adjustment : budgetAdjustmentRepository.findByBudgetWeekOrderByCreatedAtAsc(budgetWeek)) {
 			if (adjustment.getPlan() == null || adjustment.getPlan().getId() == null) {
 				continue;
 			}

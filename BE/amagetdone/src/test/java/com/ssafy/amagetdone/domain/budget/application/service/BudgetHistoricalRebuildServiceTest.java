@@ -140,8 +140,8 @@ class BudgetHistoricalRebuildServiceTest {
 		);
 
 		given(planRepository.findByIdAndUserId(11, 1)).willReturn(Optional.of(targetPlan));
-		given(budgetWeekRepository.findAll()).willReturn(List.of(staleWeek));
-		given(budgetMonthRepository.findAll()).willReturn(List.of(staleMonth));
+		given(budgetWeekRepository.findAllByUser_IdOrderByWeekStartDateAsc(1)).willReturn(List.of(staleWeek));
+		given(budgetMonthRepository.findAllByUser_IdOrderByBaseDateAsc(1)).willReturn(List.of(staleMonth));
 		given(budgetAdjustmentRepository.findAllByBudgetWeekIn(List.of(staleWeek)))
 			.willReturn(List.of(staleAutoAdd, staleManualAdd));
 		given(essentialWeekAllocationRepository.findAllByBudgetWeekIn(List.of(staleWeek)))
@@ -246,8 +246,8 @@ class BudgetHistoricalRebuildServiceTest {
 			.build();
 
 		given(planRepository.findByIdAndUserId(12, 1)).willReturn(Optional.of(targetPlan));
-		given(budgetWeekRepository.findAll()).willReturn(List.of(staleWeek));
-		given(budgetMonthRepository.findAll()).willReturn(List.of());
+		given(budgetWeekRepository.findAllByUser_IdOrderByWeekStartDateAsc(1)).willReturn(List.of(staleWeek));
+		given(budgetMonthRepository.findAllByUser_IdOrderByBaseDateAsc(1)).willReturn(List.of());
 		given(budgetAdjustmentRepository.findAllByBudgetWeekIn(List.of(staleWeek))).willReturn(List.of(staleAutoAdd));
 		given(essentialWeekAllocationRepository.findAllByBudgetWeekIn(List.of(staleWeek))).willReturn(List.of());
 		given(planWeekAllocationRepository.findAllByBudgetWeekIn(List.of(staleWeek))).willReturn(List.of());
@@ -323,8 +323,8 @@ class BudgetHistoricalRebuildServiceTest {
 		);
 
 		given(planRepository.findByIdAndUserId(11, 1)).willReturn(Optional.of(targetPlan));
-		given(budgetWeekRepository.findAll()).willReturn(List.of());
-		given(budgetMonthRepository.findAll()).willReturn(List.of(firstExistingMonth));
+		given(budgetWeekRepository.findAllByUser_IdOrderByWeekStartDateAsc(1)).willReturn(List.of());
+		given(budgetMonthRepository.findAllByUser_IdOrderByBaseDateAsc(1)).willReturn(List.of(firstExistingMonth));
 		given(budgetMonthRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
 		given(essentialExpenseMonthRepository.findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(1))
 			.willReturn(List.of(firstExistingEssential));

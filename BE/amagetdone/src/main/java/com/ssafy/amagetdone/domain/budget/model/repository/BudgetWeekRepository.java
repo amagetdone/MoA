@@ -40,4 +40,8 @@ public interface BudgetWeekRepository extends JpaRepository<BudgetWeek, Integer>
 	Optional<BudgetWeek> findFirstByUserOrderByWeekEndDateDesc(User user);
 
 	Optional<BudgetWeek> findFirstByUserAndWeekSequenceGreaterThanOrderByWeekSequenceAsc(User user, Integer weekSequence);
+
+	List<BudgetWeek> findAllByUser_IdOrderByWeekStartDateAsc(Integer userId);
+
+	List<BudgetWeek> findAllByUser_IdOrderByWeekSequenceAsc(Integer userId);
 }

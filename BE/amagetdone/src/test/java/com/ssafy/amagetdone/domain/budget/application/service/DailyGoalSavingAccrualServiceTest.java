@@ -60,7 +60,7 @@ class DailyGoalSavingAccrualServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		Mockito.lenient().when(budgetWeekRepository.findAll()).thenReturn(budgetWeeks);
+		Mockito.lenient().when(budgetWeekRepository.findAllByUser_IdOrderByWeekStartDateAsc(any())).thenReturn(budgetWeeks);
 		Mockito.lenient().when(planWeekAllocationRepository.findAllByBudgetWeekIn(any())).thenAnswer(invocation -> {
 			List<BudgetWeek> weeks = invocation.getArgument(0);
 			return weeks.stream()
