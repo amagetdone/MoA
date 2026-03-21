@@ -74,6 +74,7 @@ class PlanAiPipelineServiceTest {
 		createServiceWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
 		Plan plan = instantiatePlan(10, 1, "Europe trip fund", "Summer travel savings");
 		ReflectionTestUtils.setField(plan, "startDate", LocalDate.of(2026, 3, 19));
+		ReflectionTestUtils.setField(plan, "status", com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus.ACTIVE);
 		given(planRepository.findByIdAndUserIdAndDeletedFalse(10, 1)).willReturn(Optional.of(plan));
 		stubSuccessfulStateUpdates(10, 1);
 		given(memberProfileImageService.loadProfileImageUrl(1)).willReturn("https://cdn.example.com/profile.png");
@@ -219,7 +220,7 @@ class PlanAiPipelineServiceTest {
 		doAnswer(invocation -> {
 			plan.cancelAndDelete();
 			return 0;
-		}).when(planRepository).completeAiSuccess(eq(14), eq(1), eq("https://sketch.pyan.kr/cdn/compressed-14.mp4"), any(), any(), any(), any(), any());
+		}).when(planRepository).completeAiSuccess(eq(14), eq(1), eq("https://sketch.pyan.kr/cdn/compressed-14.mp4"), any(), any());
 		given(memberProfileImageService.loadProfileImageUrl(1)).willReturn("https://cdn.example.com/profile.png");
 		given(planAiClient.generatePlanImage(
 			"[Title] Europe trip fund [description] Summer travel savings",
@@ -273,6 +274,6 @@ class PlanAiPipelineServiceTest {
 	private void stubSuccessfulStateUpdates(int planId, int userId) {
 		given(planRepository.markAiProcessing(eq(planId), eq(userId), any(), any())).willReturn(1);
 		given(planRepository.updateAiImageKey(eq(planId), eq(userId), any(), any())).willReturn(1);
-		given(planRepository.completeAiSuccess(eq(planId), eq(userId), any(), any(), any(), any(), any(), any())).willReturn(1);
+		given(planRepository.completeAiSuccess(eq(planId), eq(userId), any(), any(), any())).willReturn(1);
 	}
 }

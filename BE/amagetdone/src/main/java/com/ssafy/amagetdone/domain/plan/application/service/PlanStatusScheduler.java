@@ -10,7 +10,6 @@ import com.ssafy.amagetdone.domain.budget.application.service.WeeklyGoalSavingAc
 import com.ssafy.amagetdone.domain.budget.application.usecase.TriggerBudgetAllocationUseCase;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
-import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
 
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -61,10 +60,9 @@ public class PlanStatusScheduler {
 	void activateStartedPlans(LocalDate today) {
 		Set<Integer> activatedUserIds = new LinkedHashSet<>();
 		java.util.List<Plan> activatedPlans = new java.util.ArrayList<>();
-		planRepository.findAllByStatusAndStartDateLessThanEqualAndAiPipelineStatusAndDeletedFalse(
+		planRepository.findAllByStatusAndStartDateLessThanEqualAndDeletedFalse(
 				PlanStatus.WAITING,
-				today,
-				PlanAiPipelineStatus.SUCCEEDED
+				today
 			)
 			.forEach(plan -> {
 				if (plan.getStatus() == PlanStatus.WAITING) {

@@ -10,6 +10,7 @@ import com.ssafy.amagetdone.domain.plan.exception.PlanErrorCode;
 import com.ssafy.amagetdone.domain.plan.exception.PlanException;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,8 +41,37 @@ class GetPlanVideoDownloadUrlUseCaseTest {
 	}
 
 	@Test
-	void throwsNotFoundWhenPlanHasNoVideoUrl() {
+	void throwsNotReadyWhenPlanVideoIsStillProcessing() {
 		Plan plan = instantiatePlan();
+		ReflectionTestUtils.setField(plan, "aiPipelineStatus", PlanAiPipelineStatus.PROCESSING);
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(10, 1)).willReturn(Optional.of(plan));
+
+		PlanException exception = assertThrows(
+			PlanException.class,
+			() -> getPlanVideoDownloadUrlUseCase.execute(1, 10)
+		);
+
+		assertEquals(PlanErrorCode.PLAN_VIDEO_NOT_READY, exception.getErrorCode());
+	}
+
+	@Test
+	void throwsGenerationFailedWhenPlanVideoGenerationFailed() {
+		Plan plan = instantiatePlan();
+		ReflectionTestUtils.setField(plan, "aiPipelineStatus", PlanAiPipelineStatus.FAILED);
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(10, 1)).willReturn(Optional.of(plan));
+
+		PlanException exception = assertThrows(
+			PlanException.class,
+			() -> getPlanVideoDownloadUrlUseCase.execute(1, 10)
+		);
+
+		assertEquals(PlanErrorCode.PLAN_VIDEO_GENERATION_FAILED, exception.getErrorCode());
+	}
+
+	@Test
+	void throwsNotFoundWhenSucceededPlanStillHasNoVideoUrl() {
+		Plan plan = instantiatePlan();
+		ReflectionTestUtils.setField(plan, "aiPipelineStatus", PlanAiPipelineStatus.SUCCEEDED);
 		given(planRepository.findByIdAndUserIdAndDeletedFalse(10, 1)).willReturn(Optional.of(plan));
 
 		PlanException exception = assertThrows(

@@ -10,7 +10,9 @@ public enum PlanErrorCode implements ErrorCode {
 	BUDGET_WEEK_NOT_FOUND(HttpStatus.BAD_REQUEST, "PLAN_003", "Budget week not found for plan period"),
 	PLAN_VIDEO_NOT_FOUND(HttpStatus.NOT_FOUND, "PLAN_004", "Plan video not found"),
 	INVALID_PAGE_REQUEST(HttpStatus.BAD_REQUEST, "PLAN_005", "Invalid page request"),
-	INVALID_PRIORITY_UPDATE_REQUEST(HttpStatus.BAD_REQUEST, "PLAN_006", "Invalid priority update request");
+	INVALID_PRIORITY_UPDATE_REQUEST(HttpStatus.BAD_REQUEST, "PLAN_006", "Invalid priority update request"),
+	PLAN_VIDEO_NOT_READY(HttpStatus.CONFLICT, "PLAN_007", "Plan video is not ready"),
+	PLAN_VIDEO_GENERATION_FAILED(HttpStatus.CONFLICT, "PLAN_008", "Plan video generation failed");
 
 	private final HttpStatus httpStatus;
 	private final String code;

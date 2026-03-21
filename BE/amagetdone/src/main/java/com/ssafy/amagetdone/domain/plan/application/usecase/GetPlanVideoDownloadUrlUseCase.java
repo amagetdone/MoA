@@ -7,6 +7,7 @@ import com.ssafy.amagetdone.domain.plan.exception.PlanErrorCode;
 import com.ssafy.amagetdone.domain.plan.exception.PlanException;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 
 @Service
 public class GetPlanVideoDownloadUrlUseCase {
@@ -23,6 +24,13 @@ public class GetPlanVideoDownloadUrlUseCase {
 			.orElseThrow(() -> new PlanException(PlanErrorCode.PLAN_NOT_FOUND));
 
 		if (plan.getVideoUrl() == null || plan.getVideoUrl().isBlank()) {
+			if (plan.getAiPipelineStatus() == PlanAiPipelineStatus.PENDING
+				|| plan.getAiPipelineStatus() == PlanAiPipelineStatus.PROCESSING) {
+				throw new PlanException(PlanErrorCode.PLAN_VIDEO_NOT_READY);
+			}
+			if (plan.getAiPipelineStatus() == PlanAiPipelineStatus.FAILED) {
+				throw new PlanException(PlanErrorCode.PLAN_VIDEO_GENERATION_FAILED);
+			}
 			throw new PlanException(PlanErrorCode.PLAN_VIDEO_NOT_FOUND);
 		}
 
