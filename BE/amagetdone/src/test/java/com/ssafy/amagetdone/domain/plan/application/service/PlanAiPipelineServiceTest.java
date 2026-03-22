@@ -105,11 +105,9 @@ class PlanAiPipelineServiceTest {
 		assertEquals("PROCESSING", ReflectionTestUtils.getField(plan, "aiPipelineStatus").toString());
 		assertEquals("ACTIVE", ReflectionTestUtils.getField(plan, "status").toString());
 		assertEquals("plan/generated.png", ReflectionTestUtils.getField(plan, "planUrl"));
-		assertEquals("task-1", ReflectionTestUtils.getField(plan, "pyanTaskId"));
 		assertEquals("plan-10-pyan-1", ReflectionTestUtils.getField(plan, "pyanRequestKey"));
 		assertEquals("QUEUED", ReflectionTestUtils.getField(plan, "pyanStatus").toString());
 		assertEquals("https://sketch.pyan.kr/api/status/task-1", ReflectionTestUtils.getField(plan, "pyanStatusUrl"));
-		assertEquals("https://sketch.pyan.kr/api/goals/plan-10", ReflectionTestUtils.getField(plan, "pyanGoalStatusUrl"));
 		assertNull(ReflectionTestUtils.getField(plan, "videoUrl"));
 		verify(memberProfileImageService).loadProfileImageUrl(1);
 		verify(planAiClient).generatePlanImage(
@@ -228,7 +226,7 @@ class PlanAiPipelineServiceTest {
 		doAnswer(invocation -> {
 			plan.cancelAndDelete();
 			return 0;
-		}).when(planRepository).registerPyanTask(eq(14), eq(1), eq("task-14"), any(), any(), any(), any(), any(), any());
+		}).when(planRepository).registerPyanTask(eq(14), eq(1), any(), any(), any());
 		given(memberProfileImageService.loadProfileImageUrl(1)).willReturn("https://cdn.example.com/profile.png");
 		given(planAiClient.generatePlanImage(
 			"[Title] Europe trip fund [description] Summer travel savings",
@@ -317,13 +315,13 @@ class PlanAiPipelineServiceTest {
 	private void stubSuccessfulStateUpdates(int planId, int userId) {
 		given(planRepository.markAiProcessing(eq(planId), eq(userId), any(), any(), any(), any())).willReturn(1);
 		given(planRepository.updateAiImageKey(eq(planId), eq(userId), any(), any())).willReturn(1);
-		given(planRepository.registerPyanTask(eq(planId), eq(userId), any(), any(), any(), any(), any(), any(), any())).willReturn(1);
-		given(planRepository.completeAiSuccess(eq(planId), eq(userId), any(), any(), any(), any(), any(), any())).willReturn(1);
+		given(planRepository.registerPyanTask(eq(planId), eq(userId), any(), any(), any())).willReturn(1);
+		given(planRepository.completeAiSuccess(eq(planId), eq(userId), any(), any(), any(), any())).willReturn(1);
 	}
 
 	private void stubQueuedStateUpdates(int planId, int userId) {
 		given(planRepository.markAiProcessing(eq(planId), eq(userId), any(), any(), any(), any())).willReturn(1);
 		given(planRepository.updateAiImageKey(eq(planId), eq(userId), any(), any())).willReturn(1);
-		given(planRepository.registerPyanTask(eq(planId), eq(userId), any(), any(), any(), any(), any(), any(), any())).willReturn(1);
+		given(planRepository.registerPyanTask(eq(planId), eq(userId), any(), any(), any())).willReturn(1);
 	}
 }

@@ -89,9 +89,6 @@ public class Plan extends BaseEntity {
 	@Column(name = "plan_video_url", length = 255)
 	private String videoUrl;
 
-	@Column(name = "pyan_task_id", length = 100)
-	private String pyanTaskId;
-
 	@Column(name = "pyan_request_key", length = 120)
 	private String pyanRequestKey;
 
@@ -101,15 +98,6 @@ public class Plan extends BaseEntity {
 
 	@Column(name = "pyan_status_url", length = 255)
 	private String pyanStatusUrl;
-
-	@Column(name = "pyan_goal_status_url", length = 255)
-	private String pyanGoalStatusUrl;
-
-	@Column(name = "pyan_original_download_url", length = 255)
-	private String pyanOriginalDownloadUrl;
-
-	@Column(name = "pyan_compressed_download_url", length = 255)
-	private String pyanCompressedDownloadUrl;
 
 	@Column(name = "pyan_last_error", length = 255)
 	private String pyanLastError;
@@ -208,35 +196,16 @@ public class Plan extends BaseEntity {
 	}
 
 	public void registerPyanTask(
-		String taskId,
 		PyanTaskStatus status,
-		String statusUrl,
-		String goalStatusUrl,
-		String originalDownloadUrl,
-		String compressedDownloadUrl
+		String statusUrl
 	) {
-		this.pyanTaskId = taskId;
 		this.pyanStatus = status;
 		this.pyanStatusUrl = statusUrl;
-		this.pyanGoalStatusUrl = goalStatusUrl;
-		this.pyanOriginalDownloadUrl = originalDownloadUrl;
-		this.pyanCompressedDownloadUrl = compressedDownloadUrl;
 		this.pyanLastError = null;
 	}
 
-	public void syncPyanTask(
-		PyanTaskStatus status,
-		String originalDownloadUrl,
-		String compressedDownloadUrl,
-		String lastError
-	) {
+	public void syncPyanTask(PyanTaskStatus status, String lastError) {
 		this.pyanStatus = status;
-		if (originalDownloadUrl != null && !originalDownloadUrl.isBlank()) {
-			this.pyanOriginalDownloadUrl = originalDownloadUrl;
-		}
-		if (compressedDownloadUrl != null && !compressedDownloadUrl.isBlank()) {
-			this.pyanCompressedDownloadUrl = compressedDownloadUrl;
-		}
 		this.pyanLastError = lastError;
 	}
 

@@ -112,29 +112,19 @@ public class PlanAiPipelineService {
 				return;
 			}
 			plan.registerPyanTask(
-				response.taskId(),
 				PyanTaskStatus.from(response.status()),
-				response.statusUrl(),
-				response.goalStatusUrl(),
-				response.originalDownloadUrl(),
-				response.compressedDownloadUrl()
+				response.statusUrl()
 			);
 			log.info(
-				"event=PYAN_TASK_REGISTERED planId={} userId={} taskId={} status={} statusUrl={}",
+				"event=PYAN_TASK_REGISTERED planId={} userId={} status={} statusUrl={}",
 				planId,
 				userId,
-				response.taskId(),
 				response.status(),
 				response.statusUrl()
 			);
 			String videoUrl = resolvePreferredDownloadUrl(response);
 			if (isReady(response) && videoUrl != null && completeAiSuccess(planId, userId, response, videoUrl)) {
-				plan.syncPyanTask(
-					PyanTaskStatus.from(response.status()),
-					response.originalDownloadUrl(),
-					response.compressedDownloadUrl(),
-					null
-				);
+				plan.syncPyanTask(PyanTaskStatus.from(response.status()), null);
 				plan.markAiSucceeded(videoUrl);
 				log.info(
 					"event=PLAN_AI_PIPELINE_SUCCESS planId={} userId={} planImageKey={} videoUrl={}",
@@ -191,12 +181,8 @@ public class PlanAiPipelineService {
 		return executeStateUpdate(() -> planRepository.registerPyanTask(
 			planId,
 			userId,
-			response.taskId(),
 			PyanTaskStatus.from(response.status()),
 			response.statusUrl(),
-			response.goalStatusUrl(),
-			response.originalDownloadUrl(),
-			response.compressedDownloadUrl(),
 			PlanStatus.CANCELLED
 		));
 	}
@@ -207,8 +193,6 @@ public class PlanAiPipelineService {
 			userId,
 			videoUrl,
 			PyanTaskStatus.from(response.status()),
-			response.originalDownloadUrl(),
-			response.compressedDownloadUrl(),
 			PlanAiPipelineStatus.SUCCEEDED,
 			PlanStatus.CANCELLED
 		));

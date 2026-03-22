@@ -48,13 +48,11 @@ public class PlanAiPollingScheduler {
 			if (isReady(response)) {
 				String resolvedVideoUrl = resolvePreferredDownloadUrl(response);
 				if (resolvedVideoUrl == null) {
-					log.warn("event=PLAN_AI_POLLING_READY_WITHOUT_URL planId={} taskId={}", plan.getId(), plan.getPyanTaskId());
+					log.warn("event=PLAN_AI_POLLING_READY_WITHOUT_URL planId={} statusUrl={}", plan.getId(), plan.getPyanStatusUrl());
 					planRepository.syncPyanProgress(
 						plan.getId(),
 						plan.getUser().getId(),
 						pyanStatus,
-						response.originalDownloadUrl(),
-						response.compressedDownloadUrl(),
 						response.message(),
 						PlanStatus.CANCELLED
 					);
@@ -65,12 +63,10 @@ public class PlanAiPollingScheduler {
 					plan.getUser().getId(),
 					resolvedVideoUrl,
 					pyanStatus,
-					response.originalDownloadUrl(),
-					response.compressedDownloadUrl(),
 					PlanAiPipelineStatus.SUCCEEDED,
 					PlanStatus.CANCELLED
 				) > 0) {
-					log.info("event=PLAN_AI_POLLING_COMPLETED planId={} taskId={} videoUrl={}", plan.getId(), plan.getPyanTaskId(), resolvedVideoUrl);
+					log.info("event=PLAN_AI_POLLING_COMPLETED planId={} statusUrl={} videoUrl={}", plan.getId(), plan.getPyanStatusUrl(), resolvedVideoUrl);
 				}
 				return;
 			}
@@ -84,8 +80,8 @@ public class PlanAiPollingScheduler {
 					response.message(),
 					PlanStatus.CANCELLED
 				) > 0) {
-					log.warn("event=PLAN_AI_POLLING_FAILED planId={} taskId={} status={} message={}",
-						plan.getId(), plan.getPyanTaskId(), response.status(), response.message());
+					log.warn("event=PLAN_AI_POLLING_FAILED planId={} statusUrl={} status={} message={}",
+						plan.getId(), plan.getPyanStatusUrl(), response.status(), response.message());
 				}
 				return;
 			}
@@ -94,16 +90,14 @@ public class PlanAiPollingScheduler {
 				plan.getId(),
 				plan.getUser().getId(),
 				pyanStatus,
-				response.originalDownloadUrl(),
-				response.compressedDownloadUrl(),
 				response.message(),
 				PlanStatus.CANCELLED
 			);
 		} catch (Exception exception) {
 			log.warn(
-				"event=PLAN_AI_POLLING_SKIPPED planId={} taskId={} message={}",
+				"event=PLAN_AI_POLLING_SKIPPED planId={} statusUrl={} message={}",
 				plan.getId(),
-				plan.getPyanTaskId(),
+				plan.getPyanStatusUrl(),
 				exception.getMessage()
 			);
 		}

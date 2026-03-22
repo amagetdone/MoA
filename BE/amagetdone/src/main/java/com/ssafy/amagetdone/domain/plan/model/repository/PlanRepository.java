@@ -121,12 +121,8 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 	@Modifying(flushAutomatically = true)
 	@Query("""
 		update Plan p
-		set p.pyanTaskId = :taskId,
-			p.pyanStatus = :pyanStatus,
+		set p.pyanStatus = :pyanStatus,
 			p.pyanStatusUrl = :statusUrl,
-			p.pyanGoalStatusUrl = :goalStatusUrl,
-			p.pyanOriginalDownloadUrl = :originalDownloadUrl,
-			p.pyanCompressedDownloadUrl = :compressedDownloadUrl,
 			p.pyanLastError = null,
 			p.version = p.version + 1
 		where p.id = :planId
@@ -137,12 +133,8 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 	int registerPyanTask(
 		@Param("planId") Integer planId,
 		@Param("userId") Integer userId,
-		@Param("taskId") String taskId,
 		@Param("pyanStatus") PyanTaskStatus pyanStatus,
 		@Param("statusUrl") String statusUrl,
-		@Param("goalStatusUrl") String goalStatusUrl,
-		@Param("originalDownloadUrl") String originalDownloadUrl,
-		@Param("compressedDownloadUrl") String compressedDownloadUrl,
 		@Param("cancelledStatus") PlanStatus cancelledStatus
 	);
 
@@ -152,8 +144,6 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 		set p.videoUrl = :videoUrl,
 			p.aiPipelineStatus = :successStatus,
 			p.pyanStatus = :pyanStatus,
-			p.pyanOriginalDownloadUrl = :originalDownloadUrl,
-			p.pyanCompressedDownloadUrl = :compressedDownloadUrl,
 			p.pyanLastError = null,
 			p.version = p.version + 1
 		where p.id = :planId
@@ -166,8 +156,6 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 		@Param("userId") Integer userId,
 		@Param("videoUrl") String videoUrl,
 		@Param("pyanStatus") PyanTaskStatus pyanStatus,
-		@Param("originalDownloadUrl") String originalDownloadUrl,
-		@Param("compressedDownloadUrl") String compressedDownloadUrl,
 		@Param("successStatus") PlanAiPipelineStatus successStatus,
 		@Param("cancelledStatus") PlanStatus cancelledStatus
 	);
@@ -176,8 +164,6 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 	@Query("""
 		update Plan p
 		set p.pyanStatus = :pyanStatus,
-			p.pyanOriginalDownloadUrl = coalesce(:originalDownloadUrl, p.pyanOriginalDownloadUrl),
-			p.pyanCompressedDownloadUrl = coalesce(:compressedDownloadUrl, p.pyanCompressedDownloadUrl),
 			p.pyanLastError = :pyanLastError,
 			p.version = p.version + 1
 		where p.id = :planId
@@ -189,8 +175,6 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 		@Param("planId") Integer planId,
 		@Param("userId") Integer userId,
 		@Param("pyanStatus") PyanTaskStatus pyanStatus,
-		@Param("originalDownloadUrl") String originalDownloadUrl,
-		@Param("compressedDownloadUrl") String compressedDownloadUrl,
 		@Param("pyanLastError") String pyanLastError,
 		@Param("cancelledStatus") PlanStatus cancelledStatus
 	);

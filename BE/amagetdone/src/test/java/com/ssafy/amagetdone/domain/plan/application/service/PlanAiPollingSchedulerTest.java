@@ -33,7 +33,7 @@ class PlanAiPollingSchedulerTest {
 
 	@Test
 	void pollsProcessingPlanAndCompletesItWhenPyanIsReady() {
-		Plan plan = processingPlan(21, 3, "task-21", "https://sketch.pyan.kr/api/status/task-21");
+		Plan plan = processingPlan(21, 3, "https://sketch.pyan.kr/api/status/task-21");
 		given(planRepository.findAllByAiPipelineStatusAndDeletedFalseAndStatusNotAndPyanStatusUrlIsNotNull(
 			PlanAiPipelineStatus.PROCESSING,
 			PlanStatus.CANCELLED
@@ -53,7 +53,7 @@ class PlanAiPollingSchedulerTest {
 				"https://sketch.pyan.kr/cdn/task-21.mp4",
 				"https://sketch.pyan.kr/cdn/task-21.compressed.mp4"
 			));
-		given(planRepository.completeAiSuccess(eq(21), eq(3), eq("https://sketch.pyan.kr/cdn/task-21.compressed.mp4"), any(), any(), any(), any(), any()))
+		given(planRepository.completeAiSuccess(eq(21), eq(3), eq("https://sketch.pyan.kr/cdn/task-21.compressed.mp4"), any(), any(), any()))
 			.willReturn(1);
 
 		PlanAiPollingScheduler scheduler = new PlanAiPollingScheduler(planRepository, pyanClient);
@@ -65,8 +65,6 @@ class PlanAiPollingSchedulerTest {
 			eq(3),
 			eq("https://sketch.pyan.kr/cdn/task-21.compressed.mp4"),
 			any(),
-			eq("https://sketch.pyan.kr/cdn/task-21.mp4"),
-			eq("https://sketch.pyan.kr/cdn/task-21.compressed.mp4"),
 			any(),
 			any()
 		);
@@ -74,7 +72,7 @@ class PlanAiPollingSchedulerTest {
 
 	@Test
 	void pollsProcessingPlanAndMarksFailureWhenPyanReportsCancelled() {
-		Plan plan = processingPlan(22, 4, "task-22", "https://sketch.pyan.kr/api/status/task-22");
+		Plan plan = processingPlan(22, 4, "https://sketch.pyan.kr/api/status/task-22");
 		given(planRepository.findAllByAiPipelineStatusAndDeletedFalseAndStatusNotAndPyanStatusUrlIsNotNull(
 			PlanAiPipelineStatus.PROCESSING,
 			PlanStatus.CANCELLED
@@ -103,13 +101,12 @@ class PlanAiPollingSchedulerTest {
 		verify(planRepository).markAiFailed(eq(22), eq(4), any(), any(), eq("cancelled upstream"), any());
 	}
 
-	private Plan processingPlan(int planId, int userId, String taskId, String statusUrl) {
+	private Plan processingPlan(int planId, int userId, String statusUrl) {
 		Plan plan = instantiatePlan();
 		ReflectionTestUtils.setField(plan, "id", planId);
 		ReflectionTestUtils.setField(plan, "user", user(userId));
 		ReflectionTestUtils.setField(plan, "status", PlanStatus.WAITING);
 		ReflectionTestUtils.setField(plan, "aiPipelineStatus", PlanAiPipelineStatus.PROCESSING);
-		ReflectionTestUtils.setField(plan, "pyanTaskId", taskId);
 		ReflectionTestUtils.setField(plan, "pyanStatusUrl", statusUrl);
 		return plan;
 	}
