@@ -79,7 +79,7 @@ class PlanRepositoryOptimisticLockTest {
 			Plan plan = entityManager.find(Plan.class, planId);
 			plan.updatePlanUrl("plan/generated.png");
 			plan.updateVideoUrl("https://cdn.example.com/plan.mp4");
-			plan.markAiSucceeded();
+			plan.markAiSucceeded("https://cdn.example.com/plan.mp4");
 			entityManager.getTransaction().commit();
 		} finally {
 			entityManager.close();

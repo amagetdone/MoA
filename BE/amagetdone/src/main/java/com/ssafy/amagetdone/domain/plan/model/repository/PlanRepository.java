@@ -8,6 +8,7 @@ import java.util.Optional;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
+import com.ssafy.amagetdone.domain.plan.model.vo.PyanTaskStatus;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -68,6 +69,11 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 		PlanAiPipelineStatus aiPipelineStatus
 	);
 
+	List<Plan> findAllByAiPipelineStatusAndDeletedFalseAndStatusNotAndPyanStatusUrlIsNotNull(
+		PlanAiPipelineStatus aiPipelineStatus,
+		PlanStatus status
+	);
+
 	boolean existsByUserId(Integer userId);
 
 	boolean existsByUserIdAndDeletedFalse(Integer userId);
@@ -82,16 +88,20 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 	@Query("""
 		update Plan p
 		set p.aiPipelineStatus = :processingStatus,
+			p.pyanRequestKey = coalesce(p.pyanRequestKey, :pyanRequestKey),
 			p.version = p.version + 1
 		where p.id = :planId
 			and p.user.id = :userId
 			and p.deleted = false
+			and p.aiPipelineStatus = :pendingStatus
 			and p.status <> :cancelledStatus
 		""")
 	int markAiProcessing(
 		@Param("planId") Integer planId,
 		@Param("userId") Integer userId,
 		@Param("processingStatus") PlanAiPipelineStatus processingStatus,
+		@Param("pyanRequestKey") String pyanRequestKey,
+		@Param("pendingStatus") PlanAiPipelineStatus pendingStatus,
 		@Param("cancelledStatus") PlanStatus cancelledStatus
 	);
 
@@ -115,8 +125,30 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 	@Modifying(flushAutomatically = true)
 	@Query("""
 		update Plan p
+		set p.pyanStatus = :pyanStatus,
+			p.pyanStatusUrl = :statusUrl,
+			p.pyanLastError = null,
+			p.version = p.version + 1
+		where p.id = :planId
+			and p.user.id = :userId
+			and p.deleted = false
+			and p.status <> :cancelledStatus
+		""")
+	int registerPyanTask(
+		@Param("planId") Integer planId,
+		@Param("userId") Integer userId,
+		@Param("pyanStatus") PyanTaskStatus pyanStatus,
+		@Param("statusUrl") String statusUrl,
+		@Param("cancelledStatus") PlanStatus cancelledStatus
+	);
+
+	@Modifying(flushAutomatically = true)
+	@Query("""
+		update Plan p
 		set p.videoUrl = :videoUrl,
 			p.aiPipelineStatus = :successStatus,
+			p.pyanStatus = :pyanStatus,
+			p.pyanLastError = null,
 			p.version = p.version + 1
 		where p.id = :planId
 			and p.user.id = :userId
@@ -127,6 +159,7 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 		@Param("planId") Integer planId,
 		@Param("userId") Integer userId,
 		@Param("videoUrl") String videoUrl,
+		@Param("pyanStatus") PyanTaskStatus pyanStatus,
 		@Param("successStatus") PlanAiPipelineStatus successStatus,
 		@Param("cancelledStatus") PlanStatus cancelledStatus
 	);
@@ -134,7 +167,28 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 	@Modifying(flushAutomatically = true)
 	@Query("""
 		update Plan p
+		set p.pyanStatus = :pyanStatus,
+			p.pyanLastError = :pyanLastError,
+			p.version = p.version + 1
+		where p.id = :planId
+			and p.user.id = :userId
+			and p.deleted = false
+			and p.status <> :cancelledStatus
+		""")
+	int syncPyanProgress(
+		@Param("planId") Integer planId,
+		@Param("userId") Integer userId,
+		@Param("pyanStatus") PyanTaskStatus pyanStatus,
+		@Param("pyanLastError") String pyanLastError,
+		@Param("cancelledStatus") PlanStatus cancelledStatus
+	);
+
+	@Modifying(flushAutomatically = true)
+	@Query("""
+		update Plan p
 		set p.aiPipelineStatus = :failedStatus,
+			p.pyanStatus = :pyanStatus,
+			p.pyanLastError = :pyanLastError,
 			p.aiRetryCount = p.aiRetryCount + 1,
 			p.version = p.version + 1
 		where p.id = :planId
@@ -146,6 +200,8 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 		@Param("planId") Integer planId,
 		@Param("userId") Integer userId,
 		@Param("failedStatus") PlanAiPipelineStatus failedStatus,
+		@Param("pyanStatus") PyanTaskStatus pyanStatus,
+		@Param("pyanLastError") String pyanLastError,
 		@Param("cancelledStatus") PlanStatus cancelledStatus
 	);
 

@@ -8,6 +8,7 @@ import java.util.List;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanListItemResponse;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
 
 import org.junit.jupiter.api.Test;
@@ -68,6 +69,31 @@ class ListPlansUseCaseDataJpaTest {
 				org.assertj.core.groups.Tuple.tuple(waitingPlan.getId().longValue(), "Future plan"),
 				org.assertj.core.groups.Tuple.tuple(activePlan.getId().longValue(), "Current plan")
 			);
+	}
+
+	@Test
+	void executeIncludesPlansEvenWhenAiPipelineFailed() {
+		User user = persistUser("plan-list-ai-failed@example.com");
+		LocalDate today = LocalDate.now();
+
+		Plan failedAiPlan = persistPlan(
+			user,
+			"Video failed plan",
+			PlanStatus.WAITING,
+			1,
+			today.plusDays(5),
+			today.plusDays(20)
+		);
+		failedAiPlan.setAiPipelineStatus(PlanAiPipelineStatus.FAILED);
+
+		entityManager.flush();
+		entityManager.clear();
+
+		List<PlanListItemResponse> response = listPlansUseCase.execute(user.getId());
+
+		assertThat(response)
+			.extracting(PlanListItemResponse::planId, PlanListItemResponse::title)
+			.containsExactly(org.assertj.core.groups.Tuple.tuple(failedAiPlan.getId().longValue(), "Video failed plan"));
 	}
 
 	private User persistUser(String email) {

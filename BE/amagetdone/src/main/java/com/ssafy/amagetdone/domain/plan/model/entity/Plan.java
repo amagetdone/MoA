@@ -6,6 +6,7 @@ import java.time.temporal.ChronoUnit;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
+import com.ssafy.amagetdone.domain.plan.model.vo.PyanTaskStatus;
 import com.ssafy.amagetdone.global.entity.BaseEntity;
 
 import org.hibernate.annotations.ColumnDefault;
@@ -87,6 +88,19 @@ public class Plan extends BaseEntity {
 
 	@Column(name = "plan_video_url", length = 255)
 	private String videoUrl;
+
+	@Column(name = "pyan_request_key", length = 120)
+	private String pyanRequestKey;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "pyan_status", length = 30)
+	private PyanTaskStatus pyanStatus;
+
+	@Column(name = "pyan_status_url", length = 255)
+	private String pyanStatusUrl;
+
+	@Column(name = "pyan_last_error", length = 255)
+	private String pyanLastError;
 
 	@ColumnDefault("'PENDING'")
 	@Builder.Default
@@ -172,14 +186,38 @@ public class Plan extends BaseEntity {
 
 	public void markAiProcessing() {
 		this.aiPipelineStatus = PlanAiPipelineStatus.PROCESSING;
+		this.pyanLastError = null;
 	}
 
-	public void markAiSucceeded() {
+	public void assignPyanRequestKey(String requestKey) {
+		if (this.pyanRequestKey == null || this.pyanRequestKey.isBlank()) {
+			this.pyanRequestKey = requestKey;
+		}
+	}
+
+	public void registerPyanTask(
+		PyanTaskStatus status,
+		String statusUrl
+	) {
+		this.pyanStatus = status;
+		this.pyanStatusUrl = statusUrl;
+		this.pyanLastError = null;
+	}
+
+	public void syncPyanTask(PyanTaskStatus status, String lastError) {
+		this.pyanStatus = status;
+		this.pyanLastError = lastError;
+	}
+
+	public void markAiSucceeded(String videoUrl) {
 		this.aiPipelineStatus = PlanAiPipelineStatus.SUCCEEDED;
+		this.videoUrl = videoUrl;
+		this.pyanLastError = null;
 	}
 
-	public void markAiFailed() {
+	public void markAiFailed(String lastError) {
 		this.aiPipelineStatus = PlanAiPipelineStatus.FAILED;
+		this.pyanLastError = lastError;
 		this.aiRetryCount++;
 	}
 }
