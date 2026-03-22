@@ -4,5 +4,7 @@ import com.ssafy.amagetdone.domain.plan.infra.client.dto.PyanGenerateResponse;
 
 public interface PyanClient {
 
-	PyanGenerateResponse generate(byte[] imageBytes, String goalId);
+	PyanGenerateResponse generate(byte[] imageBytes, String goalId, String requestKey);
+
+	PyanGenerateResponse fetchStatus(String statusUrl);
 }

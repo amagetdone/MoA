@@ -20,7 +20,7 @@ public class PlanCreatedEventListener {
 		this.planAiPipelineService = planAiPipelineService;
 	}
 
-	@Async
+	@Async("planAiTaskExecutor")
 	@TransactionalEventListener
 	public void handle(PlanCreatedEvent event) {
 		planAiPipelineService.start(event.planId(), event.userId());

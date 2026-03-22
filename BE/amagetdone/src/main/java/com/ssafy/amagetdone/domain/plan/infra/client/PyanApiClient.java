@@ -11,14 +11,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 @Component
 @ConditionalOnProperty(prefix = "pyan", name = { "base-url", "api-key" })
 public class PyanApiClient implements PyanClient {
 
 	private static final Logger log = LoggerFactory.getLogger(PyanApiClient.class);
-	private static final int MAX_GENERATE_ATTEMPTS = 2;
-
 	private final RestClient restClient;
 	private final PyanProperties properties;
 
@@ -28,11 +27,12 @@ public class PyanApiClient implements PyanClient {
 	}
 
 	@Override
-	public PyanGenerateResponse generate(byte[] imageBytes, String goalId) {
+	public PyanGenerateResponse generate(byte[] imageBytes, String goalId, String requestKey) {
 		IllegalStateException lastFailure = null;
-		for (int attempt = 1; attempt <= MAX_GENERATE_ATTEMPTS; attempt++) {
+		int maxGenerateAttempts = Math.max(1, properties.getGenerateMaxAttempts());
+		for (int attempt = 1; attempt <= maxGenerateAttempts; attempt++) {
 			try {
-				PyanGenerateResponse response = generateOnce(imageBytes, goalId, attempt);
+				PyanGenerateResponse response = generateOnce(imageBytes, goalId, requestKey, attempt);
 				log.info(
 					"event=PYAN_HTTP_RESPONSE goalId={} attempt={} taskId={} status={} compressedDownloadUrl={}",
 					goalId,
@@ -58,14 +58,14 @@ public class PyanApiClient implements PyanClient {
 		throw lastFailure == null ? new IllegalStateException("Pyan generation failed") : lastFailure;
 	}
 
-	private PyanGenerateResponse generateOnce(byte[] imageBytes, String goalId, int attempt) {
+	private PyanGenerateResponse generateOnce(byte[] imageBytes, String goalId, String requestKey, int attempt) {
 		MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
 		body.add("image", new NamedByteArrayResource("plan.png", imageBytes));
 		body.add("goal_id", goalId);
 		body.add("pen_mode", properties.getPenMode());
 		body.add("output_autocrop", String.valueOf(properties.isOutputAutocrop()));
 		String requestUrl = joinUrl("/api/generate");
-		String idempotencyKey = goalId + "-attempt-" + attempt;
+		String idempotencyKey = requestKey;
 		log.info(
 			"event=PYAN_HTTP_REQUEST url={} goalId={} attempt={} imageBytesLength={} penMode={} outputAutocrop={}",
 			requestUrl,
@@ -86,78 +86,21 @@ public class PyanApiClient implements PyanClient {
 				.body(body)
 				.retrieve()
 				.body(PyanGenerateResponse.class);
+		} catch (RestClientResponseException exception) {
+			String responseBody = exception.getResponseBodyAsString();
+			String message = "Pyan generate request failed status="
+				+ exception.getStatusCode().value()
+				+ " body="
+				+ abbreviate(responseBody, 300);
+			throw new IllegalStateException(message, exception);
 		} catch (RuntimeException exception) {
-			throw new IllegalStateException("Pyan generate request failed", exception);
+			throw new IllegalStateException("Pyan generate request failed cause=" + exception.getClass().getSimpleName(), exception);
 		}
-		return waitForCompressedDownloadUrl(response);
+		return requireResponse(response, "Pyan generation returned no response");
 	}
 
-	private PyanGenerateResponse waitForCompressedDownloadUrl(PyanGenerateResponse response) {
-		PyanGenerateResponse current = requireResponse(response, "Pyan generation returned no response");
-		if (isCancelled(current)) {
-			throw new IllegalStateException("Pyan generation cancelled: " + current.message());
-		}
-		if (isError(current)) {
-			throw new IllegalStateException("Pyan generation failed: " + current.message());
-		}
-		if (hasCompressedDownloadUrl(current)) {
-			return current;
-		}
-		if (isReady(current)) {
-			return compensateReadyWithoutCompressed(current);
-		}
-
-		String statusUrl = requireStatusUrl(current);
-		long timeoutMillis = properties.getPollTimeoutMillis();
-		long deadline = System.currentTimeMillis() + timeoutMillis;
-		long delayMillis = Math.max(1L, properties.getPollInitialDelayMillis());
-		while (System.currentTimeMillis() < deadline) {
-			sleep(Math.min(delayMillis, Math.max(1L, deadline - System.currentTimeMillis())));
-			current = fetchStatus(statusUrl);
-			if (isCancelled(current)) {
-				throw new IllegalStateException("Pyan generation cancelled: " + current.message());
-			}
-			if (isError(current)) {
-				throw new IllegalStateException("Pyan generation failed: " + current.message());
-			}
-			if (hasCompressedDownloadUrl(current)) {
-				return current;
-			}
-			if (isReady(current)) {
-				return compensateReadyWithoutCompressed(current);
-			}
-			delayMillis = nextDelayMillis(delayMillis);
-		}
-		throw new IllegalStateException("Pyan generation timed out after " + timeoutMillis + "ms");
-	}
-
-	private PyanGenerateResponse compensateReadyWithoutCompressed(PyanGenerateResponse response) {
-		String taskId = response.taskId();
-		if (!hasText(taskId)) {
-			throw new IllegalStateException("Pyan ready response missing task id");
-		}
-		String statusUrl = joinUrl("/api/status/" + taskId);
-		long delayMillis = Math.max(1L, properties.getReadyMissingCompressedInitialDelayMillis());
-		int maxAttempts = Math.max(1, properties.getReadyMissingCompressedMaxAttempts());
-		PyanGenerateResponse current = response;
-		for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-			sleep(delayMillis);
-			current = fetchStatus(statusUrl);
-			if (isCancelled(current)) {
-				throw new IllegalStateException("Pyan generation cancelled: " + current.message());
-			}
-			if (isError(current)) {
-				throw new IllegalStateException("Pyan generation failed: " + current.message());
-			}
-			if (hasCompressedDownloadUrl(current)) {
-				return current;
-			}
-			delayMillis += Math.max(1L, properties.getReadyMissingCompressedInitialDelayMillis());
-		}
-		throw new IllegalStateException("Pyan ready response missing compressed download URL");
-	}
-
-	private PyanGenerateResponse fetchStatus(String statusUrl) {
+	@Override
+	public PyanGenerateResponse fetchStatus(String statusUrl) {
 		try {
 			PyanGenerateResponse response = restClient.get()
 				.uri(statusUrl)
@@ -165,8 +108,15 @@ public class PyanApiClient implements PyanClient {
 				.retrieve()
 				.body(PyanGenerateResponse.class);
 			return requireResponse(response, "Pyan status polling returned no response");
+		} catch (RestClientResponseException exception) {
+			String responseBody = exception.getResponseBodyAsString();
+			String message = "Pyan status polling failed status="
+				+ exception.getStatusCode().value()
+				+ " body="
+				+ abbreviate(responseBody, 300);
+			throw new IllegalStateException(message, exception);
 		} catch (RuntimeException exception) {
-			throw new IllegalStateException("Pyan status polling failed", exception);
+			throw new IllegalStateException("Pyan status polling failed cause=" + exception.getClass().getSimpleName(), exception);
 		}
 	}
 
@@ -177,15 +127,8 @@ public class PyanApiClient implements PyanClient {
 		return response;
 	}
 
-	private String requireStatusUrl(PyanGenerateResponse response) {
-		if (!hasText(response.statusUrl())) {
-			throw new IllegalStateException("Pyan generation did not provide a status URL");
-		}
-		return response.statusUrl();
-	}
-
 	private boolean shouldRetry(IllegalStateException exception, int attempt) {
-		if (attempt >= MAX_GENERATE_ATTEMPTS) {
+		if (attempt >= Math.max(1, properties.getGenerateMaxAttempts())) {
 			return false;
 		}
 		String message = exception.getMessage();
@@ -195,57 +138,10 @@ public class PyanApiClient implements PyanClient {
 		if (message.startsWith("Pyan generation cancelled")) {
 			return false;
 		}
-		if (message.startsWith("Pyan generation did not provide a status URL")) {
-			return false;
-		}
-		if (message.startsWith("Pyan ready response missing task id")) {
-			return false;
-		}
 		if (message.startsWith("Pyan generation returned no response")) {
 			return false;
 		}
-		if (message.startsWith("Pyan status polling returned no response")) {
-			return false;
-		}
 		return true;
-	}
-
-	private boolean hasCompressedDownloadUrl(PyanGenerateResponse response) {
-		return hasText(response.compressedDownloadUrl());
-	}
-
-	private boolean isReady(PyanGenerateResponse response) {
-		return "ready".equalsIgnoreCase(response.status());
-	}
-
-	private boolean isCancelled(PyanGenerateResponse response) {
-		return "cancelled".equalsIgnoreCase(response.status());
-	}
-
-	private boolean isError(PyanGenerateResponse response) {
-		return "error".equalsIgnoreCase(response.status());
-	}
-
-	private boolean hasText(String value) {
-		return value != null && !value.isBlank();
-	}
-
-	private long nextDelayMillis(long currentDelayMillis) {
-		long maxDelayMillis = Math.max(1L, properties.getPollMaxDelayMillis());
-		long doubledDelay = currentDelayMillis * 2;
-		if (doubledDelay < 0) {
-			return maxDelayMillis;
-		}
-		return Math.min(maxDelayMillis, doubledDelay);
-	}
-
-	private void sleep(long delayMillis) {
-		try {
-			Thread.sleep(delayMillis);
-		} catch (InterruptedException exception) {
-			Thread.currentThread().interrupt();
-			throw new IllegalStateException("Pyan polling interrupted", exception);
-		}
 	}
 
 	private String joinUrl(String path) {
@@ -254,6 +150,16 @@ public class PyanApiClient implements PyanClient {
 			return baseUrl.substring(0, baseUrl.length() - 1) + path;
 		}
 		return baseUrl + path;
+	}
+
+	private String abbreviate(String value, int maxLength) {
+		if (value == null || value.isBlank()) {
+			return "<empty>";
+		}
+		if (value.length() <= maxLength) {
+			return value;
+		}
+		return value.substring(0, maxLength) + "...";
 	}
 
 	private static final class NamedByteArrayResource extends ByteArrayResource {

@@ -12,6 +12,7 @@ import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
+import com.ssafy.amagetdone.domain.plan.model.vo.PyanTaskStatus;
 import com.ssafy.amagetdone.global.infra.storage.ImageCategory;
 import com.ssafy.amagetdone.global.infra.storage.S3StorageService;
 
@@ -67,11 +68,13 @@ public class PlanAiPipelineService {
 			.orElseThrow(() -> new PlanException(PlanErrorCode.PLAN_NOT_FOUND));
 
 		try {
-			if (!markAiProcessing(planId, userId)) {
+			String pyanRequestKey = resolvePyanRequestKey(plan);
+			if (!markAiProcessing(planId, userId, pyanRequestKey)) {
 				log.info("event=PLAN_AI_PIPELINE_ABORTED planId={} userId={} reason=deleted_or_cancelled_before_start", planId, userId);
 				return;
 			}
 			plan.markAiProcessing();
+			plan.assignPyanRequestKey(pyanRequestKey);
 			log.info("event=PLAN_AI_PIPELINE_STARTED planId={} userId={} title={}", planId, userId, plan.getTitle());
 			String profileImageUrl = memberProfileImageService.loadProfileImageUrl(userId);
 			String userPrompt = buildUserPrompt(plan);
@@ -102,25 +105,48 @@ public class PlanAiPipelineService {
 			log.info("event=PLAN_IMAGE_STORED planId={} userId={} objectKey={}", planId, userId, objectKey);
 
 			String goalId = "plan-" + plan.getId();
-			log.info("event=PYAN_REQUEST_STARTED planId={} userId={} goalId={}", planId, userId, goalId);
-			PyanGenerateResponse response = pyanClient.generate(generatedImageBytes, goalId);
-			String videoUrl = resolveCompressedDownloadUrl(response);
-			if (!completeAiSuccess(planId, userId, videoUrl)) {
+			log.info("event=PYAN_REQUEST_STARTED planId={} userId={} goalId={} requestKey={}", planId, userId, goalId, pyanRequestKey);
+			PyanGenerateResponse response = pyanClient.generate(generatedImageBytes, goalId, pyanRequestKey);
+			if (!registerPyanTask(planId, userId, response)) {
 				log.info("event=PLAN_AI_PIPELINE_ABORTED planId={} userId={} reason=deleted_or_cancelled", planId, userId);
 				return;
 			}
-			plan.updateVideoUrl(videoUrl);
-			plan.markAiSucceeded();
+			plan.registerPyanTask(
+				response.taskId(),
+				PyanTaskStatus.from(response.status()),
+				response.statusUrl(),
+				response.goalStatusUrl(),
+				response.originalDownloadUrl(),
+				response.compressedDownloadUrl()
+			);
 			log.info(
-				"event=PLAN_AI_PIPELINE_SUCCESS planId={} userId={} planImageKey={} videoUrl={}",
+				"event=PYAN_TASK_REGISTERED planId={} userId={} taskId={} status={} statusUrl={}",
 				planId,
 				userId,
-				objectKey,
-				videoUrl
+				response.taskId(),
+				response.status(),
+				response.statusUrl()
 			);
+			String videoUrl = resolvePreferredDownloadUrl(response);
+			if (isReady(response) && videoUrl != null && completeAiSuccess(planId, userId, response, videoUrl)) {
+				plan.syncPyanTask(
+					PyanTaskStatus.from(response.status()),
+					response.originalDownloadUrl(),
+					response.compressedDownloadUrl(),
+					null
+				);
+				plan.markAiSucceeded(videoUrl);
+				log.info(
+					"event=PLAN_AI_PIPELINE_SUCCESS planId={} userId={} planImageKey={} videoUrl={}",
+					planId,
+					userId,
+					objectKey,
+					videoUrl
+				);
+			}
 		} catch (Exception exception) {
-			if (markAiFailed(planId, userId)) {
-				plan.markAiFailed();
+			if (markAiFailed(planId, userId, plan.getPyanStatus(), exception.getMessage())) {
+				plan.markAiFailed(exception.getMessage());
 			}
 			log.error(
 				"event=PLAN_AI_PIPELINE_FAILED planId={} userId={} message={}",
@@ -132,13 +158,24 @@ public class PlanAiPipelineService {
 		}
 	}
 
-	private boolean markAiProcessing(Integer planId, Integer userId) {
+	private boolean markAiProcessing(Integer planId, Integer userId, String pyanRequestKey) {
 		return executeStateUpdate(() -> planRepository.markAiProcessing(
 			planId,
 			userId,
 			PlanAiPipelineStatus.PROCESSING,
+			pyanRequestKey,
+			PlanAiPipelineStatus.PENDING,
 			PlanStatus.CANCELLED
 		));
+	}
+
+	private String resolvePyanRequestKey(Plan plan) {
+		String existing = plan.getPyanRequestKey();
+		if (existing != null && !existing.isBlank()) {
+			return existing;
+		}
+		int attempt = (plan.getAiRetryCount() == null ? 0 : plan.getAiRetryCount()) + 1;
+		return "plan-" + plan.getId() + "-pyan-" + attempt;
 	}
 
 	private boolean updateAiImageKey(Integer planId, Integer userId, String planUrl) {
@@ -150,21 +187,40 @@ public class PlanAiPipelineService {
 		));
 	}
 
-	private boolean completeAiSuccess(Integer planId, Integer userId, String videoUrl) {
+	private boolean registerPyanTask(Integer planId, Integer userId, PyanGenerateResponse response) {
+		return executeStateUpdate(() -> planRepository.registerPyanTask(
+			planId,
+			userId,
+			response.taskId(),
+			PyanTaskStatus.from(response.status()),
+			response.statusUrl(),
+			response.goalStatusUrl(),
+			response.originalDownloadUrl(),
+			response.compressedDownloadUrl(),
+			PlanStatus.CANCELLED
+		));
+	}
+
+	private boolean completeAiSuccess(Integer planId, Integer userId, PyanGenerateResponse response, String videoUrl) {
 		return executeStateUpdate(() -> planRepository.completeAiSuccess(
 			planId,
 			userId,
 			videoUrl,
+			PyanTaskStatus.from(response.status()),
+			response.originalDownloadUrl(),
+			response.compressedDownloadUrl(),
 			PlanAiPipelineStatus.SUCCEEDED,
 			PlanStatus.CANCELLED
 		));
 	}
 
-	private boolean markAiFailed(Integer planId, Integer userId) {
+	private boolean markAiFailed(Integer planId, Integer userId, PyanTaskStatus pyanStatus, String pyanLastError) {
 		return executeStateUpdate(() -> planRepository.markAiFailed(
 			planId,
 			userId,
 			PlanAiPipelineStatus.FAILED,
+			pyanStatus,
+			pyanLastError,
 			PlanStatus.CANCELLED
 		));
 	}
@@ -191,11 +247,21 @@ public class PlanAiPipelineService {
 		return "[Title] " + plan.getTitle() + " [description] " + description;
 	}
 
-	private String resolveCompressedDownloadUrl(PyanGenerateResponse response) {
-		if (response == null || response.compressedDownloadUrl() == null || response.compressedDownloadUrl().isBlank()) {
-			throw new IllegalStateException("Pyan response does not contain compressed download URL");
+	private String resolvePreferredDownloadUrl(PyanGenerateResponse response) {
+		if (response == null) {
+			return null;
 		}
-		return response.compressedDownloadUrl();
+		if (response.compressedDownloadUrl() != null && !response.compressedDownloadUrl().isBlank()) {
+			return response.compressedDownloadUrl();
+		}
+		if (response.originalDownloadUrl() != null && !response.originalDownloadUrl().isBlank()) {
+			return response.originalDownloadUrl();
+		}
+		return null;
+	}
+
+	private boolean isReady(PyanGenerateResponse response) {
+		return response != null && "ready".equalsIgnoreCase(response.status());
 	}
 
 	private static final class ByteArrayMultipartFile implements MultipartFile {
