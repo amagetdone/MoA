@@ -129,13 +129,13 @@ public class ResetTestSocialUserUseCase {
 				essentialExpenseMonthRepository.deleteAllByUserId(userId);
 
 				// 10. Plan week allocations (FK → Plan, BudgetWeek)
-				planWeekAllocationRepository.deleteByPlanUserId(userId);
+				planWeekAllocationRepository.deleteAllByUserId(userId);
 
 				// 11. Pockets (FK → Account, BudgetWeek)
 				pocketRepository.deleteAllByUserId(userId);
 
 				// 12. Plans (FK → User)
-				planRepository.deleteByUserId(userId);
+				planRepository.deleteAllByUserId(userId);
 
 				// 13. Budget weeks (FK → User)
 				budgetWeekRepository.deleteAllByUserId(userId);
