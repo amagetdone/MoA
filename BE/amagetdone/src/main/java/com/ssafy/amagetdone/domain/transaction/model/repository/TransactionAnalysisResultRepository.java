@@ -8,6 +8,7 @@ import java.util.Optional;
 import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisResult;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -65,6 +66,18 @@ public interface TransactionAnalysisResultRepository extends JpaRepository<Trans
 		@Param("fromDateTime") LocalDateTime fromDateTime,
 		@Param("toDateTime") LocalDateTime toDateTime
 	);
+
+	@Modifying
+	@Query("""
+		DELETE FROM TransactionAnalysisResult r
+		WHERE r.transaction.id IN (
+			SELECT ato.id FROM AccountTransactionOverride ato WHERE ato.account.user.id = :userId
+		)
+		OR r.transaction.id IN (
+			SELECT cto.id FROM CardTransactionOverride cto WHERE cto.card.withdrawalAccount.user.id = :userId
+		)
+		""")
+	void deleteAllByUserId(@Param("userId") Integer userId);
 
 	@Query("""
 		select r.analysisIncluded as analysisIncluded,
