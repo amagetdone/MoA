@@ -152,9 +152,9 @@ class ResetTestSocialUserUseCaseTest {
 		verify(essentialExpenseSnapshotWeekCategoryRepository).deleteAllByUserId(1);
 		verify(essentialExpenseSnapshotWeekRepository).deleteAllByUserId(1);
 		verify(essentialExpenseMonthRepository).deleteAllByUserId(1);
-		verify(planWeekAllocationRepository).deleteByPlanUserId(1);
+		verify(planWeekAllocationRepository).deleteAllByUserId(1);
 		verify(pocketRepository).deleteAllByUserId(1);
-		verify(planRepository).deleteByUserId(1);
+		verify(planRepository).deleteAllByUserId(1);
 		verify(budgetWeekRepository).deleteAllByUserId(1);
 		verify(budgetMonthRepository).deleteAllByUserId(1);
 		verify(accountVerificationRepository).deleteAllByUserId(1);
