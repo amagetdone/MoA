@@ -80,6 +80,10 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 
 	void deleteByUserId(Integer userId);
 
+	@Modifying
+	@Query("DELETE FROM Plan p WHERE p.user.id = :userId")
+	void deleteAllByUserId(@Param("userId") Integer userId);
+
 	@Modifying(flushAutomatically = true)
 	@Query("""
 		update Plan p
