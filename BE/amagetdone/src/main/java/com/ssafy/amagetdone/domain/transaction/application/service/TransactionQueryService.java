@@ -21,11 +21,12 @@ import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotW
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekCategoryRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.vo.ExpenseScope;
-import com.ssafy.amagetdone.domain.transaction.api.dto.ExpenseSummaryDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseGraphDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionListDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyExpenseGraphDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.SyncLatestTransactionsUseCase;
 import com.ssafy.amagetdone.domain.transaction.exception.TransactionErrorCode;
@@ -61,36 +62,6 @@ public class TransactionQueryService {
 	private final EssentialExpenseSnapshotWeekRepository essentialExpenseSnapshotWeekRepository;
 	private final EssentialExpenseSnapshotWeekCategoryRepository essentialExpenseSnapshotWeekCategoryRepository;
 	private final SyncLatestTransactionsUseCase syncLatestTransactionsUseCase;
-
-	public ExpenseSummaryDto.Response getExpenseSummary(
-		Integer userId,
-		YearMonth fromMonth,
-		YearMonth toMonth,
-		String bucket
-	) {
-		YearMonth resolvedToMonth = toMonth == null ? YearMonth.now() : toMonth;
-		YearMonth resolvedFromMonth = fromMonth == null ? resolvedToMonth.minusMonths(5) : fromMonth;
-		String resolvedBucket = "WEEK".equalsIgnoreCase(bucket) ? "WEEK" : "MONTH";
-		LocalDateTime fromDateTime = resolvedFromMonth.atDay(1).atStartOfDay();
-		LocalDateTime toDateTime = resolvedToMonth.atEndOfMonth().atTime(23, 59, 59);
-		List<Projection> projections = loadProjections(userId, fromDateTime, toDateTime, null);
-		List<ExpenseSummaryDto.Point> points = "WEEK".equals(resolvedBucket)
-			? buildWeeklyPoints(projections, fromDateTime.toLocalDate(), toDateTime.toLocalDate())
-			: buildMonthlyPoints(projections, resolvedFromMonth, resolvedToMonth);
-		ExpenseSummaryDto.Point latestPoint = points.isEmpty() ? null : points.get(points.size() - 1);
-		ExpenseSummaryDto.Point previousPoint = points.size() > 1 ? points.get(points.size() - 2) : null;
-		long latestAmount = latestPoint != null ? latestPoint.expenseAmount() : 0L;
-		long previousAmount = previousPoint != null ? previousPoint.expenseAmount() : 0L;
-		long changeAmount = latestAmount - previousAmount;
-		double changeRate = previousAmount == 0L ? 0d : (changeAmount * 100d) / previousAmount;
-
-		return new ExpenseSummaryDto.Response(
-			new ExpenseSummaryDto.Range(resolvedFromMonth.toString(), resolvedToMonth.toString(), resolvedBucket),
-			points,
-			new ExpenseSummaryDto.Comparison(latestAmount, previousAmount, changeAmount, round(changeRate)),
-			findLastAnalyzedAt(projections)
-		);
-	}
 
 	public MonthlyExpenseDto.Response getMonthlyExpense(Integer userId, YearMonth month) {
 		YearMonth targetMonth = month == null ? YearMonth.now() : month;
@@ -362,6 +333,60 @@ public class TransactionQueryService {
 		);
 	}
 
+	public WeeklyExpenseGraphDto.Response getWeeklyExpenseGraph(Integer userId, String yearWeek) {
+		ParsedYearWeek parsedYearWeek = parseYearMonthWeek(yearWeek);
+		LocalDate weekStartDate = parsedYearWeek.weekStartDate();
+		LocalDate weekEndDate = weekStartDate.plusDays(6L);
+		List<Projection> loadedProjections = loadProjections(
+			userId,
+			weekStartDate.atStartOfDay(),
+			weekEndDate.atTime(23, 59, 59),
+			null
+		);
+		List<Projection> projections = filterByTransactionDateRange(loadedProjections, weekStartDate, weekEndDate);
+		List<Projection> pureExpenseProjections = projections.stream()
+			.filter(this::isPureExpense)
+			.toList();
+
+		return new WeeklyExpenseGraphDto.Response(
+			parsedYearWeek.responseYearWeek(),
+			weekStartDate,
+			weekEndDate,
+			pureExpenseProjections.stream()
+				.mapToLong(projection -> projection.transaction().getTransactionBalance())
+				.sum(),
+			buildDailyExpensePoints(weekStartDate, pureExpenseProjections),
+			findLastAnalyzedAt(projections)
+		);
+	}
+
+	public MonthlyExpenseGraphDto.Response getMonthlyExpenseGraph(Integer userId, String yearMonth) {
+		YearMonth targetMonth = YearMonth.parse(yearMonth);
+		LocalDate monthStartDate = targetMonth.atDay(1);
+		LocalDate monthEndDate = targetMonth.atEndOfMonth();
+		List<Projection> loadedProjections = loadProjections(
+			userId,
+			monthStartDate.atStartOfDay(),
+			monthEndDate.atTime(23, 59, 59),
+			null
+		);
+		List<Projection> projections = filterByTransactionDateRange(loadedProjections, monthStartDate, monthEndDate);
+		List<Projection> pureExpenseProjections = projections.stream()
+			.filter(this::isPureExpense)
+			.toList();
+
+		return new MonthlyExpenseGraphDto.Response(
+			targetMonth.toString(),
+			monthStartDate,
+			monthEndDate,
+			pureExpenseProjections.stream()
+				.mapToLong(projection -> projection.transaction().getTransactionBalance())
+				.sum(),
+			buildMonthlyExpensePoints(targetMonth, pureExpenseProjections),
+			findLastAnalyzedAt(projections)
+		);
+	}
+
 	public MonthlyTransactionAnalysisDto.Response getMonthlyTransactionAnalysis(Integer userId, String yearMonth) {
 		TransactionAnalysisMetadata latestMetadata = getLatestMetadata(userId);
 		YearMonth targetMonth = YearMonth.parse(yearMonth);
@@ -501,65 +526,6 @@ public class TransactionQueryService {
 			.toList();
 	}
 
-	private List<ExpenseSummaryDto.Point> buildMonthlyPoints(
-		List<Projection> projections,
-		YearMonth fromMonth,
-		YearMonth toMonth
-	) {
-		List<ExpenseSummaryDto.Point> points = new ArrayList<>();
-		YearMonth cursor = fromMonth;
-		while (!cursor.isAfter(toMonth)) {
-			final YearMonth targetMonth = cursor;
-			points.add(toPoint(
-				targetMonth.toString(),
-				projections.stream()
-					.filter(projection -> YearMonth.from(projection.transaction().getTransactionDateTime()).equals(targetMonth))
-					.toList()
-			));
-			cursor = cursor.plusMonths(1);
-		}
-		return points;
-	}
-
-	private List<ExpenseSummaryDto.Point> buildWeeklyPoints(
-		List<Projection> projections,
-		LocalDate fromDate,
-		LocalDate toDate
-	) {
-		List<ExpenseSummaryDto.Point> points = new ArrayList<>();
-		LocalDate cursor = fromDate.with(TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
-		LocalDate end = toDate.with(TemporalAdjusters.nextOrSame(java.time.DayOfWeek.SUNDAY));
-		while (!cursor.isAfter(end)) {
-			LocalDate weekStart = cursor;
-			LocalDate weekEnd = cursor.plusDays(6);
-			points.add(toPoint(
-				weekStart + "~" + weekEnd,
-				projections.stream()
-					.filter(projection -> {
-						LocalDate occurredDate = projection.transaction().getTransactionDateTime().toLocalDate();
-						return !occurredDate.isBefore(weekStart) && !occurredDate.isAfter(weekEnd);
-					})
-					.toList()
-			));
-			cursor = cursor.plusWeeks(1);
-		}
-		return points;
-	}
-
-	private ExpenseSummaryDto.Point toPoint(String label, List<Projection> projections) {
-		long fixedAmount = projections.stream()
-			.filter(this::isPureExpense)
-			.filter(projection -> resolveExpenseScope(projection) == ExpenseScope.FIXED)
-			.mapToLong(projection -> projection.transaction().getTransactionBalance())
-			.sum();
-		long variableAmount = projections.stream()
-			.filter(this::isPureExpense)
-			.filter(projection -> resolveExpenseScope(projection) == ExpenseScope.VARIABLE)
-			.mapToLong(projection -> projection.transaction().getTransactionBalance())
-			.sum();
-		return new ExpenseSummaryDto.Point(label, fixedAmount + variableAmount, fixedAmount, variableAmount);
-	}
-
 	private boolean isPureExpense(Projection projection) {
 		if (hasExcludedReason(projection, TransactionExcludedReason.INCOME)
 			|| hasExcludedReason(projection, TransactionExcludedReason.INTERNAL_TRANSFER)) {
@@ -601,6 +567,57 @@ public class TransactionQueryService {
 		return analysisResult != null && analysisResult.isAnalysisIncluded();
 	}
 
+	private List<WeeklyExpenseGraphDto.Point> buildDailyExpensePoints(LocalDate weekStartDate, List<Projection> projections) {
+		Map<LocalDate, Long> expenseAmountByDate = projections.stream()
+			.collect(Collectors.groupingBy(
+				projection -> projection.transaction().getTransactionDateTime().toLocalDate(),
+				Collectors.summingLong(projection -> projection.transaction().getTransactionBalance())
+			));
+		List<WeeklyExpenseGraphDto.Point> points = new ArrayList<>();
+		for (int dayOffset = 0; dayOffset < 7; dayOffset++) {
+			LocalDate targetDate = weekStartDate.plusDays(dayOffset);
+			points.add(new WeeklyExpenseGraphDto.Point(
+				targetDate,
+				dayOfWeekLabel(targetDate.getDayOfWeek()),
+				expenseAmountByDate.getOrDefault(targetDate, 0L)
+			));
+		}
+		return points;
+	}
+
+	private List<MonthlyExpenseGraphDto.Point> buildMonthlyExpensePoints(YearMonth targetMonth, List<Projection> projections) {
+		LocalDate monthStartDate = targetMonth.atDay(1);
+		LocalDate monthEndDate = targetMonth.atEndOfMonth();
+		LocalDate cursor = monthStartDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+		LocalDate lastWeekStart = monthEndDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+		List<MonthlyExpenseGraphDto.Point> points = new ArrayList<>();
+		int index = 1;
+		while (!cursor.isAfter(lastWeekStart)) {
+			LocalDate weekStartDate = cursor;
+			LocalDate weekEndDate = cursor.plusDays(6L);
+			long expenseAmount = projections.stream()
+				.filter(projection -> {
+					LocalDate transactionDate = projection.transaction().getTransactionDateTime().toLocalDate();
+					return !transactionDate.isBefore(monthStartDate)
+						&& !transactionDate.isAfter(monthEndDate)
+						&& !transactionDate.isBefore(weekStartDate)
+						&& !transactionDate.isAfter(weekEndDate);
+				})
+				.mapToLong(projection -> projection.transaction().getTransactionBalance())
+				.sum();
+			points.add(new MonthlyExpenseGraphDto.Point(
+				toExternalYearMonthWeek(weekStartDate),
+				weekStartDate,
+				weekEndDate,
+				targetMonth.getMonthValue() + "월 " + index + "주차",
+				expenseAmount
+			));
+			cursor = cursor.plusWeeks(1);
+			index++;
+		}
+		return points;
+	}
+
 	private ExpenseScope resolveExpenseScope(Projection projection) {
 		if (projection.analysisResult() != null && projection.analysisResult().getExpenseScope() != null) {
 			return projection.analysisResult().getExpenseScope();
@@ -639,6 +656,19 @@ public class TransactionQueryService {
 
 	private long zero(Long amount) {
 		return amount == null ? 0L : amount;
+	}
+
+	private List<Projection> filterByTransactionDateRange(
+		List<Projection> projections,
+		LocalDate startDate,
+		LocalDate endDate
+	) {
+		return projections.stream()
+			.filter(projection -> {
+				LocalDate transactionDate = projection.transaction().getTransactionDateTime().toLocalDate();
+				return !transactionDate.isBefore(startDate) && !transactionDate.isAfter(endDate);
+			})
+			.toList();
 	}
 
 	private LocalDateTime findLastAnalyzedAt(List<Projection> projections) {
@@ -716,6 +746,18 @@ public class TransactionQueryService {
 
 	private double round(double value) {
 		return Math.round(value * 100d) / 100d;
+	}
+
+	private String dayOfWeekLabel(DayOfWeek dayOfWeek) {
+		return switch (dayOfWeek) {
+			case MONDAY -> "월";
+			case TUESDAY -> "화";
+			case WEDNESDAY -> "수";
+			case THURSDAY -> "목";
+			case FRIDAY -> "금";
+			case SATURDAY -> "토";
+			case SUNDAY -> "일";
+		};
 	}
 
 	private record Projection(

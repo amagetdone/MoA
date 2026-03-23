@@ -22,8 +22,10 @@ import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnaps
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekRepository;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.vo.UserStatus;
+import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseGraphDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionListDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyExpenseGraphDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.SyncLatestTransactionsUseCase;
 import com.ssafy.amagetdone.domain.transaction.model.entity.AccountTransactionOverride;
@@ -204,6 +206,115 @@ class TransactionQueryServiceTest {
 		);
 
 		assertEquals("타이짬뽕인동점", response.items().get(0).merchantText());
+	}
+
+	@Test
+	void getWeeklyExpenseGraphReturnsSevenDailyPointsIncludingZeroDays() {
+		TransactionQueryService queryService = transactionQueryService();
+
+		User user = User.builder()
+			.id(1)
+			.email("tester@example.com")
+			.nickname("tester")
+			.status(UserStatus.ACTIVE)
+			.build();
+		Account account = Account.create(user, "111-222-333", "type-1", "main", "deposit", "001", "bank", "KRW");
+		Category food = Category.create(10, "Food");
+		Category housing = Category.create(12, "Housing");
+		AccountTransactionOverride mondayExpense = accountTransaction(1, account, food, LocalDateTime.of(2026, 3, 9, 12, 0), 50_000L, 2, "Lunch");
+		AccountTransactionOverride wednesdayExpense = accountTransaction(2, account, housing, LocalDateTime.of(2026, 3, 11, 8, 0), 30_000L, 2, "Rent");
+		AccountTransactionOverride sundayExpense = accountTransaction(3, account, food, LocalDateTime.of(2026, 3, 15, 20, 0), 20_000L, 2, "Dinner");
+		AccountTransactionOverride income = accountTransaction(4, account, housing, LocalDateTime.of(2026, 3, 10, 9, 0), 300_000L, 1, "Salary");
+
+		given(accountTransactionOverrideRepository
+			.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of(sundayExpense, wednesdayExpense, income, mondayExpense));
+		given(cardTransactionOverrideRepository
+			.findAllByCard_WithdrawalAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of());
+		given(transactionAnalysisResultRepository.findAllByTransaction_IdIn(anyList()))
+			.willReturn(List.of(
+				includedResult(mondayExpense, food, ExpenseScope.VARIABLE),
+				includedResult(wednesdayExpense, housing, ExpenseScope.FIXED),
+				includedResult(sundayExpense, food, ExpenseScope.VARIABLE),
+				excludedResult(income, housing, TransactionExcludedReason.INCOME)
+			));
+
+		WeeklyExpenseGraphDto.Response response = queryService.getWeeklyExpenseGraph(1, "2026-03-2");
+
+		assertEquals("2026-03-2", response.yearWeek());
+		assertEquals(LocalDate.of(2026, 3, 9), response.weekStartDate());
+		assertEquals(LocalDate.of(2026, 3, 15), response.weekEndDate());
+		assertEquals(100_000L, response.totalExpenseAmount());
+		assertEquals(7, response.points().size());
+		assertEquals(LocalDate.of(2026, 3, 9), response.points().get(0).date());
+		assertEquals("월", response.points().get(0).label());
+		assertEquals(50_000L, response.points().get(0).expenseAmount());
+		assertEquals(LocalDate.of(2026, 3, 10), response.points().get(1).date());
+		assertEquals(0L, response.points().get(1).expenseAmount());
+		assertEquals(LocalDate.of(2026, 3, 11), response.points().get(2).date());
+		assertEquals(30_000L, response.points().get(2).expenseAmount());
+		assertEquals(LocalDate.of(2026, 3, 15), response.points().get(6).date());
+		assertEquals(20_000L, response.points().get(6).expenseAmount());
+		assertEquals(LocalDateTime.of(2026, 3, 1, 0, 0), response.lastAnalyzedAt());
+	}
+
+	@Test
+	void getMonthlyExpenseGraphReturnsOverlappingWeeklyPointsUsingOnlyInMonthExpenses() {
+		TransactionQueryService queryService = transactionQueryService();
+
+		User user = User.builder()
+			.id(1)
+			.email("tester@example.com")
+			.nickname("tester")
+			.status(UserStatus.ACTIVE)
+			.build();
+		Account account = Account.create(user, "111-222-333", "type-1", "main", "deposit", "001", "bank", "KRW");
+		Category food = Category.create(10, "Food");
+		AccountTransactionOverride febExpense = accountTransaction(1, account, food, LocalDateTime.of(2026, 2, 28, 12, 0), 30_000L, 2, "February");
+		AccountTransactionOverride marchFirstExpense = accountTransaction(2, account, food, LocalDateTime.of(2026, 3, 1, 18, 0), 10_000L, 2, "March 1");
+		AccountTransactionOverride marchSecondWeekExpense = accountTransaction(3, account, food, LocalDateTime.of(2026, 3, 3, 12, 0), 20_000L, 2, "March 3");
+		AccountTransactionOverride marchFourthWeekExpense = accountTransaction(4, account, food, LocalDateTime.of(2026, 3, 17, 12, 0), 40_000L, 2, "March 17");
+		AccountTransactionOverride marchLastWeekExpense = accountTransaction(5, account, food, LocalDateTime.of(2026, 3, 31, 12, 0), 50_000L, 2, "March 31");
+		AccountTransactionOverride aprilExpense = accountTransaction(6, account, food, LocalDateTime.of(2026, 4, 2, 12, 0), 60_000L, 2, "April");
+
+		given(accountTransactionOverrideRepository
+			.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of(aprilExpense, marchLastWeekExpense, marchFourthWeekExpense, marchSecondWeekExpense, marchFirstExpense, febExpense));
+		given(cardTransactionOverrideRepository
+			.findAllByCard_WithdrawalAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of());
+		given(transactionAnalysisResultRepository.findAllByTransaction_IdIn(anyList()))
+			.willReturn(List.of(
+				includedResult(febExpense, food, ExpenseScope.VARIABLE),
+				includedResult(marchFirstExpense, food, ExpenseScope.VARIABLE),
+				includedResult(marchSecondWeekExpense, food, ExpenseScope.VARIABLE),
+				includedResult(marchFourthWeekExpense, food, ExpenseScope.VARIABLE),
+				includedResult(marchLastWeekExpense, food, ExpenseScope.VARIABLE),
+				includedResult(aprilExpense, food, ExpenseScope.VARIABLE)
+			));
+
+		MonthlyExpenseGraphDto.Response response = queryService.getMonthlyExpenseGraph(1, "2026-03");
+
+		assertEquals("2026-03", response.yearMonth());
+		assertEquals(LocalDate.of(2026, 3, 1), response.monthStartDate());
+		assertEquals(LocalDate.of(2026, 3, 31), response.monthEndDate());
+		assertEquals(120_000L, response.totalExpenseAmount());
+		assertEquals(6, response.points().size());
+		assertEquals("2026-02-4", response.points().get(0).yearWeek());
+		assertEquals(LocalDate.of(2026, 2, 23), response.points().get(0).weekStartDate());
+		assertEquals(LocalDate.of(2026, 3, 1), response.points().get(0).weekEndDate());
+		assertEquals("3월 1주차", response.points().get(0).label());
+		assertEquals(10_000L, response.points().get(0).expenseAmount());
+		assertEquals("3월 2주차", response.points().get(1).label());
+		assertEquals(20_000L, response.points().get(1).expenseAmount());
+		assertEquals(0L, response.points().get(2).expenseAmount());
+		assertEquals("3월 4주차", response.points().get(3).label());
+		assertEquals(40_000L, response.points().get(3).expenseAmount());
+		assertEquals(0L, response.points().get(4).expenseAmount());
+		assertEquals("2026-03-5", response.points().get(5).yearWeek());
+		assertEquals(50_000L, response.points().get(5).expenseAmount());
+		assertEquals(LocalDateTime.of(2026, 3, 1, 0, 0), response.lastAnalyzedAt());
 	}
 
 	@Test
