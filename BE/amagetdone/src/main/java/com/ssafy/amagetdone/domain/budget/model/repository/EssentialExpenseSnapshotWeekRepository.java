@@ -8,8 +8,15 @@ import java.util.Optional;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeek;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface EssentialExpenseSnapshotWeekRepository extends JpaRepository<EssentialExpenseSnapshotWeek, Integer> {
+
+	@Modifying
+	@Query("DELETE FROM EssentialExpenseSnapshotWeek s WHERE s.user.id = :userId")
+	void deleteAllByUserId(@Param("userId") Integer userId);
 
 	Optional<EssentialExpenseSnapshotWeek> findByUser_IdAndYearWeek(Integer userId, String yearWeek);
 

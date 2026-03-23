@@ -1,7 +1,7 @@
 package com.ssafy.amagetdone.domain.plan.infra.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -13,6 +13,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import com.ssafy.amagetdone.domain.plan.infra.client.dto.PyanGenerateResponse;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -28,7 +29,7 @@ class PyanApiClientTest {
 		server.expect(requestTo("https://sketch.pyan.kr/api/generate"))
 			.andExpect(method(POST))
 			.andExpect(header("X-API-Key", "pyan-api-key"))
-			.andExpect(header("Idempotency-Key", "plan-10-attempt-1"))
+			.andExpect(header("Idempotency-Key", "plan-10-pyan-1"))
 			.andRespond(withSuccess("""
 				{
 				  "status": "ready",
@@ -43,7 +44,7 @@ class PyanApiClientTest {
 				}
 				""", APPLICATION_JSON));
 
-		PyanGenerateResponse response = client.generate("generated-image".getBytes(), "plan-10");
+		PyanGenerateResponse response = client.generate("generated-image".getBytes(), "plan-10", "plan-10-pyan-1");
 
 		assertEquals("task-1", response.taskId());
 		assertEquals("plan-10", response.goalId());
@@ -61,14 +62,14 @@ class PyanApiClientTest {
 	}
 
 	@Test
-	void generatePollsUntilReadyAndReturnsCompressedDownloadUrl() {
+	void generateReturnsQueuedResponseWithoutPollingStatus() {
 		RestClient.Builder builder = RestClient.builder();
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
 		PyanApiClient client = new PyanApiClient(builder, createProperties());
 
 		server.expect(requestTo("https://sketch.pyan.kr/api/generate"))
 			.andExpect(method(POST))
-			.andExpect(header("Idempotency-Key", "plan-11-attempt-1"))
+			.andExpect(header("Idempotency-Key", "plan-11-pyan-1"))
 			.andRespond(withSuccess("""
 				{
 				  "status": "queued",
@@ -77,81 +78,49 @@ class PyanApiClientTest {
 				  "status_url": "https://sketch.pyan.kr/api/status/task-2"
 				}
 				""", APPLICATION_JSON));
-		server.expect(requestTo("https://sketch.pyan.kr/api/status/task-2"))
-			.andExpect(method(GET))
-			.andRespond(withSuccess("""
-				{
-				  "status": "ready",
-				  "task_id": "task-2",
-				  "goal_id": "plan-11",
-				  "compressed_download_url": "https://sketch.pyan.kr/cdn/task-2.compressed.mp4",
-				  "original_download_url": "https://sketch.pyan.kr/cdn/task-2.mp4"
-				}
-				""", APPLICATION_JSON));
+		PyanGenerateResponse response = client.generate("generated-image".getBytes(), "plan-11", "plan-11-pyan-1");
 
-		PyanGenerateResponse response = client.generate("generated-image".getBytes(), "plan-11");
-
-		assertEquals("ready", response.status());
-		assertEquals("https://sketch.pyan.kr/cdn/task-2.compressed.mp4", response.compressedDownloadUrl());
+		assertEquals("queued", response.status());
+		assertEquals("task-2", response.taskId());
+		assertEquals("https://sketch.pyan.kr/api/status/task-2", response.statusUrl());
 	}
 
 	@Test
-	void generateRetriesWhenPolledStatusReturnsError() {
+	void fetchStatusLoadsCurrentTaskState() {
 		RestClient.Builder builder = RestClient.builder();
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
 		PyanApiClient client = new PyanApiClient(builder, createProperties());
 
-		server.expect(requestTo("https://sketch.pyan.kr/api/generate"))
-			.andExpect(method(POST))
-			.andExpect(header("Idempotency-Key", "plan-12-attempt-1"))
-			.andRespond(withSuccess("""
-				{
-				  "status": "queued",
-				  "task_id": "task-3",
-				  "goal_id": "plan-12",
-				  "status_url": "https://sketch.pyan.kr/api/status/task-3"
-				}
-				""", APPLICATION_JSON));
 		server.expect(requestTo("https://sketch.pyan.kr/api/status/task-3"))
 			.andExpect(method(GET))
 			.andRespond(withSuccess("""
 				{
-				  "status": "error",
+				  "status": "ready",
 				  "task_id": "task-3",
 				  "goal_id": "plan-12",
-				  "message": "generation failed"
-				}
-				""", APPLICATION_JSON));
-		server.expect(requestTo("https://sketch.pyan.kr/api/generate"))
-			.andExpect(method(POST))
-			.andExpect(header("Idempotency-Key", "plan-12-attempt-2"))
-			.andRespond(withSuccess("""
-				{
-				  "status": "ready",
-				  "task_id": "task-3-retry",
-				  "goal_id": "plan-12",
-				  "status_url": "https://sketch.pyan.kr/api/status/task-3-retry",
-				  "compressed_download_url": "https://sketch.pyan.kr/cdn/task-3-retry.compressed.mp4"
+				  "compressed_download_url": "https://sketch.pyan.kr/cdn/task-3.compressed.mp4"
 				}
 				""", APPLICATION_JSON));
 
-		PyanGenerateResponse response = client.generate("generated-image".getBytes(), "plan-12");
+		PyanGenerateResponse response = client.fetchStatus("https://sketch.pyan.kr/api/status/task-3");
 
 		assertEquals("ready", response.status());
-		assertEquals("https://sketch.pyan.kr/cdn/task-3-retry.compressed.mp4", response.compressedDownloadUrl());
+		assertEquals("https://sketch.pyan.kr/cdn/task-3.compressed.mp4", response.compressedDownloadUrl());
 	}
 
 	@Test
-	void generateThrowsWhenPollingTimesOutAfterRetry() {
+	void generateRetriesWhenInitialRequestFails() {
 		RestClient.Builder builder = RestClient.builder();
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).ignoreExpectOrder(true).build();
-		PyanProperties properties = createProperties();
-		properties.setPollTimeoutMillis(5);
-		PyanApiClient client = new PyanApiClient(builder, properties);
+		PyanApiClient client = new PyanApiClient(builder, createProperties());
 
 		server.expect(requestTo("https://sketch.pyan.kr/api/generate"))
 			.andExpect(method(POST))
-			.andExpect(header("Idempotency-Key", "plan-13-attempt-1"))
+			.andExpect(header("Idempotency-Key", "plan-13-pyan-1"))
+			.andRespond(org.springframework.test.web.client.response.MockRestResponseCreators.withServerError());
+		server.expect(requestTo("https://sketch.pyan.kr/api/generate"))
+			.andExpect(method(POST))
+			.andExpect(header("Idempotency-Key", "plan-13-pyan-1"))
 			.andRespond(withSuccess("""
 				{
 				  "status": "queued",
@@ -160,145 +129,40 @@ class PyanApiClientTest {
 				  "status_url": "https://sketch.pyan.kr/api/status/task-4"
 				}
 				""", APPLICATION_JSON));
-		server.expect(ExpectedCount.manyTimes(), requestTo("https://sketch.pyan.kr/api/status/task-4"))
-			.andExpect(method(GET))
-			.andRespond(withSuccess("""
-				{
-				  "status": "processing",
-				  "task_id": "task-4",
-				  "goal_id": "plan-13",
-				  "message": "still working"
-				}
-				""", APPLICATION_JSON));
+
+		PyanGenerateResponse response = client.generate("generated-image".getBytes(), "plan-13", "plan-13-pyan-1");
+
+		assertEquals("queued", response.status());
+		assertEquals("task-4", response.taskId());
+	}
+
+	@Test
+	void generateIncludesHttpStatusAndBodyWhenInitialRequestReturnsError() {
+		RestClient.Builder builder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+		PyanProperties properties = createProperties();
+		properties.setGenerateMaxAttempts(1);
+		PyanApiClient client = new PyanApiClient(builder, properties);
+
 		server.expect(requestTo("https://sketch.pyan.kr/api/generate"))
 			.andExpect(method(POST))
-			.andExpect(header("Idempotency-Key", "plan-13-attempt-2"))
-			.andRespond(withSuccess("""
-				{
-				  "status": "queued",
-				  "task_id": "task-4-retry",
-				  "goal_id": "plan-13",
-				  "status_url": "https://sketch.pyan.kr/api/status/task-4-retry"
-				}
-				""", APPLICATION_JSON));
-		server.expect(ExpectedCount.manyTimes(), requestTo("https://sketch.pyan.kr/api/status/task-4-retry"))
-			.andExpect(method(GET))
-			.andRespond(withSuccess("""
-				{
-				  "status": "processing",
-				  "task_id": "task-4-retry",
-				  "goal_id": "plan-13",
-				  "message": "still working"
-				}
-				""", APPLICATION_JSON));
+			.andRespond(org.springframework.test.web.client.response.MockRestResponseCreators.withStatus(HttpStatus.UNAUTHORIZED)
+				.contentType(APPLICATION_JSON)
+				.body("""
+					{"detail":"invalid api key"}
+					"""));
 
-		IllegalStateException exception = assertThrows(
+		IllegalStateException exception = org.junit.jupiter.api.Assertions.assertThrows(
 			IllegalStateException.class,
-			() -> client.generate("generated-image".getBytes(), "plan-13")
+			() -> client.generate("generated-image".getBytes(), "plan-14", "plan-14-pyan-1")
 		);
 
-		assertEquals("Pyan generation timed out after 5ms", exception.getMessage());
+		assertTrue(exception.getMessage().contains("status=401"));
+		assertTrue(exception.getMessage().contains("invalid api key"));
 	}
 
 	@Test
-	void generatePollsReadyWithoutCompressedUrlBeforeRetryingGenerate() {
-		RestClient.Builder builder = RestClient.builder();
-		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-		PyanProperties properties = createProperties();
-		properties.setReadyMissingCompressedInitialDelayMillis(1);
-		properties.setReadyMissingCompressedMaxAttempts(3);
-		PyanApiClient client = new PyanApiClient(builder, properties);
-
-		server.expect(requestTo("https://sketch.pyan.kr/api/generate"))
-			.andExpect(method(POST))
-			.andExpect(header("Idempotency-Key", "plan-14-attempt-1"))
-			.andRespond(withSuccess("""
-				{
-				  "status": "ready",
-				  "task_id": "task-5",
-				  "goal_id": "plan-14",
-				  "status_url": "https://sketch.pyan.kr/api/status/task-5",
-				  "original_download_url": "https://sketch.pyan.kr/cdn/task-5.mp4"
-				}
-				""", APPLICATION_JSON));
-		server.expect(requestTo("https://sketch.pyan.kr/api/status/task-5"))
-			.andExpect(method(GET))
-			.andRespond(withSuccess("""
-				{
-				  "status": "ready",
-				  "task_id": "task-5",
-				  "goal_id": "plan-14",
-				  "compressed_download_url": "https://sketch.pyan.kr/cdn/task-5.compressed.mp4"
-				}
-				""", APPLICATION_JSON));
-
-		PyanGenerateResponse response = client.generate("generated-image".getBytes(), "plan-14");
-
-		assertEquals("ready", response.status());
-		assertEquals("https://sketch.pyan.kr/cdn/task-5.compressed.mp4", response.compressedDownloadUrl());
-	}
-
-	@Test
-	void generateRetriesWhenReadyDoesNotContainCompressedUrlAfterCompensation() {
-		RestClient.Builder builder = RestClient.builder();
-		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-		PyanProperties properties = createProperties();
-		properties.setReadyMissingCompressedInitialDelayMillis(1);
-		properties.setReadyMissingCompressedMaxAttempts(2);
-		PyanApiClient client = new PyanApiClient(builder, properties);
-
-		server.expect(requestTo("https://sketch.pyan.kr/api/generate"))
-			.andExpect(method(POST))
-			.andExpect(header("Idempotency-Key", "plan-15-attempt-1"))
-			.andRespond(withSuccess("""
-				{
-				  "status": "ready",
-				  "task_id": "task-6",
-				  "goal_id": "plan-15",
-				  "status_url": "https://sketch.pyan.kr/api/status/task-6",
-				  "original_download_url": "https://sketch.pyan.kr/cdn/task-6.mp4"
-				}
-				""", APPLICATION_JSON));
-		server.expect(requestTo("https://sketch.pyan.kr/api/status/task-6"))
-			.andExpect(method(GET))
-			.andRespond(withSuccess("""
-				{
-				  "status": "ready",
-				  "task_id": "task-6",
-				  "goal_id": "plan-15",
-				  "original_download_url": "https://sketch.pyan.kr/cdn/task-6.mp4"
-				}
-				""", APPLICATION_JSON));
-		server.expect(requestTo("https://sketch.pyan.kr/api/status/task-6"))
-			.andExpect(method(GET))
-			.andRespond(withSuccess("""
-				{
-				  "status": "ready",
-				  "task_id": "task-6",
-				  "goal_id": "plan-15",
-				  "original_download_url": "https://sketch.pyan.kr/cdn/task-6.mp4"
-				}
-				""", APPLICATION_JSON));
-		server.expect(requestTo("https://sketch.pyan.kr/api/generate"))
-			.andExpect(method(POST))
-			.andExpect(header("Idempotency-Key", "plan-15-attempt-2"))
-			.andRespond(withSuccess("""
-				{
-				  "status": "ready",
-				  "task_id": "task-6-retry",
-				  "goal_id": "plan-15",
-				  "status_url": "https://sketch.pyan.kr/api/status/task-6-retry",
-				  "compressed_download_url": "https://sketch.pyan.kr/cdn/task-6-retry.compressed.mp4"
-				}
-				""", APPLICATION_JSON));
-
-		PyanGenerateResponse response = client.generate("generated-image".getBytes(), "plan-15");
-
-		assertEquals("https://sketch.pyan.kr/cdn/task-6-retry.compressed.mp4", response.compressedDownloadUrl());
-	}
-
-	@Test
-	void generateThrowsWhenCancelled() {
+	void generateReturnsCancelledResponseForCallerToHandle() {
 		RestClient.Builder builder = RestClient.builder();
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
 		PyanApiClient client = new PyanApiClient(builder, createProperties());
@@ -314,12 +178,10 @@ class PyanApiClientTest {
 				}
 				""", APPLICATION_JSON));
 
-		IllegalStateException exception = assertThrows(
-			IllegalStateException.class,
-			() -> client.generate("generated-image".getBytes(), "plan-16")
-		);
+		PyanGenerateResponse response = client.generate("generated-image".getBytes(), "plan-16", "plan-16-pyan-1");
 
-		assertEquals("Pyan generation cancelled: cancelled", exception.getMessage());
+		assertEquals("cancelled", response.status());
+		assertEquals("cancelled", response.message());
 	}
 
 	private PyanProperties createProperties() {

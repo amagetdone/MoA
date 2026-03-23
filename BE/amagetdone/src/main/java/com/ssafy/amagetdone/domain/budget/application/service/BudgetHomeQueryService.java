@@ -165,8 +165,6 @@ public class BudgetHomeQueryService {
 			.map(plan -> {
 				long weeklyTarget = weeklyTargetByPlanId.getOrDefault(plan.getId(), 0L);
 				long weeklySaved = weeklySavedByPlanId.getOrDefault(plan.getId(), 0L);
-				long totalTargetAmount = zero(plan.getTargetAmount());
-				long totalSavedAmount = zero(plan.getSavedAmount());
 				return BudgetHomeDto.PlanCard.of(
 					plan.getId() == null ? null : Long.valueOf(plan.getId()),
 					plan.getTitle(),
@@ -174,7 +172,7 @@ public class BudgetHomeQueryService {
 					calculateDDay(today, plan.getEndDate()),
 					weeklySaved,
 					weeklyTarget,
-					calculateProgressRate(totalSavedAmount, totalTargetAmount),
+					calculateProgressRate(weeklySaved, weeklyTarget),
 					plan.getPlanUrl()
 				);
 			})

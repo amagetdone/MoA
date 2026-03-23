@@ -3,6 +3,8 @@ package com.ssafy.amagetdone.domain.budget.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -25,6 +27,7 @@ import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -57,7 +60,7 @@ class DailyGoalSavingAccrualServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		Mockito.lenient().when(budgetWeekRepository.findAll()).thenReturn(budgetWeeks);
+		Mockito.lenient().when(budgetWeekRepository.findAllByUser_IdOrderByWeekStartDateAsc(any())).thenReturn(budgetWeeks);
 		Mockito.lenient().when(planWeekAllocationRepository.findAllByBudgetWeekIn(any())).thenAnswer(invocation -> {
 			List<BudgetWeek> weeks = invocation.getArgument(0);
 			return weeks.stream()
@@ -74,6 +77,12 @@ class DailyGoalSavingAccrualServiceTest {
 			savedAdjustments.add(adjustment);
 			return adjustment;
 		});
+		Mockito.lenient().when(planRepository.adjustSavedAmount(any(), any())).thenAnswer(invocation -> {
+			Integer planId = invocation.getArgument(0);
+			Long delta = invocation.getArgument(1);
+			updateTrackedPlanSavedAmount(planId, delta);
+			return 1;
+		});
 	}
 
 	@Test
@@ -85,39 +94,37 @@ class DailyGoalSavingAccrualServiceTest {
 		budgetWeeks.add(budgetWeek);
 		allocationsByWeekId.put(101, List.of(allocation));
 
-		DailyGoalSavingAccrualService march5Service = serviceAt("2026-03-05T01:00:00Z");
-		GoalSavingAccrualForceDto.Response firstResponse = march5Service.backfillAccrual(
+		DailyGoalSavingAccrualService march9Service = serviceAt("2026-03-09T01:00:00Z");
+		GoalSavingAccrualForceDto.Response firstResponse = march9Service.backfillAccrual(
 			1,
 			new GoalSavingAccrualForceDto.BackfillRequest(null)
 		);
 
-		assertThat(plan.getSavedAmount()).isEqualTo(30_000L);
 		assertThat(firstResponse.operationType()).isEqualTo(GoalSavingAccrualForceDto.OperationType.BACKFILL);
 		assertThat(firstResponse.appliedScope()).isNull();
 		assertThat(firstResponse.targetType()).isEqualTo(GoalSavingAccrualForceDto.TargetType.ALL);
-		assertThat(firstResponse.cutoffDate()).isEqualTo(LocalDate.of(2026, 3, 4));
-		assertThat(firstResponse.appliedAmount()).isEqualTo(30_000L);
+		assertThat(firstResponse.cutoffDate()).isEqualTo(LocalDate.of(2026, 3, 8));
+		assertThat(firstResponse.appliedAmount()).isEqualTo(70_000L);
 		assertThat(firstResponse.periodStartDate()).isEqualTo(LocalDate.of(2026, 3, 2));
-		assertThat(firstResponse.periodEndDate()).isEqualTo(LocalDate.of(2026, 3, 4));
+		assertThat(firstResponse.periodEndDate()).isEqualTo(LocalDate.of(2026, 3, 8));
 		assertThat(firstResponse.plans()).singleElement().satisfies(detail -> {
 			assertThat(detail.priority()).isEqualTo(1);
 			assertThat(detail.plannedAmount()).isEqualTo(70_000L);
 			assertThat(detail.finalAmount()).isEqualTo(70_000L);
-			assertThat(detail.accruedAmount()).isEqualTo(30_000L);
-			assertThat(detail.savedAmount()).isEqualTo(30_000L);
-			assertThat(detail.remainingScheduledAmount()).isEqualTo(40_000L);
+			assertThat(detail.accruedAmount()).isEqualTo(70_000L);
+			assertThat(detail.savedAmount()).isEqualTo(70_000L);
+			assertThat(detail.remainingScheduledAmount()).isEqualTo(0L);
 		});
 
-		DailyGoalSavingAccrualService march9Service = serviceAt("2026-03-09T01:00:00Z");
-		GoalSavingAccrualForceDto.Response secondResponse = march9Service.backfillAccrual(
+		DailyGoalSavingAccrualService march10Service = serviceAt("2026-03-10T01:00:00Z");
+		GoalSavingAccrualForceDto.Response secondResponse = march10Service.backfillAccrual(
 			1,
 			new GoalSavingAccrualForceDto.BackfillRequest(null)
 		);
 
-		assertThat(plan.getSavedAmount()).isEqualTo(70_000L);
-		assertThat(secondResponse.appliedAmount()).isEqualTo(40_000L);
+		assertThat(secondResponse.appliedAmount()).isEqualTo(0L);
 		assertThat(secondResponse.plans()).singleElement().satisfies(detail -> {
-			assertThat(detail.accruedAmount()).isEqualTo(40_000L);
+			assertThat(detail.accruedAmount()).isEqualTo(0L);
 			assertThat(detail.savedAmount()).isEqualTo(70_000L);
 			assertThat(detail.remainingScheduledAmount()).isEqualTo(0L);
 		});
@@ -132,17 +139,16 @@ class DailyGoalSavingAccrualServiceTest {
 		budgetWeeks.add(budgetWeek);
 		allocationsByWeekId.put(102, List.of(allocation));
 
-		DailyGoalSavingAccrualService service = serviceAt("2026-03-08T01:00:00Z");
+		DailyGoalSavingAccrualService service = serviceAt("2026-03-09T01:00:00Z");
 		GoalSavingAccrualForceDto.Response response = service.backfillAccrual(
 			1,
 			new GoalSavingAccrualForceDto.BackfillRequest(null)
 		);
 
-		assertThat(plan.getSavedAmount()).isEqualTo(30_000L);
 		assertThat(response.plans()).singleElement().satisfies(detail -> {
 			assertThat(detail.finalAmount()).isEqualTo(40_000L);
-			assertThat(detail.accruedAmount()).isEqualTo(30_000L);
-			assertThat(detail.remainingScheduledAmount()).isEqualTo(10_000L);
+			assertThat(detail.accruedAmount()).isEqualTo(40_000L);
+			assertThat(detail.remainingScheduledAmount()).isEqualTo(0L);
 		});
 	}
 
@@ -160,7 +166,6 @@ class DailyGoalSavingAccrualServiceTest {
 		GoalSavingAccrualForceDto.Response firstResponse = service.applyDailyAccrual(1);
 		GoalSavingAccrualForceDto.Response secondResponse = service.applyDailyAccrual(1);
 
-		assertThat(plan.getSavedAmount()).isEqualTo(40_000L);
 		assertThat(firstResponse.appliedAmount()).isEqualTo(40_000L);
 		assertThat(secondResponse.appliedAmount()).isEqualTo(0L);
 		assertThat(savedAdjustments).hasSize(1);
@@ -178,7 +183,6 @@ class DailyGoalSavingAccrualServiceTest {
 
 		DailyGoalSavingAccrualService initialService = serviceAt("2026-03-09T01:00:00Z");
 		initialService.applyDailyAccrual(1);
-		assertThat(plan.getSavedAmount()).isEqualTo(70_000L);
 
 		allocation.setFinalAmount(40_000L);
 
@@ -188,7 +192,6 @@ class DailyGoalSavingAccrualServiceTest {
 			new GoalSavingAccrualForceDto.BackfillRequest(plan.getId())
 		);
 
-		assertThat(plan.getSavedAmount()).isEqualTo(40_000L);
 		assertThat(response.operationType()).isEqualTo(GoalSavingAccrualForceDto.OperationType.BACKFILL);
 		assertThat(response.targetType()).isEqualTo(GoalSavingAccrualForceDto.TargetType.SINGLE);
 		assertThat(response.planId()).isEqualTo(plan.getId());
@@ -212,7 +215,7 @@ class DailyGoalSavingAccrualServiceTest {
 			allocation(cameraPlan, budgetWeek, 35_000L)
 		));
 
-		DailyGoalSavingAccrualService service = serviceAt("2026-03-19T01:00:00Z");
+		DailyGoalSavingAccrualService service = serviceAt("2026-03-23T01:00:00Z");
 		GoalSavingAccrualForceDto.Response response = service.backfillAccrual(
 			1,
 			new GoalSavingAccrualForceDto.BackfillRequest(15)
@@ -221,8 +224,28 @@ class DailyGoalSavingAccrualServiceTest {
 		assertThat(response.targetType()).isEqualTo(GoalSavingAccrualForceDto.TargetType.SINGLE);
 		assertThat(response.planId()).isEqualTo(15);
 		assertThat(response.plans()).hasSize(1);
-		assertThat(travelPlan.getSavedAmount()).isEqualTo(30_000L);
-		assertThat(cameraPlan.getSavedAmount()).isEqualTo(0L);
+		assertThat(response.plans()).singleElement().satisfies(detail -> assertThat(detail.savedAmount()).isEqualTo(70_000L));
+	}
+
+	@Test
+	void applyDailyAccrualKeepsAiImageStateAndAvoidsWholePlanSave() {
+		User user = user(1);
+		Plan plan = activePlan(user, 17, "Travel Fund", 0L);
+		ReflectionTestUtils.setField(plan, "planUrl", "plan/generated.png");
+		ReflectionTestUtils.setField(plan, "aiPipelineStatus", PlanAiPipelineStatus.PROCESSING);
+		BudgetWeek budgetWeek = budgetWeek(user, 106, 8, LocalDate.of(2026, 3, 16), LocalDate.of(2026, 3, 22), 7);
+		PlanWeekAllocation allocation = allocation(plan, budgetWeek, 70_000L);
+		budgetWeeks.add(budgetWeek);
+		allocationsByWeekId.put(106, List.of(allocation));
+
+		DailyGoalSavingAccrualService service = serviceAt("2026-03-19T01:00:00Z");
+		GoalSavingAccrualForceDto.Response response = service.applyDailyAccrual(1);
+
+		assertThat(response.appliedAmount()).isEqualTo(30_000L);
+		assertThat(plan.getPlanUrl()).isEqualTo("plan/generated.png");
+		assertThat(plan.getAiPipelineStatus()).isEqualTo(PlanAiPipelineStatus.PROCESSING);
+		verify(planRepository).adjustSavedAmount(17, 30_000L);
+		verify(planRepository, never()).saveAll(any());
 	}
 
 	@Test
@@ -299,5 +322,18 @@ class DailyGoalSavingAccrualServiceTest {
 			.plannedAmount(finalAmount)
 			.finalAmount(finalAmount)
 			.build();
+	}
+
+	private void updateTrackedPlanSavedAmount(Integer planId, Long delta) {
+		if (planId == null || delta == null) {
+			return;
+		}
+		allocationsByWeekId.values().stream()
+			.flatMap(List::stream)
+			.map(PlanWeekAllocation::getPlan)
+			.filter(java.util.Objects::nonNull)
+			.filter(plan -> planId.equals(plan.getId()))
+			.findFirst()
+			.ifPresent(plan -> plan.setSavedAmount(Math.max(0L, (plan.getSavedAmount() == null ? 0L : plan.getSavedAmount()) + delta)));
 	}
 }

@@ -7,8 +7,15 @@ import java.util.Optional;
 import com.ssafy.amagetdone.domain.transaction.model.entity.CardTransactionOverride;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface CardTransactionOverrideRepository extends JpaRepository<CardTransactionOverride, Integer> {
+
+	@Modifying
+	@Query("DELETE FROM CardTransactionOverride o WHERE o.card.withdrawalAccount.user.id = :userId")
+	void deleteAllByUserId(@Param("userId") Integer userId);
 
 	List<CardTransactionOverride> findAllByCard_CardUniqueNo(Long cardUniqueNo);
 

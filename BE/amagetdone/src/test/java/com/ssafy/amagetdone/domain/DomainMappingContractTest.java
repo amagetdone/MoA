@@ -74,6 +74,7 @@ class DomainMappingContractTest {
 		assertColumnDefault(Account.class, "verified", "FALSE");
 		assertColumnDefault(AccountVerification.class, "status", "'REQUESTED'");
 		assertColumnDefault(User.class, "status", "'ACTIVE'");
+		assertColumnDefault(Plan.class, "version", "0");
 		assertColumnDefault(BudgetMonth.class, "status", "'OPEN'");
 		assertColumnDefault(BudgetWeek.class, "status", "'PLANNED'");
 		assertColumnDefault(BudgetWeek.class, "periodDays", "7");

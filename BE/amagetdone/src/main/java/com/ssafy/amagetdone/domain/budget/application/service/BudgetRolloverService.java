@@ -157,6 +157,7 @@ public class BudgetRolloverService {
 		long finalSavingAmount = allocations.stream()
 			.mapToLong(allocation -> zero(allocation.getFinalAmount()))
 			.sum();
+		long planSavedAmount = sumPlanSavedAmount(budgetWeek);
 
 		budgetWeek.setFinalFreeAmount(
 			zero(budgetWeek.getPlannedIncomeAmount())
@@ -164,7 +165,15 @@ public class BudgetRolloverService {
 				- finalSavingAmount
 				- zero(budgetWeek.getRolloverInAmount())
 				+ zero(budgetWeek.getManualAdjustmentAmount())
+				- planSavedAmount
 		);
+	}
+
+	private long sumPlanSavedAmount(BudgetWeek budgetWeek) {
+		return budgetAdjustmentRepository.findByBudgetWeekOrderByCreatedAtDesc(budgetWeek).stream()
+			.filter(adjustment -> adjustment.getAdjustmentType() == BudgetAdjustmentType.PLAN_SAVED_ADD)
+			.mapToLong(adjustment -> zero(adjustment.getAdjustmentAmount()))
+			.sum();
 	}
 
 	private Comparator<PlanWeekAllocation> planDeductionOrder() {

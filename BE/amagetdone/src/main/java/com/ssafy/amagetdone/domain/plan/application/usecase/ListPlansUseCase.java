@@ -16,6 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class ListPlansUseCase {
 
+	private static final List<PlanStatus> LISTED_PLAN_STATUSES = List.of(
+		PlanStatus.WAITING,
+		PlanStatus.ACTIVE,
+		PlanStatus.PAUSED
+	);
+
 	private final PlanRepository planRepository;
 
 	public ListPlansUseCase(PlanRepository planRepository) {
@@ -25,7 +31,7 @@ public class ListPlansUseCase {
 	public List<PlanListItemResponse> execute(Integer userId) {
 		LocalDate today = LocalDate.now();
 
-		return planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE).stream()
+		return planRepository.findAllByUserIdAndDeletedFalseAndStatusIn(userId, LISTED_PLAN_STATUSES).stream()
 			.sorted(Comparator.comparing(Plan::getPriority)
 				.thenComparing(Plan::getTitle, Comparator.nullsLast(String::compareTo)))
 			.map(plan -> PlanListItemResponse.from(plan, today))

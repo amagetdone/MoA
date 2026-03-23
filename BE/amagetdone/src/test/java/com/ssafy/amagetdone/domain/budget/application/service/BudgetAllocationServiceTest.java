@@ -12,6 +12,7 @@ import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetMonth;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseMonth;
+import com.ssafy.amagetdone.domain.budget.model.repository.BudgetAdjustmentRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetMonthRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseMonthRepository;
@@ -34,6 +35,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 class BudgetAllocationServiceTest {
 
 	@Mock
+	private BudgetAdjustmentRepository budgetAdjustmentRepository;
+
+	@Mock
 	private BudgetMonthRepository budgetMonthRepository;
 
 	@Mock
@@ -53,6 +57,7 @@ class BudgetAllocationServiceTest {
 	@BeforeEach
 	void setUp() {
 		budgetAllocationService = new BudgetAllocationService(
+			budgetAdjustmentRepository,
 			budgetMonthRepository,
 			budgetWeekRepository,
 			essentialExpenseMonthRepository,

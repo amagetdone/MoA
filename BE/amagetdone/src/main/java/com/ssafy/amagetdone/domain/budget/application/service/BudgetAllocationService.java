@@ -17,10 +17,12 @@ import com.ssafy.amagetdone.domain.budget.model.entity.BudgetMonth;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseMonth;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialWeekAllocation;
+import com.ssafy.amagetdone.domain.budget.model.repository.BudgetAdjustmentRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetMonthRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseMonthRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialWeekAllocationRepository;
+import com.ssafy.amagetdone.domain.budget.model.vo.BudgetAdjustmentType;
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetMonthStatus;
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetWeekStatus;
 import com.ssafy.amagetdone.domain.budget.model.vo.ExpenseScope;
@@ -41,6 +43,7 @@ public class BudgetAllocationService {
 
 	private static final String AUTO_ALLOCATION_TYPE = "AUTO";
 
+	private final BudgetAdjustmentRepository budgetAdjustmentRepository;
 	private final BudgetMonthRepository budgetMonthRepository;
 	private final BudgetWeekRepository budgetWeekRepository;
 	private final EssentialExpenseMonthRepository essentialExpenseMonthRepository;
@@ -91,6 +94,9 @@ public class BudgetAllocationService {
 		Map<EssentialAllocationKey, ExistingEssentialAllocationState> existingEssentialStates = loadExistingEssentialStates(
 			budgetWeeksByStartDate.values()
 		);
+		Map<PlanAllocationKey, ExistingPlanAllocationState> existingPlanStates = loadExistingPlanStates(
+			budgetWeeksByStartDate.values()
+		);
 		deleteExistingAllocations(budgetWeeksByStartDate.values());
 
 		Map<LocalDate, Long> incomeByWeekStartDate = allocateMonthlyIncome(
@@ -111,7 +117,8 @@ public class BudgetAllocationService {
 			weekFrames,
 			budgetWeeksByStartDate,
 			serviceStartDate,
-			allocationEndDate
+			allocationEndDate,
+			existingPlanStates
 		);
 
 		applyShortageAdjustments(
@@ -147,11 +154,7 @@ public class BudgetAllocationService {
 	private List<EssentialExpenseMonth> normalizeEssentials(User user, List<EssentialExpenseMonth> essentials) {
 		List<EssentialExpenseMonth> source = essentials;
 		if (source == null || source.isEmpty()) {
-			source = essentialExpenseMonthRepository.findAll().stream()
-				.filter(essential -> essential.getBudgetMonth() != null)
-				.filter(essential -> essential.getBudgetMonth().getUser() != null)
-				.filter(essential -> Objects.equals(essential.getBudgetMonth().getUser().getId(), user.getId()))
-				.toList();
+			source = essentialExpenseMonthRepository.findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(user.getId());
 		}
 
 		return source.stream()
@@ -335,6 +338,24 @@ public class BudgetAllocationService {
 		return existingStates;
 	}
 
+	private Map<PlanAllocationKey, ExistingPlanAllocationState> loadExistingPlanStates(
+		Collection<BudgetWeek> budgetWeeks
+	) {
+		Map<PlanAllocationKey, ExistingPlanAllocationState> existingStates = new HashMap<>();
+		for (BudgetWeek budgetWeek : budgetWeeks) {
+			for (PlanWeekAllocation allocation : planWeekAllocationRepository.findByBudgetWeek(budgetWeek)) {
+				if (allocation.getPlan() == null || allocation.getPlan().getId() == null) {
+					continue;
+				}
+				existingStates.put(
+					new PlanAllocationKey(allocation.getPlan().getId(), budgetWeek.getWeekStartDate()),
+					new ExistingPlanAllocationState(allocation.getActualAmount(), allocation.getNote())
+				);
+			}
+		}
+		return existingStates;
+	}
+
 	private void deleteExistingAllocations(Collection<BudgetWeek> budgetWeeks) {
 		List<EssentialWeekAllocation> essentialAllocations = new ArrayList<>();
 		List<PlanWeekAllocation> planAllocations = new ArrayList<>();
@@ -428,7 +449,8 @@ public class BudgetAllocationService {
 		List<WeekFrame> weekFrames,
 		Map<LocalDate, BudgetWeek> budgetWeeksByStartDate,
 		LocalDate serviceStartDate,
-		LocalDate allocationEndDate
+		LocalDate allocationEndDate,
+		Map<PlanAllocationKey, ExistingPlanAllocationState> existingPlanStates
 	) {
 		Map<LocalDate, List<PlanWeekAllocation>> allocationsByWeekStartDate = new LinkedHashMap<>();
 		for (WeekFrame weekFrame : weekFrames) {
@@ -465,12 +487,16 @@ public class BudgetAllocationService {
 				}
 
 				BudgetWeek budgetWeek = budgetWeeksByStartDate.get(entry.getKey());
+				PlanAllocationKey planKey = new PlanAllocationKey(plan.getId(), entry.getKey());
+				ExistingPlanAllocationState existingState = existingPlanStates.get(planKey);
 				allocationsByWeekStartDate.get(entry.getKey()).add(PlanWeekAllocation.builder()
 					.budgetWeek(budgetWeek)
 					.plan(plan)
 					.allocationType(AUTO_ALLOCATION_TYPE)
 					.plannedAmount(plannedAmount)
 					.finalAmount(plannedAmount)
+					.actualAmount(existingState != null ? existingState.actualAmount() : null)
+					.note(existingState != null ? existingState.note() : null)
 					.build());
 			}
 		}
@@ -494,8 +520,10 @@ public class BudgetAllocationService {
 			List<PlanWeekAllocation> planAllocations = planAllocationsByWeekStartDate.getOrDefault(weekStartDate, List.of());
 			long plannedSavingAmount = planAllocations.stream().mapToLong(allocation -> normalizeAmount(allocation.getPlannedAmount())).sum();
 			long plannedFreeAmount = plannedIncomeAmount - plannedEssentialAmount - plannedSavingAmount;
+			long planSavedAmount = sumPlanSavedAmount(budgetWeek);
 			long currentFreeAmount = plannedFreeAmount - normalizeAmount(budgetWeek.getRolloverInAmount())
-				+ normalizeAmount(budgetWeek.getManualAdjustmentAmount());
+				+ normalizeAmount(budgetWeek.getManualAdjustmentAmount())
+				- planSavedAmount;
 
 			if (currentFreeAmount < 0L && !planAllocations.isEmpty()) {
 				long shortage = -currentFreeAmount;
@@ -536,11 +564,13 @@ public class BudgetAllocationService {
 			long finalSavingAmount = planAllocationsByWeekStartDate.getOrDefault(weekStartDate, List.of()).stream()
 				.mapToLong(allocation -> normalizeAmount(allocation.getFinalAmount()))
 				.sum();
+			long budgetWeekPlanSavedAmount = sumPlanSavedAmount(budgetWeek);
 			long finalFreeAmount = plannedIncomeAmount
 				- plannedEssentialAmount
 				- finalSavingAmount
 				- normalizeAmount(budgetWeek.getRolloverInAmount())
-				+ normalizeAmount(budgetWeek.getManualAdjustmentAmount());
+				+ normalizeAmount(budgetWeek.getManualAdjustmentAmount())
+				- budgetWeekPlanSavedAmount;
 
 			budgetWeek.setPlannedIncomeAmount(plannedIncomeAmount);
 			budgetWeek.setPlannedEssentialAmount(plannedEssentialAmount);
@@ -689,6 +719,13 @@ public class BudgetAllocationService {
 		return ExpenseScope.valueOf(expenseScope.trim().toUpperCase());
 	}
 
+	private long sumPlanSavedAmount(BudgetWeek budgetWeek) {
+		return budgetAdjustmentRepository.findByBudgetWeekOrderByCreatedAtDesc(budgetWeek).stream()
+			.filter(adjustment -> adjustment.getAdjustmentType() == BudgetAdjustmentType.PLAN_SAVED_ADD)
+			.mapToLong(adjustment -> normalizeAmount(adjustment.getAdjustmentAmount()))
+			.sum();
+	}
+
 	private long normalizeAmount(Long amount) {
 		return amount == null ? 0L : Math.max(0L, amount);
 	}
@@ -770,5 +807,11 @@ public class BudgetAllocationService {
 		private static EssentialAllocationKey from(LocalDate weekStartDate, EssentialWeekAllocation allocation) {
 			return new EssentialAllocationKey(allocation.getEssentialExpenseMonth().getId(), weekStartDate);
 		}
+	}
+
+	private record PlanAllocationKey(Integer planId, LocalDate weekStartDate) {
+	}
+
+	private record ExistingPlanAllocationState(Long actualAmount, String note) {
 	}
 }

@@ -12,6 +12,7 @@ public class PyanProperties {
 	private long pollInitialDelayMillis = 3000;
 	private long pollMaxDelayMillis = 30000;
 	private long pollTimeoutMillis = 120000;
+	private int generateMaxAttempts = 2;
 	private long readyMissingCompressedInitialDelayMillis = 2000;
 	private int readyMissingCompressedMaxAttempts = 3;
 
@@ -69,6 +70,14 @@ public class PyanProperties {
 
 	public void setPollTimeoutMillis(long pollTimeoutMillis) {
 		this.pollTimeoutMillis = pollTimeoutMillis;
+	}
+
+	public int getGenerateMaxAttempts() {
+		return generateMaxAttempts;
+	}
+
+	public void setGenerateMaxAttempts(int generateMaxAttempts) {
+		this.generateMaxAttempts = generateMaxAttempts;
 	}
 
 	public long getReadyMissingCompressedInitialDelayMillis() {

@@ -76,11 +76,8 @@ public class BudgetHistoricalRebuildService {
 		}
 
 		List<BudgetMonth> budgetMonths = budgetMonthsWithSeedFallback(userId, serviceStartDate, today);
-		List<BudgetWeek> affectedWeeks = budgetWeekRepository.findAll().stream()
-			.filter(week -> week != null)
-			.filter(week -> week.getUser() != null && Objects.equals(week.getUser().getId(), userId))
+		List<BudgetWeek> affectedWeeks = budgetWeekRepository.findAllByUser_IdOrderByWeekStartDateAsc(userId).stream()
 			.filter(week -> overlaps(week, serviceStartDate, today))
-			.sorted(java.util.Comparator.comparing(BudgetWeek::getWeekStartDate))
 			.toList();
 
 		List<BudgetMonth> affectedMonths = budgetMonths.stream()
@@ -135,10 +132,7 @@ public class BudgetHistoricalRebuildService {
 	}
 
 	private List<BudgetMonth> budgetMonthsWithSeedFallback(Integer userId, LocalDate serviceStartDate, LocalDate today) {
-		List<BudgetMonth> existingMonths = budgetMonthRepository.findAll().stream()
-			.filter(month -> month != null)
-			.filter(month -> month.getUser() != null && Objects.equals(month.getUser().getId(), userId))
-			.toList();
+		List<BudgetMonth> existingMonths = budgetMonthRepository.findAllByUser_IdOrderByBaseDateAsc(userId);
 		if (existingMonths.isEmpty()) {
 			return existingMonths;
 		}
@@ -228,8 +222,7 @@ public class BudgetHistoricalRebuildService {
 	}
 
 	private void resetPlanSavedAmounts(List<BudgetAdjustment> adjustments) {
-		Map<Integer, Plan> plansById = new LinkedHashMap<>();
-		Map<Integer, Long> signedAdjustmentsByPlanId = new LinkedHashMap<>();
+		Map<Integer, Long> savedAmountDeltasByPlanId = new LinkedHashMap<>();
 
 		for (BudgetAdjustment adjustment : adjustments) {
 			if (adjustment.getPlan() == null || adjustment.getPlan().getId() == null) {
@@ -239,21 +232,14 @@ public class BudgetHistoricalRebuildService {
 			if (signedAmount == 0L) {
 				continue;
 			}
-			plansById.putIfAbsent(adjustment.getPlan().getId(), adjustment.getPlan());
-			signedAdjustmentsByPlanId.merge(adjustment.getPlan().getId(), signedAmount, Long::sum);
+			savedAmountDeltasByPlanId.merge(adjustment.getPlan().getId(), -signedAmount, Long::sum);
 		}
 
-		if (plansById.isEmpty()) {
+		if (savedAmountDeltasByPlanId.isEmpty()) {
 			return;
 		}
 
-		for (Map.Entry<Integer, Plan> entry : plansById.entrySet()) {
-			long signedAmount = signedAdjustmentsByPlanId.getOrDefault(entry.getKey(), 0L);
-			Plan plan = entry.getValue();
-			plan.setSavedAmount(Math.max(0L, zero(plan.getSavedAmount()) - signedAmount));
-		}
-
-		planRepository.saveAll(plansById.values());
+		savedAmountDeltasByPlanId.forEach(planRepository::adjustSavedAmount);
 	}
 
 	private long signedSavedAdjustmentAmount(BudgetAdjustment adjustment) {

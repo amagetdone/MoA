@@ -2,9 +2,10 @@ package com.ssafy.amagetdone.domain.budget.application.service;
 
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetAdjustment;
@@ -91,10 +92,12 @@ public class WeeklyGoalSavingAccrualService {
 	}
 
 	private long calculatePool(BudgetWeek week) {
+		long planSavedAmount = sumPlanSavedAmount(week);
 		long totalBudget = zero(week.getPlannedIncomeAmount())
 			- zero(week.getPlannedEssentialAmount())
 			- zero(week.getRolloverInAmount())
-			+ zero(week.getManualAdjustmentAmount());
+			+ zero(week.getManualAdjustmentAmount())
+			- planSavedAmount;
 
 		long alreadyAccrued = planWeekAllocationRepository.findByBudgetWeek(week).stream()
 			.filter(a -> a.getActualAmount() != null)
@@ -104,9 +107,17 @@ public class WeeklyGoalSavingAccrualService {
 		return Math.max(totalBudget - alreadyAccrued, 0L);
 	}
 
+	private long sumPlanSavedAmount(BudgetWeek budgetWeek) {
+		return budgetAdjustmentRepository.findByBudgetWeekOrderByCreatedAtDesc(budgetWeek).stream()
+			.filter(adjustment -> adjustment.getAdjustmentType() == BudgetAdjustmentType.PLAN_SAVED_ADD)
+			.mapToLong(adjustment -> zero(adjustment.getAdjustmentAmount()))
+			.sum();
+	}
+
 	private void applyAccruals(List<PlanWeekAllocation> allocations, long pool, BudgetWeek budgetWeek) {
 		long remaining = pool;
-		LocalDateTime now = LocalDateTime.now(clock);
+		Map<Integer, Long> savedAmountDeltas = new LinkedHashMap<>();
+		Map<Integer, Long> currentSavedAmounts = new LinkedHashMap<>();
 
 		for (PlanWeekAllocation allocation : allocations) {
 			Plan plan = allocation.getPlan();
@@ -115,8 +126,12 @@ public class WeeklyGoalSavingAccrualService {
 			long accrual = Math.min(desired, Math.max(remaining, 0L));
 			allocation.setActualAmount(accrual);
 
+			long savedAmount = currentSavedAmounts.computeIfAbsent(plan.getId(), ignored -> zero(plan.getSavedAmount()));
+
 			if (accrual > 0L) {
-				plan.setSavedAmount(zero(plan.getSavedAmount()) + accrual);
+				savedAmount += accrual;
+				currentSavedAmounts.put(plan.getId(), savedAmount);
+				savedAmountDeltas.merge(plan.getId(), accrual, Long::sum);
 				budgetAdjustmentRepository.save(BudgetAdjustment.builder()
 					.budgetWeek(budgetWeek)
 					.plan(plan)
@@ -132,18 +147,23 @@ public class WeeklyGoalSavingAccrualService {
 				extendPlanForShortfall(plan, shortfall);
 			}
 
-			if (zero(plan.getSavedAmount()) >= zero(plan.getTargetAmount())) {
+			if (savedAmount >= zero(plan.getTargetAmount())) {
 				plan.setStatus(PlanStatus.COMPLETED);
 			}
 		}
+
+		savedAmountDeltas.forEach((planId, delta) -> planRepository.adjustSavedAmount(planId, delta));
 
 		planWeekAllocationRepository.saveAll(allocations);
 		List<Plan> updatedPlans = allocations.stream()
 			.map(PlanWeekAllocation::getPlan)
 			.filter(Objects::nonNull)
+			.filter(plan -> plan.getStatus() == PlanStatus.COMPLETED)
 			.distinct()
 			.toList();
-		planRepository.saveAll(updatedPlans);
+		if (!updatedPlans.isEmpty()) {
+			planRepository.saveAll(updatedPlans);
+		}
 	}
 
 	private void extendPlanForShortfall(Plan plan, long shortfallAmount) {

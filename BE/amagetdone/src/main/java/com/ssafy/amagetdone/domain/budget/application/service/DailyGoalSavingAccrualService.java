@@ -147,7 +147,10 @@ public class DailyGoalSavingAccrualService {
 			);
 		}
 
-		List<PlanWeekAllocation> allocations = findAllocations(userId, planId, null, cutoffDate, planId == null);
+		LocalDate today = LocalDate.now(clock);
+		List<PlanWeekAllocation> allocations = findAllocations(userId, planId, null, cutoffDate, planId == null).stream()
+			.filter(a -> a.getBudgetWeek() != null && a.getBudgetWeek().getWeekEndDate().isBefore(today))
+			.toList();
 		if (allocations.isEmpty()) {
 			if (planId != null) {
 				var ownedPlan = planRepository.findByIdAndUserId(planId, userId);
@@ -222,7 +225,8 @@ public class DailyGoalSavingAccrualService {
 	) {
 		long appliedAmount = 0L;
 		Map<Integer, PlanAggregate> aggregates = new LinkedHashMap<>();
-		Map<Integer, Plan> updatedPlans = new LinkedHashMap<>();
+		Map<Integer, Long> currentSavedAmounts = new LinkedHashMap<>();
+		Map<Integer, Long> savedAmountDeltas = new LinkedHashMap<>();
 		LocalDateTime adjustmentCreatedAt = LocalDateTime.now(clock);
 
 		for (PlanWeekAllocation allocation : allocations) {
@@ -252,9 +256,12 @@ public class DailyGoalSavingAccrualService {
 			long deltaAmount = catchUpMode
 				? calculateCatchUpDelta(allocation, cutoffDate)
 				: calculateForcedDelta(allocation, scope, scopedStart, accrualEnd, executedDate);
+			long savedAmount = currentSavedAmounts.computeIfAbsent(plan.getId(), ignored -> zero(plan.getSavedAmount()));
 
 			if (deltaAmount > 0L) {
-				plan.setSavedAmount(zero(plan.getSavedAmount()) + deltaAmount);
+				savedAmount += deltaAmount;
+				currentSavedAmounts.put(plan.getId(), savedAmount);
+				savedAmountDeltas.merge(plan.getId(), deltaAmount, Long::sum);
 				budgetAdjustmentRepository.save(autoAdjustment(
 					budgetWeek,
 					plan,
@@ -264,10 +271,13 @@ public class DailyGoalSavingAccrualService {
 					adjustmentCreatedAt
 				));
 				appliedAmount += deltaAmount;
-				updatedPlans.put(plan.getId(), plan);
 			} else if (deltaAmount < 0L) {
-				long deductionAmount = Math.min(zero(plan.getSavedAmount()), Math.abs(deltaAmount));
-				plan.setSavedAmount(zero(plan.getSavedAmount()) - deductionAmount);
+				long deductionAmount = Math.min(savedAmount, Math.abs(deltaAmount));
+				savedAmount -= deductionAmount;
+				currentSavedAmounts.put(plan.getId(), savedAmount);
+				if (deductionAmount > 0L) {
+					savedAmountDeltas.merge(plan.getId(), -deductionAmount, Long::sum);
+				}
 				budgetAdjustmentRepository.save(autoAdjustment(
 					budgetWeek,
 					plan,
@@ -277,16 +287,13 @@ public class DailyGoalSavingAccrualService {
 					adjustmentCreatedAt
 				));
 				appliedAmount -= Math.abs(deltaAmount);
-				updatedPlans.put(plan.getId(), plan);
 			}
 
 			aggregates.computeIfAbsent(plan.getId(), ignored -> new PlanAggregate(plan))
-				.accumulate(plannedAmount, finalAmount, deltaAmount, plan.getSavedAmount(), remainingScheduledAmount);
+				.accumulate(plannedAmount, finalAmount, deltaAmount, savedAmount, remainingScheduledAmount);
 		}
 
-		if (!updatedPlans.isEmpty()) {
-			planRepository.saveAll(updatedPlans.values());
-		}
+		savedAmountDeltas.forEach((planId, delta) -> planRepository.adjustSavedAmount(planId, delta));
 
 		List<GoalSavingAccrualForceDto.PlanResult> plans = aggregates.values().stream()
 			.map(PlanAggregate::toResponse)
@@ -314,13 +321,10 @@ public class DailyGoalSavingAccrualService {
 		LocalDate rangeEndDate,
 		boolean activeOnly
 	) {
-		List<BudgetWeek> candidateWeeks = budgetWeekRepository.findAll().stream()
-			.filter(Objects::nonNull)
-			.filter(week -> week.getUser() != null && Objects.equals(week.getUser().getId(), userId))
+		List<BudgetWeek> candidateWeeks = budgetWeekRepository.findAllByUser_IdOrderByWeekStartDateAsc(userId).stream()
 			.filter(week -> week.getStatus() != BudgetWeekStatus.CLOSED)
 			.filter(week -> rangeEndDate == null || !week.getWeekStartDate().isAfter(rangeEndDate))
 			.filter(week -> rangeStartDate == null || overlaps(week, rangeStartDate, rangeEndDate == null ? week.getWeekEndDate() : rangeEndDate))
-			.sorted(Comparator.comparing(BudgetWeek::getWeekStartDate))
 			.toList();
 		if (candidateWeeks.isEmpty()) {
 			return List.of();

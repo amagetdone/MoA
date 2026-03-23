@@ -78,7 +78,8 @@ public class GoalSavingAccrualApplyTestService {
 		}
 
 		Map<Integer, PlanAggregate> planAggregates = new LinkedHashMap<>();
-		Map<Integer, Plan> updatedPlans = new LinkedHashMap<>();
+		Map<Integer, Long> currentSavedAmounts = new LinkedHashMap<>();
+		Map<Integer, Long> savedAmountDeltas = new LinkedHashMap<>();
 		long appliedAmount = 0L;
 		String reasonKey = reasonKey(scope, period.label());
 
@@ -94,9 +95,12 @@ public class GoalSavingAccrualApplyTestService {
 			long plannedAmount = scopedAmount(allocation, zero(allocation.getPlannedAmount()), overlapStart, overlapEnd);
 			long finalAmount = scopedAmount(allocation, zero(allocation.getFinalAmount()), overlapStart, overlapEnd);
 			long accruedAmount = finalAmount;
+			long savedAmount = currentSavedAmounts.computeIfAbsent(plan.getId(), ignored -> zero(plan.getSavedAmount()));
 
 			if (accruedAmount > 0L) {
-				plan.setSavedAmount(zero(plan.getSavedAmount()) + accruedAmount);
+				savedAmount += accruedAmount;
+				currentSavedAmounts.put(plan.getId(), savedAmount);
+				savedAmountDeltas.merge(plan.getId(), accruedAmount, Long::sum);
 				budgetAdjustmentRepository.save(BudgetAdjustment.builder()
 					.budgetWeek(budgetWeek)
 					.plan(plan)
@@ -105,16 +109,13 @@ public class GoalSavingAccrualApplyTestService {
 					.reason(reasonKey)
 					.build());
 				appliedAmount += accruedAmount;
-				updatedPlans.put(plan.getId(), plan);
 			}
 
 			planAggregates.computeIfAbsent(plan.getId(), ignored -> new PlanAggregate(plan))
-				.accumulate(plannedAmount, finalAmount, accruedAmount, plan.getSavedAmount());
+				.accumulate(plannedAmount, finalAmount, accruedAmount, savedAmount);
 		}
 
-		if (!updatedPlans.isEmpty()) {
-			planRepository.saveAll(updatedPlans.values());
-		}
+		savedAmountDeltas.forEach((planId, delta) -> planRepository.adjustSavedAmount(planId, delta));
 
 		List<GoalSavingAccrualForceDto.PlanResult> plans = planAggregates.values().stream()
 			.map(PlanAggregate::toResponse)
