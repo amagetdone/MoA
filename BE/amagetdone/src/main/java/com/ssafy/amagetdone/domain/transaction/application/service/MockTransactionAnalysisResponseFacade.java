@@ -2,13 +2,18 @@ package com.ssafy.amagetdone.domain.transaction.application.service;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.temporal.TemporalAdjusters;
+import java.util.List;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ssafy.amagetdone.domain.transaction.api.dto.ExpenseSummaryDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseGraphDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyExpenseGraphDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.TransactionAnalysisResponseFacade;
 
@@ -22,14 +27,12 @@ public class MockTransactionAnalysisResponseFacade implements TransactionAnalysi
 
 	private static final String MOCK_ROOT = "mock/transaction-analysis/";
 
-	private final ExpenseSummaryDto.Response expenseSummary;
 	private final MonthlyExpenseDto.Response monthlyExpense;
 	private final TransactionAnalysisDto.OnboardingResult onboardingResult;
 	private final WeeklyTransactionAnalysisDto.Response weeklyAnalysis;
 	private final MonthlyTransactionAnalysisDto.Response monthlyAnalysis;
 
 	public MockTransactionAnalysisResponseFacade(ObjectMapper objectMapper) {
-		this.expenseSummary = read(objectMapper, "expense-summary.json", ExpenseSummaryDto.Response.class);
 		this.monthlyExpense = read(objectMapper, "monthly-expense.json", MonthlyExpenseDto.Response.class);
 		this.onboardingResult = read(objectMapper, "onboarding-analysis.json", TransactionAnalysisDto.OnboardingResult.class);
 		this.weeklyAnalysis = read(objectMapper, "weekly-analysis.json", WeeklyTransactionAnalysisDto.Response.class);
@@ -61,14 +64,65 @@ public class MockTransactionAnalysisResponseFacade implements TransactionAnalysi
 	}
 
 	@Override
-	public ExpenseSummaryDto.Response getExpenseSummary(Integer userId, YearMonth fromMonth, YearMonth toMonth,
-		String bucket) {
-		return expenseSummary;
+	public MonthlyExpenseDto.Response getMonthlyExpense(Integer userId, YearMonth month) {
+		return monthlyExpense;
 	}
 
 	@Override
-	public MonthlyExpenseDto.Response getMonthlyExpense(Integer userId, YearMonth month) {
-		return monthlyExpense;
+	public WeeklyExpenseGraphDto.Response getWeeklyExpenseGraph(Integer userId, String yearWeek) {
+		LocalDate startDate = weeklyAnalysis.weekStartDate();
+		List<WeeklyExpenseGraphDto.Point> points = startDate == null
+			? List.of()
+			: List.of(
+				new WeeklyExpenseGraphDto.Point(startDate, "월", 50_000L),
+				new WeeklyExpenseGraphDto.Point(startDate.plusDays(1L), "화", 30_000L),
+				new WeeklyExpenseGraphDto.Point(startDate.plusDays(2L), "수", 20_000L),
+				new WeeklyExpenseGraphDto.Point(startDate.plusDays(3L), "목", 0L),
+				new WeeklyExpenseGraphDto.Point(startDate.plusDays(4L), "금", 0L),
+				new WeeklyExpenseGraphDto.Point(startDate.plusDays(5L), "토", 0L),
+				new WeeklyExpenseGraphDto.Point(startDate.plusDays(6L), "일", 0L)
+			);
+		long totalExpenseAmount = points.stream().mapToLong(WeeklyExpenseGraphDto.Point::expenseAmount).sum();
+		return new WeeklyExpenseGraphDto.Response(
+			yearWeek,
+			startDate,
+			weeklyAnalysis.weekEndDate(),
+			totalExpenseAmount,
+			points,
+			weeklyAnalysis.lastAnalyzedAt()
+		);
+	}
+
+	@Override
+	public MonthlyExpenseGraphDto.Response getMonthlyExpenseGraph(Integer userId, String yearMonth) {
+		YearMonth targetMonth = YearMonth.parse(yearMonth);
+		LocalDate monthStartDate = targetMonth.atDay(1);
+		LocalDate firstWeekStartDate = monthStartDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+		List<MonthlyExpenseGraphDto.Point> points = List.of(
+			new MonthlyExpenseGraphDto.Point(
+				yearMonth + "-1",
+				firstWeekStartDate,
+				firstWeekStartDate.plusDays(6L),
+				targetMonth.getMonthValue() + "월 1주차",
+				120_000L
+			),
+			new MonthlyExpenseGraphDto.Point(
+				yearMonth + "-2",
+				firstWeekStartDate.plusWeeks(1L),
+				firstWeekStartDate.plusWeeks(1L).plusDays(6L),
+				targetMonth.getMonthValue() + "월 2주차",
+				180_000L
+			)
+		);
+		long totalExpenseAmount = points.stream().mapToLong(MonthlyExpenseGraphDto.Point::expenseAmount).sum();
+		return new MonthlyExpenseGraphDto.Response(
+			yearMonth,
+			monthStartDate,
+			targetMonth.atEndOfMonth(),
+			totalExpenseAmount,
+			points,
+			monthlyAnalysis.lastAnalyzedAt()
+		);
 	}
 
 	@Override
@@ -107,5 +161,4 @@ public class MockTransactionAnalysisResponseFacade implements TransactionAnalysi
 			throw new IllegalStateException("Failed to load transaction analysis mock data: " + fileName, exception);
 		}
 	}
-
 }

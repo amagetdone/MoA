@@ -9,16 +9,16 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import java.time.YearMonth;
 import java.util.List;
 
-import com.ssafy.amagetdone.domain.transaction.api.dto.ExpenseSummaryDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
-import com.ssafy.amagetdone.domain.transaction.application.usecase.GetExpenseSummaryUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyExpenseGraphUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyExecutionAnalysisResultUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyExpenseUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyTransactionAnalysisUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetOnboardingAnalysisResultUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.GetWeeklyExpenseGraphUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetWeeklyTransactionAnalysisUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.RunTransactionAnalysisUseCase;
 import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisMetadata;
@@ -30,9 +30,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class RealTransactionAnalysisResponseFacadeTest {
-
-	@Mock
-	private GetExpenseSummaryUseCase getExpenseSummaryUseCase;
 
 	@Mock
 	private GetMonthlyExpenseUseCase getMonthlyExpenseUseCase;
@@ -51,6 +48,12 @@ class RealTransactionAnalysisResponseFacadeTest {
 
 	@Mock
 	private GetMonthlyTransactionAnalysisUseCase getMonthlyTransactionAnalysisUseCase;
+
+	@Mock
+	private GetWeeklyExpenseGraphUseCase getWeeklyExpenseGraphUseCase;
+
+	@Mock
+	private GetMonthlyExpenseGraphUseCase getMonthlyExpenseGraphUseCase;
 
 	@Test
 	void getWeeklyAnalysisRetriesAfterRunningMonthlyAnalysisWhenWeekHasTransactionsButNoAnalysis() {
@@ -115,8 +118,9 @@ class RealTransactionAnalysisResponseFacadeTest {
 
 	private RealTransactionAnalysisResponseFacade facade() {
 		return new RealTransactionAnalysisResponseFacade(
-			getExpenseSummaryUseCase,
 			getMonthlyExpenseUseCase,
+			getWeeklyExpenseGraphUseCase,
+			getMonthlyExpenseGraphUseCase,
 			runTransactionAnalysisUseCase,
 			getOnboardingAnalysisResultUseCase,
 			getMonthlyExecutionAnalysisResultUseCase,

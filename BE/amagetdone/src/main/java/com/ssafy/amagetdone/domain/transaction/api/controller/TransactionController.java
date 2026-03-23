@@ -3,12 +3,13 @@ package com.ssafy.amagetdone.domain.transaction.api.controller;
 import java.time.LocalDate;
 import java.time.YearMonth;
 
-import com.ssafy.amagetdone.domain.transaction.api.dto.ExpenseSummaryDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseGraphDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionListDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionSyncDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyExpenseGraphDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.ListTransactionsUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.SyncLatestTransactionsUseCase;
@@ -39,32 +40,36 @@ public class TransactionController implements TransactionDocsController {
 	private final ListTransactionsUseCase listTransactionsUseCase;
 	private final SyncLatestTransactionsUseCase syncLatestTransactionsUseCase;
 
-	@GetMapping("/expenses/summary")
-	public ApiResponse<ExpenseSummaryDto.Response> getExpenseSummary(
-		@AuthenticationPrincipal AuthenticatedMember authenticatedMember,
-		@RequestParam(name = "fromMonth", required = false) String fromMonth,
-		@RequestParam(name = "toMonth", required = false) String toMonth,
-		@RequestParam(name = "bucket", required = false) String bucket
-	) {
-		return ApiResponse.ok(
-			"지출 요약을 조회했습니다.",
-			transactionAnalysisResponseFacade.getExpenseSummary(
-				authenticatedMember.userId(),
-				parseYearMonth(fromMonth),
-				parseYearMonth(toMonth),
-				bucket
-			)
-		);
-	}
-
 	@GetMapping("/expenses/monthly")
 	public ApiResponse<MonthlyExpenseDto.Response> getMonthlyExpense(
 		@AuthenticationPrincipal AuthenticatedMember authenticatedMember,
 		@RequestParam(name = "month", required = false) String month
 	) {
 		return ApiResponse.ok(
-			"월간 지출을 조회했습니다.",
+			"월간 지출 요약을 조회했습니다.",
 			transactionAnalysisResponseFacade.getMonthlyExpense(authenticatedMember.userId(), parseYearMonth(month))
+		);
+	}
+
+	@GetMapping("/expenses/graphs/weeks/{yearWeek}")
+	public ApiResponse<WeeklyExpenseGraphDto.Response> getWeeklyExpenseGraph(
+		@AuthenticationPrincipal AuthenticatedMember authenticatedMember,
+		@PathVariable("yearWeek") String yearWeek
+	) {
+		return ApiResponse.ok(
+			"주간 지출 그래프를 조회했습니다.",
+			transactionAnalysisResponseFacade.getWeeklyExpenseGraph(authenticatedMember.userId(), yearWeek)
+		);
+	}
+
+	@GetMapping("/expenses/graphs/months/{yearMonth}")
+	public ApiResponse<MonthlyExpenseGraphDto.Response> getMonthlyExpenseGraph(
+		@AuthenticationPrincipal AuthenticatedMember authenticatedMember,
+		@PathVariable("yearMonth") String yearMonth
+	) {
+		return ApiResponse.ok(
+			"월간 지출 그래프를 조회했습니다.",
+			transactionAnalysisResponseFacade.getMonthlyExpenseGraph(authenticatedMember.userId(), yearMonth)
 		);
 	}
 
@@ -111,7 +116,7 @@ public class TransactionController implements TransactionDocsController {
 		@RequestParam(name = "month") String month
 	) {
 		return ApiResponse.ok(
-			"해당 월 거래 분석을 완료했습니다.",
+			"월별 거래 분석을 완료했습니다.",
 			TransactionAnalysisDto.Response.from(
 				transactionAnalysisResponseFacade.analyzeMonthlyTransactions(
 					authenticatedMember.userId(),

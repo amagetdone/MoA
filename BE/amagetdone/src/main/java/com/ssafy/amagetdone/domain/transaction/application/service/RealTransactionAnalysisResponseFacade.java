@@ -2,16 +2,18 @@ package com.ssafy.amagetdone.domain.transaction.application.service;
 
 import java.time.YearMonth;
 
-import com.ssafy.amagetdone.domain.transaction.api.dto.ExpenseSummaryDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseGraphDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyExpenseGraphDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
-import com.ssafy.amagetdone.domain.transaction.application.usecase.GetExpenseSummaryUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyExpenseGraphUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyExecutionAnalysisResultUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyExpenseUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyTransactionAnalysisUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetOnboardingAnalysisResultUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.GetWeeklyExpenseGraphUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.GetWeeklyTransactionAnalysisUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.RunTransactionAnalysisUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.TransactionAnalysisResponseFacade;
@@ -30,8 +32,9 @@ import org.springframework.stereotype.Service;
 )
 public class RealTransactionAnalysisResponseFacade implements TransactionAnalysisResponseFacade {
 
-	private final GetExpenseSummaryUseCase getExpenseSummaryUseCase;
 	private final GetMonthlyExpenseUseCase getMonthlyExpenseUseCase;
+	private final GetWeeklyExpenseGraphUseCase getWeeklyExpenseGraphUseCase;
+	private final GetMonthlyExpenseGraphUseCase getMonthlyExpenseGraphUseCase;
 	private final RunTransactionAnalysisUseCase runTransactionAnalysisUseCase;
 	private final GetOnboardingAnalysisResultUseCase getOnboardingAnalysisResultUseCase;
 	private final GetMonthlyExecutionAnalysisResultUseCase getMonthlyExecutionAnalysisResultUseCase;
@@ -59,14 +62,18 @@ public class RealTransactionAnalysisResponseFacade implements TransactionAnalysi
 	}
 
 	@Override
-	public ExpenseSummaryDto.Response getExpenseSummary(Integer userId, YearMonth fromMonth, YearMonth toMonth,
-		String bucket) {
-		return getExpenseSummaryUseCase.execute(userId, fromMonth, toMonth, bucket);
+	public MonthlyExpenseDto.Response getMonthlyExpense(Integer userId, YearMonth month) {
+		return getMonthlyExpenseUseCase.execute(userId, month);
 	}
 
 	@Override
-	public MonthlyExpenseDto.Response getMonthlyExpense(Integer userId, YearMonth month) {
-		return getMonthlyExpenseUseCase.execute(userId, month);
+	public WeeklyExpenseGraphDto.Response getWeeklyExpenseGraph(Integer userId, String yearWeek) {
+		return getWeeklyExpenseGraphUseCase.execute(userId, yearWeek);
+	}
+
+	@Override
+	public MonthlyExpenseGraphDto.Response getMonthlyExpenseGraph(Integer userId, String yearMonth) {
+		return getMonthlyExpenseGraphUseCase.execute(userId, yearMonth);
 	}
 
 	@Override
