@@ -64,10 +64,10 @@ class ListPlansUseCaseDataJpaTest {
 		List<PlanListItemResponse> response = listPlansUseCase.execute(user.getId());
 
 		assertThat(response)
-			.extracting(PlanListItemResponse::planId, PlanListItemResponse::title)
+			.extracting(PlanListItemResponse::planId, PlanListItemResponse::title, PlanListItemResponse::aiPipelineStatus)
 			.containsExactly(
-				org.assertj.core.groups.Tuple.tuple(waitingPlan.getId().longValue(), "Future plan"),
-				org.assertj.core.groups.Tuple.tuple(activePlan.getId().longValue(), "Current plan")
+				org.assertj.core.groups.Tuple.tuple(waitingPlan.getId().longValue(), "Future plan", "PENDING"),
+				org.assertj.core.groups.Tuple.tuple(activePlan.getId().longValue(), "Current plan", "PENDING")
 			);
 	}
 
@@ -92,8 +92,8 @@ class ListPlansUseCaseDataJpaTest {
 		List<PlanListItemResponse> response = listPlansUseCase.execute(user.getId());
 
 		assertThat(response)
-			.extracting(PlanListItemResponse::planId, PlanListItemResponse::title)
-			.containsExactly(org.assertj.core.groups.Tuple.tuple(failedAiPlan.getId().longValue(), "Video failed plan"));
+			.extracting(PlanListItemResponse::planId, PlanListItemResponse::title, PlanListItemResponse::aiPipelineStatus)
+			.containsExactly(org.assertj.core.groups.Tuple.tuple(failedAiPlan.getId().longValue(), "Video failed plan", "FAILED"));
 	}
 
 	private User persistUser(String email) {
