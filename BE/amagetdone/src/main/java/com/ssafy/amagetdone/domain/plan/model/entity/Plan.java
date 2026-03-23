@@ -171,9 +171,25 @@ public class Plan extends BaseEntity {
 		this.status = PlanStatus.ACTIVE;
 	}
 
+	public void updateMetadata(String title, String description) {
+		this.title = title;
+		this.description = description;
+	}
+
 	public void cancelAndDelete() {
 		this.status = PlanStatus.CANCELLED;
 		this.setDeleted(true);
+	}
+
+	public void resetAiPipelineForRegeneration() {
+		this.planUrl = null;
+		this.videoUrl = null;
+		this.pyanRequestKey = null;
+		this.pyanStatus = null;
+		this.pyanStatusUrl = null;
+		this.pyanLastError = null;
+		this.aiPipelineStatus = PlanAiPipelineStatus.PENDING;
+		this.aiRetryCount = (this.aiRetryCount == null ? 0 : this.aiRetryCount) + 1;
 	}
 
 	public void extendEndDate(int additionalWeeks) {
@@ -219,5 +235,9 @@ public class Plan extends BaseEntity {
 		this.aiPipelineStatus = PlanAiPipelineStatus.FAILED;
 		this.pyanLastError = lastError;
 		this.aiRetryCount++;
+	}
+
+	public boolean isAiProcessing() {
+		return this.aiPipelineStatus == PlanAiPipelineStatus.PROCESSING;
 	}
 }
