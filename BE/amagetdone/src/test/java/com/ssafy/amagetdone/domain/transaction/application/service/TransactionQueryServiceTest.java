@@ -18,13 +18,8 @@ import com.ssafy.amagetdone.domain.account.model.entity.Account;
 import com.ssafy.amagetdone.domain.account.model.entity.Card;
 import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.domain.account.model.entity.Merchant;
-import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
-import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseMonth;
-import com.ssafy.amagetdone.domain.budget.model.entity.EssentialWeekAllocation;
-import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekCategoryRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekRepository;
-import com.ssafy.amagetdone.domain.budget.model.repository.EssentialWeekAllocationRepository;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.vo.UserStatus;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisDto;
@@ -35,10 +30,12 @@ import com.ssafy.amagetdone.domain.transaction.model.entity.AccountTransactionOv
 import com.ssafy.amagetdone.domain.transaction.model.entity.CardTransactionOverride;
 import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisMetadata;
 import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisResult;
+import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionOverride;
 import com.ssafy.amagetdone.domain.transaction.model.repository.AccountTransactionOverrideRepository;
 import com.ssafy.amagetdone.domain.transaction.model.repository.CardTransactionOverrideRepository;
 import com.ssafy.amagetdone.domain.transaction.model.repository.TransactionAnalysisMetadataRepository;
 import com.ssafy.amagetdone.domain.transaction.model.repository.TransactionAnalysisResultRepository;
+import com.ssafy.amagetdone.domain.transaction.model.vo.TransactionExcludedReason;
 import com.ssafy.amagetdone.domain.budget.model.vo.ExpenseScope;
 
 import org.junit.jupiter.api.Test;
@@ -66,12 +63,6 @@ class TransactionQueryServiceTest {
 
 	@Mock
 	private EssentialExpenseSnapshotWeekCategoryRepository essentialExpenseSnapshotWeekCategoryRepository;
-
-	@Mock
-	private BudgetWeekRepository budgetWeekRepository;
-
-	@Mock
-	private EssentialWeekAllocationRepository essentialWeekAllocationRepository;
 
 	@Mock
 	private SyncLatestTransactionsUseCase syncLatestTransactionsUseCase;
@@ -216,7 +207,7 @@ class TransactionQueryServiceTest {
 	}
 
 	@Test
-	void getWeeklyTransactionAnalysisAggregatesAllocationBasedCategoryComparison() {
+	void getWeeklyTransactionAnalysisAggregatesActualEssentialExpensesWithoutBudgetData() {
 		TransactionQueryService queryService = transactionQueryService();
 
 		User user = User.builder()
@@ -238,40 +229,84 @@ class TransactionQueryServiceTest {
 
 		given(transactionAnalysisMetadataRepository.findTopByUser_IdOrderByAnalyzedAtDesc(1))
 			.willReturn(Optional.of(latestMetadata));
-		BudgetWeek budgetWeek = BudgetWeek.create(
-			101,
-			user,
-			1,
-			LocalDate.of(2026, 3, 16),
-			LocalDate.of(2026, 3, 22)
-		);
 		Category food = Category.create(10, "Food");
+		Category transport = Category.create(11, "Transport");
 		Category housing = Category.create(12, "Housing");
-		EssentialExpenseMonth foodMonth = EssentialExpenseMonth.builder()
-			.id(201)
-			.category(food)
-			.expenseScope(ExpenseScope.VARIABLE.name())
-			.amount(0L)
+		Account account = Account.create(user, "111-222-333", "type-1", "main", "deposit", "001", "bank", "KRW");
+		Card card = Card.builder()
+			.cardUniqueNo(2001L)
+			.withdrawalAccount(account)
+			.cvc("123")
+			.cardNo("1234-5678-9012-3456")
+			.name("card")
+			.issuerCode("001")
+			.cardIssuerName("issuer")
+			.cardExpiryDate(LocalDateTime.of(2027, 12, 31, 0, 0))
+			.cardDescription("card")
+			.withdrawalDate("25")
+			.baselinePerformance(0L)
+			.maxBenefitLimit(0L)
 			.build();
-		EssentialExpenseMonth housingMonth = EssentialExpenseMonth.builder()
-			.id(202)
-			.category(housing)
-			.expenseScope(ExpenseScope.FIXED.name())
-			.amount(0L)
-			.build();
+		Merchant merchant = Merchant.builder().id(1).name("Store").build();
+		AccountTransactionOverride salary = accountTransaction(
+			1,
+			account,
+			housing,
+			LocalDateTime.of(2026, 3, 17, 9, 0),
+			300_000L,
+			1,
+			"Salary"
+		);
+		AccountTransactionOverride rent = accountTransaction(
+			2,
+			account,
+			housing,
+			LocalDateTime.of(2026, 3, 18, 8, 0),
+			70_000L,
+			2,
+			"Rent"
+		);
+		CardTransactionOverride lunch = cardTransaction(
+			3,
+			card,
+			merchant,
+			food,
+			LocalDateTime.of(2026, 3, 19, 12, 0),
+			45_000L,
+			"Lunch"
+		);
+		CardTransactionOverride bus = cardTransaction(
+			4,
+			card,
+			merchant,
+			transport,
+			LocalDateTime.of(2026, 3, 20, 18, 30),
+			20_000L,
+			"Bus"
+		);
+		CardTransactionOverride movie = cardTransaction(
+			5,
+			card,
+			merchant,
+			transport,
+			LocalDateTime.of(2026, 3, 21, 20, 0),
+			30_000L,
+			"Movie"
+		);
 
-		given(budgetWeekRepository
-			.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByWeekSequenceAsc(
-				1,
-				LocalDate.of(2026, 3, 22),
-				LocalDate.of(2026, 3, 16)
-			))
-			.willReturn(Optional.of(budgetWeek));
-		given(essentialWeekAllocationRepository.findByBudgetWeek(budgetWeek))
+		given(accountTransactionOverrideRepository
+			.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of(salary, rent));
+		given(cardTransactionOverrideRepository
+			.findAllByCard_WithdrawalAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of(lunch, bus, movie));
+		given(transactionAnalysisResultRepository.findAllByTransaction_IdInAndAnalyzedAt(anyList(), any()))
 			.willReturn(List.of(
-				essentialAllocation(301, budgetWeek, foodMonth, food, ExpenseScope.VARIABLE, 60_000L, 45_000L),
-				essentialAllocation(302, budgetWeek, foodMonth, food, ExpenseScope.FIXED, 15_000L, 10_000L),
-				essentialAllocation(303, budgetWeek, housingMonth, housing, ExpenseScope.FIXED, 70_000L, 70_000L)
+				excludedResult(salary, housing, TransactionExcludedReason.INCOME),
+				includedResult(rent, housing, ExpenseScope.FIXED),
+				includedResult(lunch, food, ExpenseScope.VARIABLE),
+				includedResult(bus, transport, ExpenseScope.VARIABLE),
+				excludedResult(movie, transport, TransactionExcludedReason.NON_ESSENTIAL)
 			));
 
 		WeeklyTransactionAnalysisDto.Response response = queryService.getWeeklyTransactionAnalysis(1, "2026-03-3");
@@ -279,42 +314,51 @@ class TransactionQueryServiceTest {
 		assertEquals("2026-03-3", response.yearWeek());
 		assertEquals(LocalDate.of(2026, 3, 16), response.weekStartDate());
 		assertEquals(LocalDate.of(2026, 3, 22), response.weekEndDate());
-		assertEquals(145_000L, response.essentialAmount());
-		assertEquals(125_000L, response.expenseAmount());
-		assertEquals(85_000L, response.fixedEssentialAmount());
-		assertEquals(60_000L, response.variableEssentialAmount());
-		assertEquals(2, response.categoryExpenses().size());
-		assertEquals(75_000L, response.categoryExpenses().get(0).plannedAmount());
-		assertEquals(55_000L, response.categoryExpenses().get(0).actualSpentAmount());
-		assertEquals(20_000L, response.categoryExpenses().get(0).remainingAmount());
+		assertEquals(165_000L, response.expenseAmount());
+		assertEquals(135_000L, response.essentialAmount());
+		assertEquals(70_000L, response.fixedEssentialAmount());
+		assertEquals(65_000L, response.variableEssentialAmount());
+		assertEquals(3, response.categoryExpenses().size());
 		assertEquals("Food", response.categoryExpenses().get(0).categoryName());
-		assertEquals(70_000L, response.categoryExpenses().get(1).plannedAmount());
-		assertEquals(70_000L, response.categoryExpenses().get(1).actualSpentAmount());
+		assertEquals(45_000L, response.categoryExpenses().get(0).plannedAmount());
+		assertEquals(45_000L, response.categoryExpenses().get(0).actualSpentAmount());
+		assertEquals(0L, response.categoryExpenses().get(0).remainingAmount());
+		assertEquals("Transport", response.categoryExpenses().get(1).categoryName());
+		assertEquals(20_000L, response.categoryExpenses().get(1).plannedAmount());
+		assertEquals(20_000L, response.categoryExpenses().get(1).actualSpentAmount());
 		assertEquals(0L, response.categoryExpenses().get(1).remainingAmount());
-		assertEquals("Housing", response.categoryExpenses().get(1).categoryName());
+		assertEquals("Housing", response.categoryExpenses().get(2).categoryName());
+		assertEquals(70_000L, response.categoryExpenses().get(2).plannedAmount());
+		assertEquals(70_000L, response.categoryExpenses().get(2).actualSpentAmount());
+		assertEquals(0L, response.categoryExpenses().get(2).remainingAmount());
 		assertEquals(latestMetadata.getAnalyzedAt(), response.lastAnalyzedAt());
 	}
 
 	@Test
-	void getWeeklyTransactionAnalysisReturnsEmptyResponseWhenAllocationIsMissing() {
+	void getWeeklyTransactionAnalysisReturnsEmptyResponseWhenWeekHasNoExpenses() {
 		TransactionQueryService queryService = transactionQueryService();
 
-		given(budgetWeekRepository
-			.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByWeekSequenceAsc(
-				1,
-				LocalDate.of(2026, 3, 22),
-				LocalDate.of(2026, 3, 16)
-			))
-			.willReturn(Optional.empty());
+		TransactionAnalysisMetadata latestMetadata = TransactionAnalysisMetadata.builder()
+			.id(1)
+			.user(User.builder()
+				.id(1)
+				.email("tester@example.com")
+				.nickname("tester")
+				.status(UserStatus.ACTIVE)
+				.build())
+			.analyzedAt(LocalDateTime.of(2026, 3, 1, 0, 0))
+			.build();
+		given(transactionAnalysisMetadataRepository.findTopByUser_IdOrderByAnalyzedAtDesc(1))
+			.willReturn(Optional.of(latestMetadata));
+		given(accountTransactionOverrideRepository
+			.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of());
+		given(cardTransactionOverrideRepository
+			.findAllByCard_WithdrawalAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of());
 
 		WeeklyTransactionAnalysisDto.Response response = queryService.getWeeklyTransactionAnalysis(1, "2026-03-3");
 
-		verify(budgetWeekRepository)
-			.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByWeekSequenceAsc(
-				1,
-				LocalDate.of(2026, 3, 22),
-				LocalDate.of(2026, 3, 16)
-			);
 		assertEquals("2026-03-3", response.yearWeek());
 		assertEquals(0L, response.expenseAmount());
 		assertEquals(0L, response.essentialAmount());
@@ -346,8 +390,6 @@ class TransactionQueryServiceTest {
 			transactionAnalysisMetadataRepository,
 			essentialExpenseSnapshotWeekRepository,
 			essentialExpenseSnapshotWeekCategoryRepository,
-			budgetWeekRepository,
-			essentialWeekAllocationRepository,
 			syncLatestTransactionsUseCase
 		);
 	}
@@ -415,23 +457,18 @@ class TransactionQueryServiceTest {
 			.build();
 	}
 
-	private EssentialWeekAllocation essentialAllocation(
-		int id,
-		BudgetWeek budgetWeek,
-		EssentialExpenseMonth essentialExpenseMonth,
+	private TransactionAnalysisResult excludedResult(
+		TransactionOverride transaction,
 		Category category,
-		ExpenseScope expenseScope,
-		long plannedAmount,
-		long actualSpentAmount
+		TransactionExcludedReason excludedReason
 	) {
-		return EssentialWeekAllocation.builder()
-			.id(id)
-			.budgetWeek(budgetWeek)
-			.essentialExpenseMonth(essentialExpenseMonth)
+		return TransactionAnalysisResult.builder()
+			.id(transaction.getId())
+			.transaction(transaction)
 			.category(category)
-			.expenseScope(expenseScope)
-			.plannedAmount(plannedAmount)
-			.actualSpentAmount(actualSpentAmount)
+			.analysisIncluded(false)
+			.excludedReason(excludedReason)
+			.analyzedAt(LocalDateTime.of(2026, 3, 1, 0, 0))
 			.build();
 	}
 }

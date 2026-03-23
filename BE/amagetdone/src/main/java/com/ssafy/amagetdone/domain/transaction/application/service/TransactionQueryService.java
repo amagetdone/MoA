@@ -11,18 +11,15 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.LinkedHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.ssafy.amagetdone.domain.account.model.entity.Category;
-import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeek;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeekCategory;
-import com.ssafy.amagetdone.domain.budget.model.entity.EssentialWeekAllocation;
-import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekCategoryRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekRepository;
-import com.ssafy.amagetdone.domain.budget.model.repository.EssentialWeekAllocationRepository;
 import com.ssafy.amagetdone.domain.budget.model.vo.ExpenseScope;
 import com.ssafy.amagetdone.domain.transaction.api.dto.ExpenseSummaryDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseDto;
@@ -63,8 +60,6 @@ public class TransactionQueryService {
 	private final TransactionAnalysisMetadataRepository transactionAnalysisMetadataRepository;
 	private final EssentialExpenseSnapshotWeekRepository essentialExpenseSnapshotWeekRepository;
 	private final EssentialExpenseSnapshotWeekCategoryRepository essentialExpenseSnapshotWeekCategoryRepository;
-	private final BudgetWeekRepository budgetWeekRepository;
-	private final EssentialWeekAllocationRepository essentialWeekAllocationRepository;
 	private final SyncLatestTransactionsUseCase syncLatestTransactionsUseCase;
 
 	public ExpenseSummaryDto.Response getExpenseSummary(
@@ -326,70 +321,44 @@ public class TransactionQueryService {
 
 	public WeeklyTransactionAnalysisDto.Response getWeeklyTransactionAnalysis(Integer userId, String yearWeek) {
 		ParsedYearWeek parsedYearWeek = parseYearMonthWeek(yearWeek);
-		TransactionAnalysisMetadata latestMetadata = transactionAnalysisMetadataRepository
-			.findTopByUser_IdOrderByAnalyzedAtDesc(userId)
-			.orElse(null);
 		LocalDate weekStartDate = parsedYearWeek.weekStartDate();
 		LocalDate weekEndDate = weekStartDate.plusDays(6L);
-		BudgetWeek budgetWeek = budgetWeekRepository
-			.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByWeekSequenceAsc(
-				userId,
-				weekEndDate,
-				weekStartDate
-			)
+		LocalDateTime analyzedAt = transactionAnalysisMetadataRepository.findTopByUser_IdOrderByAnalyzedAtDesc(userId)
+			.map(TransactionAnalysisMetadata::getAnalyzedAt)
 			.orElse(null);
-		if (budgetWeek == null) {
-			return WeeklyTransactionAnalysisDto.Response.empty(parsedYearWeek.responseYearWeek());
-		}
-
-		List<EssentialWeekAllocation> allocations = essentialWeekAllocationRepository.findByBudgetWeek(budgetWeek);
-		if (allocations.isEmpty()) {
-			return WeeklyTransactionAnalysisDto.Response.empty(parsedYearWeek.responseYearWeek());
-		}
-
-		List<WeeklyTransactionAnalysisDto.CategoryExpense> categoryExpenses = allocations.stream()
-			.collect(Collectors.groupingBy(
-				allocation -> new WeeklyCategoryKey(
-					allocation.getCategory().getId(),
-					allocation.getCategory().getName()
-				)
-			))
-			.entrySet()
-			.stream()
-			.sorted(Map.Entry.comparingByKey(Comparator.comparing(WeeklyCategoryKey::categoryId)))
-			.map(entry -> {
-				long plannedAmount = entry.getValue().stream()
-					.mapToLong(allocation -> zero(allocation.getPlannedAmount()))
-					.sum();
-				long actualSpentAmount = entry.getValue().stream()
-					.mapToLong(allocation -> zero(allocation.getActualSpentAmount()))
-					.sum();
-				return new WeeklyTransactionAnalysisDto.CategoryExpense(
-					entry.getKey().categoryId(),
-					entry.getKey().categoryName(),
-					plannedAmount,
-					actualSpentAmount,
-					plannedAmount - actualSpentAmount
-				);
-			})
+		List<Projection> projections = loadProjections(
+			userId,
+			weekStartDate.atStartOfDay(),
+			weekEndDate.atTime(23, 59, 59),
+			analyzedAt
+		);
+		List<Projection> pureExpenseProjections = projections.stream()
+			.filter(this::isPureExpense)
 			.toList();
-		long plannedEssentialAmount = allocations.stream()
-			.mapToLong(allocation -> zero(allocation.getPlannedAmount()))
+		if (pureExpenseProjections.isEmpty()) {
+			return WeeklyTransactionAnalysisDto.Response.empty(parsedYearWeek.responseYearWeek());
+		}
+		List<Projection> essentialExpenseProjections = pureExpenseProjections.stream()
+			.filter(this::isEssentialExpense)
+			.toList();
+		List<WeeklyTransactionAnalysisDto.CategoryExpense> categoryExpenses = buildWeeklyCategoryExpenses(essentialExpenseProjections);
+		long expenseAmount = pureExpenseProjections.stream()
+			.mapToLong(projection -> projection.transaction().getTransactionBalance())
 			.sum();
-		long actualSpentAmount = allocations.stream()
-			.mapToLong(allocation -> zero(allocation.getActualSpentAmount()))
+		long essentialAmount = essentialExpenseProjections.stream()
+			.mapToLong(projection -> projection.transaction().getTransactionBalance())
 			.sum();
 
 		return new WeeklyTransactionAnalysisDto.Response(
 			parsedYearWeek.responseYearWeek(),
-			budgetWeek.getWeekStartDate(),
-			budgetWeek.getWeekEndDate(),
-			actualSpentAmount,
-			plannedEssentialAmount,
-			sumPlannedAmountByScope(allocations, ExpenseScope.FIXED),
-			sumPlannedAmountByScope(allocations, ExpenseScope.VARIABLE),
+			weekStartDate,
+			weekEndDate,
+			expenseAmount,
+			essentialAmount,
+			sumExpenseAmountByScope(essentialExpenseProjections, ExpenseScope.FIXED),
+			sumExpenseAmountByScope(essentialExpenseProjections, ExpenseScope.VARIABLE),
 			categoryExpenses,
-			latestMetadata != null ? latestMetadata.getAnalyzedAt() : null
+			findLastAnalyzedAt(projections)
 		);
 	}
 
@@ -627,6 +596,11 @@ public class TransactionQueryService {
 		return excludedReason == TransactionExcludedReason.NON_ESSENTIAL;
 	}
 
+	private boolean isEssentialExpense(Projection projection) {
+		TransactionAnalysisResult analysisResult = projection.analysisResult();
+		return analysisResult != null && analysisResult.isAnalysisIncluded();
+	}
+
 	private ExpenseScope resolveExpenseScope(Projection projection) {
 		if (projection.analysisResult() != null && projection.analysisResult().getExpenseScope() != null) {
 			return projection.analysisResult().getExpenseScope();
@@ -634,10 +608,32 @@ public class TransactionQueryService {
 		return ExpenseScope.VARIABLE;
 	}
 
-	private long sumPlannedAmountByScope(List<EssentialWeekAllocation> allocations, ExpenseScope expenseScope) {
-		return allocations.stream()
-			.filter(allocation -> allocation.getExpenseScope() == expenseScope)
-			.mapToLong(allocation -> zero(allocation.getPlannedAmount()))
+	private List<WeeklyTransactionAnalysisDto.CategoryExpense> buildWeeklyCategoryExpenses(List<Projection> projections) {
+		Map<WeeklyCategoryKey, Long> amountsByCategory = projections.stream()
+			.collect(Collectors.groupingBy(
+				projection -> {
+					Category category = resolveCategory(projection);
+					return new WeeklyCategoryKey(category.getId(), category.getName());
+				},
+				LinkedHashMap::new,
+				Collectors.summingLong(projection -> projection.transaction().getTransactionBalance())
+			));
+		return amountsByCategory.entrySet().stream()
+			.sorted(Map.Entry.comparingByKey(Comparator.comparing(WeeklyCategoryKey::categoryId)))
+			.map(entry -> new WeeklyTransactionAnalysisDto.CategoryExpense(
+				entry.getKey().categoryId(),
+				entry.getKey().categoryName(),
+				entry.getValue(),
+				entry.getValue(),
+				0L
+			))
+			.toList();
+	}
+
+	private long sumExpenseAmountByScope(List<Projection> projections, ExpenseScope expenseScope) {
+		return projections.stream()
+			.filter(projection -> resolveExpenseScope(projection) == expenseScope)
+			.mapToLong(projection -> projection.transaction().getTransactionBalance())
 			.sum();
 	}
 

@@ -71,11 +71,27 @@ public class RealTransactionAnalysisResponseFacade implements TransactionAnalysi
 
 	@Override
 	public WeeklyTransactionAnalysisDto.Response getWeeklyAnalysis(Integer userId, String yearWeek) {
-		return getWeeklyTransactionAnalysisUseCase.execute(userId, yearWeek);
+		WeeklyTransactionAnalysisDto.Response response = getWeeklyTransactionAnalysisUseCase.execute(userId, yearWeek);
+		if (shouldRefreshWeeklyAnalysis(response)) {
+			runTransactionAnalysisUseCase.execute(userId, resolveYearMonth(yearWeek));
+			return getWeeklyTransactionAnalysisUseCase.execute(userId, yearWeek);
+		}
+		return response;
 	}
 
 	@Override
 	public MonthlyTransactionAnalysisDto.Response getMonthlyAnalysis(Integer userId, String yearMonth) {
 		return getMonthlyTransactionAnalysisUseCase.execute(userId, yearMonth);
+	}
+
+	private boolean shouldRefreshWeeklyAnalysis(WeeklyTransactionAnalysisDto.Response response) {
+		return response != null
+			&& response.lastAnalyzedAt() == null
+			&& response.expenseAmount() != null
+			&& response.expenseAmount() > 0L;
+	}
+
+	private YearMonth resolveYearMonth(String yearWeek) {
+		return YearMonth.parse(yearWeek.substring(0, 7));
 	}
 }
