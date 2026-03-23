@@ -15,7 +15,8 @@ public record PlanListItemResponse(
 	Integer priority,
 	Integer weekNumber,
 	Long dday,
-	BigDecimal achievementRate
+	BigDecimal achievementRate,
+	String aiPipelineStatus
 ) {
 
 	public static PlanListItemResponse from(Plan plan, LocalDate today) {
@@ -30,7 +31,8 @@ public record PlanListItemResponse(
 			plan.getPriority(),
 			plan.getTargetWeeks() == null ? 0 : plan.getTargetWeeks(),
 			calculateDday(today, plan.getEndDate()),
-			calculateAchievementRate(safeSavedAmount, safeTargetAmount)
+			calculateAchievementRate(safeSavedAmount, safeTargetAmount),
+			plan.getAiPipelineStatus() == null ? null : plan.getAiPipelineStatus().name()
 		);
 	}
 
@@ -46,10 +48,13 @@ public record PlanListItemResponse(
 		if (targetAmount <= 0L) {
 			return BigDecimal.ZERO;
 		}
+		if (savedAmount >= targetAmount) {
+			return BigDecimal.valueOf(100);
+		}
 
 		return BigDecimal.valueOf(savedAmount)
 			.multiply(BigDecimal.valueOf(100))
-			.divide(BigDecimal.valueOf(targetAmount), 1, RoundingMode.HALF_UP)
+			.divide(BigDecimal.valueOf(targetAmount), 1, RoundingMode.DOWN)
 			.stripTrailingZeros();
 	}
 
