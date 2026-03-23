@@ -15,14 +15,13 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.List;
 
-import com.ssafy.amagetdone.domain.member.model.entity.User;
-import com.ssafy.amagetdone.domain.member.model.vo.UserStatus;
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
-import com.ssafy.amagetdone.domain.transaction.api.dto.ExpenseSummaryDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseGraphDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionListDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyExpenseGraphDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.application.service.TransactionSyncService;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.ListTransactionsUseCase;
@@ -60,28 +59,79 @@ class TransactionControllerTest {
 	private SyncLatestTransactionsUseCase syncLatestTransactionsUseCase;
 
 	@Test
-	void getExpenseSummaryReadsAuthorizationAndReturnsApiResponse() throws Exception {
-		given(transactionAnalysisResponseFacade.getExpenseSummary(1, YearMonth.of(2025, 10), YearMonth.of(2026, 3), "MONTH"))
-			.willReturn(new ExpenseSummaryDto.Response(
-				new ExpenseSummaryDto.Range("2025-10", "2026-03", "MONTH"),
-				List.of(new ExpenseSummaryDto.Point("2026-03", 1900000L, 650000L, 1250000L)),
-				new ExpenseSummaryDto.Comparison(1900000L, 1720000L, 180000L, 10.47),
+	void getWeeklyExpenseGraphReadsAuthorizationAndReturnsApiResponse() throws Exception {
+		given(transactionAnalysisResponseFacade.getWeeklyExpenseGraph(1, "2026-03-2"))
+			.willReturn(new WeeklyExpenseGraphDto.Response(
+				"2026-03-2",
+				LocalDate.of(2026, 3, 2),
+				LocalDate.of(2026, 3, 8),
+				190_000L,
+				List.of(
+					new WeeklyExpenseGraphDto.Point(LocalDate.of(2026, 3, 2), "월", 50_000L),
+					new WeeklyExpenseGraphDto.Point(LocalDate.of(2026, 3, 3), "화", 0L)
+				),
 				LocalDateTime.of(2026, 3, 13, 15, 20)
 			));
 
-		mockMvc.perform(apiGet("/transactions/expenses/summary")
+		mockMvc.perform(apiGet("/transactions/expenses/graphs/weeks/2026-03-2")
 				.with(authentication(
 					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
-				))
-				.param("fromMonth", "2025-10")
-				.param("toMonth", "2026-03")
-				.param("bucket", "MONTH"))
+				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.message").value("지출 요약을 조회했습니다."))
-			.andExpect(jsonPath("$.data.range.fromMonth").value("2025-10"))
-			.andExpect(jsonPath("$.data.points[0].expenseAmount").value(1900000))
-			.andExpect(jsonPath("$.data.comparison.changeRate").value(10.47));
+			.andExpect(jsonPath("$.message").value("주간 지출 그래프를 조회했습니다."))
+			.andExpect(jsonPath("$.data.yearWeek").value("2026-03-2"))
+			.andExpect(jsonPath("$.data.weekStartDate").value("2026-03-02"))
+			.andExpect(jsonPath("$.data.weekEndDate").value("2026-03-08"))
+			.andExpect(jsonPath("$.data.totalExpenseAmount").value(190_000))
+			.andExpect(jsonPath("$.data.points[0].date").value("2026-03-02"))
+			.andExpect(jsonPath("$.data.points[0].label").value("월"))
+			.andExpect(jsonPath("$.data.points[0].expenseAmount").value(50_000));
+	}
+
+	@Test
+	void getMonthlyExpenseGraphReadsAuthorizationAndReturnsApiResponse() throws Exception {
+		given(transactionAnalysisResponseFacade.getMonthlyExpenseGraph(1, "2026-03"))
+			.willReturn(new MonthlyExpenseGraphDto.Response(
+				"2026-03",
+				LocalDate.of(2026, 3, 1),
+				LocalDate.of(2026, 3, 31),
+				640_000L,
+				List.of(
+					new MonthlyExpenseGraphDto.Point(
+						"2026-03-1",
+						LocalDate.of(2026, 3, 2),
+						LocalDate.of(2026, 3, 8),
+						"3월 1주차",
+						120_000L
+					),
+					new MonthlyExpenseGraphDto.Point(
+						"2026-03-2",
+						LocalDate.of(2026, 3, 9),
+						LocalDate.of(2026, 3, 15),
+						"3월 2주차",
+						180_000L
+					)
+				),
+				LocalDateTime.of(2026, 3, 13, 15, 20)
+			));
+
+		mockMvc.perform(apiGet("/transactions/expenses/graphs/months/2026-03")
+				.with(authentication(
+					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, List.of())
+				)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("월간 지출 그래프를 조회했습니다."))
+			.andExpect(jsonPath("$.data.yearMonth").value("2026-03"))
+			.andExpect(jsonPath("$.data.monthStartDate").value("2026-03-01"))
+			.andExpect(jsonPath("$.data.monthEndDate").value("2026-03-31"))
+			.andExpect(jsonPath("$.data.totalExpenseAmount").value(640_000))
+			.andExpect(jsonPath("$.data.points[0].yearWeek").value("2026-03-1"))
+			.andExpect(jsonPath("$.data.points[0].weekStartDate").value("2026-03-02"))
+			.andExpect(jsonPath("$.data.points[0].weekEndDate").value("2026-03-08"))
+			.andExpect(jsonPath("$.data.points[0].label").value("3월 1주차"))
+			.andExpect(jsonPath("$.data.points[0].expenseAmount").value(120_000));
 	}
 
 	@Test
@@ -89,11 +139,11 @@ class TransactionControllerTest {
 		given(transactionAnalysisResponseFacade.getMonthlyExpense(1, YearMonth.of(2026, 3)))
 			.willReturn(new MonthlyExpenseDto.Response(
 				"2026-03",
-				1900000L,
-				650000L,
-				1250000L,
-				2300000L,
-				420000L,
+				1_900_000L,
+				650_000L,
+				1_250_000L,
+				2_300_000L,
+				420_000L,
 				84,
 				LocalDateTime.of(2026, 3, 13, 15, 20)
 			));
@@ -105,9 +155,9 @@ class TransactionControllerTest {
 				.param("month", "2026-03"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.message").value("월간 지출을 조회했습니다."))
+			.andExpect(jsonPath("$.message").value("월간 지출 요약을 조회했습니다."))
 			.andExpect(jsonPath("$.data.month").value("2026-03"))
-			.andExpect(jsonPath("$.data.totalExpenseAmount").value(1900000))
+			.andExpect(jsonPath("$.data.totalExpenseAmount").value(1_900_000))
 			.andExpect(jsonPath("$.data.transactionCount").value(84));
 	}
 
@@ -125,7 +175,7 @@ class TransactionControllerTest {
 					"card-10231",
 					LocalDateTime.of(2026, 3, 12, 13, 22, 11),
 					"Coffee Shop",
-					6100L,
+					6_100L,
 					"OUT",
 					new TransactionListDto.CategoryView(13, "Cafe"),
 					"VARIABLE",
@@ -185,7 +235,7 @@ class TransactionControllerTest {
 				780_000L,
 				40.0,
 				60.0,
-				"현재 소비 흐름은 안정적이에요.",
+				"이번 달은 식비와 교통비가 높았어요.",
 				List.of(
 					new TransactionAnalysisDto.CategoryExpense(10, "Food", 700_000L),
 					new TransactionAnalysisDto.CategoryExpense(1, "Transport", 120_000L)
@@ -199,7 +249,7 @@ class TransactionControllerTest {
 				.param("month", "2026-02"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.message").value("해당 월 거래 분석을 완료했습니다."))
+			.andExpect(jsonPath("$.message").value("월별 거래 분석을 완료했습니다."))
 			.andExpect(jsonPath("$.data.summaryText").value("2026-02 소비 분석을 완료했어요."))
 			.andExpect(jsonPath("$.data.averageIncome").value(2_100_000))
 			.andExpect(jsonPath("$.data.averageExpense").value(1_320_000))
@@ -258,14 +308,14 @@ class TransactionControllerTest {
 				"2026-03-2",
 				LocalDate.of(2026, 3, 2),
 				LocalDate.of(2026, 3, 8),
-				152000L,
-				155000L,
-				72000L,
-				83000L,
+				152_000L,
+				155_000L,
+				72_000L,
+				83_000L,
 				List.of(
-					new WeeklyTransactionAnalysisDto.CategoryExpense(2, "Subscription", 17000L, 12000L, 5000L),
-					new WeeklyTransactionAnalysisDto.CategoryExpense(12, "Housing", 55000L, 55000L, 0L),
-					new WeeklyTransactionAnalysisDto.CategoryExpense(10, "Food", 83000L, 85000L, -2000L)
+					new WeeklyTransactionAnalysisDto.CategoryExpense(2, "Subscription", 17_000L, 12_000L, 5_000L),
+					new WeeklyTransactionAnalysisDto.CategoryExpense(12, "Housing", 55_000L, 55_000L, 0L),
+					new WeeklyTransactionAnalysisDto.CategoryExpense(10, "Food", 83_000L, 85_000L, -2_000L)
 				),
 				LocalDateTime.of(2026, 3, 13, 15, 20)
 			));
@@ -278,14 +328,14 @@ class TransactionControllerTest {
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.message").value("주간 분석 결과를 조회했습니다."))
 			.andExpect(jsonPath("$.data.yearWeek").value("2026-03-2"))
-			.andExpect(jsonPath("$.data.expenseAmount").value(152000))
-			.andExpect(jsonPath("$.data.essentialAmount").value(155000))
-			.andExpect(jsonPath("$.data.fixedEssentialAmount").value(72000))
-			.andExpect(jsonPath("$.data.variableEssentialAmount").value(83000))
+			.andExpect(jsonPath("$.data.expenseAmount").value(152_000))
+			.andExpect(jsonPath("$.data.essentialAmount").value(155_000))
+			.andExpect(jsonPath("$.data.fixedEssentialAmount").value(72_000))
+			.andExpect(jsonPath("$.data.variableEssentialAmount").value(83_000))
 			.andExpect(jsonPath("$.data.categoryExpenses[0].categoryName").value("Subscription"))
-			.andExpect(jsonPath("$.data.categoryExpenses[0].plannedAmount").value(17000))
-			.andExpect(jsonPath("$.data.categoryExpenses[0].actualSpentAmount").value(12000))
-			.andExpect(jsonPath("$.data.categoryExpenses[0].remainingAmount").value(5000));
+			.andExpect(jsonPath("$.data.categoryExpenses[0].plannedAmount").value(17_000))
+			.andExpect(jsonPath("$.data.categoryExpenses[0].actualSpentAmount").value(12_000))
+			.andExpect(jsonPath("$.data.categoryExpenses[0].remainingAmount").value(5_000));
 	}
 
 	@Test
@@ -324,13 +374,13 @@ class TransactionControllerTest {
 		given(transactionAnalysisResponseFacade.getMonthlyAnalysis(1, "2026-03"))
 			.willReturn(new MonthlyTransactionAnalysisDto.Response(
 				"2026-03",
-				1900000L,
-				680000L,
-				430000L,
-				250000L,
+				1_900_000L,
+				680_000L,
+				430_000L,
+				250_000L,
 				List.of(
-					new MonthlyTransactionAnalysisDto.CategoryExpense(10, "Food", 750000L, 39.47),
-					new MonthlyTransactionAnalysisDto.CategoryExpense(2, "Subscription", 68000L, 3.58)
+					new MonthlyTransactionAnalysisDto.CategoryExpense(10, "Food", 750_000L, 39.47),
+					new MonthlyTransactionAnalysisDto.CategoryExpense(2, "Subscription", 68_000L, 3.58)
 				),
 				LocalDateTime.of(2026, 3, 13, 15, 20)
 			));
@@ -343,10 +393,10 @@ class TransactionControllerTest {
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.message").value("월간 분석 결과를 조회했습니다."))
 			.andExpect(jsonPath("$.data.yearMonth").value("2026-03"))
-			.andExpect(jsonPath("$.data.expenseAmount").value(1900000))
-			.andExpect(jsonPath("$.data.monthlyEssentialAmount").value(680000))
-			.andExpect(jsonPath("$.data.fixedEssentialAmount").value(430000))
-			.andExpect(jsonPath("$.data.variableEssentialAmount").value(250000))
+			.andExpect(jsonPath("$.data.expenseAmount").value(1_900_000))
+			.andExpect(jsonPath("$.data.monthlyEssentialAmount").value(680_000))
+			.andExpect(jsonPath("$.data.fixedEssentialAmount").value(430_000))
+			.andExpect(jsonPath("$.data.variableEssentialAmount").value(250_000))
 			.andExpect(jsonPath("$.data.categoryExpenses[0].ratio").value(39.47));
 	}
 
@@ -358,21 +408,12 @@ class TransactionControllerTest {
 			1_100_000L,
 			65.0,
 			35.0,
-			"지금 흐름이면 저축 여력이 있어요.",
+			"현재 소비 흐름이면 저축 여력이 있어요.",
 			List.of(
 				new TransactionAnalysisDto.CategoryExpense(10, "Food", 750_000L),
 				new TransactionAnalysisDto.CategoryExpense(20, "Housing", 550_000L)
 			)
 		);
-	}
-
-	private User user(int id) {
-		return User.builder()
-			.id(id)
-			.status(UserStatus.ACTIVE)
-			.email("tester@example.com")
-			.nickname("tester")
-			.build();
 	}
 
 	private MockHttpServletRequestBuilder apiGet(String path) {
