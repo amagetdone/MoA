@@ -313,9 +313,9 @@ class TransactionControllerTest {
 				72_000L,
 				83_000L,
 				List.of(
-					new WeeklyTransactionAnalysisDto.CategoryExpense(2, "Subscription", 17_000L, 12_000L, 5_000L),
-					new WeeklyTransactionAnalysisDto.CategoryExpense(12, "Housing", 55_000L, 55_000L, 0L),
-					new WeeklyTransactionAnalysisDto.CategoryExpense(10, "Food", 83_000L, 85_000L, -2_000L)
+					new WeeklyTransactionAnalysisDto.CategoryExpense(2, "Subscription", 0L, 17_000L, 0L),
+					new WeeklyTransactionAnalysisDto.CategoryExpense(12, "Housing", 0L, 55_000L, 0L),
+					new WeeklyTransactionAnalysisDto.CategoryExpense(10, "Food", 0L, 80_000L, 0L)
 				),
 				LocalDateTime.of(2026, 3, 13, 15, 20)
 			));
@@ -333,9 +333,9 @@ class TransactionControllerTest {
 			.andExpect(jsonPath("$.data.fixedEssentialAmount").value(72_000))
 			.andExpect(jsonPath("$.data.variableEssentialAmount").value(83_000))
 			.andExpect(jsonPath("$.data.categoryExpenses[0].categoryName").value("Subscription"))
-			.andExpect(jsonPath("$.data.categoryExpenses[0].plannedAmount").value(17_000))
-			.andExpect(jsonPath("$.data.categoryExpenses[0].actualSpentAmount").value(12_000))
-			.andExpect(jsonPath("$.data.categoryExpenses[0].remainingAmount").value(5_000));
+			.andExpect(jsonPath("$.data.categoryExpenses[0].plannedAmount").value(0))
+			.andExpect(jsonPath("$.data.categoryExpenses[0].actualSpentAmount").value(17_000))
+			.andExpect(jsonPath("$.data.categoryExpenses[0].remainingAmount").value(0));
 	}
 
 	@Test
@@ -380,7 +380,9 @@ class TransactionControllerTest {
 				250_000L,
 				List.of(
 					new MonthlyTransactionAnalysisDto.CategoryExpense(10, "Food", 750_000L, 39.47),
-					new MonthlyTransactionAnalysisDto.CategoryExpense(2, "Subscription", 68_000L, 3.58)
+					new MonthlyTransactionAnalysisDto.CategoryExpense(12, "Housing", 550_000L, 28.95),
+					new MonthlyTransactionAnalysisDto.CategoryExpense(2, "Subscription", 68_000L, 3.58),
+					new MonthlyTransactionAnalysisDto.CategoryExpense(40, "Leisure", 120_000L, 6.32)
 				),
 				LocalDateTime.of(2026, 3, 13, 15, 20)
 			));
@@ -397,7 +399,9 @@ class TransactionControllerTest {
 			.andExpect(jsonPath("$.data.monthlyEssentialAmount").value(680_000))
 			.andExpect(jsonPath("$.data.fixedEssentialAmount").value(430_000))
 			.andExpect(jsonPath("$.data.variableEssentialAmount").value(250_000))
-			.andExpect(jsonPath("$.data.categoryExpenses[0].ratio").value(39.47));
+			.andExpect(jsonPath("$.data.categoryExpenses[0].ratio").value(39.47))
+			.andExpect(jsonPath("$.data.categoryExpenses[1].amount").value(550_000))
+			.andExpect(jsonPath("$.data.categoryExpenses[3].categoryName").value("Leisure"));
 	}
 
 	private TransactionAnalysisDto.OnboardingResult sampleOnboardingResult() {
