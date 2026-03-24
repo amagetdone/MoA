@@ -64,7 +64,7 @@ class ListPlansUseCaseTest {
 
 		given(planRepository.findAllByUserIdAndDeletedFalseAndStatusIn(
 			1,
-			List.of(PlanStatus.WAITING, PlanStatus.ACTIVE, PlanStatus.PAUSED, PlanStatus.COMPLETED)
+			List.of(PlanStatus.WAITING, PlanStatus.ACTIVE, PlanStatus.COMPLETED)
 		))
 			.willReturn(List.of(completedPlan, activePlan, waitingPlan));
 
@@ -102,7 +102,7 @@ class ListPlansUseCaseTest {
 
 		given(planRepository.findAllByUserIdAndDeletedFalseAndStatusIn(
 			1,
-			List.of(PlanStatus.WAITING, PlanStatus.ACTIVE, PlanStatus.PAUSED, PlanStatus.COMPLETED)
+			List.of(PlanStatus.WAITING, PlanStatus.ACTIVE, PlanStatus.COMPLETED)
 		))
 			.willReturn(List.of(nearlyCompletedPlan));
 

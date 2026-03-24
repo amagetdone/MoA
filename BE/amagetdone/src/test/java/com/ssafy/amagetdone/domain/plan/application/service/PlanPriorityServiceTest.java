@@ -35,7 +35,7 @@ class PlanPriorityServiceTest {
 		Plan third = planWithPriority(3);
 		given(planRepository.findAllByUserIdAndDeletedFalseAndStatusInAndPriorityGreaterThanEqualOrderByPriorityAsc(
 			1,
-			List.of(PlanStatus.WAITING, PlanStatus.ACTIVE, PlanStatus.PAUSED),
+			List.of(PlanStatus.WAITING, PlanStatus.ACTIVE),
 			2
 		))
 			.willReturn(List.of(second, third));
@@ -52,12 +52,29 @@ class PlanPriorityServiceTest {
 		Plan fourth = planWithPriority(4);
 		given(planRepository.findAllByUserIdAndDeletedFalseAndStatusInAndPriorityGreaterThanOrderByPriorityAsc(
 			1,
-			List.of(PlanStatus.WAITING, PlanStatus.ACTIVE, PlanStatus.PAUSED),
+			List.of(PlanStatus.WAITING, PlanStatus.ACTIVE),
 			2
 		))
 			.willReturn(List.of(third, fourth));
 
 		planPriorityService.compactPrioritiesAfterDeletion(1, 2);
+
+		assertEquals(2, ReflectionTestUtils.getField(third, "priority"));
+		assertEquals(3, ReflectionTestUtils.getField(fourth, "priority"));
+	}
+
+	@Test
+	void compactsRemainingPrioritiesAfterCompletion() {
+		Plan third = planWithPriority(3);
+		Plan fourth = planWithPriority(4);
+		given(planRepository.findAllByUserIdAndDeletedFalseAndStatusInAndPriorityGreaterThanOrderByPriorityAsc(
+			1,
+			List.of(PlanStatus.WAITING, PlanStatus.ACTIVE),
+			2
+		))
+			.willReturn(List.of(third, fourth));
+
+		planPriorityService.compactPrioritiesAfterCompletion(1, 2);
 
 		assertEquals(2, ReflectionTestUtils.getField(third, "priority"));
 		assertEquals(3, ReflectionTestUtils.getField(fourth, "priority"));

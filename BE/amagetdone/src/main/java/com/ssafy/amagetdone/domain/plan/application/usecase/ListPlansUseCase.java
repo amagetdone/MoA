@@ -19,7 +19,6 @@ public class ListPlansUseCase {
 	private static final List<PlanStatus> LISTED_PLAN_STATUSES = List.of(
 		PlanStatus.WAITING,
 		PlanStatus.ACTIVE,
-		PlanStatus.PAUSED,
 		PlanStatus.COMPLETED
 	);
 

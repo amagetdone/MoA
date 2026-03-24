@@ -2,6 +2,7 @@ package com.ssafy.amagetdone.domain.budget.application.service;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,6 +15,7 @@ import com.ssafy.amagetdone.domain.budget.model.repository.BudgetAdjustmentRepos
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetAdjustmentType;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
+import com.ssafy.amagetdone.domain.plan.application.service.PlanPriorityService;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
@@ -37,6 +39,7 @@ public class WeeklyGoalSavingAccrualService {
 	private final PlanWeekAllocationRepository planWeekAllocationRepository;
 	private final BudgetAdjustmentRepository budgetAdjustmentRepository;
 	private final PlanRepository planRepository;
+	private final PlanPriorityService planPriorityService;
 	private final EntityManager entityManager;
 	private final Clock clock;
 
@@ -118,6 +121,7 @@ public class WeeklyGoalSavingAccrualService {
 		long remaining = pool;
 		Map<Integer, Long> savedAmountDeltas = new LinkedHashMap<>();
 		Map<Integer, Long> currentSavedAmounts = new LinkedHashMap<>();
+		List<Integer> completedPriorities = new ArrayList<>();
 
 		for (PlanWeekAllocation allocation : allocations) {
 			Plan plan = allocation.getPlan();
@@ -148,6 +152,7 @@ public class WeeklyGoalSavingAccrualService {
 			}
 
 			if (savedAmount >= zero(plan.getTargetAmount())) {
+				completedPriorities.add(plan.getPriority());
 				plan.setStatus(PlanStatus.COMPLETED);
 			}
 		}
@@ -163,6 +168,13 @@ public class WeeklyGoalSavingAccrualService {
 			.toList();
 		if (!updatedPlans.isEmpty()) {
 			planRepository.saveAll(updatedPlans);
+			completedPriorities.stream()
+				.filter(Objects::nonNull)
+				.sorted(Comparator.reverseOrder())
+				.forEach(priority -> planPriorityService.compactPrioritiesAfterCompletion(
+					budgetWeek.getUser().getId(),
+					priority
+				));
 		}
 	}
 
