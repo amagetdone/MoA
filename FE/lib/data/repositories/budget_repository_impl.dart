@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:more_app/data/datasources/remote/budget_remote_datasource.dart';
 import 'package:more_app/domain/entities/budget.dart';
 import 'package:more_app/domain/repositories/budget_repository.dart';
@@ -32,28 +31,19 @@ class BudgetRepositoryImpl implements BudgetRepository {
 
     try {
       income = await _remoteDataSource.getIncome();
-      debugPrint('[Budget] income=$income');
-    } catch (e) {
-      debugPrint('[Budget] getIncome ERROR: $e');
-    }
+    } catch (_) {}
 
     // 저장된 월급이 없으면 거래 분석의 평균 수입으로 pre-fill
     if (income == 0) {
       try {
         income = await _remoteDataSource.getAverageIncomeFromAnalysis();
-        debugPrint('[Budget] averageIncome fallback=$income');
-      } catch (e) {
-        debugPrint('[Budget] getAverageIncomeFromAnalysis ERROR: $e');
-      }
+      } catch (_) {}
     }
 
     try {
       final yearWeek = _toIsoYearWeek(_thisWeekMonday());
       setup = await _remoteDataSource.getWeekSetup(yearWeek);
-      debugPrint('[Budget] setup loaded: saving=${setup.plannedSavingAmount} essential=${setup.plannedEssentialAmount} free=${setup.plannedFreeAmount}');
-    } catch (e) {
-      debugPrint('[Budget] getWeekSetup ERROR: $e');
-    }
+    } catch (_) {}
 
     final fixedEssentials = setup.essentials
         .where((e) => e.expenseScope == 'FIXED')

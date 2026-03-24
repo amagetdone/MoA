@@ -160,7 +160,10 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           ),
                           if (_isFixedExpanded && setup.fixedEssentials.isNotEmpty) ...[
                             SizedBox(height: 16.h),
-                            _EssentialCategoryList(essentials: setup.fixedEssentials, sectionTotal: setup.fixedExpenseAmount),
+                            _EssentialCategoryList(
+                              essentials: setup.fixedEssentials,
+                              totalAmount: setup.fixedExpenseAmount,
+                            ),
                           ],
                           SizedBox(height: 40.h),
 

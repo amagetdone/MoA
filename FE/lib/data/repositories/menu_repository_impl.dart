@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
 import 'package:more_app/data/datasources/remote/menu_remote_datasource.dart';
 import 'package:more_app/data/models/app_snapshot_dto.dart';
@@ -21,7 +20,6 @@ class MenuRepositoryImpl implements MenuRepository {
     try {
       return await _remoteDataSource.fetchMenuDashboard();
     } catch (e) {
-      debugPrint('[MenuRepository] fetchMenuSummary 실패: $e');
       final snapshot = await _localDataSource.getCachedSnapshot();
       return _toMenuSummary(snapshot);
     }

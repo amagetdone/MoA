@@ -181,23 +181,18 @@ class OnboardingViewModel extends StateNotifier<OnboardingState> {
   Future<void> syncAndAnalyze() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      print('[Onboarding] sync 요청 시작');
-      final syncResponse = await _dio.post(
+      await _dio.post(
         'transactions/sync',
         data: {'months': 3, 'forceFullSync': true},
       );
-      print('[Onboarding] sync 완료: ${syncResponse.statusCode} ${syncResponse.data}');
 
-      print('[Onboarding] analysis 요청 시작');
       final response = await _dio.get('transactions/analysis');
-      print('[Onboarding] analysis 완료: ${response.statusCode} ${response.data}');
 
       state = state.copyWith(
         isLoading: false,
         analysisResult: AnalysisResult.fromJson(response.data as Map<String, dynamic>),
       );
     } catch (e) {
-      print('[Onboarding] 에러 발생: $e');
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
@@ -219,7 +214,6 @@ class OnboardingViewModel extends StateNotifier<OnboardingState> {
   Future<void> createPlan(Goal goal) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      print('[Onboarding] plan 생성 요청 시작');
       final response = await _dio.post(
         'v1/plans',
         data: {
@@ -231,13 +225,11 @@ class OnboardingViewModel extends StateNotifier<OnboardingState> {
           'priority': goal.priority,
         },
       );
-      print('[Onboarding] plan 생성 완료: ${response.statusCode} / data: ${response.data}');
       state = state.copyWith(
         isLoading: false,
         planResult: PlanResult.fromJson(response.data as Map<String, dynamic>),
       );
     } catch (e) {
-      print('[Onboarding] plan 생성 에러: $e');
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
