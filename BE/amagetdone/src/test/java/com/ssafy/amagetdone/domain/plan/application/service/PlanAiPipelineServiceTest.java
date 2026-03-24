@@ -17,11 +17,13 @@ import java.util.Optional;
 
 import com.ssafy.amagetdone.domain.member.application.service.MemberProfileImageService;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
+import com.ssafy.amagetdone.domain.notification.application.event.PlanAiCompletedEvent;
 import com.ssafy.amagetdone.domain.plan.infra.client.PlanAiClient;
 import com.ssafy.amagetdone.domain.plan.infra.client.PyanClient;
 import com.ssafy.amagetdone.domain.plan.infra.client.dto.PyanGenerateResponse;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 import com.ssafy.amagetdone.global.infra.storage.ImageCategory;
 import com.ssafy.amagetdone.global.infra.storage.S3StorageService;
 
@@ -29,9 +31,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.SimpleTransactionStatus;
-import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class PlanAiPipelineServiceTest {
@@ -54,6 +57,9 @@ class PlanAiPipelineServiceTest {
 	@Mock
 	private PlatformTransactionManager transactionManager;
 
+	@Mock
+	private ApplicationEventPublisher applicationEventPublisher;
+
 	private PlanAiPipelineService planAiPipelineService;
 
 	private void createServiceWithClock(Clock clock) {
@@ -65,7 +71,8 @@ class PlanAiPipelineServiceTest {
 			storageService,
 			pyanClient,
 			clock,
-			transactionManager
+			transactionManager,
+			applicationEventPublisher
 		);
 	}
 
@@ -116,6 +123,7 @@ class PlanAiPipelineServiceTest {
 		);
 		verify(pyanClient).generate(any(byte[].class), eq("plan-10"), eq("plan-10-pyan-1"));
 		verify(planRepository, never()).saveAndFlush(any());
+		verify(applicationEventPublisher, never()).publishEvent(any());
 	}
 
 	@Test
@@ -154,6 +162,9 @@ class PlanAiPipelineServiceTest {
 		assertEquals("READY", ReflectionTestUtils.getField(plan, "pyanStatus").toString());
 		assertEquals("https://sketch.pyan.kr/cdn/original-2.mp4", ReflectionTestUtils.getField(plan, "videoUrl"));
 		assertEquals("WAITING", ReflectionTestUtils.getField(plan, "status").toString());
+		verify(applicationEventPublisher).publishEvent(
+			new PlanAiCompletedEvent(1, 11, "Europe trip fund", PlanAiPipelineStatus.SUCCEEDED)
+		);
 	}
 
 	@Test
@@ -174,6 +185,9 @@ class PlanAiPipelineServiceTest {
 		assertEquals("FAILED", ReflectionTestUtils.getField(plan, "aiPipelineStatus").toString());
 		assertEquals(1, ReflectionTestUtils.getField(plan, "aiRetryCount"));
 		assertNull(ReflectionTestUtils.getField(plan, "planUrl"));
+		verify(applicationEventPublisher).publishEvent(
+			new PlanAiCompletedEvent(1, 12, "Europe trip fund", PlanAiPipelineStatus.FAILED)
+		);
 	}
 
 	@Test
@@ -188,6 +202,7 @@ class PlanAiPipelineServiceTest {
 		verify(memberProfileImageService, never()).loadProfileImageUrl(any());
 		verify(planAiClient, never()).generatePlanImage(any(), any());
 		verify(pyanClient, never()).generate(any(), any(), any());
+		verify(applicationEventPublisher, never()).publishEvent(any());
 	}
 
 	@Test
@@ -213,6 +228,9 @@ class PlanAiPipelineServiceTest {
 		assertEquals("FAILED", ReflectionTestUtils.getField(plan, "aiPipelineStatus").toString());
 		assertEquals(1, ReflectionTestUtils.getField(plan, "aiRetryCount"));
 		assertNull(ReflectionTestUtils.getField(plan, "videoUrl"));
+		verify(applicationEventPublisher).publishEvent(
+			new PlanAiCompletedEvent(1, 13, "Europe trip fund", PlanAiPipelineStatus.FAILED)
+		);
 	}
 
 	@Test
@@ -254,6 +272,7 @@ class PlanAiPipelineServiceTest {
 		assertEquals("CANCELLED", ReflectionTestUtils.getField(plan, "status").toString());
 		assertEquals("PROCESSING", ReflectionTestUtils.getField(plan, "aiPipelineStatus").toString());
 		assertNull(ReflectionTestUtils.getField(plan, "videoUrl"));
+		verify(applicationEventPublisher, never()).publishEvent(any());
 	}
 
 	@Test
@@ -289,6 +308,7 @@ class PlanAiPipelineServiceTest {
 
 		assertEquals("plan-16-pyan-existing", ReflectionTestUtils.getField(plan, "pyanRequestKey"));
 		verify(pyanClient).generate(any(byte[].class), eq("plan-16"), eq("plan-16-pyan-existing"));
+		verify(applicationEventPublisher, never()).publishEvent(any());
 	}
 
 	private Plan instantiatePlan(int planId, int userId, String title, String description) {

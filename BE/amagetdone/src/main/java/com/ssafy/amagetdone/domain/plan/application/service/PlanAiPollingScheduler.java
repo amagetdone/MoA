@@ -2,6 +2,7 @@ package com.ssafy.amagetdone.domain.plan.application.service;
 
 import java.util.List;
 
+import com.ssafy.amagetdone.domain.notification.application.event.PlanAiCompletedEvent;
 import com.ssafy.amagetdone.domain.plan.infra.client.PyanClient;
 import com.ssafy.amagetdone.domain.plan.infra.client.dto.PyanGenerateResponse;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
@@ -12,6 +13,7 @@ import com.ssafy.amagetdone.domain.plan.model.vo.PyanTaskStatus;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,10 +25,16 @@ public class PlanAiPollingScheduler {
 
 	private final PlanRepository planRepository;
 	private final PyanClient pyanClient;
+	private final ApplicationEventPublisher applicationEventPublisher;
 
-	public PlanAiPollingScheduler(PlanRepository planRepository, PyanClient pyanClient) {
+	public PlanAiPollingScheduler(
+		PlanRepository planRepository,
+		PyanClient pyanClient,
+		ApplicationEventPublisher applicationEventPublisher
+	) {
 		this.planRepository = planRepository;
 		this.pyanClient = pyanClient;
+		this.applicationEventPublisher = applicationEventPublisher;
 	}
 
 	@Scheduled(fixedDelayString = "${plan-ai.status-sync-fixed-delay-millis:30000}")
@@ -66,6 +74,12 @@ public class PlanAiPollingScheduler {
 					PlanAiPipelineStatus.SUCCEEDED,
 					PlanStatus.CANCELLED
 				) > 0) {
+					applicationEventPublisher.publishEvent(new PlanAiCompletedEvent(
+						plan.getUser().getId(),
+						plan.getId(),
+						plan.getTitle(),
+						PlanAiPipelineStatus.SUCCEEDED
+					));
 					log.info("event=PLAN_AI_POLLING_COMPLETED planId={} statusUrl={} videoUrl={}", plan.getId(), plan.getPyanStatusUrl(), resolvedVideoUrl);
 				}
 				return;
@@ -80,6 +94,12 @@ public class PlanAiPollingScheduler {
 					response.message(),
 					PlanStatus.CANCELLED
 				) > 0) {
+					applicationEventPublisher.publishEvent(new PlanAiCompletedEvent(
+						plan.getUser().getId(),
+						plan.getId(),
+						plan.getTitle(),
+						PlanAiPipelineStatus.FAILED
+					));
 					log.warn("event=PLAN_AI_POLLING_FAILED planId={} statusUrl={} status={} message={}",
 						plan.getId(), plan.getPyanStatusUrl(), response.status(), response.message());
 				}

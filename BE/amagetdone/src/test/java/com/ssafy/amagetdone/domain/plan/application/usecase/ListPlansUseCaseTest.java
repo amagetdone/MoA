@@ -51,25 +51,40 @@ class ListPlansUseCaseTest {
 			LocalDate.now().plusDays(72),
 			PlanStatus.ACTIVE
 		);
+		Plan completedPlan = instantiatePlan(
+			3,
+			"Completed fund",
+			1_000_000L,
+			1_000_000L,
+			3,
+			4,
+			LocalDate.now().minusDays(1),
+			PlanStatus.COMPLETED
+		);
 
 		given(planRepository.findAllByUserIdAndDeletedFalseAndStatusIn(
 			1,
-			List.of(PlanStatus.WAITING, PlanStatus.ACTIVE, PlanStatus.PAUSED)
+			List.of(PlanStatus.WAITING, PlanStatus.ACTIVE, PlanStatus.PAUSED, PlanStatus.COMPLETED)
 		))
-			.willReturn(List.of(activePlan, waitingPlan));
+			.willReturn(List.of(completedPlan, activePlan, waitingPlan));
 
 		List<PlanListItemResponse> response = listPlansUseCase.execute(1);
 
-		assertEquals(2, response.size());
+		assertEquals(3, response.size());
 		assertEquals(1L, response.get(0).planId());
 		assertEquals("iPad purchase", response.get(0).title());
+		assertEquals("WAITING", response.get(0).status());
 		assertEquals(14L, response.get(0).dday());
 		assertEquals(0, response.get(0).achievementRate().compareTo(new java.math.BigDecimal("32")));
 		assertEquals("PENDING", response.get(0).aiPipelineStatus());
 		assertEquals(2L, response.get(1).planId());
+		assertEquals("ACTIVE", response.get(1).status());
 		assertEquals(72L, response.get(1).dday());
 		assertEquals(0, response.get(1).achievementRate().compareTo(new java.math.BigDecimal("33.3")));
 		assertEquals("FAILED", response.get(1).aiPipelineStatus());
+		assertEquals(3L, response.get(2).planId());
+		assertEquals("COMPLETED", response.get(2).status());
+		assertEquals("FAILED", response.get(2).aiPipelineStatus());
 	}
 
 	@Test
@@ -87,7 +102,7 @@ class ListPlansUseCaseTest {
 
 		given(planRepository.findAllByUserIdAndDeletedFalseAndStatusIn(
 			1,
-			List.of(PlanStatus.WAITING, PlanStatus.ACTIVE, PlanStatus.PAUSED)
+			List.of(PlanStatus.WAITING, PlanStatus.ACTIVE, PlanStatus.PAUSED, PlanStatus.COMPLETED)
 		))
 			.willReturn(List.of(nearlyCompletedPlan));
 

@@ -1,5 +1,6 @@
 package com.ssafy.amagetdone.domain.notification.application.service;
 
+import com.ssafy.amagetdone.domain.notification.application.event.PlanAiCompletedEvent;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.ssafy.amagetdone.domain.notification.application.event.TransactionSyncedEvent;
 import com.ssafy.amagetdone.domain.notification.model.entity.DeviceToken;
@@ -13,6 +14,11 @@ public class NoopPushNotificationService implements PushNotificationService {
 
 	@Override
 	public SendResult sendTransactionNotification(DeviceToken deviceToken, TransactionSyncedEvent event) {
+		return SendResult.SKIPPED;
+	}
+
+	@Override
+	public SendResult sendPlanAiCompletedNotification(DeviceToken deviceToken, PlanAiCompletedEvent event) {
 		return SendResult.SKIPPED;
 	}
 }
