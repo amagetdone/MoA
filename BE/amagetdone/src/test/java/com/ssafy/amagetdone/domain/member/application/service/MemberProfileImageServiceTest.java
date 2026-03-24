@@ -101,6 +101,20 @@ class MemberProfileImageServiceTest {
 		verify(storageService).getUrl("profile/current.png");
 	}
 
+	@Test
+	void loadProfileImageUrlReturnsDefaultUrlWhenStoredKeyMissing() {
+		User user = newUser(1, null);
+		given(userRepository.findById(1)).willReturn(Optional.of(user));
+
+		String url = memberProfileImageService.loadProfileImageUrl(1);
+
+		assertEquals(
+			"https://amagetdone.s3.ap-northeast-2.amazonaws.com/profile/fb9dc026-62fc-4c52-87de-d277cecb6e57.png",
+			url
+		);
+		verify(storageService, never()).getUrl(any());
+	}
+
 	private User newUser(int id, String profileUrl) {
 		User user = User.createPendingSocialUser();
 		ReflectionTestUtils.setField(user, "id", id);
