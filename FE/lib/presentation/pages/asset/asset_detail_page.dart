@@ -16,7 +16,8 @@ class AssetDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isIncome = transaction.type == TransactionType.income;
-    final isCard = transaction.memo == 'VARIABLE' || transaction.memo == 'FIXED';
+    final memoUpper = transaction.memo?.toUpperCase();
+    final isCard = memoUpper == 'VARIABLE' || memoUpper == 'FIXED';
     final dateFormat = DateFormat('yyyy.MM.dd. HH:mm');
 
     return Scaffold(
@@ -35,6 +36,11 @@ class AssetDetailPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
+                    '결제 상세',
+                    style: AppTextStyles.headingLg,
+                  ),
+                  SizedBox(height: 16.h),
+                  Text(
                     transaction.title,
                     style: AppTextStyles.headingLg.copyWith(fontSize: 24.sp),
                   ),
@@ -52,7 +58,7 @@ class AssetDetailPage extends StatelessWidget {
                           style: AppTextStyles.caption.copyWith(color: AppColors.orange500, fontWeight: FontWeight.bold),
                         ),
                       ),
-                      if (transaction.memo != null) ...[
+                      if (transaction.memo != null && memoUpper != 'FIXED' && memoUpper != 'VARIABLE') ...[
                         SizedBox(width: 8.w),
                         Container(
                           padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
@@ -61,7 +67,7 @@ class AssetDetailPage extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10.r),
                           ),
                           child: Text(
-                            transaction.memo == 'FIXED' ? '고정비' : transaction.memo == 'VARIABLE' ? '변동비' : transaction.memo!,
+                            transaction.memo!,
                             style: AppTextStyles.caption.copyWith(color: AppColors.gray500, fontWeight: FontWeight.bold),
                           ),
                         ),

@@ -103,8 +103,8 @@ class _AssetPageState extends ConsumerState<AssetPage> {
             _typeIdx = typeIdx;
             _creditIdx = creditIdx;
             final periods = ['1개월', '3개월', '6개월', '지난달'];
-            final types = ['전체', '입금만', '출금만'];
-            final credits = ['포함', '미포함', '카드만'];
+            final types = ['전체', '입금', '출금'];
+            final credits = ['계좌+카드', '계좌', '카드'];
             _filterLabel = '${periods[periodIdx]}·${types[typeIdx]}·${credits[creditIdx]}';
           });
           _fetchTransactions();
@@ -134,9 +134,11 @@ class _AssetPageState extends ConsumerState<AssetPage> {
     // 신용카드 포함 여부 필터
     if (_creditIdx == 1) transactions = transactions.where((t) => t.sourceType != 'CARD').toList();
     if (_creditIdx == 2) transactions = transactions.where((t) => t.sourceType == 'CARD').toList();
-    // 계좌 필터
+    // 계좌 필터 (카드 거래는 accountId가 없으므로 제외)
     if (_selectedAccountNo != null) {
-      transactions = transactions.where((t) => t.accountId == _selectedAccountNo).toList();
+      transactions = transactions.where((t) =>
+        t.accountId == _selectedAccountNo || t.sourceType == 'CARD'
+      ).toList();
     }
     final grouped = _groupByDate(transactions);
 
@@ -295,6 +297,27 @@ class _AssetPageState extends ConsumerState<AssetPage> {
     );
   }
 
+  Color _categoryColor(String name) {
+    switch (name) {
+      case '교육비':         return const Color(0xFFB39DDB);
+      case '교통비':         return const Color(0xFF90CAF9);
+      case '구독료':         return const Color(0xFF80CBC4);
+      case '금융/보험':      return const Color(0xFFA5D6A7);
+      case '기타서비스':     return const Color(0xFFB0BEC5);
+      case '문화/여가/여행': return const Color(0xFFF48FB1);
+      case '미용':           return const Color(0xFFF8BBD0);
+      case '생활/반려동물':  return const Color(0xFFC5E1A5);
+      case '세금/공과금':    return const Color(0xFFFFCC80);
+      case '쇼핑/패션':      return const Color(0xFFCE93D8);
+      case '식비':           return const Color(0xFFFFAB91);
+      case '의료/건강':      return const Color(0xFF80DEEA);
+      case '주거/통신':      return const Color(0xFF90A4AE);
+      case '카페':           return const Color(0xFFBCAAA4);
+      case '편의점':         return const Color(0xFFFFF176);
+      default:               return const Color(0xFFB0BEC5);
+    }
+  }
+
   Widget _buildTransactionItem(Transaction t) {
     final isPlus = t.type == TransactionType.income;
     final amountText = '${isPlus ? '+' : '-'}${CurrencyFormatter.formatKRW(t.amount)}';
@@ -327,10 +350,10 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                     children: [
                       Container(
                         padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                        decoration: BoxDecoration(color: const Color(0xFFFFCC91).withValues(alpha: 0.4), borderRadius: BorderRadius.circular(10.r)),
-                        child: Text(t.category, style: AppTextStyles.caption.copyWith(color: AppColors.orange500, fontSize: 10.sp)),
+                        decoration: BoxDecoration(color: _categoryColor(t.category).withValues(alpha: 0.35), borderRadius: BorderRadius.circular(10.r)),
+                        child: Text(t.category, style: AppTextStyles.caption.copyWith(color: _categoryColor(t.category), fontSize: 10.sp)),
                       ),
-                      if (t.memo != null) ...[
+                      if (t.memo != null && t.memo!.toUpperCase() != 'VARIABLE' && t.memo!.toUpperCase() != 'FIXED') ...[
                         SizedBox(width: 6.w),
                         Text(t.memo!, style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
                       ],
@@ -415,9 +438,9 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
             SizedBox(height: 12.h),
             _buildFilterSection('조회 기간', ['1개월', '3개월', '6개월', '지난달'], _periodIdx, (i) => setState(() => _periodIdx = i)),
             SizedBox(height: 24.h),
-            _buildFilterSection('거래 유형', ['전체', '입금만', '출금만'], _typeIdx, (i) => setState(() => _typeIdx = i)),
+            _buildFilterSection('거래 유형', ['전체', '입금', '출금'], _typeIdx, (i) => setState(() => _typeIdx = i)),
             SizedBox(height: 24.h),
-            _buildFilterSection('신용카드 거래내역 포함 여부', ['포함', '미포함', '신용카드만'], _creditIdx, (i) => setState(() => _creditIdx = i)),
+            _buildFilterSection('거래 내역', ['계좌+카드', '계좌', '카드'], _creditIdx, (i) => setState(() => _creditIdx = i)),
             SizedBox(height: 24.h),
             Text('거래 계좌', style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold)),
             SizedBox(height: 16.h),
