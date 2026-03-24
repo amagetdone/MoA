@@ -14,6 +14,9 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class MemberProfileImageService {
 
+	private static final String DEFAULT_PROFILE_IMAGE_URL =
+		"https://amagetdone.s3.ap-northeast-2.amazonaws.com/profile/fb9dc026-62fc-4c52-87de-d277cecb6e57.png";
+
 	private final UserRepository userRepository;
 	private final S3StorageService storageService;
 
@@ -49,7 +52,7 @@ public class MemberProfileImageService {
 		User user = userRepository.findById(userId)
 			.orElseThrow(() -> new MemberException(MemberErrorCode.USER_NOT_FOUND));
 		if (!hasText(user.getProfileUrl())) {
-			throw new IllegalArgumentException("Profile image is missing.");
+			return DEFAULT_PROFILE_IMAGE_URL;
 		}
 		return storageService.getUrl(user.getProfileUrl());
 	}
