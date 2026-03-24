@@ -3,6 +3,7 @@ package com.ssafy.amagetdone.domain.plan.application.service;
 import java.time.Clock;
 
 import com.ssafy.amagetdone.domain.member.application.service.MemberProfileImageService;
+import com.ssafy.amagetdone.domain.notification.application.event.PlanAiCompletedEvent;
 import com.ssafy.amagetdone.domain.plan.exception.PlanErrorCode;
 import com.ssafy.amagetdone.domain.plan.exception.PlanException;
 import com.ssafy.amagetdone.domain.plan.infra.client.PlanAiClient;
@@ -19,6 +20,7 @@ import com.ssafy.amagetdone.global.infra.storage.S3StorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -43,6 +45,7 @@ public class PlanAiPipelineService {
 	private final PyanClient pyanClient;
 	private final Clock clock;
 	private final TransactionTemplate requiresNewTransaction;
+	private final ApplicationEventPublisher applicationEventPublisher;
 
 	public PlanAiPipelineService(
 		PlanRepository planRepository,
@@ -51,7 +54,8 @@ public class PlanAiPipelineService {
 		S3StorageService storageService,
 		PyanClient pyanClient,
 		Clock clock,
-		PlatformTransactionManager transactionManager
+		PlatformTransactionManager transactionManager,
+		ApplicationEventPublisher applicationEventPublisher
 	) {
 		this.planRepository = planRepository;
 		this.memberProfileImageService = memberProfileImageService;
@@ -59,6 +63,7 @@ public class PlanAiPipelineService {
 		this.storageService = storageService;
 		this.pyanClient = pyanClient;
 		this.clock = clock;
+		this.applicationEventPublisher = applicationEventPublisher;
 		this.requiresNewTransaction = new TransactionTemplate(transactionManager);
 		this.requiresNewTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
 	}
@@ -126,6 +131,7 @@ public class PlanAiPipelineService {
 			if (isReady(response) && videoUrl != null && completeAiSuccess(planId, userId, response, videoUrl)) {
 				plan.syncPyanTask(PyanTaskStatus.from(response.status()), null);
 				plan.markAiSucceeded(videoUrl);
+				publishTerminalEvent(userId, plan.getId(), plan.getTitle(), PlanAiPipelineStatus.SUCCEEDED);
 				log.info(
 					"event=PLAN_AI_PIPELINE_SUCCESS planId={} userId={} planImageKey={} videoUrl={}",
 					planId,
@@ -137,6 +143,7 @@ public class PlanAiPipelineService {
 		} catch (Exception exception) {
 			if (markAiFailed(planId, userId, plan.getPyanStatus(), exception.getMessage())) {
 				plan.markAiFailed(exception.getMessage());
+				publishTerminalEvent(userId, plan.getId(), plan.getTitle(), PlanAiPipelineStatus.FAILED);
 			}
 			log.error(
 				"event=PLAN_AI_PIPELINE_FAILED planId={} userId={} message={}",
@@ -212,6 +219,15 @@ public class PlanAiPipelineService {
 	private boolean executeStateUpdate(java.util.function.Supplier<Integer> updateOperation) {
 		Integer updatedRows = requiresNewTransaction.execute(status -> updateOperation.get());
 		return updatedRows != null && updatedRows > 0;
+	}
+
+	private void publishTerminalEvent(
+		Integer userId,
+		Integer planId,
+		String planTitle,
+		PlanAiPipelineStatus aiPipelineStatus
+	) {
+		applicationEventPublisher.publishEvent(new PlanAiCompletedEvent(userId, planId, planTitle, aiPipelineStatus));
 	}
 
 	private byte[] decodeBase64Image(String base64Image) {

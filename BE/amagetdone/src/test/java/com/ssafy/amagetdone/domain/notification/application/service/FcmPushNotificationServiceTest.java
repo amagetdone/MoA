@@ -9,9 +9,11 @@ import java.time.LocalDateTime;
 
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
+import com.ssafy.amagetdone.domain.notification.application.event.PlanAiCompletedEvent;
 import com.ssafy.amagetdone.domain.notification.application.event.TransactionSyncedEvent;
 import com.ssafy.amagetdone.domain.notification.model.entity.DeviceToken;
 import com.ssafy.amagetdone.domain.notification.model.vo.DevicePlatform;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,6 +56,27 @@ class FcmPushNotificationServiceTest {
 		java.util.Map<String, String> data = (java.util.Map<String, String>)ReflectionTestUtils.getField(captor.getValue(), "data");
 		assertEquals("TRANSACTION_POSTED", data.get("type"));
 		assertEquals("5400", data.get("amount"));
+		assertEquals(PushNotificationService.SendResult.SENT, result);
+	}
+
+	@Test
+	void sendPlanAiCompletedNotificationBuildsAndSendsMessage() throws Exception {
+		when(firebaseMessaging.send(any())).thenReturn("message-id");
+
+		PushNotificationService.SendResult result = fcmPushNotificationService.sendPlanAiCompletedNotification(
+			deviceToken("token-2"),
+			new PlanAiCompletedEvent(1, 31, "Europe trip fund", PlanAiPipelineStatus.SUCCEEDED)
+		);
+
+		ArgumentCaptor<com.google.firebase.messaging.Message> captor =
+			ArgumentCaptor.forClass(com.google.firebase.messaging.Message.class);
+		verify(firebaseMessaging).send(captor.capture());
+		assertEquals("token-2", ReflectionTestUtils.getField(captor.getValue(), "token"));
+		@SuppressWarnings("unchecked")
+		java.util.Map<String, String> data = (java.util.Map<String, String>)ReflectionTestUtils.getField(captor.getValue(), "data");
+		assertEquals("PLAN_AI_COMPLETED", data.get("type"));
+		assertEquals("31", data.get("planId"));
+		assertEquals("SUCCEEDED", data.get("aiPipelineStatus"));
 		assertEquals(PushNotificationService.SendResult.SENT, result);
 	}
 

@@ -1,14 +1,15 @@
 package com.ssafy.amagetdone.domain.plan.application.service;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import java.util.List;
 
 import com.ssafy.amagetdone.domain.member.model.entity.User;
+import com.ssafy.amagetdone.domain.notification.application.event.PlanAiCompletedEvent;
 import com.ssafy.amagetdone.domain.plan.infra.client.PyanClient;
 import com.ssafy.amagetdone.domain.plan.infra.client.dto.PyanGenerateResponse;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,6 +32,9 @@ class PlanAiPollingSchedulerTest {
 
 	@Mock
 	private PyanClient pyanClient;
+
+	@Mock
+	private ApplicationEventPublisher applicationEventPublisher;
 
 	@Test
 	void pollsProcessingPlanAndCompletesItWhenPyanIsReady() {
@@ -56,7 +61,7 @@ class PlanAiPollingSchedulerTest {
 		given(planRepository.completeAiSuccess(eq(21), eq(3), eq("https://sketch.pyan.kr/cdn/task-21.compressed.mp4"), any(), any(), any()))
 			.willReturn(1);
 
-		PlanAiPollingScheduler scheduler = new PlanAiPollingScheduler(planRepository, pyanClient);
+		PlanAiPollingScheduler scheduler = new PlanAiPollingScheduler(planRepository, pyanClient, applicationEventPublisher);
 
 		scheduler.syncProcessingPlans();
 
@@ -67,6 +72,9 @@ class PlanAiPollingSchedulerTest {
 			any(),
 			any(),
 			any()
+		);
+		verify(applicationEventPublisher).publishEvent(
+			new PlanAiCompletedEvent(3, 21, null, PlanAiPipelineStatus.SUCCEEDED)
 		);
 	}
 
@@ -94,11 +102,45 @@ class PlanAiPollingSchedulerTest {
 			));
 		given(planRepository.markAiFailed(eq(22), eq(4), any(), any(), eq("cancelled upstream"), any())).willReturn(1);
 
-		PlanAiPollingScheduler scheduler = new PlanAiPollingScheduler(planRepository, pyanClient);
+		PlanAiPollingScheduler scheduler = new PlanAiPollingScheduler(planRepository, pyanClient, applicationEventPublisher);
 
 		scheduler.syncProcessingPlans();
 
 		verify(planRepository).markAiFailed(eq(22), eq(4), any(), any(), eq("cancelled upstream"), any());
+		verify(applicationEventPublisher).publishEvent(
+			new PlanAiCompletedEvent(4, 22, null, PlanAiPipelineStatus.FAILED)
+		);
+	}
+
+	@Test
+	void pollsProcessingPlanWithoutPublishingWhenStillProcessing() {
+		Plan plan = processingPlan(23, 5, "https://sketch.pyan.kr/api/status/task-23");
+		given(planRepository.findAllByAiPipelineStatusAndDeletedFalseAndStatusNotAndPyanStatusUrlIsNotNull(
+			PlanAiPipelineStatus.PROCESSING,
+			PlanStatus.CANCELLED
+		)).willReturn(List.of(plan));
+		given(pyanClient.fetchStatus("https://sketch.pyan.kr/api/status/task-23"))
+			.willReturn(new PyanGenerateResponse(
+				"processing",
+				"task-23",
+				"plan-23",
+				"still working",
+				"https://sketch.pyan.kr/api/status/task-23",
+				null,
+				null,
+				null,
+				null,
+				"https://sketch.pyan.kr/api/goals/plan-23",
+				null,
+				null
+			));
+
+		PlanAiPollingScheduler scheduler = new PlanAiPollingScheduler(planRepository, pyanClient, applicationEventPublisher);
+
+		scheduler.syncProcessingPlans();
+
+		verify(planRepository).syncPyanProgress(eq(23), eq(5), any(), eq("still working"), any());
+		verify(applicationEventPublisher, never()).publishEvent(any());
 	}
 
 	private Plan processingPlan(int planId, int userId, String statusUrl) {

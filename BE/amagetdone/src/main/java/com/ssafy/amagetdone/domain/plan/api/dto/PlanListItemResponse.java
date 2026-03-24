@@ -16,6 +16,7 @@ public record PlanListItemResponse(
 	Integer weekNumber,
 	Long dday,
 	BigDecimal achievementRate,
+	String status,
 	String aiPipelineStatus
 ) {
 
@@ -32,6 +33,7 @@ public record PlanListItemResponse(
 			plan.getTargetWeeks() == null ? 0 : plan.getTargetWeeks(),
 			calculateDday(today, plan.getEndDate()),
 			calculateAchievementRate(safeSavedAmount, safeTargetAmount),
+			plan.getStatus() == null ? null : plan.getStatus().name(),
 			plan.getAiPipelineStatus() == null ? null : plan.getAiPipelineStatus().name()
 		);
 	}
