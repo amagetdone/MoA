@@ -15,12 +15,13 @@ class AssetDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final isIncome = transaction.type == TransactionType.income;
     final isCard = transaction.memo == 'VARIABLE' || transaction.memo == 'FIXED';
     final dateFormat = DateFormat('yyyy.MM.dd. HH:mm');
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       appBar: const MoreAppBar(
         title: '',
         showBack: true,
@@ -36,7 +37,7 @@ class AssetDetailPage extends StatelessWidget {
                 children: [
                   Text(
                     transaction.title,
-                    style: AppTextStyles.headingLg.copyWith(fontSize: 24.sp),
+                    style: AppTextStyles.headingLg.copyWith(color: colors.textPrimary, fontSize: 24.sp),
                   ),
                   SizedBox(height: 8.h),
                   Row(
@@ -57,19 +58,19 @@ class AssetDetailPage extends StatelessWidget {
                         Container(
                           padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
                           decoration: BoxDecoration(
-                            color: AppColors.gray100,
+                            color: colors.gray100,
                             borderRadius: BorderRadius.circular(10.r),
                           ),
                           child: Text(
                             transaction.memo == 'FIXED' ? '고정비' : transaction.memo == 'VARIABLE' ? '변동비' : transaction.memo!,
-                            style: AppTextStyles.caption.copyWith(color: AppColors.gray500, fontWeight: FontWeight.bold),
+                            style: AppTextStyles.caption.copyWith(color: colors.gray500, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
                     ],
                   ),
                   SizedBox(height: 24.h),
-                  const Divider(color: Color(0xFFEEEEEE), thickness: 1, height: 1),
+                  Divider(color: colors.borderDefault, thickness: 1, height: 1),
                   SizedBox(height: 24.h),
 
                   _DetailRow(label: '거래 시간', value: dateFormat.format(transaction.dateTime)),
@@ -82,18 +83,18 @@ class AssetDetailPage extends StatelessWidget {
                   ],
 
                   SizedBox(height: 20.h),
-                  const Divider(color: Color(0xFFEEEEEE), thickness: 1),
+                  Divider(color: colors.borderDefault, thickness: 1),
                   SizedBox(height: 24.h),
 
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('거래 금액', style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
+                      Text('거래 금액', style: AppTextStyles.bodyMd.copyWith(color: colors.textSecondary)),
                       Text(
                         CurrencyFormatter.formatKRW(transaction.amount),
                         style: AppTextStyles.bodyLg.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: isIncome ? const Color(0xFF81C784) : Colors.black87,
+                          color: isIncome ? AppColors.green500 : colors.textPrimary,
                         ),
                       ),
                     ],
@@ -125,11 +126,12 @@ class _DetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
-        Text(value, style: AppTextStyles.bodyMd.copyWith(color: Colors.black87, fontWeight: FontWeight.w500)),
+        Text(label, style: AppTextStyles.bodyMd.copyWith(color: colors.textSecondary)),
+        Text(value, style: AppTextStyles.bodyMd.copyWith(color: colors.textPrimary, fontWeight: FontWeight.w500)),
       ],
     );
   }

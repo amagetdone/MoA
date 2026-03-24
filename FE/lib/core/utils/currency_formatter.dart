@@ -8,6 +8,16 @@ abstract class CurrencyFormatter {
     return '${_krwFormat.format(amount)}원';
   }
 
+  static String formatCompact(int amount) {
+    if (amount >= 10000) {
+      final man = amount ~/ 10000;
+      final remainder = amount % 10000;
+      if (remainder == 0) return '$man만원';
+      return '$man만${_krwFormat.format(remainder)}원';
+    }
+    return '${_krwFormat.format(amount)}원';
+  }
+
   static String formatWithSign(int amount) {
     final prefix = amount >= 0 ? '+' : '';
     return '$prefix${_krwFormat.format(amount)}원';

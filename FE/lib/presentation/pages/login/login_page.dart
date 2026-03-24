@@ -115,6 +115,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     ref.listen<AuthState>(authViewModelProvider, (prev, next) {
       if (next is! AuthLoading) {
         _interruptedLoginTimer?.cancel();
@@ -137,7 +139,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
     final isLoading = authState is AuthLoading;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colors.bgSurface,
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 24.w),
@@ -153,6 +155,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
               Text(
                 '모아',
                 style: AppTextStyles.headingXl.copyWith(
+                  color: colors.textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -166,7 +169,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                 .read(authViewModelProvider.notifier)
                                 .loginWithKakao(),
                 backgroundColor: const Color(0xFFFEE500),
-                textColor: AppColors.textPrimary,
+                textColor: colors.textPrimary,
                 text: '카카오로 시작하기',
                 iconPath: 'assets/images/logo/kakaologo.png',
               ),
@@ -179,11 +182,11 @@ class _LoginPageState extends ConsumerState<LoginPage>
                             ref
                                 .read(authViewModelProvider.notifier)
                                 .loginWithGoogle(),
-                backgroundColor: Colors.white,
-                textColor: AppColors.textPrimary,
+                backgroundColor: colors.bgSurface,
+                textColor: colors.textPrimary,
                 text: '구글로 시작하기',
                 iconPath: 'assets/images/logo/googlelogo.png',
-                borderColor: AppColors.borderDefault,
+                borderColor: colors.borderDefault,
               ),
               SizedBox(height: 12.h),
               GestureDetector(
@@ -210,7 +213,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                 child: Text(
                   '테스트 계정으로 로그인',
                   style: AppTextStyles.bodySm.copyWith(
-                    color: AppColors.textTertiary,
+                    color: colors.textTertiary,
                     decoration: TextDecoration.underline,
                   ),
                 ),

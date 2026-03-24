@@ -124,6 +124,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final accountState = ref.watch(accountViewModelProvider);
     final accounts = accountState.accounts;
 
@@ -148,7 +149,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
     });
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       appBar: MoreAppBar(
         title: '',
         backgroundColor: const Color(0xFFFFCC91).withValues(alpha: 0.6),
@@ -176,18 +177,18 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                     child: Container(
                       padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 10.h),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: colors.bgSurface.withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(30.r),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                          BoxShadow(color: colors.cardShadow, blurRadius: 10, offset: const Offset(0, 4)),
                         ],
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.lightbulb_outline, size: 18, color: Colors.black87),
+                          Icon(Icons.lightbulb_outline, size: 18, color: colors.textPrimary),
                           SizedBox(width: 8.w),
-                          Text('소비패턴 알아보기', style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.w600)),
+                          Text('소비패턴 알아보기', style: AppTextStyles.bodyMd.copyWith(color: colors.textPrimary, fontWeight: FontWeight.w600)),
                         ],
                       ),
                     ),
@@ -205,21 +206,21 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                           children: [
                             Container(
                               padding: EdgeInsets.all(8.w),
-                              decoration: const BoxDecoration(color: Color(0xFFF5F5F5), shape: BoxShape.circle),
-                              child: const Icon(Icons.monetization_on_outlined, size: 20, color: Colors.black54),
+                              decoration: BoxDecoration(color: colors.gray50, shape: BoxShape.circle),
+                              child: Icon(Icons.monetization_on_outlined, size: 20, color: colors.textTertiary),
                             ),
                             SizedBox(width: 12.w),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('총 자산', style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
-                                Text(CurrencyFormatter.formatKRW(ref.watch(homeViewModelProvider).totalAsset), style: AppTextStyles.headingMd),
+                                Text('총 자산', style: AppTextStyles.caption.copyWith(color: colors.textTertiary)),
+                                Text(CurrencyFormatter.formatKRW(ref.watch(homeViewModelProvider).totalAsset), style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary)),
                               ],
                             ),
                             const Spacer(),
                             IconButton(
                               onPressed: () => context.push(AppRoutes.accountManage),
-                              icon: const Icon(Icons.menu, size: 24, color: Colors.black87),
+                              icon: Icon(Icons.menu, size: 24, color: colors.textPrimary),
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
                             ),
@@ -234,13 +235,13 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                 Container(
                   padding: EdgeInsets.all(24.w),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: colors.bgSurface,
                     borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('거래내역', style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold)),
+                      Text('거래내역', style: AppTextStyles.bodyMd.copyWith(color: colors.textPrimary, fontWeight: FontWeight.bold)),
                       SizedBox(height: 16.h),
                       GestureDetector(
                         behavior: HitTestBehavior.opaque,
@@ -248,15 +249,15 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                         child: Container(
                           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF8F8F8),
+                            color: colors.gray50,
                             borderRadius: BorderRadius.circular(12.r),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.search, size: 18, color: Colors.black38),
+                              Icon(Icons.search, size: 18, color: colors.dimText),
                               const Spacer(),
-                              Text(_filterLabel, style: AppTextStyles.caption.copyWith(color: Colors.black38)),
-                              const Icon(Icons.arrow_drop_down, size: 18, color: Colors.black38),
+                              Text(_filterLabel, style: AppTextStyles.caption.copyWith(color: colors.dimText)),
+                              Icon(Icons.arrow_drop_down, size: 18, color: colors.dimText),
                             ],
                           ),
                         ),
@@ -268,7 +269,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                         Center(
                           child: Padding(
                             padding: EdgeInsets.symmetric(vertical: 40.h),
-                            child: Text('거래내역이 없습니다.', style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary)),
+                            child: Text('거래내역이 없습니다.', style: AppTextStyles.bodySm.copyWith(color: colors.textTertiary)),
                           ),
                         )
                       else
@@ -289,13 +290,15 @@ class _AssetPageState extends ConsumerState<AssetPage> {
   }
 
   Widget _buildDateHeader(String date) {
+    final colors = AppColors.of(context);
     return Padding(
       padding: EdgeInsets.only(bottom: 16.h),
-      child: Text(date, style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary, fontWeight: FontWeight.bold)),
+      child: Text(date, style: AppTextStyles.caption.copyWith(color: colors.textTertiary, fontWeight: FontWeight.bold)),
     );
   }
 
   Widget _buildTransactionItem(Transaction t) {
+    final colors = AppColors.of(context);
     final isPlus = t.type == TransactionType.income;
     final amountText = '${isPlus ? '+' : '-'}${CurrencyFormatter.formatKRW(t.amount)}';
     final balanceText = CurrencyFormatter.formatKRW(t.balanceAfter);
@@ -316,10 +319,10 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                     children: [
                       Text(
                         t.title.length > 10 ? '${t.title.substring(0, 10)}...' : t.title,
-                        style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold),
+                        style: AppTextStyles.bodyMd.copyWith(color: colors.textPrimary, fontWeight: FontWeight.bold),
                       ),
                       SizedBox(width: 8.w),
-                      Text(timeText, style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
+                      Text(timeText, style: AppTextStyles.caption.copyWith(color: colors.textTertiary)),
                     ],
                   ),
                   SizedBox(height: 4.h),
@@ -332,7 +335,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                       ),
                       if (t.memo != null) ...[
                         SizedBox(width: 6.w),
-                        Text(t.memo!, style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
+                        Text(t.memo!, style: AppTextStyles.caption.copyWith(color: colors.textTertiary)),
                       ],
                     ],
                   ),
@@ -344,9 +347,9 @@ class _AssetPageState extends ConsumerState<AssetPage> {
               children: [
                 Text(amountText, style: AppTextStyles.bodyMd.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: isPlus ? const Color(0xFF81C784) : Colors.black87,
+                  color: isPlus ? AppColors.green500 : colors.textPrimary,
                 )),
-                Text(balanceText, style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
+                Text(balanceText, style: AppTextStyles.caption.copyWith(color: colors.textTertiary)),
               ],
             ),
           ],
@@ -400,6 +403,7 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final accounts = widget.accounts;
     final firstRow = accounts.take(3).toList();
     final secondRow = accounts.length > 3 ? accounts.skip(3).take(3).toList() : <Account>[];
@@ -419,12 +423,12 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
             SizedBox(height: 24.h),
             _buildFilterSection('신용카드 거래내역 포함 여부', ['포함', '미포함', '신용카드만'], _creditIdx, (i) => setState(() => _creditIdx = i)),
             SizedBox(height: 24.h),
-            Text('거래 계좌', style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold)),
+            Text('거래 계좌', style: AppTextStyles.bodyMd.copyWith(color: colors.textPrimary, fontWeight: FontWeight.bold)),
             SizedBox(height: 16.h),
             Container(
               padding: EdgeInsets.all(16.w),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0F0F0),
+                color: colors.bgAccent,
                 borderRadius: BorderRadius.circular(16.r),
               ),
               child: Column(
@@ -448,7 +452,7 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
                       child: Icon(
                         _isAccountExpanded ? Icons.arrow_drop_up : Icons.arrow_drop_down,
                         size: 32.w,
-                        color: Colors.black54,
+                        color: colors.textSecondary,
                       ),
                     ),
                   ],
@@ -476,14 +480,15 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
   }
 
   Widget _buildFilterSection(String title, List<String> options, int selectedIdx, Function(int) onTap) {
+    final colors = AppColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold)),
+        Text(title, style: AppTextStyles.bodyMd.copyWith(color: colors.textPrimary, fontWeight: FontWeight.bold)),
         SizedBox(height: 12.h),
         Container(
           padding: EdgeInsets.all(4.w),
-          decoration: BoxDecoration(color: const Color(0xFFEEEEEE), borderRadius: BorderRadius.circular(12.r)),
+          decoration: BoxDecoration(color: colors.borderDefault, borderRadius: BorderRadius.circular(12.r)),
           child: IntrinsicHeight(
             child: Stack(
               children: [
@@ -499,9 +504,9 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
                     heightFactor: 1.0,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: colors.bgSurface,
                         borderRadius: BorderRadius.circular(10.r),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4)],
+                        boxShadow: [BoxShadow(color: colors.cardShadow, blurRadius: 4)],
                       ),
                     ),
                   ),
@@ -519,7 +524,7 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
                             child: AnimatedDefaultTextStyle(
                               duration: const Duration(milliseconds: 200),
                               style: AppTextStyles.caption.copyWith(
-                                color: isSelected ? Colors.black87 : Colors.black38,
+                                color: isSelected ? colors.textPrimary : colors.dimText,
                                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                               ),
                               child: Text(e.value),
@@ -539,6 +544,7 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
   }
 
   Widget _buildAccountItem(Account account) {
+    final colors = AppColors.of(context);
     final isSelected = _selectedAccountNo == account.accountNumber;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -547,9 +553,9 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
         duration: const Duration(milliseconds: 200),
         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
+          color: isSelected ? colors.bgSurface : Colors.transparent,
           borderRadius: BorderRadius.circular(10.r),
-          boxShadow: isSelected ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4)] : [],
+          boxShadow: isSelected ? [BoxShadow(color: colors.cardShadow, blurRadius: 4)] : [],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -557,7 +563,7 @@ class _AssetFilterBottomSheetState extends State<_AssetFilterBottomSheet> {
             const Icon(Icons.circle, size: 14, color: Colors.blueAccent),
             SizedBox(width: 6.w),
             Text(account.bankName, style: AppTextStyles.caption.copyWith(
-              color: isSelected ? Colors.black87 : Colors.black38,
+              color: isSelected ? colors.textPrimary : colors.dimText,
               fontSize: 11.sp,
             )),
           ],

@@ -28,7 +28,8 @@ class SpendingLineChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (data.isEmpty) return const Center(child: Text('데이터가 없습니다'));
+    final colors = AppColors.of(context);
+    if (data.isEmpty) return Center(child: Text('데이터가 없습니다', style: TextStyle(color: colors.textPrimary)));
 
     final maxVal = data.map((e) => e.amount).reduce((a, b) => a > b ? a : b);
     final minVal = data.map((e) => e.amount).reduce((a, b) => a < b ? a : b);
@@ -62,7 +63,7 @@ class SpendingLineChart extends StatelessWidget {
           return FlDotCirclePainter(
             radius: isMax ? 5 : 3.5,
             color: AppColors.orange500,
-            strokeColor: Colors.white,
+            strokeColor: colors.bgSurface,
             strokeWidth: 2,
           );
         },
@@ -109,8 +110,8 @@ class SpendingLineChart extends StatelessWidget {
                           label,
                           style: AppTextStyles.caption.copyWith(
                             color: i == maxIndex || i == minIndex
-                                ? AppColors.textSecondary
-                                : AppColors.textTertiary,
+                                ? colors.textSecondary
+                                : colors.textTertiary,
                             fontWeight: i == maxIndex || i == minIndex
                                 ? FontWeight.w600
                                 : FontWeight.normal,
@@ -141,7 +142,7 @@ class SpendingLineChart extends StatelessWidget {
                 touchTooltipData: LineTouchTooltipData(
                   getTooltipColor: (spot) => spot.x == maxIndex.toDouble()
                       ? AppColors.orange500
-                      : AppColors.textPrimary,
+                      : colors.textPrimary,
                   tooltipRoundedRadius: 8.r,
                   tooltipPadding: EdgeInsets.symmetric(
                     horizontal: 10.w,
@@ -172,7 +173,7 @@ class SpendingLineChart extends StatelessWidget {
                           radius: 5.r,
                           color: AppColors.orange500,
                           strokeWidth: 2,
-                          strokeColor: Colors.white,
+                          strokeColor: colors.bgSurface,
                         ),
                       ),
                     );

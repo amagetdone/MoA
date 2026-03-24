@@ -105,15 +105,16 @@ class _OnboardingLoadingPageState extends ConsumerState<OnboardingLoadingPage>
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
+        final colors = AppColors.of(dialogContext);
         return AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20.r),
           ),
-          backgroundColor: AppColors.bgSurface,
+          backgroundColor: colors.bgSurface,
           title: Text(
             '월급을 확인해주세요',
             style: AppTextStyles.headingMd.copyWith(
-              color: AppColors.gray900,
+              color: colors.gray900,
               fontSize: 18.sp,
             ),
           ),
@@ -124,7 +125,7 @@ class _OnboardingLoadingPageState extends ConsumerState<OnboardingLoadingPage>
               Text(
                 '분석한 월 평균 수입이에요.\n다르다면 직접 수정해주세요.',
                 style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.gray500,
+                  color: colors.gray500,
                   fontSize: 13.sp,
                 ),
               ),
@@ -183,10 +184,11 @@ class _OnboardingLoadingPageState extends ConsumerState<OnboardingLoadingPage>
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: colors.bgSurface,
         body: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,7 +198,7 @@ class _OnboardingLoadingPageState extends ConsumerState<OnboardingLoadingPage>
                 child: Text(
                   '분석 중',
                   style: AppTextStyles.headingLg.copyWith(
-                    color: AppColors.gray900,
+                    color: colors.gray900,
                     fontSize: 22.sp,
                   ),
                 ),
@@ -245,7 +247,7 @@ class _OnboardingLoadingPageState extends ConsumerState<OnboardingLoadingPage>
                                 : '지난 3개월 거래내역 기반으로\n소비패턴을 분석 중입니다.',
                         textAlign: TextAlign.center,
                         style: AppTextStyles.headingMd.copyWith(
-                          color: AppColors.gray900,
+                          color: colors.gray900,
                           fontSize: 18.sp,
                         ),
                       ),
@@ -268,7 +270,7 @@ class _OnboardingLoadingPageState extends ConsumerState<OnboardingLoadingPage>
                   children: [
                     Container(
                       decoration: BoxDecoration(
-                        color: AppColors.gray100,
+                        color: colors.gray100,
                         borderRadius: BorderRadius.circular(4.r),
                       ),
                     ),
@@ -280,9 +282,9 @@ class _OnboardingLoadingPageState extends ConsumerState<OnboardingLoadingPage>
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(4.r),
-                          gradient: const LinearGradient(
-                            colors: [AppColors.white, AppColors.orange500],
-                            stops: [0.0, 0.7],
+                          gradient: LinearGradient(
+                            colors: [colors.white, AppColors.orange500],
+                            stops: const [0.0, 0.7],
                           ),
                         ),
                       ),

@@ -27,13 +27,14 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final goalState = ref.watch(goalViewModelProvider);
     final viewModel = ref.read(goalViewModelProvider.notifier);
     final filteredGoals = goalState.filteredGoals;
     final totalCount = goalState.goals.length;
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       appBar: const MoreAppBar(showBack: false, showLogo: true, showNotification: true),
       body: goalState.isLoading
           ? const SizedBox.shrink()
@@ -51,6 +52,7 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
                             Text(
                               '나의 목표',
                               style: AppTextStyles.headingMd.copyWith(
+                                color: colors.textPrimary,
                                 fontSize: 20.sp,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -59,7 +61,7 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
                             Text(
                               '총 $totalCount개의 목표를 계획했어요.',
                               style: AppTextStyles.caption.copyWith(
-                                color: AppColors.textTertiary,
+                                color: colors.textTertiary,
                                 fontSize: 12.sp,
                               ),
                             ),
@@ -91,7 +93,7 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
                               child: Text(
                                 '목표 우선순위 설정 >',
                                 style: AppTextStyles.bodySm.copyWith(
-                                  color: AppColors.textTertiary,
+                                  color: colors.textTertiary,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -136,19 +138,20 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
     String message,
     GoalViewModel viewModel,
   ) {
+    final colors = AppColors.of(context);
     return Center(
       child: Padding(
         padding: EdgeInsets.all(24.w),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('목표 목록을 불러오지 못했습니다.', style: AppTextStyles.bodyLg),
+            Text('목표 목록을 불러오지 못했습니다.', style: AppTextStyles.bodyLg.copyWith(color: colors.textPrimary)),
             SizedBox(height: 8.h),
             Text(
               message,
               textAlign: TextAlign.center,
               style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.textTertiary,
+                color: colors.textTertiary,
               ),
             ),
             SizedBox(height: 16.h),
@@ -163,6 +166,7 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
   }
 
   Widget _buildEmpty(bool showAchieved) {
+    final colors = AppColors.of(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -170,17 +174,17 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
           Icon(
             Icons.flag_outlined,
             size: 64.w,
-            color: AppColors.textTertiary.withValues(alpha: 0.5),
+            color: colors.textTertiary.withValues(alpha: 0.5),
           ),
           SizedBox(height: 16.h),
           Text(
             showAchieved ? '아직 달성한 목표가 없어요' : '진행 중인 목표가 없어요',
-            style: AppTextStyles.bodyLg.copyWith(color: AppColors.textTertiary),
+            style: AppTextStyles.bodyLg.copyWith(color: colors.textTertiary),
           ),
           SizedBox(height: 8.h),
           Text(
             '새로운 목표를 추가해보세요!',
-            style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary),
+            style: AppTextStyles.bodySm.copyWith(color: colors.textTertiary),
           ),
         ],
       ),
@@ -202,16 +206,17 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
         decoration: BoxDecoration(
-          color: selected ? AppColors.orange500 : Colors.white,
+          color: selected ? AppColors.orange500 : colors.bgSurface,
           borderRadius: BorderRadius.circular(999.r),
           border: Border.all(
-            color: selected ? AppColors.orange500 : AppColors.borderDefault,
+            color: selected ? AppColors.orange500 : colors.borderDefault,
           ),
           boxShadow: selected
               ? [
@@ -226,7 +231,7 @@ class _FilterChip extends StatelessWidget {
         child: Text(
           label,
           style: AppTextStyles.bodySm.copyWith(
-            color: selected ? Colors.white : AppColors.textTertiary,
+            color: selected ? Colors.white : colors.textTertiary,
             fontWeight: FontWeight.w600,
           ),
         ),

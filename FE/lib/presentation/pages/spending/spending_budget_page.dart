@@ -36,6 +36,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
   }
 
   void _showEditBudgetDialog(int currentIncome) {
+    final colors = AppColors.of(context);
     final controller = TextEditingController();
 
     void formatListener() {
@@ -54,15 +55,15 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: colors.bgSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('총 예산 수정', style: AppTextStyles.headingMd),
+            Text('총 예산 수정', style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary)),
             IconButton(
               onPressed: () => controller.text = _formatWithComma(currentIncome.toString()),
-              icon: const Icon(Icons.refresh, color: AppColors.textTertiary),
+              icon: Icon(Icons.refresh, color: colors.textTertiary),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
             ),
@@ -72,7 +73,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('한 달 총 수입(예산)을 입력해주세요.', style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary)),
+            Text('한 달 총 수입(예산)을 입력해주세요.', style: AppTextStyles.bodySm.copyWith(color: colors.textTertiary)),
             SizedBox(height: 16.h),
             TextField(
               controller: controller,
@@ -90,7 +91,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('취소', style: TextStyle(color: AppColors.textTertiary)),
+            child: Text('취소', style: TextStyle(color: colors.textTertiary)),
           ),
           TextButton(
             onPressed: () {
@@ -110,11 +111,12 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final state = ref.watch(spendingBudgetViewModelProvider);
 
     if (state.isLoading) {
       return Scaffold(
-        backgroundColor: AppColors.bgPrimary,
+        backgroundColor: colors.bgPrimary,
         appBar: const MoreAppBar(title: '', showBack: true, showNotification: true),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -128,7 +130,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
         : setup.remainingFreeAmount;
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       appBar: const MoreAppBar(title: '', showBack: true, showNotification: true),
       body: Column(
         children: [
@@ -141,12 +143,12 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('주간 예산 설정', style: AppTextStyles.headingMd.copyWith(fontSize: 20.sp, fontWeight: FontWeight.bold)),
+                    Text('주간 예산 설정', style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary, fontSize: 20.sp, fontWeight: FontWeight.bold)),
                     SizedBox(height: 4.h),
                     Text(
                       '주간 예산에 따라 소비분석과 계획 수립을 진행합니다.',
                       style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textTertiary,
+                        color: colors.textTertiary,
                         fontSize: 12.sp,
                         height: 1.4,
                       ),
@@ -165,7 +167,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                                 '총 예산 (수입)',
                                 style: AppTextStyles.bodyMd.copyWith(
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
+                                  color: colors.textPrimary,
                                 ),
                               ),
                               Flexible(
@@ -174,7 +176,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.edit_outlined, size: 20, color: Colors.black),
+                                      Icon(Icons.edit_outlined, size: 20, color: colors.textPrimary),
                                       SizedBox(width: 8.w),
                                       Flexible(
                                         child: FittedBox(
@@ -182,6 +184,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                                           child: Text(
                                             CurrencyFormatter.formatKRW(displayIncome),
                                             style: AppTextStyles.headingLg.copyWith(
+                                              color: colors.textPrimary,
                                               fontSize: 20.sp,
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -195,7 +198,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                             ],
                           ),
                           SizedBox(height: 24.h),
-                          const Divider(color: Color(0xFFEEEEEE), thickness: 1),
+                          Divider(color: colors.borderDefault, thickness: 1),
                           SizedBox(height: 32.h),
 
                           _BudgetSectionHeader(
@@ -244,6 +247,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                               Text(
                                 '= 여유 자금',
                                 style: AppTextStyles.bodyMd.copyWith(
+                                  color: colors.textPrimary,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 18.sp,
                                 ),
@@ -265,7 +269,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           Text(
                             '고정/변동/저축비를 제외한 자유롭게 사용 가능한 금액',
                             style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textTertiary,
+                              color: colors.textTertiary,
                               fontSize: 11.sp,
                             ),
                           ),
@@ -329,6 +333,7 @@ class _BudgetSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -340,17 +345,17 @@ class _BudgetSectionHeader extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.arrow_right_alt, color: AppColors.textPrimary, size: 22.w),
+                  Icon(Icons.arrow_right_alt, color: colors.textPrimary, size: 22.w),
                   SizedBox(width: 6.w),
                   Text(
                     label,
-                    style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold, fontSize: 17.sp),
+                    style: AppTextStyles.bodyMd.copyWith(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 17.sp),
                   ),
                   if (isExpandable) ...[
                     SizedBox(width: 4.w),
                     Icon(
                       isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                      color: AppColors.textTertiary,
+                      color: colors.textTertiary,
                       size: 20.w,
                     ),
                   ],
@@ -369,7 +374,7 @@ class _BudgetSectionHeader extends StatelessWidget {
         SizedBox(height: 4.h),
         Text(
           description,
-          style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary, fontSize: 12.sp),
+          style: AppTextStyles.caption.copyWith(color: colors.textTertiary, fontSize: 12.sp),
         ),
       ],
     );
@@ -384,6 +389,7 @@ class _EssentialCategoryList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Column(
       children: essentials.map((e) {
         final ratio = sectionTotal > 0
@@ -402,14 +408,14 @@ class _EssentialCategoryList extends StatelessWidget {
                   Text(
                     e.categoryName,
                     style: AppTextStyles.bodySm.copyWith(
-                      color: AppColors.textSecondary,
+                      color: colors.textSecondary,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                   Text(
                     '${CurrencyFormatter.formatKRW(e.plannedAmount)} / ${CurrencyFormatter.formatKRW(sectionTotal)}',
                     style: AppTextStyles.caption.copyWith(
-                      color: isOver ? Colors.red : AppColors.textTertiary,
+                      color: isOver ? AppColors.red500 : colors.textTertiary,
                       fontSize: 11.sp,
                     ),
                   ),
@@ -418,8 +424,8 @@ class _EssentialCategoryList extends StatelessWidget {
               SizedBox(height: 6.h),
               MoreProgressBar(
                 progress: ratio,
-                color: isOver ? Colors.red : AppColors.orange500,
-                backgroundColor: const Color(0xFFF0F0F0),
+                color: isOver ? AppColors.red500 : AppColors.orange500,
+                backgroundColor: colors.gray50,
                 height: 8.h,
               ),
             ],

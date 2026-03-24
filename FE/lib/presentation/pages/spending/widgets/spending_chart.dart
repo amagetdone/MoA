@@ -26,13 +26,14 @@ class SpendingDonutChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return MoreCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             '소비 패턴',
-            style: AppTextStyles.headingMd.copyWith(fontSize: 16.sp),
+            style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary, fontSize: 16.sp),
           ),
           SizedBox(height: 16.h),
           SizedBox(
@@ -42,7 +43,7 @@ class SpendingDonutChart extends StatelessWidget {
               children: [
                 PieChart(
                   PieChartData(
-                    sections: _buildSections(),
+                    sections: _buildSections(colors),
                     centerSpaceRadius: 60.r,
                     sectionsSpace: 2,
                     borderData: FlBorderData(show: false),
@@ -56,7 +57,7 @@ class SpendingDonutChart extends StatelessWidget {
                       CurrencyFormatter.formatKRW(_totalAmount),
                       style: AppTextStyles.bodyMd.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                        color: colors.textPrimary,
                         fontSize: 14.sp,
                       ),
                     ),
@@ -64,7 +65,7 @@ class SpendingDonutChart extends StatelessWidget {
                     Text(
                       '총 지출',
                       style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textTertiary,
+                        color: colors.textTertiary,
                         fontSize: 11.sp,
                       ),
                     ),
@@ -107,7 +108,7 @@ class SpendingDonutChart extends StatelessWidget {
           Text(
             '카테고리별 지출 100% 기준',
             style: AppTextStyles.caption.copyWith(
-              color: AppColors.textTertiary,
+              color: colors.textTertiary,
               fontSize: 11.sp,
             ),
           ),
@@ -134,7 +135,7 @@ class SpendingDonutChart extends StatelessWidget {
                     child: Text(
                       category.name,
                       style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textSecondary,
+                        color: colors.textSecondary,
                         fontSize: 12.sp,
                       ),
                     ),
@@ -145,7 +146,7 @@ class SpendingDonutChart extends StatelessWidget {
                       borderRadius: BorderRadius.circular(3.r),
                       child: LinearProgressIndicator(
                         value: percentage / 100,
-                        backgroundColor: AppColors.borderDefault,
+                        backgroundColor: colors.borderDefault,
                         valueColor: AlwaysStoppedAnimation(SpendingUiMapper.colorFrom(category.colorValue)),
                         minHeight: 6.h,
                       ),
@@ -155,7 +156,7 @@ class SpendingDonutChart extends StatelessWidget {
                   Text(
                     '$percentage%',
                     style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textSecondary,
+                      color: colors.textSecondary,
                       fontSize: 12.sp,
                     ),
                   ),
@@ -168,12 +169,12 @@ class SpendingDonutChart extends StatelessWidget {
     );
   }
 
-  List<PieChartSectionData> _buildSections() {
+  List<PieChartSectionData> _buildSections(AppColorScheme colors) {
     if (categories.isEmpty) {
       return [
         PieChartSectionData(
           value: 1,
-          color: AppColors.borderDefault,
+          color: colors.borderDefault,
           radius: 30.r,
           showTitle: false,
         ),

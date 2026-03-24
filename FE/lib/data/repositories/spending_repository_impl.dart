@@ -91,12 +91,9 @@ class SpendingRepositoryImpl implements SpendingRepository {
   }
 
   String _toIsoYearWeek(DateTime weekMonday) {
-    final thursday = weekMonday.add(const Duration(days: 3));
-    final year = thursday.year;
-    final jan4 = DateTime(year, 1, 4);
-    final week1Monday = jan4.subtract(Duration(days: jan4.weekday - 1));
-    final weekNum = weekMonday.difference(week1Monday).inDays ~/ 7 + 1;
-    return '$year-W${weekNum.toString().padLeft(2, '0')}';
+    final month = weekMonday.month.toString().padLeft(2, '0');
+    final weekOfMonth = ((weekMonday.day - 1) ~/ 7) + 1;
+    return '${weekMonday.year}-$month-$weekOfMonth';
   }
 
   @override

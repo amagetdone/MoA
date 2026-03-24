@@ -82,16 +82,17 @@ class GoalSummaryCard extends StatelessWidget {
 class _GoalHeaderIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Container(
       width: 42.w,
       height: 42.w,
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
+        color: colors.gray50,
         borderRadius: BorderRadius.circular(14.r),
       ),
       child: Icon(
         Icons.wb_sunny_outlined,
-        color: AppColors.textPrimary,
+        color: colors.textPrimary,
         size: 22.w,
       ),
     );
@@ -105,17 +106,18 @@ class _GoalHeaderText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           '목표',
-          style: AppTextStyles.headingMd.copyWith(fontWeight: FontWeight.w800),
+          style: AppTextStyles.headingMd.copyWith(fontWeight: FontWeight.w800, color: colors.textPrimary),
         ),
         Text(
           goalName,
           style: AppTextStyles.bodyLg.copyWith(
-            color: AppColors.textSecondary,
+            color: colors.textSecondary,
             fontWeight: FontWeight.w500,
           ),
           maxLines: 1,
@@ -133,6 +135,7 @@ class _ViewAllButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return TextButton(
       onPressed: onPressed ?? () => context.go(AppRoutes.goalTab),
       style: TextButton.styleFrom(
@@ -143,7 +146,7 @@ class _ViewAllButton extends StatelessWidget {
       child: Text(
         '전체보기',
         style: AppTextStyles.bodyLg.copyWith(
-          color: AppColors.textSecondary,
+          color: colors.textSecondary,
           fontWeight: FontWeight.w500,
         ),
       ),
@@ -158,17 +161,18 @@ class _GoalIllustration extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Container(
       width: 104.w,
       height: 104.w,
       padding: EdgeInsets.all(10.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F7F7),
+        color: colors.gray50,
         borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: AppColors.borderDefault),
+        border: Border.all(color: colors.borderDefault),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: colors.cardShadow,
             blurRadius: 16.r,
             offset: Offset(0, 4.h),
           ),
@@ -205,13 +209,14 @@ class _GoalProgressContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           weekText,
           style: AppTextStyles.bodyLg.copyWith(
-            color: AppColors.textSecondary,
+            color: colors.textSecondary,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -222,7 +227,7 @@ class _GoalProgressContent extends StatelessWidget {
           child: Text(
             amountText,
             style: AppTextStyles.bodyLg.copyWith(
-              color: AppColors.textTertiary,
+              color: colors.textTertiary,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -231,7 +236,7 @@ class _GoalProgressContent extends StatelessWidget {
         MoreProgressBar(
           progress: progressRate,
           color: AppColors.orange500,
-          backgroundColor: AppColors.gray100.withValues(alpha: 0.95),
+          backgroundColor: colors.gray100.withValues(alpha: 0.95),
           height: 14.h,
         ),
       ],

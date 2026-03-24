@@ -18,13 +18,14 @@ class TransactionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final isExpense = transaction.type == TransactionType.expense;
     final isIncome = transaction.type == TransactionType.income;
     final amountColor = isExpense
         ? AppColors.red500
         : isIncome
             ? AppColors.green500
-            : AppColors.textPrimary;
+            : colors.textPrimary;
     final amountPrefix = isExpense
         ? '-'
         : isIncome
@@ -44,12 +45,12 @@ class TransactionTile extends StatelessWidget {
               height: 40.w,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _getCategoryColor().withValues(alpha: 0.15),
+                color: _getCategoryColor(colors).withValues(alpha: 0.15),
               ),
               child: Icon(
                 _getCategoryIcon(),
                 size: 20.w,
-                color: _getCategoryColor(),
+                color: _getCategoryColor(colors),
               ),
             ),
             SizedBox(width: 12.w),
@@ -62,7 +63,7 @@ class TransactionTile extends StatelessWidget {
                   Text(
                     transaction.title,
                     style: AppTextStyles.bodyMd.copyWith(
-                      color: AppColors.textPrimary,
+                      color: colors.textPrimary,
                       fontSize: 14.sp,
                     ),
                     maxLines: 1,
@@ -72,7 +73,7 @@ class TransactionTile extends StatelessWidget {
                   Text(
                     timeFormat.format(transaction.dateTime),
                     style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textTertiary,
+                      color: colors.textTertiary,
                       fontSize: 11.sp,
                     ),
                   ),
@@ -96,7 +97,7 @@ class TransactionTile extends StatelessWidget {
     );
   }
 
-  Color _getCategoryColor() {
+  Color _getCategoryColor(AppColorScheme colors) {
     switch (transaction.category) {
       case '식비':
         return AppColors.orange500;
@@ -114,7 +115,7 @@ class TransactionTile extends StatelessWidget {
       case '문화':
         return Colors.pink;
       default:
-        return AppColors.textTertiary;
+        return colors.textTertiary;
     }
   }
 

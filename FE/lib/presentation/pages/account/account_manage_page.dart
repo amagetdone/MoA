@@ -32,11 +32,12 @@ class _AccountManagePageState extends ConsumerState<AccountManagePage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final accountState = ref.watch(accountViewModelProvider);
     final accounts = accountState.accounts;
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       appBar: MoreAppBar(
         title: '',
         showBack: true,
@@ -54,19 +55,19 @@ class _AccountManagePageState extends ConsumerState<AccountManagePage> {
           children: [
             Text(
               widget.isOnboarding ? '계좌 추가' : '계좌 관리',
-              style: AppTextStyles.headingMd.copyWith(fontSize: 20.sp, fontWeight: FontWeight.bold),
+              style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary, fontSize: 20.sp, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 4.h),
             Text(
               accounts.isEmpty
                   ? '연결된 계좌가 없어요.'
                   : '총 ${accounts.length}개의 계좌가 연결되었어요.',
-              style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary, fontSize: 12.sp),
+              style: AppTextStyles.caption.copyWith(color: colors.textTertiary, fontSize: 12.sp),
             ),
             SizedBox(height: 20.h),
 
             if (accounts.isNotEmpty) ...[
-              Text('연결된 계좌', style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
+              Text('연결된 계좌', style: AppTextStyles.bodyMd.copyWith(color: colors.textSecondary, fontWeight: FontWeight.bold)),
               SizedBox(height: 12.h),
               ...accounts.map((account) => Padding(
                 padding: EdgeInsets.only(bottom: 12.h),
@@ -80,13 +81,13 @@ class _AccountManagePageState extends ConsumerState<AccountManagePage> {
                           width: 48.w,
                           height: 48.w,
                           decoration: BoxDecoration(
-                            color: account.verified ? AppColors.orange500 : AppColors.gray500,
+                            color: account.verified ? AppColors.orange500 : colors.gray500,
                             borderRadius: BorderRadius.circular(12.r),
                           ),
                           child: Center(
                             child: Text(
                               account.bankName.isNotEmpty ? account.bankName[0] : 'B',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24.sp, color: Colors.white),
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24.sp, color: colors.white),
                             ),
                           ),
                         ),
@@ -97,19 +98,19 @@ class _AccountManagePageState extends ConsumerState<AccountManagePage> {
                             children: [
                               Row(
                                 children: [
-                                  Text(account.bankName, style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold)),
+                                  Text(account.bankName, style: AppTextStyles.bodyMd.copyWith(color: colors.textPrimary, fontWeight: FontWeight.bold)),
                                   if (!account.verified) ...[
                                     SizedBox(width: 8.w),
                                     Container(
                                       padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
                                       decoration: BoxDecoration(
-                                        color: AppColors.gray100,
+                                        color: colors.gray100,
                                         borderRadius: BorderRadius.circular(4.r),
                                       ),
                                       child: Text(
                                         '연결 해제됨',
                                         style: AppTextStyles.caption.copyWith(
-                                          color: AppColors.gray500,
+                                          color: colors.gray500,
                                           fontSize: 11.sp,
                                         ),
                                       ),
@@ -118,7 +119,7 @@ class _AccountManagePageState extends ConsumerState<AccountManagePage> {
                                 ],
                               ),
                               SizedBox(height: 4.h),
-                              Text(account.accountNumber, style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary)),
+                              Text(account.accountNumber, style: AppTextStyles.bodySm.copyWith(color: colors.textSecondary)),
                             ],
                           ),
                         ),
@@ -141,13 +142,13 @@ class _AccountManagePageState extends ConsumerState<AccountManagePage> {
                                         await ref.read(accountViewModelProvider.notifier).removeAccount(account.id);
                                         ref.read(homeViewModelProvider.notifier).loadData();
                                       },
-                                      child: Text('해제', style: TextStyle(color: Colors.red)),
+                                      child: Text('해제', style: TextStyle(color: AppColors.red500)),
                                     ),
                                   ],
                                 ),
                               );
                             },
-                            child: Icon(Icons.delete_outline, color: AppColors.textTertiary, size: 24.w),
+                            child: Icon(Icons.delete_outline, color: colors.textTertiary, size: 24.w),
                           )
                         else
                           Opacity(
@@ -183,7 +184,7 @@ class _AccountManagePageState extends ConsumerState<AccountManagePage> {
                                 child: Text(
                                   '다시 연결',
                                   style: AppTextStyles.bodySm.copyWith(
-                                    color: Colors.white,
+                                    color: colors.white,
                                     fontWeight: FontWeight.w600,
                                     fontSize: 12.sp,
                                   ),
@@ -218,14 +219,14 @@ class _AccountManagePageState extends ConsumerState<AccountManagePage> {
                           color: AppColors.orange500,
                           borderRadius: BorderRadius.circular(12.r),
                         ),
-                        child: Icon(Icons.add, color: Colors.white, size: 36.w),
+                        child: Icon(Icons.add, color: colors.white, size: 36.w),
                       ),
                       SizedBox(height: 16.h),
-                      Text('새로운 계좌 연결하기', style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold, fontSize: 16.sp)),
+                      Text('새로운 계좌 연결하기', style: AppTextStyles.bodyMd.copyWith(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16.sp)),
                       SizedBox(height: 6.h),
                       Text(
                         '계좌를 추가하고 자산을 관리하세요 !',
-                        style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary, fontSize: 13.sp),
+                        style: AppTextStyles.caption.copyWith(color: colors.textTertiary, fontSize: 13.sp),
                       ),
                     ],
                   ),

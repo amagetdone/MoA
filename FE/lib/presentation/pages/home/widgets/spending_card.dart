@@ -22,7 +22,7 @@ class SpendingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 남은 비율 → 오렌지 배경이 위에서 아래로 줄어듦
+    final colors = AppColors.of(context);
     final remainRatio = totalAmount > 0
         ? (remainingAmount / totalAmount).clamp(0.0, 1.0)
         : 0.0;
@@ -33,83 +33,34 @@ class SpendingCard extends StatelessWidget {
       fillFromTop: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    '여유자금',
-                    style: AppTextStyles.bodySm.copyWith(
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  SizedBox(width: 4.w),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 1.h),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(999.r),
-                      color: AppColors.orange500.withValues(alpha: 0.15),
-                    ),
-                    child: Text(
-                      'D-$daysRemaining',
-                      style: TextStyle(
-                        color: AppColors.orange500,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 9.sp,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 6.h),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Row(
-                  children: [
-                    Text(
-                      CurrencyFormatter.formatKRW(remainingAmount),
-                      style: AppTextStyles.headingMd.copyWith(
-                        color: AppColors.orange500,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    SizedBox(width: 4.w),
-                    Text(
-                      '남음',
-                      style: TextStyle(
-                        color: AppColors.textTertiary,
-                        fontSize: 11.sp,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          Text(
+            '여유자금',
+            style: AppTextStyles.bodySm.copyWith(
+              color: colors.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '/ ${CurrencyFormatter.formatKRW(totalAmount)} (${CurrencyFormatter.formatKRW(usedAmount)} 사용)',
-                style: TextStyle(
-                  color: AppColors.textTertiary,
-                  fontSize: 10.sp,
-                ),
+          SizedBox(height: 8.h),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              CurrencyFormatter.formatKRW(remainingAmount),
+              style: AppTextStyles.headingMd.copyWith(
+                color: AppColors.orange500,
+                fontWeight: FontWeight.w800,
               ),
-              SizedBox(height: 2.h),
-              Text(
-                '하루 ${CurrencyFormatter.formatKRW(dailyAvailable)} 사용 가능',
-                style: TextStyle(
-                  color: AppColors.textTertiary,
-                  fontSize: 10.sp,
-                ),
-              ),
-            ],
+            ),
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            '/ ${CurrencyFormatter.formatKRW(totalAmount)}',
+            style: TextStyle(
+              color: colors.textTertiary,
+              fontSize: 11.sp,
+            ),
           ),
         ],
       ),
@@ -130,18 +81,18 @@ class GaugeCard extends StatelessWidget {
   final double fillRatio;
   final Color fillColor;
   final Widget child;
-  /// true: 위에서 아래로 채움 (소비 → 줄어듦), false: 아래에서 위로 채움 (저축 → 차오름)
   final bool fillFromTop;
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
+        color: colors.bgSurface,
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
+            color: colors.cardShadow,
             offset: Offset(0, 2.h),
             blurRadius: 8.r,
           ),

@@ -16,6 +16,7 @@ class GoalPlanPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColors.of(context);
     final plan = ref.watch(onboardingViewModelProvider).planResult;
 
     final planTitle = plan?.planTitle ?? '';
@@ -30,7 +31,7 @@ class GoalPlanPage extends ConsumerWidget {
     final freeAmount = budget?.freeAmount ?? 0;
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       appBar: MoreAppBar(title: '', showBack: false),
       body: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
@@ -40,6 +41,7 @@ class GoalPlanPage extends ConsumerWidget {
             Text(
               '목표 계획 수립',
               style: AppTextStyles.headingLg.copyWith(
+                color: colors.textPrimary,
                 fontSize: 24.sp,
                 fontWeight: FontWeight.bold,
               ),
@@ -48,7 +50,7 @@ class GoalPlanPage extends ConsumerWidget {
             Text(
               '소비패턴 결과를 반영하여\n$planTitle 목표 계획을 수립합니다.',
               style: AppTextStyles.bodyMd.copyWith(
-                color: AppColors.gray500,
+                color: colors.gray500,
                 fontSize: 14.sp,
               ),
             ),
@@ -72,7 +74,7 @@ class GoalPlanPage extends ConsumerWidget {
                   RichText(
                     text: TextSpan(
                       style: AppTextStyles.bodyMd.copyWith(
-                        color: AppColors.gray900,
+                        color: colors.gray900,
                         fontSize: 15.sp,
                         fontWeight: FontWeight.w600,
                       ),
@@ -89,12 +91,12 @@ class GoalPlanPage extends ConsumerWidget {
                     ),
                   ),
                   SizedBox(height: 12.h),
-                  Divider(height: 1, color: AppColors.borderDefault),
+                  Divider(height: 1, color: colors.borderDefault),
                   SizedBox(height: 12.h),
                   Text(
                     '여유 자금',
                     style: AppTextStyles.bodySm.copyWith(
-                      color: AppColors.gray500,
+                      color: colors.gray500,
                       fontSize: 13.sp,
                     ),
                   ),
@@ -126,7 +128,7 @@ class GoalPlanPage extends ConsumerWidget {
                   Text(
                     '주간 예산',
                     style: AppTextStyles.headingMd.copyWith(
-                      color: AppColors.gray900,
+                      color: colors.gray900,
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w700,
                     ),
@@ -139,7 +141,7 @@ class GoalPlanPage extends ConsumerWidget {
                     isHeader: true,
                   ),
                   SizedBox(height: 16.h),
-                  Divider(height: 1, color: AppColors.gray100),
+                  Divider(height: 1, color: colors.gray100),
                   SizedBox(height: 16.h),
 
                   _BudgetRow(
@@ -149,7 +151,7 @@ class GoalPlanPage extends ConsumerWidget {
                   ),
                   const _BudgetSubLabel(text: '목표를 위해 저축하는 금액'),
                   SizedBox(height: 16.h),
-                  Divider(height: 1, color: AppColors.gray100),
+                  Divider(height: 1, color: colors.gray100),
                   SizedBox(height: 16.h),
 
                   _BudgetRow(
@@ -180,7 +182,7 @@ class GoalPlanPage extends ConsumerWidget {
                     ),
                   ],
                   SizedBox(height: 16.h),
-                  Divider(height: 1, color: AppColors.gray100),
+                  Divider(height: 1, color: colors.gray100),
                   SizedBox(height: 16.h),
 
                   _BudgetRow(
@@ -189,7 +191,7 @@ class GoalPlanPage extends ConsumerWidget {
                   ),
                   const _BudgetSubLabel(text: '식비, 여가비 등 생활에 필요한 비용'),
                   SizedBox(height: 16.h),
-                  Divider(height: 1, color: AppColors.gray100),
+                  Divider(height: 1, color: colors.gray100),
                   SizedBox(height: 16.h),
 
                   _BudgetRow(
@@ -221,12 +223,13 @@ class _BudgetSubLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Padding(
       padding: EdgeInsets.only(top: 2.h),
       child: Text(
         text,
         style: AppTextStyles.bodySm.copyWith(
-          color: AppColors.gray500,
+          color: colors.gray500,
           fontSize: 11.sp,
         ),
       ),
@@ -251,13 +254,14 @@ class _BudgetRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
           style: AppTextStyles.bodySm.copyWith(
-            color: isSubItem ? AppColors.gray500 : AppColors.gray700,
+            color: isSubItem ? colors.gray500 : colors.gray700,
             fontWeight: isHeader ? FontWeight.w700 : FontWeight.w400,
             fontSize: isSubItem ? 12.sp : 14.sp,
           ),
@@ -265,7 +269,7 @@ class _BudgetRow extends StatelessWidget {
         Text(
           value,
           style: AppTextStyles.bodySm.copyWith(
-            color: color ?? (isSubItem ? AppColors.gray500 : AppColors.gray900),
+            color: color ?? (isSubItem ? colors.gray500 : colors.gray900),
             fontWeight: isHeader ? FontWeight.w700 : FontWeight.w500,
             fontSize: isSubItem ? 12.sp : 14.sp,
           ),

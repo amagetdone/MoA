@@ -33,20 +33,21 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final actionWidgets = <Widget>[
       if (skipText != null)
         TextButton(
           onPressed: onSkip,
           child: Text(
             skipText!,
-            style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary),
+            style: AppTextStyles.bodySm.copyWith(color: colors.textTertiary),
           ),
         ),
       if (showNotification)
         Padding(
           padding: EdgeInsets.only(right: 16.w),
           child: IconButton(
-            icon: Icon(Icons.notifications_none, size: 24.w, color: AppColors.textPrimary),
+            icon: Icon(Icons.notifications_none, size: 24.w, color: colors.textPrimary),
             onPressed: () {},
           ),
         ),
@@ -54,7 +55,7 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
     ];
 
     return AppBar(
-      backgroundColor: backgroundColor ?? AppColors.bgPrimary,
+      backgroundColor: backgroundColor ?? colors.bgPrimary,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: true,
@@ -64,7 +65,7 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
           ? Padding(
               padding: EdgeInsets.only(left: 16.w),
               child: IconButton(
-                icon: Icon(Icons.arrow_back_ios, size: 20.w, color: AppColors.textPrimary),
+                icon: Icon(Icons.arrow_back_ios, size: 20.w, color: colors.textPrimary),
                 onPressed: onBack ?? () {
                   if (context.canPop()) {
                     context.pop();
@@ -83,7 +84,7 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
                 )
               : null,
       title: title != null
-          ? Text(title!, style: AppTextStyles.headingMd)
+          ? Text(title!, style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary))
           : null,
       actions: actionWidgets.isNotEmpty ? actionWidgets : null,
     );

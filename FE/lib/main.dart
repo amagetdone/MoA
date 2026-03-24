@@ -10,6 +10,7 @@ import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'package:more_app/core/theme/app_theme.dart';
 import 'package:more_app/core/utils/app_env.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/viewmodels/theme_viewmodel.dart';
 import 'package:more_app/presentation/widgets/preview/web_preview_shell.dart';
 
 class AppScrollBehavior extends MaterialScrollBehavior {
@@ -44,13 +45,15 @@ Future<void> main() async {
   runApp(const ProviderScope(child: MoreApp()));
 }
 
-class MoreApp extends StatelessWidget {
+class MoreApp extends ConsumerWidget {
   const MoreApp({super.key});
 
   static const _designSize = Size(412, 892);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeProvider);
+
     return ScreenUtilInit(
       designSize: _designSize,
       minTextAdapt: true,
@@ -60,6 +63,8 @@ class MoreApp extends StatelessWidget {
           title: 'MORE',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: themeMode,
           scrollBehavior: AppScrollBehavior(),
           routerConfig: appRouter,
           builder: (context, routerChild) {

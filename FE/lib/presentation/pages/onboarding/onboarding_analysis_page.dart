@@ -17,6 +17,7 @@ class OnboardingAnalysisPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColors.of(context);
     final analysis = ref.watch(onboardingViewModelProvider).analysisResult;
 
     final averageIncome = analysis?.averageIncome ?? 0;
@@ -30,7 +31,7 @@ class OnboardingAnalysisPage extends ConsumerWidget {
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: AppColors.bgPrimary,
+        backgroundColor: colors.bgPrimary,
         appBar: MoreAppBar(
           title: '',
           showBack: false,
@@ -43,6 +44,7 @@ class OnboardingAnalysisPage extends ConsumerWidget {
               Text(
                 '분석 결과',
                 style: AppTextStyles.headingLg.copyWith(
+                  color: colors.textPrimary,
                   fontSize: 24.sp,
                   fontWeight: FontWeight.bold,
                 ),
@@ -51,7 +53,7 @@ class OnboardingAnalysisPage extends ConsumerWidget {
               Text(
                 analysis?.summaryText ?? '3개월 간 소비패턴을 분석했어요.',
                 style: AppTextStyles.bodyMd.copyWith(
-                  color: AppColors.gray500,
+                  color: colors.gray500,
                   fontSize: 14.sp,
                 ),
               ),
@@ -103,7 +105,7 @@ class OnboardingAnalysisPage extends ConsumerWidget {
                                 Text(
                                   CurrencyFormatter.formatKRW(averageExpense),
                                   style: AppTextStyles.headingMd.copyWith(
-                                    color: AppColors.gray900,
+                                    color: colors.gray900,
                                     fontSize: 16.sp,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -112,7 +114,7 @@ class OnboardingAnalysisPage extends ConsumerWidget {
                                 Text(
                                   '평균 지출',
                                   style: AppTextStyles.bodySm.copyWith(
-                                    color: AppColors.gray500,
+                                    color: colors.gray500,
                                     fontSize: 12.sp,
                                   ),
                                 ),
@@ -180,7 +182,7 @@ class OnboardingAnalysisPage extends ConsumerWidget {
                         child: Text(
                           '카테고리별 지출',
                           style: AppTextStyles.bodyMd.copyWith(
-                            color: AppColors.gray900,
+                            color: colors.gray900,
                             fontWeight: FontWeight.w600,
                             fontSize: 14.sp,
                           ),
@@ -238,13 +240,14 @@ class _StatRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
           style: AppTextStyles.bodySm.copyWith(
-            color: AppColors.gray500,
+            color: colors.gray500,
             fontWeight: isBold ? FontWeight.w600 : FontWeight.w400,
             fontSize: 13.sp,
           ),
@@ -253,7 +256,7 @@ class _StatRow extends StatelessWidget {
           value,
           style:
               (isBold ? AppTextStyles.bodyLg : AppTextStyles.bodySm).copyWith(
-            color: valueColor ?? AppColors.gray900,
+            color: valueColor ?? colors.gray900,
             fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
             fontSize: isBold ? 16.sp : 13.sp,
           ),
@@ -271,6 +274,7 @@ class _LegendDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -283,7 +287,7 @@ class _LegendDot extends StatelessWidget {
         Text(
           label,
           style: AppTextStyles.bodySm.copyWith(
-            color: AppColors.gray700,
+            color: colors.gray700,
             fontSize: 13.sp,
           ),
         ),
@@ -305,6 +309,7 @@ class _CategoryBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -314,14 +319,14 @@ class _CategoryBar extends StatelessWidget {
             Text(
               name,
               style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.gray700,
+                color: colors.gray700,
                 fontSize: 13.sp,
               ),
             ),
             Text(
               amount,
               style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.gray900,
+                color: colors.gray900,
                 fontWeight: FontWeight.w600,
                 fontSize: 13.sp,
               ),
@@ -335,7 +340,7 @@ class _CategoryBar extends StatelessWidget {
             height: 8.h,
             child: LinearProgressIndicator(
               value: ratio,
-              backgroundColor: AppColors.gray100,
+              backgroundColor: colors.gray100,
               valueColor:
                   const AlwaysStoppedAnimation<Color>(AppColors.orange500),
             ),

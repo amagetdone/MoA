@@ -273,6 +273,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
+        final colors = AppColors.of(ctx);
         return StatefulBuilder(
           builder: (ctx, setModalState) {
             final maxDay = daysInMonth(years[yearIndex], monthIndex + 1);
@@ -282,7 +283,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
             return Container(
               height: 320.h,
               decoration: BoxDecoration(
-                color: AppColors.bgSurface,
+                color: colors.bgSurface,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
               ),
               child: Column(
@@ -301,7 +302,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                           child: Text(
                             '취소',
                             style: AppTextStyles.bodyMd.copyWith(
-                              color: AppColors.textTertiary,
+                              color: colors.textTertiary,
                             ),
                           ),
                         ),
@@ -325,7 +326,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                       ],
                     ),
                   ),
-                  Divider(height: 1, color: AppColors.borderDefault),
+                  Divider(height: 1, color: colors.borderDefault),
                   // 피커
                   Expanded(
                     child: Row(
@@ -421,8 +422,9 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       appBar: MoreAppBar(title: '', showBack: !widget.isOnboarding),
       body: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
@@ -432,6 +434,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
             Text(
               '프로필 설정',
               style: AppTextStyles.headingLg.copyWith(
+                color: colors.textPrimary,
                 fontSize: 24.sp,
                 fontWeight: FontWeight.bold,
               ),
@@ -447,7 +450,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                       width: 88.w,
                       height: 88.w,
                       decoration: BoxDecoration(
-                        color: AppColors.gray100,
+                        color: colors.gray100,
                         borderRadius: BorderRadius.circular(16.r),
                         image: _selectedImage != null
                             ? DecorationImage(
@@ -470,14 +473,17 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                           ? Icon(
                               Icons.camera_alt_outlined,
                               size: 32.w,
-                              color: AppColors.gray500,
+                              color: colors.gray500,
                             )
                           : null,
                     ),
                   ),
                   SizedBox(height: 12.h),
                   if (widget.isOnboarding)
-                    Text('등록하지 않으면 기본 이미지로 설정돼요.', style: AppTextStyles.bodySm)
+                    Text(
+                      '등록하지 않으면 기본 이미지로 설정돼요.',
+                      style: AppTextStyles.bodySm.copyWith(color: colors.textSecondary),
+                    )
                   else
                     GestureDetector(
                       onTap: () {
@@ -490,7 +496,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                       child: Text(
                         '기본 이미지로 변경하기',
                         style: AppTextStyles.bodySm.copyWith(
-                          color: AppColors.textTertiary,
+                          color: colors.textTertiary,
                           decoration: TextDecoration.underline,
                         ),
                       ),
@@ -544,7 +550,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                 suffixIcon: Icon(
                   Icons.calendar_today,
                   size: 20.w,
-                  color: AppColors.textTertiary,
+                  color: colors.textTertiary,
                 ),
               ),
               SizedBox(height: 24.h),
@@ -553,15 +559,15 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
               Text(
                 '고정 수입 여부',
                 style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.textSecondary,
+                  color: colors.textSecondary,
                 ),
               ),
               SizedBox(height: 8.h),
               Container(
                 decoration: BoxDecoration(
-                  color: AppColors.gray100,
+                  color: colors.gray100,
                   borderRadius: BorderRadius.circular(16.r),
-                  border: Border.all(color: AppColors.borderDefault),
+                  border: Border.all(color: colors.borderDefault),
                 ),
                 child: IntrinsicHeight(
                   child: Stack(
@@ -580,7 +586,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                             padding: EdgeInsets.all(4.w),
                             child: Container(
                               decoration: BoxDecoration(
-                                color: AppColors.bgSurface,
+                                color: colors.bgSurface,
                                 borderRadius: BorderRadius.circular(12.r),
                               ),
                             ),
@@ -614,9 +620,9 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
               Container(
                 padding: EdgeInsets.all(16.w),
                 decoration: BoxDecoration(
-                  color: AppColors.bgSurface,
+                  color: colors.bgSurface,
                   borderRadius: BorderRadius.circular(16.r),
-                  border: Border.all(color: AppColors.borderDefault),
+                  border: Border.all(color: colors.borderDefault),
                 ),
                 child: Column(
                   children: [
@@ -702,6 +708,7 @@ class _AgreementCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return GestureDetector(
       onTap: () => onChanged(!value),
       child: Row(
@@ -717,7 +724,7 @@ class _AgreementCheckbox extends StatelessWidget {
                 borderRadius: BorderRadius.circular(4.r),
               ),
               side: BorderSide(
-                color: value ? AppColors.orange500 : AppColors.gray100,
+                color: value ? AppColors.orange500 : colors.gray100,
                 width: 1.5,
               ),
             ),
@@ -727,14 +734,14 @@ class _AgreementCheckbox extends StatelessWidget {
             child: Text(
               text,
               style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.gray900,
+                color: colors.gray900,
                 fontWeight: isBold ? FontWeight.w700 : FontWeight.w400,
                 fontSize: 13.sp,
               ),
             ),
           ),
           if (showArrow)
-            Icon(Icons.chevron_right, size: 20.w, color: AppColors.gray500),
+            Icon(Icons.chevron_right, size: 20.w, color: colors.gray500),
         ],
       ),
     );
@@ -754,6 +761,7 @@ class _ToggleOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -769,7 +777,7 @@ class _ToggleOption extends StatelessWidget {
             child: AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 250),
               style: AppTextStyles.bodyMd.copyWith(
-                color: selected ? AppColors.gray900 : AppColors.textTertiary,
+                color: selected ? colors.gray900 : colors.textTertiary,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
               ),
               child: Text(label),

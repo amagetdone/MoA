@@ -29,19 +29,20 @@ class _MenuPageState extends ConsumerState<MenuPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final state = ref.watch(menuViewModelProvider);
 
     if (state.isLoading) {
-      return const Scaffold(
-        backgroundColor: AppColors.bgPrimary,
-        appBar: MoreAppBar(showBack: false, showLogo: true, showNotification: true),
-        body: SizedBox.shrink(),
+      return Scaffold(
+        backgroundColor: colors.bgPrimary,
+        appBar: const MoreAppBar(showBack: false, showLogo: true, showNotification: true),
+        body: const SizedBox.shrink(),
       );
     }
 
     if (state.errorMessage != null) {
       return Scaffold(
-        backgroundColor: AppColors.bgPrimary,
+        backgroundColor: colors.bgPrimary,
         appBar: const MoreAppBar(showBack: false, showLogo: true, showNotification: true),
         body: Center(
           child: Text(
@@ -53,7 +54,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       appBar: const MoreAppBar(showBack: false, showLogo: true, showNotification: true),
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
@@ -66,7 +67,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                 children: [
                   CircleAvatar(
                     radius: 24.r,
-                    backgroundColor: AppColors.gray100,
+                    backgroundColor: colors.gray100,
                     backgroundImage: state.profileImageUrl != null
                         ? NetworkImage(state.profileImageUrl!)
                         : null,
@@ -74,7 +75,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                         ? Icon(
                             Icons.person_outline,
                             size: 28.w,
-                            color: AppColors.gray500,
+                            color: colors.gray500,
                           )
                         : null,
                   ),
@@ -99,7 +100,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                           Text(
                             state.userName,
                             style: AppTextStyles.bodyLg.copyWith(
-                              color: AppColors.textPrimary,
+                              color: colors.textPrimary,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -109,14 +110,14 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                               Text(
                                 '내 정보 수정하기',
                                 style: AppTextStyles.bodySm.copyWith(
-                                  color: AppColors.textTertiary,
+                                  color: colors.textTertiary,
                                 ),
                               ),
                               SizedBox(width: 2.w),
                               Icon(
                                 Icons.chevron_right,
                                 size: 16.w,
-                                color: AppColors.textTertiary,
+                                color: colors.textTertiary,
                               ),
                             ],
                           ),
@@ -129,7 +130,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                     child: Icon(
                       Icons.settings_outlined,
                       size: 24.w,
-                      color: AppColors.textSecondary,
+                      color: colors.textSecondary,
                     ),
                   ),
                 ],
@@ -177,7 +178,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
               child: Text(
                 '전체 메뉴',
                 style: AppTextStyles.bodyLg.copyWith(
-                  color: AppColors.textPrimary,
+                  color: colors.textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -239,6 +240,7 @@ class _StatBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -254,7 +256,7 @@ class _StatBox extends StatelessWidget {
             Text(
               label,
               style: AppTextStyles.caption.copyWith(
-                color: AppColors.textTertiary,
+                color: colors.textTertiary,
                 fontSize: 12.5.sp,
               ),
             ),
@@ -262,7 +264,7 @@ class _StatBox extends StatelessWidget {
             Text(
               value,
               style: AppTextStyles.bodyMd.copyWith(
-                color: AppColors.textPrimary,
+                color: colors.textPrimary,
                 fontWeight: FontWeight.w600,
                 fontSize: 14.sp,
               ),
@@ -292,6 +294,7 @@ class _MenuListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Padding(
@@ -302,17 +305,17 @@ class _MenuListItem extends StatelessWidget {
               width: 40.w,
               height: 40.w,
               decoration: BoxDecoration(
-                color: AppColors.gray100,
+                color: colors.gray100,
                 borderRadius: BorderRadius.circular(12.r),
               ),
-              child: Icon(icon, size: 20.w, color: Colors.white),
+              child: Icon(icon, size: 20.w, color: colors.white),
             ),
             SizedBox(width: 14.w),
             Expanded(
               child: Text(
                 title,
                 style: AppTextStyles.bodyMd.copyWith(
-                  color: AppColors.textPrimary,
+                  color: colors.textPrimary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -320,7 +323,7 @@ class _MenuListItem extends StatelessWidget {
             Text(
               subtitle,
               style: AppTextStyles.caption.copyWith(
-                color: AppColors.textTertiary,
+                color: colors.textTertiary,
                 fontSize: 11.sp,
               ),
             ),
@@ -328,7 +331,7 @@ class _MenuListItem extends StatelessWidget {
             Icon(
               Icons.chevron_right,
               size: 18.w,
-              color: AppColors.textTertiary,
+              color: colors.textTertiary,
             ),
           ],
         ),

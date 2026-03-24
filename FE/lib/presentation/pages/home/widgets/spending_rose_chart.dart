@@ -1,19 +1,17 @@
-import 'dart:math' as math;
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:graphic/graphic.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:more_app/domain/entities/spending.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 
-const _petalColors = [
+const _donutColors = [
   Color(0xFF5B8DEF),
   Color(0xFFFFB74D),
   Color(0xFF81C784),
   Color(0xFFE57373),
-  Color(0xFF9575CD),
   Color(0xFF90A4AE),
 ];
 
@@ -34,10 +32,9 @@ class SpendingRoseChart extends StatefulWidget {
 class _SpendingRoseChartState extends State<SpendingRoseChart> {
   int? _selectedIndex;
 
-  List<_RoseEntry> _buildEntries() {
+  List<_DonutEntry> _buildEntries() {
     if (widget.categories.isEmpty) return [];
 
-    // 같은 이름 카테고리 합치기
     final merged = <String, int>{};
     for (final c in widget.categories) {
       merged[c.name] = (merged[c.name] ?? 0) + c.amount;
@@ -46,15 +43,15 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
     final sorted = merged.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    final entries = <_RoseEntry>[];
+    final entries = <_DonutEntry>[];
     int othersAmount = 0;
 
     for (int i = 0; i < sorted.length; i++) {
-      if (i < 5) {
-        entries.add(_RoseEntry(
+      if (i < 4) {
+        entries.add(_DonutEntry(
           name: sorted[i].key,
           amount: sorted[i].value,
-          color: _petalColors[i],
+          color: _donutColors[i],
         ));
       } else {
         othersAmount += sorted[i].value;
@@ -62,10 +59,10 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
     }
 
     if (othersAmount > 0) {
-      entries.add(_RoseEntry(
+      entries.add(_DonutEntry(
         name: '기타',
         amount: othersAmount,
-        color: _petalColors[5],
+        color: _donutColors[4],
       ));
     }
 
@@ -74,6 +71,7 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final entries = _buildEntries();
     final total = entries.fold<int>(0, (s, e) => s + e.amount);
 
@@ -81,15 +79,10 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
       return const SizedBox.shrink();
     }
 
-    final chartData = entries
-        .asMap()
-        .entries
-        .map((e) => {
-          'name': e.value.name,
-          'value': e.value.amount,
-          'index': e.key.toString(),
-        })
-        .toList();
+    final centerEntry =
+        _selectedIndex != null && _selectedIndex! < entries.length
+            ? entries[_selectedIndex!]
+            : null;
 
     return MoreCard(
       padding: EdgeInsets.all(16.w),
@@ -100,13 +93,16 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
             children: [
               Text(
                 '이번 주 소비',
-                style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.w700),
+                style: AppTextStyles.bodyMd.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: colors.textPrimary,
+                ),
               ),
               const Spacer(),
               Text(
                 widget.weekLabel,
                 style: TextStyle(
-                  color: AppColors.textTertiary,
+                  color: colors.textTertiary,
                   fontSize: 11.sp,
                 ),
               ),
@@ -114,79 +110,78 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
           ),
           SizedBox(height: 16.h),
 
+          // Donut chart
           SizedBox(
-            height: 240.h,
-            child: Chart(
-              data: chartData,
-              variables: {
-                'name': Variable(
-                  accessor: (Map map) => map['name'] as String,
-                ),
-                'value': Variable(
-                  accessor: (Map map) => map['value'] as num,
-                  scale: LinearScale(min: 0, marginMax: 0.1),
-                ),
-                'index': Variable(
-                  accessor: (Map map) => map['index'] as String,
-                ),
-              },
-              marks: [
-                IntervalMark(
-                  shape: ShapeEncode(
-                    value: RectShape(
-                      borderRadius: BorderRadius.all(Radius.circular(6.r)),
+            height: 220.h,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                PieChart(
+                  PieChartData(
+                    sectionsSpace: 2,
+                    centerSpaceRadius: 55.w,
+                    startDegreeOffset: -90,
+                    pieTouchData: PieTouchData(
+                      touchCallback: (event, response) {
+                        if (response == null ||
+                            response.touchedSection == null) {
+                          return;
+                        }
+                        if (event is FlTapUpEvent) {
+                          final idx =
+                              response.touchedSection!.touchedSectionIndex;
+                          if (idx >= 0 && idx < entries.length) {
+                            setState(() {
+                              _selectedIndex =
+                                  _selectedIndex == idx ? null : idx;
+                            });
+                          }
+                        }
+                      },
                     ),
+                    sections: entries.asMap().entries.map((e) {
+                      final idx = e.key;
+                      final entry = e.value;
+                      final isSelected = _selectedIndex == idx;
+                      return PieChartSectionData(
+                        value: entry.amount.toDouble(),
+                        color: entry.color,
+                        radius: isSelected ? 38.w : 32.w,
+                        title: '',
+                      );
+                    }).toList(),
                   ),
-                  color: ColorEncode(
-                    variable: 'index',
-                    values: entries.length >= 2
-                        ? entries.map((e) => e.color).toList()
-                        : [entries.first.color, entries.first.color],
+                ),
+                // Center label
+                IgnorePointer(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        centerEntry?.name ?? '총 소비',
+                        style: AppTextStyles.caption.copyWith(
+                          color: colors.textTertiary,
+                          fontSize: 11.sp,
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        CurrencyFormatter.formatCompact(
+                          centerEntry?.amount ?? total,
+                        ),
+                        style: AppTextStyles.headingMd.copyWith(
+                          color: colors.textPrimary,
+                          fontSize: 15.sp,
+                        ),
+                      ),
+                    ],
                   ),
-                  elevation: ElevationEncode(value: 3),
-                  transition: Transition(
-                    duration: const Duration(milliseconds: 800),
-                    curve: Curves.elasticOut,
-                  ),
-                  entrance: {MarkEntrance.y},
                 ),
               ],
-              coord: PolarCoord(startRadius: 0.15),
-              selections: {
-                'tap': PointSelection(
-                  on: {GestureType.tap},
-                  toggle: true,
-                ),
-              },
-              tooltip: TooltipGuide(
-                renderer: (size, anchor, selectedTuples) {
-                  if (selectedTuples.isEmpty) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted && _selectedIndex != null) {
-                        setState(() => _selectedIndex = null);
-                      }
-                    });
-                    return [];
-                  }
-
-                  final tuple = selectedTuples.values.first;
-                  final idxStr = tuple['index']?.toString() ?? '';
-                  final idx = int.tryParse(idxStr) ?? -1;
-
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted && _selectedIndex != idx) {
-                      setState(() => _selectedIndex = idx);
-                    }
-                  });
-
-                  // 투명 요소 반환 (기본 툴팁 숨김, 우리 커스텀 UI 사용)
-                  return [];
-                },
-              ),
             ),
           ),
 
-          // 선택된 카테고리 정보
+          // Selected category detail
           if (_selectedIndex != null && _selectedIndex! < entries.length) ...[
             SizedBox(height: 8.h),
             _SelectedInfo(entry: entries[_selectedIndex!], total: total),
@@ -194,36 +189,39 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
 
           SizedBox(height: 12.h),
 
-          // 범례
-          Wrap(
-            spacing: 12.w,
-            runSpacing: 6.h,
-            children: entries.map((e) {
-              final percent = total > 0
-                  ? (e.amount / total * 100).toStringAsFixed(0)
-                  : '0';
-              return Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 8.w,
-                    height: 8.w,
-                    decoration: BoxDecoration(
-                      color: e.color,
-                      shape: BoxShape.circle,
+          // Legend
+          Center(
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 14.w,
+              runSpacing: 6.h,
+              children: entries.map((e) {
+                final percent = total > 0
+                    ? (e.amount / total * 100).toStringAsFixed(0)
+                    : '0';
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8.w,
+                      height: 8.w,
+                      decoration: BoxDecoration(
+                        color: e.color,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                  SizedBox(width: 4.w),
-                  Text(
-                    '${e.name} $percent%',
-                    style: TextStyle(
-                      color: AppColors.textTertiary,
-                      fontSize: 10.sp,
+                    SizedBox(width: 4.w),
+                    Text(
+                      '${e.name} $percent%',
+                      style: TextStyle(
+                        color: colors.textTertiary,
+                        fontSize: 10.sp,
+                      ),
                     ),
-                  ),
-                ],
-              );
-            }).toList(),
+                  ],
+                );
+              }).toList(),
+            ),
           ),
         ],
       ),
@@ -233,11 +231,12 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
 
 class _SelectedInfo extends StatelessWidget {
   const _SelectedInfo({required this.entry, required this.total});
-  final _RoseEntry entry;
+  final _DonutEntry entry;
   final int total;
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final percent = total > 0
         ? (entry.amount / total * 100).toStringAsFixed(1)
         : '0';
@@ -260,7 +259,10 @@ class _SelectedInfo extends StatelessWidget {
           SizedBox(width: 8.w),
           Text(
             entry.name,
-            style: AppTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700),
+            style: AppTextStyles.bodySm.copyWith(
+              fontWeight: FontWeight.w700,
+              color: colors.textPrimary,
+            ),
           ),
           const Spacer(),
           Text(
@@ -274,7 +276,10 @@ class _SelectedInfo extends StatelessWidget {
           SizedBox(width: 8.w),
           Text(
             CurrencyFormatter.formatKRW(entry.amount),
-            style: AppTextStyles.bodySm.copyWith(fontWeight: FontWeight.w600),
+            style: AppTextStyles.bodySm.copyWith(
+              fontWeight: FontWeight.w600,
+              color: colors.textPrimary,
+            ),
           ),
         ],
       ),
@@ -282,11 +287,11 @@ class _SelectedInfo extends StatelessWidget {
   }
 }
 
-class _RoseEntry {
+class _DonutEntry {
   final String name;
   final int amount;
   final Color color;
-  const _RoseEntry({
+  const _DonutEntry({
     required this.name,
     required this.amount,
     required this.color,

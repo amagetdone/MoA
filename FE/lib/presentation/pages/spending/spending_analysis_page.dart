@@ -33,11 +33,12 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final state = ref.watch(spendingViewModelProvider);
     final viewModel = ref.read(spendingViewModelProvider.notifier);
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       appBar: MoreAppBar(
         title: '',
         showBack: false,
@@ -55,12 +56,12 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('지출 내역', style: AppTextStyles.headingMd.copyWith(fontSize: 20.sp, fontWeight: FontWeight.bold)),
+                  Text('지출 내역', style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary, fontSize: 20.sp, fontWeight: FontWeight.bold)),
                   SizedBox(height: 4.h),
                   Text(
                     '주, 월 단위로 소비 내역을 확인할 수 있어요.',
                     style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textTertiary,
+                      color: colors.textTertiary,
                       fontSize: 12.sp,
                     ),
                   ),
@@ -104,7 +105,7 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('지출 그래프', style: AppTextStyles.headingMd),
+                        Text('지출 그래프', style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary)),
                         SizedBox(height: 20.h),
                         SizedBox(
                           height: 220.h,
@@ -128,7 +129,7 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('카테고리별 지출', style: AppTextStyles.headingMd),
+                        Text('카테고리별 지출', style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary)),
                         SizedBox(height: 20.h),
                         CategoryList(
                           categories: state.categories,
@@ -175,6 +176,7 @@ class _SpendingSummaryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColors.of(context);
     final viewModel = ref.read(spendingViewModelProvider.notifier);
     final periodLabel = state.isWeekly
         ? _weekLabel(state.selectedWeekStart)
@@ -203,7 +205,7 @@ class _SpendingSummaryCard extends ConsumerWidget {
                       fit: BoxFit.scaleDown,
                       child: Text(
                         periodLabel,
-                        style: AppTextStyles.headingMd,
+                        style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary),
                       ),
                     ),
                     FittedBox(
@@ -211,7 +213,7 @@ class _SpendingSummaryCard extends ConsumerWidget {
                       child: Text(
                         periodRange,
                         style: AppTextStyles.caption
-                            .copyWith(color: AppColors.textTertiary),
+                            .copyWith(color: colors.textTertiary),
                       ),
                     ),
                   ],
@@ -233,13 +235,13 @@ class _SpendingSummaryCard extends ConsumerWidget {
               children: [
                 Text(
                   '총 지출  ',
-                  style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary),
+                  style: AppTextStyles.bodyMd.copyWith(color: colors.textSecondary),
                 ),
                 Text(
                   CurrencyFormatter.formatKRW(
                     state.isWeekly ? state.weeklyExpenseAmount : state.monthlyExpenseAmount,
                   ),
-                  style: AppTextStyles.headingMd.copyWith(fontSize: 22.sp),
+                  style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary, fontSize: 22.sp),
                 ),
               ],
             ),
@@ -256,10 +258,11 @@ class _SpendingInsightBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: AppColors.bgInsight,
+        color: colors.bgInsight,
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Row(
@@ -281,7 +284,7 @@ class _SpendingInsightBox extends StatelessWidget {
             child: Text(
               '예산 설정하기 >',
               style: AppTextStyles.caption.copyWith(
-                color: AppColors.textTertiary,
+                color: colors.textTertiary,
                 fontSize: 11.sp,
               ),
             ),

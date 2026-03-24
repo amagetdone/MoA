@@ -18,6 +18,7 @@ class GoalLineChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final graphData = goal.graphData;
     if (graphData != null &&
         (graphData.weeks.isNotEmpty ||
@@ -46,7 +47,7 @@ class GoalLineChart extends StatelessWidget {
         primaryLegend: '실제',
         secondaryLegend: '예상 경로',
         primaryColor: AppColors.green500,
-        secondaryColor: AppColors.textTertiary,
+        secondaryColor: colors.textTertiary,
         primarySeries: [
           for (var i = 0; i < totalWeekCount; i++)
             _ChartDatum(
@@ -94,7 +95,7 @@ class GoalLineChart extends StatelessWidget {
       primaryLegend: '실제',
       secondaryLegend: '예상 경로',
       primaryColor: AppColors.green500,
-      secondaryColor: AppColors.textTertiary,
+      secondaryColor: colors.textTertiary,
       primarySeries: [
         for (var i = 0; i < totalWeeks; i++)
           _ChartDatum(
@@ -234,6 +235,7 @@ class _LineChartCardState extends State<_LineChartCard> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final allValues = <double>[
       ...widget.primarySeries.map((e) => e.value),
       ...widget.secondarySeries.map((e) => e.value),
@@ -308,7 +310,7 @@ class _LineChartCardState extends State<_LineChartCard> {
           Text(
             widget.title,
             style: AppTextStyles.headingMd.copyWith(
-              color: AppColors.textPrimary,
+              color: colors.textPrimary,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -319,7 +321,7 @@ class _LineChartCardState extends State<_LineChartCard> {
             leftColor: widget.primaryColor,
             rightLabel: '예상 누적',
             rightValue: CurrencyFormatter.formatKRW(latestPlanned),
-            rightColor: AppColors.textPrimary,
+            rightColor: colors.textPrimary,
           ),
           SizedBox(height: 10.h),
           _LegendRow(
@@ -339,7 +341,7 @@ class _LineChartCardState extends State<_LineChartCard> {
           Text(
             widget.helperText,
             style: AppTextStyles.caption.copyWith(
-              color: AppColors.textTertiary,
+              color: colors.textTertiary,
             ),
           ),
           SizedBox(height: 12.h),
@@ -358,7 +360,7 @@ class _LineChartCardState extends State<_LineChartCard> {
                   drawVerticalLine: false,
                   horizontalInterval: _resolveGridInterval(maxY),
                   getDrawingHorizontalLine: (_) =>
-                      FlLine(color: AppColors.borderDefault, strokeWidth: 1),
+                      FlLine(color: colors.borderDefault, strokeWidth: 1),
                 ),
                 titlesData: FlTitlesData(
                   topTitles: const AxisTitles(
@@ -377,7 +379,7 @@ class _LineChartCardState extends State<_LineChartCard> {
                         child: Text(
                           _formatAxisAmount(value),
                           style: AppTextStyles.caption.copyWith(
-                            color: AppColors.textTertiary,
+                            color: colors.textTertiary,
                           ),
                         ),
                       ),
@@ -398,7 +400,7 @@ class _LineChartCardState extends State<_LineChartCard> {
                           child: Text(
                             widget.primarySeries[index].label,
                             style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textTertiary,
+                              color: colors.textTertiary,
                             ),
                           ),
                         );
@@ -418,7 +420,7 @@ class _LineChartCardState extends State<_LineChartCard> {
                       vertical: 6.h,
                     ),
                     tooltipMargin: 8.h,
-                    getTooltipColor: (_) => Colors.white,
+                    getTooltipColor: (_) => colors.bgSurface,
                     getTooltipItems: (spots) => spots
                         .map(
                           (spot) => LineTooltipItem(
@@ -535,6 +537,7 @@ class _BarChartCardState extends State<_BarChartCard> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return MoreCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -542,7 +545,7 @@ class _BarChartCardState extends State<_BarChartCard> {
           Text(
             widget.title,
             style: AppTextStyles.headingMd.copyWith(
-              color: AppColors.textPrimary,
+              color: colors.textPrimary,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -553,7 +556,7 @@ class _BarChartCardState extends State<_BarChartCard> {
             leftColor: widget.leftMetricColor,
             rightLabel: widget.rightMetricLabel,
             rightValue: widget.rightMetricValue,
-            rightColor: AppColors.textPrimary,
+            rightColor: colors.textPrimary,
           ),
           SizedBox(height: 10.h),
           _ChartControlRow(
@@ -612,7 +615,7 @@ class _BarChartCardState extends State<_BarChartCard> {
                           drawVerticalLine: false,
                           horizontalInterval: bounds.interval,
                           getDrawingHorizontalLine: (_) => FlLine(
-                            color: AppColors.borderDefault,
+                            color: colors.borderDefault,
                             strokeWidth: 1,
                           ),
                         ),
@@ -633,7 +636,7 @@ class _BarChartCardState extends State<_BarChartCard> {
                                 child: Text(
                                   _formatAxisAmount(value),
                                   style: AppTextStyles.caption.copyWith(
-                                    color: AppColors.textTertiary,
+                                    color: colors.textTertiary,
                                   ),
                                 ),
                               ),
@@ -654,7 +657,7 @@ class _BarChartCardState extends State<_BarChartCard> {
                                   child: Text(
                                     widget.bars[index].label,
                                     style: AppTextStyles.caption.copyWith(
-                                      color: AppColors.textTertiary,
+                                      color: colors.textTertiary,
                                     ),
                                   ),
                                 );
@@ -674,7 +677,7 @@ class _BarChartCardState extends State<_BarChartCard> {
                               vertical: 6.h,
                             ),
                             tooltipMargin: 8.h,
-                            getTooltipColor: (_) => Colors.white,
+                            getTooltipColor: (_) => colors.bgSurface,
                             getTooltipItem:
                                 (
                                   group,
@@ -707,7 +710,7 @@ class _BarChartCardState extends State<_BarChartCard> {
                                 horizontalLines: [
                                   HorizontalLine(
                                     y: widget.referenceLineY!,
-                                    color: AppColors.textTertiary.withValues(
+                                    color: colors.textTertiary.withValues(
                                       alpha: 0.55,
                                     ),
                                     strokeWidth: 1.5,
@@ -814,6 +817,7 @@ class _MetricBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Padding(
       padding: EdgeInsets.only(right: 8.w),
       child: Column(
@@ -822,7 +826,7 @@ class _MetricBlock extends StatelessWidget {
           Text(
             label,
             style: AppTextStyles.caption.copyWith(
-              color: AppColors.textTertiary,
+              color: colors.textTertiary,
             ),
           ),
           SizedBox(height: 4.h),
@@ -854,13 +858,14 @@ class _ChartControlRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Row(
       children: [
         Expanded(
           child: Text(
             helperText,
             style: AppTextStyles.caption.copyWith(
-              color: AppColors.textTertiary,
+              color: colors.textTertiary,
             ),
           ),
         ),
@@ -880,6 +885,7 @@ class _ZoomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return InkWell(
       borderRadius: BorderRadius.circular(999.r),
       onTap: onTap,
@@ -887,10 +893,10 @@ class _ZoomButton extends StatelessWidget {
         width: 28.w,
         height: 28.w,
         decoration: BoxDecoration(
-          color: AppColors.gray50,
+          color: colors.gray50,
           borderRadius: BorderRadius.circular(999.r),
         ),
-        child: Icon(icon, size: 18.w, color: AppColors.textPrimary),
+        child: Icon(icon, size: 18.w, color: colors.textPrimary),
       ),
     );
   }
@@ -903,6 +909,7 @@ class _LegendRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Wrap(
       spacing: 12.w,
       runSpacing: 6.h,
@@ -926,7 +933,7 @@ class _LegendRow extends StatelessWidget {
               Text(
                 item.label,
                 style: AppTextStyles.caption.copyWith(
-                  color: AppColors.textTertiary,
+                  color: colors.textTertiary,
                 ),
               ),
             ],

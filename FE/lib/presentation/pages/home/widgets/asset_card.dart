@@ -19,6 +19,7 @@ class AssetCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return MoreCard(
       onTap: () => context.push(AppRoutes.asset),
       padding: EdgeInsets.all(16.w),
@@ -31,7 +32,7 @@ class AssetCard extends StatelessWidget {
                 Text(
                   '총 자산',
                   style: TextStyle(
-                    color: AppColors.textTertiary,
+                    color: colors.textTertiary,
                     fontSize: 11.sp,
                     fontWeight: FontWeight.w500,
                   ),
@@ -45,7 +46,7 @@ class AssetCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 22.sp,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
+                      color: colors.textPrimary,
                     ),
                   ),
                 ),
@@ -59,7 +60,7 @@ class AssetCard extends StatelessWidget {
                 Text(
                   '계좌 관리',
                   style: TextStyle(
-                    color: AppColors.textTertiary,
+                    color: colors.textTertiary,
                     fontSize: 12.sp,
                     fontWeight: FontWeight.w500,
                   ),
@@ -67,7 +68,7 @@ class AssetCard extends StatelessWidget {
                 Icon(
                   Icons.chevron_right,
                   size: 16.w,
-                  color: AppColors.textTertiary,
+                  color: colors.textTertiary,
                 ),
               ],
             ),
