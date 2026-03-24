@@ -12,17 +12,20 @@ import static org.mockito.Mockito.verify;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
 import com.ssafy.amagetdone.domain.account.model.entity.Card;
 import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.domain.account.model.entity.Merchant;
+import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseSnapshotWeek;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekCategoryRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekRepository;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.vo.UserStatus;
 import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseGraphDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionListDto;
 import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyExpenseGraphDto;
@@ -431,17 +434,21 @@ class TransactionQueryServiceTest {
 		assertEquals(65_000L, response.variableEssentialAmount());
 		assertEquals(3, response.categoryExpenses().size());
 		assertEquals("Food", response.categoryExpenses().get(0).categoryName());
-		assertEquals(45_000L, response.categoryExpenses().get(0).plannedAmount());
+		assertEquals(0L, response.categoryExpenses().get(0).plannedAmount());
 		assertEquals(45_000L, response.categoryExpenses().get(0).actualSpentAmount());
 		assertEquals(0L, response.categoryExpenses().get(0).remainingAmount());
 		assertEquals("Transport", response.categoryExpenses().get(1).categoryName());
-		assertEquals(20_000L, response.categoryExpenses().get(1).plannedAmount());
-		assertEquals(20_000L, response.categoryExpenses().get(1).actualSpentAmount());
+		assertEquals(0L, response.categoryExpenses().get(1).plannedAmount());
+		assertEquals(50_000L, response.categoryExpenses().get(1).actualSpentAmount());
 		assertEquals(0L, response.categoryExpenses().get(1).remainingAmount());
 		assertEquals("Housing", response.categoryExpenses().get(2).categoryName());
-		assertEquals(70_000L, response.categoryExpenses().get(2).plannedAmount());
+		assertEquals(0L, response.categoryExpenses().get(2).plannedAmount());
 		assertEquals(70_000L, response.categoryExpenses().get(2).actualSpentAmount());
 		assertEquals(0L, response.categoryExpenses().get(2).remainingAmount());
+		assertEquals(
+			response.expenseAmount(),
+			response.categoryExpenses().stream().mapToLong(WeeklyTransactionAnalysisDto.CategoryExpense::actualSpentAmount).sum()
+		);
 		assertEquals(latestMetadata.getAnalyzedAt(), response.lastAnalyzedAt());
 	}
 
@@ -479,6 +486,104 @@ class TransactionQueryServiceTest {
 		assertNull(response.weekStartDate());
 		assertNull(response.weekEndDate());
 		assertNull(response.lastAnalyzedAt());
+	}
+
+	@Test
+	void getMonthlyTransactionAnalysisAggregatesCategoryExpensesFromAllPureExpenses() {
+		TransactionQueryService queryService = transactionQueryService();
+
+		User user = User.builder()
+			.id(1)
+			.email("tester@example.com")
+			.nickname("tester")
+			.status(UserStatus.ACTIVE)
+			.build();
+		TransactionAnalysisMetadata latestMetadata = TransactionAnalysisMetadata.builder()
+			.id(1)
+			.user(user)
+			.requestedMonths(3)
+			.windowStartAt(LocalDateTime.of(2025, 12, 1, 0, 0))
+			.windowEndAt(LocalDateTime.of(2026, 2, 28, 23, 59, 59))
+			.transactionCount(12)
+			.latestTransactionAt(LocalDateTime.of(2026, 3, 28, 18, 0))
+			.analyzedAt(LocalDateTime.of(2026, 4, 1, 0, 0))
+			.build();
+		given(transactionAnalysisMetadataRepository.findTopByUser_IdOrderByAnalyzedAtDesc(1))
+			.willReturn(Optional.of(latestMetadata));
+
+		Account account = Account.create(user, "111-222-333", "type-1", "main", "deposit", "001", "bank", "KRW");
+		Card card = Card.builder()
+			.cardUniqueNo(2001L)
+			.withdrawalAccount(account)
+			.cvc("123")
+			.cardNo("1234-5678-9012-3456")
+			.name("card")
+			.issuerCode("001")
+			.cardIssuerName("issuer")
+			.cardExpiryDate(LocalDateTime.of(2027, 12, 31, 0, 0))
+			.cardDescription("card")
+			.withdrawalDate("25")
+			.baselinePerformance(0L)
+			.maxBenefitLimit(0L)
+			.build();
+		Merchant merchant = Merchant.builder().id(1).name("Store").build();
+		Category food = Category.create(10, "Food");
+		Category housing = Category.create(12, "Housing");
+		Category leisure = Category.create(40, "Leisure");
+
+		AccountTransactionOverride rent = accountTransaction(1, account, housing, LocalDateTime.of(2026, 3, 5, 9, 0), 50_000L, 2, "Rent");
+		CardTransactionOverride groceries = cardTransaction(2, card, merchant, food, LocalDateTime.of(2026, 3, 10, 12, 0), 80_000L, "Groceries");
+		CardTransactionOverride movie = cardTransaction(3, card, merchant, leisure, LocalDateTime.of(2026, 3, 20, 20, 0), 40_000L, "Movie");
+
+		given(accountTransactionOverrideRepository
+			.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of(rent));
+		given(cardTransactionOverrideRepository
+			.findAllByCard_WithdrawalAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of(groceries, movie));
+		given(transactionAnalysisResultRepository.findAllByTransaction_IdInAndAnalyzedAt(anyList(), any()))
+			.willReturn(List.of(
+				includedResult(rent, housing, ExpenseScope.FIXED),
+				includedResult(groceries, food, ExpenseScope.VARIABLE),
+				excludedResult(movie, leisure, TransactionExcludedReason.NON_ESSENTIAL)
+			));
+
+		EssentialExpenseSnapshotWeek snapshotWeek = EssentialExpenseSnapshotWeek.builder()
+			.id(100)
+			.user(user)
+			.yearWeek("2026-W10")
+			.weekStartDate(LocalDate.of(2026, 3, 2))
+			.weekEndDate(LocalDate.of(2026, 3, 8))
+			.baseMonths(3)
+			.essentialAmount(130_000L)
+			.fixedEssentialAmount(50_000L)
+			.variableEssentialAmount(80_000L)
+			.analyzedAt(latestMetadata.getAnalyzedAt())
+			.build();
+		given(essentialExpenseSnapshotWeekRepository
+			.findAllByUser_IdAndAnalyzedAtAndWeekStartDateBetweenOrderByWeekStartDate(any(), any(), any(), any()))
+			.willReturn(List.of(snapshotWeek));
+
+		MonthlyTransactionAnalysisDto.Response response = queryService.getMonthlyTransactionAnalysis(1, "2026-03");
+
+		assertEquals("2026-03", response.yearMonth());
+		assertEquals(170_000L, response.expenseAmount());
+		assertEquals(130_000L, response.monthlyEssentialAmount());
+		assertEquals(50_000L, response.fixedEssentialAmount());
+		assertEquals(80_000L, response.variableEssentialAmount());
+		assertEquals(3, response.categoryExpenses().size());
+		Map<String, MonthlyTransactionAnalysisDto.CategoryExpense> categoryByName = response.categoryExpenses().stream()
+			.collect(java.util.stream.Collectors.toMap(MonthlyTransactionAnalysisDto.CategoryExpense::categoryName, item -> item));
+		assertEquals(80_000L, categoryByName.get("Food").amount());
+		assertEquals(47.06, categoryByName.get("Food").ratio());
+		assertEquals(50_000L, categoryByName.get("Housing").amount());
+		assertEquals(29.41, categoryByName.get("Housing").ratio());
+		assertEquals(40_000L, categoryByName.get("Leisure").amount());
+		assertEquals(23.53, categoryByName.get("Leisure").ratio());
+		assertEquals(
+			response.expenseAmount(),
+			response.categoryExpenses().stream().mapToLong(MonthlyTransactionAnalysisDto.CategoryExpense::amount).sum()
+		);
 	}
 
 	@Test
