@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:more_app/data/datasources/remote/spending_remote_datasource.dart';
 import 'package:more_app/data/models/app_snapshot_dto.dart';
 import 'package:more_app/data/models/weekly_analysis_dto.dart';
@@ -12,114 +11,80 @@ class RealSpendingRemoteDataSource implements SpendingRemoteDataSource {
   final Dio _dio;
 
   @override
-  Future<void> syncTransactions({int months = 3, bool relabel = false}) async {
-    debugPrint('[Spending] POST /transactions/sync months=$months');
-    final res = await _dio.post(
+  Future<void> syncTransactions({int months = 1, bool relabel = false}) async {
+    await _dio.post(
       '/transactions/sync',
       data: {'months': months, 'forceFullSync': false},
     );
-    debugPrint('[Spending] sync result: ${res.statusCode} ${res.data}');
   }
 
   @override
-  Future<void> analyzeTransactions({int months = 3, bool relabel = false}) async {
-    debugPrint('[Spending] POST /transactions/analysis months=$months');
-    final res = await _dio.post(
+  Future<void> analyzeTransactions({int months = 1, bool relabel = false}) async {
+    await _dio.post(
       '/transactions/analysis',
-      data: {'months': months, 'relabel': relabel},
+      data: {'months': months},
     );
-    debugPrint('[Spending] analyze result: ${res.statusCode} ${res.data}');
   }
 
   @override
   Future<WeeklyAnalysisDto> fetchWeeklyAnalysis(String yearWeek) async {
-    debugPrint('[Spending] GET /transactions/analysis/weeks/$yearWeek');
     final response = await _dio.get('/transactions/analysis/weeks/$yearWeek');
-    debugPrint('[Spending] weekly result: ${response.statusCode} ${response.data}');
     return WeeklyAnalysisDto.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  String _toMonthWeek(DateTime weekMonday) {
+    final year = weekMonday.year;
+    final month = weekMonday.month;
+    final firstDayOfMonth = DateTime(year, month, 1);
+    final daysToFirstMonday = (8 - firstDayOfMonth.weekday) % 7;
+    final firstMonday = firstDayOfMonth.add(Duration(days: daysToFirstMonday));
+    final weekNum = weekMonday.difference(firstMonday).inDays ~/ 7 + 1;
+    return '$year-${month.toString().padLeft(2, '0')}-$weekNum';
   }
 
   @override
   Future<List<DailySpending>> fetchWeeklyDailySpending(DateTime weekStart) async {
-    final weekEnd = weekStart.add(const Duration(days: 6));
-    String fmt(DateTime d) =>
-        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
-    final response = await _dio.get(
-      '/transactions',
-      queryParameters: {
-        'fromDate': fmt(weekStart),
-        'toDate': fmt(weekEnd),
-        'analysisInclusion': 'INCLUDED',
-        'page': 0,
-        'size': 200,
-      },
-    );
-
-    final items = (response.data['items'] as List<dynamic>? ?? []);
-
-    final dailyMap = <String, int>{};
-    for (final item in items) {
-      final direction = item['direction'] as String? ?? '';
-      if (direction == 'IN') continue; // 수입 제외
-      final occurredAt = item['occurredAt'] as String? ?? '';
-      final date = occurredAt.length >= 10 ? occurredAt.substring(0, 10) : '';
-      final amount = (item['amount'] as num?)?.toInt() ?? 0;
-      if (date.isNotEmpty && amount > 0) {
-        dailyMap[date] = (dailyMap[date] ?? 0) + amount;
-      }
-    }
-
-    return List.generate(7, (i) {
-      final date = weekStart.add(Duration(days: i));
-      return DailySpending(date: date, amount: dailyMap[fmt(date)] ?? 0);
-    });
+    final yearWeek = _toMonthWeek(weekStart);
+    final response = await _dio.get('/transactions/expenses/graphs/weeks/$yearWeek');
+    final points = (response.data['points'] as List<dynamic>? ?? []);
+    return points.map((p) {
+      final date = DateTime.parse(p['date'] as String);
+      final amount = (p['expenseAmount'] as num?)?.toInt() ?? 0;
+      return DailySpending(date: date, amount: amount);
+    }).toList();
   }
 
   @override
   Future<MonthlyAnalysisDto> fetchMonthlyAnalysis(String yearMonth) async {
-    debugPrint('[Spending] GET /transactions/analysis/months/$yearMonth');
     final response = await _dio.get('/transactions/analysis/months/$yearMonth');
-    debugPrint('[Spending] monthly result: ${response.statusCode} ${response.data}');
     return MonthlyAnalysisDto.fromJson(response.data as Map<String, dynamic>);
   }
 
   @override
   Future<List<DailySpending>> fetchMonthlyDailySpending(DateTime monthStart) async {
-    final monthEnd = DateTime(monthStart.year, monthStart.month + 1, 0);
-    String fmt(DateTime d) =>
-        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
-    final response = await _dio.get(
-      '/transactions',
-      queryParameters: {
-        'fromDate': fmt(monthStart),
-        'toDate': fmt(monthEnd),
-        'analysisInclusion': 'INCLUDED',
-        'page': 0,
-        'size': 1000,
-      },
-    );
-
-    final items = (response.data['items'] as List<dynamic>? ?? []);
-
-    final dailyMap = <String, int>{};
-    for (final item in items) {
-      final direction = item['direction'] as String? ?? '';
-      if (direction == 'IN') continue;
-      final occurredAt = item['occurredAt'] as String? ?? '';
-      final date = occurredAt.length >= 10 ? occurredAt.substring(0, 10) : '';
-      final amount = (item['amount'] as num?)?.toInt() ?? 0;
-      if (date.isNotEmpty && amount > 0) {
-        dailyMap[date] = (dailyMap[date] ?? 0) + amount;
-      }
-    }
-
-    final daysInMonth = monthEnd.day;
-    return List.generate(daysInMonth, (i) {
-      final date = DateTime(monthStart.year, monthStart.month, i + 1);
-      return DailySpending(date: date, amount: dailyMap[fmt(date)] ?? 0);
-    });
+    final yearMonth =
+        '${monthStart.year}-${monthStart.month.toString().padLeft(2, '0')}';
+    final response =
+        await _dio.get('/transactions/expenses/graphs/months/$yearMonth');
+    final points = (response.data['points'] as List<dynamic>? ?? []);
+    return points
+        .where((p) {
+          final yearWeek = p['yearWeek'] as String? ?? '';
+          if (!yearWeek.startsWith(yearMonth)) return false;
+          // 6주차 이상 제외 (1~5주차만 표시)
+          final parts = yearWeek.split('-');
+          final weekNum = parts.length >= 3 ? (int.tryParse(parts.last) ?? 0) : 0;
+          return weekNum >= 1 && weekNum <= 5;
+        })
+        .where((p) => p['weekStartDate'] != null)
+        .map((p) {
+          final date = DateTime.parse(p['weekStartDate'] as String);
+          final amount = (p['expenseAmount'] as num?)?.toInt() ?? 0;
+          final label = p['label'] as String?;
+          return DailySpending(date: date, amount: amount, label: label);
+        })
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
   }
 
   @override
@@ -160,6 +125,48 @@ class RealSpendingRemoteDataSource implements SpendingRemoteDataSource {
       incomeTotal: incomeTotal,
       categoryAmounts: categoryMap,
     );
+  }
+
+  @override
+  Future<MonthlyAnalysisTriggerDto> analyzeMonthlyTransactions(String yearMonth) async {
+    final res = await _dio.post(
+      '/transactions/analysis/monthly',
+      queryParameters: {'month': yearMonth},
+    );
+    return MonthlyAnalysisTriggerDto.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<MonthlyTransactionSummary> fetchWeeklyTransactionSummary(DateTime weekStart) async {
+    final weekEnd = weekStart.add(const Duration(days: 6));
+    String fmt(DateTime d) =>
+        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+    final response = await _dio.get(
+      '/transactions',
+      queryParameters: {
+        'fromDate': fmt(weekStart),
+        'toDate': fmt(weekEnd),
+        'analysisInclusion': 'INCLUDED',
+        'page': 0,
+        'size': 200,
+      },
+    );
+
+    final items = (response.data['items'] as List<dynamic>? ?? []);
+    final categoryMap = <String, int>{};
+
+    for (final item in items) {
+      final direction = item['direction'] as String? ?? '';
+      if (direction != 'OUT') continue;
+      final amount = (item['amount'] as num?)?.toInt() ?? 0;
+      if (amount <= 0) continue;
+      final categoryObj = item['category'] as Map<String, dynamic>?;
+      final categoryName = categoryObj?['name'] as String? ?? '기타';
+      categoryMap[categoryName] = (categoryMap[categoryName] ?? 0) + amount;
+    }
+
+    return MonthlyTransactionSummary(incomeTotal: 0, categoryAmounts: categoryMap);
   }
 
   @override

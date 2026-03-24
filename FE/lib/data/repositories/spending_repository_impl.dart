@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
 import 'package:more_app/data/datasources/remote/spending_remote_datasource.dart'
     show SpendingRemoteDataSource, MonthlyTransactionSummary;
@@ -19,12 +18,12 @@ class SpendingRepositoryImpl implements SpendingRepository {
   final AppLocalDataSource _localDataSource;
 
   @override
-  Future<void> syncTransactions({int months = 3, bool relabel = false}) async {
+  Future<void> syncTransactions({int months = 1, bool relabel = false}) async {
     await _remoteDataSource.syncTransactions(months: months, relabel: relabel);
   }
 
   @override
-  Future<void> analyzeTransactions({int months = 3, bool relabel = false}) async {
+  Future<void> analyzeTransactions({int months = 1, bool relabel = false}) async {
     await _remoteDataSource.analyzeTransactions(months: months, relabel: relabel);
   }
 
@@ -49,14 +48,14 @@ class SpendingRepositoryImpl implements SpendingRepository {
                 budget: 0,
                 colorValue: 0xFFFF7043,
                 iconKey: 'more_horiz',
+                ratio: e.ratio,
               ))
           .toList();
       return MonthlyAnalysisResult(
         categories: categories,
         expenseAmount: dto.expenseAmount,
       );
-    } catch (e, st) {
-      debugPrint('[Spending] fetchMonthlyAnalysis ERROR: $e\n$st');
+    } catch (e) {
       return const MonthlyAnalysisResult();
     }
   }
@@ -68,35 +67,52 @@ class SpendingRepositoryImpl implements SpendingRepository {
 
   @override
   Future<WeeklyAnalysisResult> fetchWeeklyAnalysis(DateTime weekStart) async {
-    final yearWeek = _toIsoYearWeek(weekStart);
+    final yearWeek = _toMonthWeek(weekStart);
     try {
       final dto = await _remoteDataSource.fetchWeeklyAnalysis(yearWeek);
-      final categories = dto.categoryExpenses
+      if (dto.expenseAmount > 0 && dto.categoryExpenses.isNotEmpty) {
+        final categories = dto.categoryExpenses
+            .map((e) => SpendingCategory(
+                  name: e.categoryName,
+                  amount: e.amount,
+                  budget: 0,
+                  colorValue: 0xFFFF7043,
+                  iconKey: 'more_horiz',
+                  ratio: e.ratio,
+                ))
+            .toList();
+        return WeeklyAnalysisResult(
+          categories: categories,
+          expenseAmount: dto.expenseAmount,
+        );
+      }
+      // 분석 결과 없거나 actualSpentAmount가 모두 0이면 거래 내역에서 직접 카테고리 집계
+      final summary = await _remoteDataSource.fetchWeeklyTransactionSummary(weekStart);
+      final categories = summary.categoryAmounts.entries
           .map((e) => SpendingCategory(
-                name: e.categoryName,
-                amount: e.amount,
+                name: e.key,
+                amount: e.value,
                 budget: 0,
                 colorValue: 0xFFFF7043,
                 iconKey: 'more_horiz',
               ))
-          .toList();
-      return WeeklyAnalysisResult(
-        categories: categories,
-        expenseAmount: dto.expenseAmount,
-      );
-    } catch (e, st) {
-      debugPrint('[Spending] fetchWeeklyAnalysis ERROR: $e\n$st');
+          .toList()
+        ..sort((a, b) => b.amount.compareTo(a.amount));
+      final expenseAmount = summary.categoryAmounts.values.fold(0, (sum, v) => sum + v);
+      return WeeklyAnalysisResult(categories: categories, expenseAmount: expenseAmount);
+    } catch (e) {
       return const WeeklyAnalysisResult();
     }
   }
 
-  String _toIsoYearWeek(DateTime weekMonday) {
-    final thursday = weekMonday.add(const Duration(days: 3));
-    final year = thursday.year;
-    final jan4 = DateTime(year, 1, 4);
-    final week1Monday = jan4.subtract(Duration(days: jan4.weekday - 1));
-    final weekNum = weekMonday.difference(week1Monday).inDays ~/ 7 + 1;
-    return '$year-W${weekNum.toString().padLeft(2, '0')}';
+  String _toMonthWeek(DateTime weekMonday) {
+    final year = weekMonday.year;
+    final month = weekMonday.month;
+    final firstDayOfMonth = DateTime(year, month, 1);
+    final daysToFirstMonday = (8 - firstDayOfMonth.weekday) % 7;
+    final firstMonday = firstDayOfMonth.add(Duration(days: daysToFirstMonday));
+    final weekNum = weekMonday.difference(firstMonday).inDays ~/ 7 + 1;
+    return '$year-${month.toString().padLeft(2, '0')}-$weekNum';
   }
 
   @override
@@ -141,54 +157,25 @@ class SpendingRepositoryImpl implements SpendingRepository {
   }
 
   @override
-  Future<SpendingPatternResult> fetchThreeMonthPattern(DateTime currentMonth) async {
+  Future<SpendingPatternResult> fetchPreviousMonthPattern(DateTime currentMonth) async {
     try {
-      final months = [
-        DateTime(currentMonth.year, currentMonth.month - 3, 1),
-        DateTime(currentMonth.year, currentMonth.month - 2, 1),
-        DateTime(currentMonth.year, currentMonth.month - 1, 1),
-      ];
+      final prevMonth = DateTime(currentMonth.year, currentMonth.month - 1, 1);
+      final yearMonth = _toYearMonth(prevMonth);
 
-      // 실거래 기반: 수입 합계 + 카테고리별 지출
-      final summaries = await Future.wait(months.map((m) async {
-        try {
-          return await _remoteDataSource.fetchMonthlyTransactionSummary(m);
-        } catch (_) {
-          return const MonthlyTransactionSummary();
-        }
-      }));
+      final dto = await _remoteDataSource.fetchMonthlyAnalysis(yearMonth);
+      final summary = await _remoteDataSource.fetchMonthlyTransactionSummary(prevMonth);
 
-      // 필수지출 분류 (고정비/변동비)
-      final analysisDtos = await Future.wait(months.map((m) async {
-        try {
-          return await _remoteDataSource.fetchMonthlyAnalysis(_toYearMonth(m));
-        } catch (_) {
-          return MonthlyAnalysisDto(yearMonth: _toYearMonth(m));
-        }
-      }));
-
-      final totalIncome = summaries.fold(0, (sum, s) => sum + s.incomeTotal);
-      final totalExpense = analysisDtos.fold(0, (sum, d) => sum + d.expenseAmount);
-      final fixedAmount = analysisDtos.fold(0, (sum, d) => sum + d.fixedEssentialAmount);
-      final variableAmount = analysisDtos.fold(0, (sum, d) => sum + d.variableEssentialAmount);
-      for (final dto in analysisDtos) {
-        debugPrint('[Pattern] ${dto.yearMonth} expense=${dto.expenseAmount} fixed=${dto.fixedEssentialAmount} variable=${dto.variableEssentialAmount} categories=${dto.categoryExpenses.length}');
-      }
+      final totalIncome = summary.incomeTotal;
+      final totalExpense = dto.expenseAmount;
+      final fixedAmount = dto.fixedEssentialAmount;
+      final variableAmount = dto.variableEssentialAmount;
       final freeAmount = (totalExpense - fixedAmount - variableAmount).clamp(0, totalExpense);
-      final savingsAmount = (totalIncome - totalExpense).clamp(0, totalIncome);
+      final savingsAmount = totalIncome - totalExpense;
 
-      // 카테고리: 분석 스냅샷 기반 (구독비, 식비 등 properly labeled)
-      final categoryMap = <String, int>{};
-      for (final dto in analysisDtos) {
-        for (final cat in dto.categoryExpenses) {
-          categoryMap[cat.categoryName] = (categoryMap[cat.categoryName] ?? 0) + cat.amount;
-        }
-      }
-
-      final categories = categoryMap.entries
+      final categories = dto.categoryExpenses
           .map((e) => SpendingCategory(
-                name: e.key,
-                amount: e.value,
+                name: e.categoryName,
+                amount: e.amount,
                 budget: 0,
                 colorValue: 0xFFFF7043,
                 iconKey: 'more_horiz',
@@ -208,8 +195,7 @@ class SpendingRepositoryImpl implements SpendingRepository {
         categories: categories,
         topCategoryName: topCategoryName,
       );
-    } catch (e, st) {
-      debugPrint('[Spending] fetchThreeMonthPattern ERROR: $e\n$st');
+    } catch (e) {
       return const SpendingPatternResult();
     }
   }

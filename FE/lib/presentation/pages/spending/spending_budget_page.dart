@@ -22,7 +22,6 @@ class SpendingBudgetPage extends ConsumerStatefulWidget {
 }
 
 class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
-  int? _editedIncome;
   bool _isFixedExpanded = false;
   bool _isVariableExpanded = false;
 
@@ -35,103 +34,38 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
     );
   }
 
-  void _showEditBudgetDialog(int currentIncome) {
-    final controller = TextEditingController();
+  Future<void> _showEditBudgetDialog(int currentIncome) async {
+    final newValue = await showDialog<int>(
+      context: context,
+      builder: (_) => _EditIncomeDialog(currentIncome: currentIncome),
+    );
 
-    void formatListener() {
-      final text = controller.text;
-      final formatted = _formatWithComma(text);
-      if (formatted != text) {
-        controller.value = TextEditingValue(
-          text: formatted,
-          selection: TextSelection.collapsed(offset: formatted.length),
-        );
+    if (newValue != null && mounted) {
+      try {
+        await ref.read(spendingBudgetViewModelProvider.notifier).saveIncome(newValue);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('저장에 실패했습니다: $e')),
+          );
+        }
       }
     }
-    controller.addListener(formatListener);
-    controller.text = _formatWithComma(currentIncome.toString());
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('총 예산 수정', style: AppTextStyles.headingMd),
-            IconButton(
-              onPressed: () => controller.text = _formatWithComma(currentIncome.toString()),
-              icon: const Icon(Icons.refresh, color: AppColors.textTertiary),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('한 달 총 수입(예산)을 입력해주세요.', style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary)),
-            SizedBox(height: 16.h),
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: InputDecoration(
-                suffixText: '원',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.r)),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12.w),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소', style: TextStyle(color: AppColors.textTertiary)),
-          ),
-          TextButton(
-            onPressed: () {
-              final newValue = int.tryParse(controller.text.replaceAll(',', ''));
-              if (newValue != null) setState(() => _editedIncome = newValue);
-              Navigator.pop(context);
-            },
-            child: const Text('저장', style: TextStyle(color: AppColors.orange500, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    ).whenComplete(() {
-      controller.removeListener(formatListener);
-      controller.dispose();
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(spendingBudgetViewModelProvider);
-
-    if (state.isLoading) {
-      return Scaffold(
-        backgroundColor: AppColors.bgPrimary,
-        appBar: const MoreAppBar(title: '', showBack: true, showNotification: true),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
     final setup = state.setup;
-    final displayIncome = _editedIncome ?? setup.monthlyIncome;
-    // 수입 수정 중이면 로컬 계산, 아니면 서버의 실제 잔여 여유자금 사용
-    final extraFunds = _editedIncome != null
-        ? displayIncome - setup.savingsAmount - setup.fixedExpenseAmount - setup.variableExpenseAmount
-        : setup.remainingFreeAmount;
+    final extraFunds = setup.remainingFreeAmount;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: const MoreAppBar(title: '', showBack: true, showNotification: true),
-      body: Column(
-        children: [
+      body: state.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
           Expanded(
             child: Scrollbar(
               thumbVisibility: false,
@@ -141,11 +75,11 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('주간 예산 설정', style: AppTextStyles.headingMd.copyWith(fontSize: 20.sp, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 4.h),
+                    Text('월 수입 · 주간 예산 설정', style: AppTextStyles.headingLg),
+                    SizedBox(height: 12.h),
                     Text(
-                      '주간 예산에 따라 소비분석과 계획 수립을 진행합니다.',
-                      style: AppTextStyles.caption.copyWith(
+                      '월 수입을 기반으로 주간 예산 금액이 자동 배분 됩니다.',
+                      style: AppTextStyles.bodySm.copyWith(
                         color: AppColors.textTertiary,
                         fontSize: 12.sp,
                         height: 1.4,
@@ -162,15 +96,15 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                '총 예산 (수입)',
+                                '월 수입',
                                 style: AppTextStyles.bodyMd.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 17.sp,
                                 ),
                               ),
                               Flexible(
                                 child: GestureDetector(
-                                  onTap: () => _showEditBudgetDialog(displayIncome),
+                                  onTap: () => _showEditBudgetDialog(setup.monthlyIncome),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
@@ -180,7 +114,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                                         child: FittedBox(
                                           fit: BoxFit.scaleDown,
                                           child: Text(
-                                            CurrencyFormatter.formatKRW(displayIncome),
+                                            CurrencyFormatter.formatKRW(setup.monthlyIncome),
                                             style: AppTextStyles.headingLg.copyWith(
                                               fontSize: 20.sp,
                                               fontWeight: FontWeight.bold,
@@ -196,7 +130,16 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           ),
                           SizedBox(height: 24.h),
                           const Divider(color: Color(0xFFEEEEEE), thickness: 1),
-                          SizedBox(height: 32.h),
+                          SizedBox(height: 16.h),
+
+                          Text(
+                            '주간 예산 금액',
+                            style: AppTextStyles.bodyLg.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18.sp,
+                            ),
+                          ),
+                          SizedBox(height: 24.h),
 
                           _BudgetSectionHeader(
                             label: '저축액',
@@ -232,7 +175,11 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           ),
                           if (_isVariableExpanded && setup.variableEssentials.isNotEmpty) ...[
                             SizedBox(height: 16.h),
-                            _EssentialCategoryList(essentials: setup.variableEssentials, sectionTotal: setup.variableExpenseAmount),
+                            _EssentialCategoryList(
+                              essentials: setup.variableEssentials,
+                              totalAmount: setup.variableExpenseAmount,
+                              isVariable: true,
+                            ),
                           ],
                           SizedBox(height: 32.h),
                           const Divider(color: Color(0xFF333333), thickness: 1.5),
@@ -242,7 +189,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                '= 여유 자금',
+                                '= 주간 여유 자금',
                                 style: AppTextStyles.bodyMd.copyWith(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 18.sp,
@@ -279,25 +226,10 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
             ),
           ),
           MoreBottomButton(
-            text: state.isSaving ? '저장 중...' : '저장하기',
+            text: state.isSaving ? '저장 중...' : '확인',
             onPressed: state.isSaving
                 ? null
                 : () async {
-                    if (_editedIncome != null) {
-                      try {
-                        await ref
-                            .read(spendingBudgetViewModelProvider.notifier)
-                            .saveIncome(_editedIncome!);
-                        _editedIncome = null;
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('저장에 실패했습니다: $e')),
-                          );
-                        }
-                        return;
-                      }
-                    }
                     await ref.read(homeViewModelProvider.notifier).loadData();
                     if (context.mounted) context.pop();
                   },
@@ -378,18 +310,23 @@ class _BudgetSectionHeader extends StatelessWidget {
 
 class _EssentialCategoryList extends StatelessWidget {
   final List<BudgetEssential> essentials;
-  final int sectionTotal;
+  final int totalAmount;
+  final bool isVariable;
 
-  const _EssentialCategoryList({required this.essentials, required this.sectionTotal});
+  const _EssentialCategoryList({
+    required this.essentials,
+    required this.totalAmount,
+    this.isVariable = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: essentials.map((e) {
-        final ratio = sectionTotal > 0
-            ? (e.plannedAmount / sectionTotal).clamp(0.0, 1.0)
+        final barRatio = totalAmount > 0
+            ? (e.plannedAmount / totalAmount).clamp(0.0, 1.0)
             : 0.0;
-        final isOver = e.plannedAmount > 0 && e.actualSpentAmount > e.plannedAmount;
+        final isOver = isVariable && e.plannedAmount > 0 && e.actualSpentAmount > e.plannedAmount;
 
         return Padding(
           padding: EdgeInsets.only(bottom: 16.h),
@@ -406,18 +343,35 @@ class _EssentialCategoryList extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  Text(
-                    '${CurrencyFormatter.formatKRW(e.plannedAmount)} / ${CurrencyFormatter.formatKRW(sectionTotal)}',
-                    style: AppTextStyles.caption.copyWith(
-                      color: isOver ? Colors.red : AppColors.textTertiary,
-                      fontSize: 11.sp,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          '${CurrencyFormatter.formatKRW(e.plannedAmount)} / ${CurrencyFormatter.formatKRW(totalAmount)}',
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.caption.copyWith(
+                            color: isOver ? Colors.red : AppColors.textTertiary,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 4.w),
+                      Text(
+                        '(${(barRatio * 100).toStringAsFixed(1)}%)',
+                        style: AppTextStyles.caption.copyWith(
+                          color: isOver ? Colors.red : AppColors.orange500,
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
               SizedBox(height: 6.h),
               MoreProgressBar(
-                progress: ratio,
+                progress: barRatio,
                 color: isOver ? Colors.red : AppColors.orange500,
                 backgroundColor: const Color(0xFFF0F0F0),
                 height: 8.h,
@@ -426,6 +380,104 @@ class _EssentialCategoryList extends StatelessWidget {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+class _EditIncomeDialog extends StatefulWidget {
+  final int currentIncome;
+  const _EditIncomeDialog({required this.currentIncome});
+
+  @override
+  State<_EditIncomeDialog> createState() => _EditIncomeDialogState();
+}
+
+class _EditIncomeDialogState extends State<_EditIncomeDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+    _controller.addListener(_formatListener);
+    _controller.text = _formatWithComma(widget.currentIncome.toString());
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_formatListener);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  String _formatWithComma(String value) {
+    if (value.isEmpty) return '';
+    final number = int.tryParse(value.replaceAll(',', '')) ?? 0;
+    return number.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    );
+  }
+
+  void _formatListener() {
+    final text = _controller.text;
+    final formatted = _formatWithComma(text);
+    if (formatted != text) {
+      _controller.value = TextEditingValue(
+        text: formatted,
+        selection: TextSelection.collapsed(offset: formatted.length),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text('총 예산 수정', style: AppTextStyles.headingMd),
+          IconButton(
+            onPressed: () => _controller.text = _formatWithComma(widget.currentIncome.toString()),
+            icon: const Icon(Icons.refresh, color: AppColors.textTertiary),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('한 달 총 수입(예산)을 입력해주세요.', style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary)),
+          SizedBox(height: 16.h),
+          TextField(
+            controller: _controller,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              suffixText: '원',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.r)),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12.w),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('취소', style: TextStyle(color: AppColors.textTertiary)),
+        ),
+        TextButton(
+          onPressed: () {
+            final val = int.tryParse(_controller.text.replaceAll(',', ''));
+            Navigator.pop(context, val);
+          },
+          child: const Text('저장', style: TextStyle(color: AppColors.orange500, fontWeight: FontWeight.bold)),
+        ),
+      ],
     );
   }
 }
