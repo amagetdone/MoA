@@ -8,6 +8,7 @@ public class AccountSsafyApiProperties {
 	private String baseUrl;
 	private String institutionCode;
 	private String fintechAppNo;
+	private String apiKey;
 
 	public String getBaseUrl() {
 		return baseUrl;
@@ -31,5 +32,13 @@ public class AccountSsafyApiProperties {
 
 	public void setFintechAppNo(String fintechAppNo) {
 		this.fintechAppNo = fintechAppNo;
+	}
+
+	public String getApiKey() {
+		return apiKey;
+	}
+
+	public void setApiKey(String apiKey) {
+		this.apiKey = apiKey;
 	}
 }

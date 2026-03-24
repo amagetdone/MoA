@@ -26,6 +26,7 @@ public class SsafyAdminCreditCardApiClient {
 
 	private static final String CREATE_CARD_API = "createCreditCard";
 	private static final String CREATE_CARD_TRANSACTION_API = "createCreditCardTransaction";
+	private static final String CANCEL_CARD_TRANSACTION_API = "deleteTransaction";
 
 	private final RestClient restClient;
 	private final AccountSsafyApiProperties properties;
@@ -34,6 +35,7 @@ public class SsafyAdminCreditCardApiClient {
 	private final SsafyHttpErrorParser httpErrorParser;
 	private final ParameterizedTypeReference<SsafyResponseEnvelope<ApiCreateCardResponse>> createCardResponseType;
 	private final ParameterizedTypeReference<SsafyResponseEnvelope<ApiCreateCardTransactionResponse>> createCardTransactionResponseType;
+	private final ParameterizedTypeReference<SsafyResponseEnvelope<ApiCancelCardTransactionResponse>> cancelCardTransactionResponseType;
 
 	public SsafyAdminCreditCardApiClient(
 		RestClient.Builder restClientBuilder,
@@ -50,6 +52,8 @@ public class SsafyAdminCreditCardApiClient {
 		this.createCardResponseType = new ParameterizedTypeReference<>() {
 		};
 		this.createCardTransactionResponseType = new ParameterizedTypeReference<>() {
+		};
+		this.cancelCardTransactionResponseType = new ParameterizedTypeReference<>() {
 		};
 	}
 
@@ -124,6 +128,42 @@ public class SsafyAdminCreditCardApiClient {
 			"Y",
 			"Y",
 			"BILLED"
+		);
+	}
+
+	public CardTransactionDto.Item cancelCardTransaction(
+		String apiKey,
+		String userKey,
+		String cardNo,
+		String cvc,
+		Long transactionUniqueNo
+	) {
+		if (isBlank(apiKey) || isBlank(userKey) || isBlank(cardNo) || isBlank(cvc) || transactionUniqueNo == null) {
+			throw new AccountException(AccountErrorCode.CREDIT_CARD_TRANSACTION_CANCEL_API_CALL_FAILED);
+		}
+
+		ApiCancelCardTransactionResponse payload = post(
+			CANCEL_CARD_TRANSACTION_API,
+			apiKey,
+			userKey,
+			new CancelCardTransactionApiRequest(cardNo, cvc, transactionUniqueNo),
+			cancelCardTransactionResponseType,
+			AccountErrorCode.CREDIT_CARD_TRANSACTION_CANCEL_API_CALL_FAILED,
+			AccountErrorCode.INVALID_CREDIT_CARD_TRANSACTION_CANCEL_API_RESPONSE
+		);
+
+		return new CardTransactionDto.Item(
+			payload.transactionUniqueNo(),
+			payload.categoryId(),
+			payload.categoryName(),
+			payload.merchantId(),
+			payload.merchantName(),
+			payload.transactionDate(),
+			payload.transactionTime(),
+			payload.transactionBalance(),
+			"Y",
+			"Y",
+			payload.status()
 		);
 	}
 
@@ -222,6 +262,13 @@ public class SsafyAdminCreditCardApiClient {
 	) {
 	}
 
+	private record CancelCardTransactionApiRequest(
+		String cardNo,
+		String cvc,
+		Long transactionUniqueNo
+	) {
+	}
+
 	private record ApiCreateCardResponse(
 		String cardNo,
 		String cvc,
@@ -247,6 +294,19 @@ public class SsafyAdminCreditCardApiClient {
 		String transactionDate,
 		String transactionTime,
 		Long paymentBalance
+	) {
+	}
+
+	private record ApiCancelCardTransactionResponse(
+		Long transactionUniqueNo,
+		String categoryId,
+		String categoryName,
+		Long merchantId,
+		String merchantName,
+		String transactionDate,
+		String transactionTime,
+		Long transactionBalance,
+		String status
 	) {
 	}
 }

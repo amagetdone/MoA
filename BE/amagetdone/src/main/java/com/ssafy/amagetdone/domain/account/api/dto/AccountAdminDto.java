@@ -76,4 +76,58 @@ public final class AccountAdminDto {
 		int transactionCount
 	) {
 	}
+
+	@Schema(name = "AccountPaymentRequest")
+	public record AccountPaymentRequest(
+		@Schema(description = "Withdraw account number", example = "0016174648358792")
+		String accountNo,
+		@Schema(description = "Deposit account number", example = "0010000000000001")
+		String counterpartyAccountNo,
+		@Schema(description = "Transfer amount", example = "10000")
+		Long amount,
+		@Schema(description = "Withdrawal summary", example = "테스트 출금")
+		String withdrawalSummary,
+		@Schema(description = "Deposit summary", example = "테스트 입금")
+		String depositSummary
+	) {
+	}
+
+	@Schema(name = "CardPaymentRequest")
+	public record CardPaymentRequest(
+		@Schema(description = "Card number", example = "5241111122223333")
+		String cardNo,
+		@Schema(description = "Merchant id", example = "101001")
+		Long merchantId,
+		@Schema(description = "Payment amount", example = "28900")
+		Long amount
+	) {
+	}
+
+	@Schema(name = "CardPaymentCancelRequest")
+	public record CardPaymentCancelRequest(
+		@Schema(description = "Card number", example = "5241111122223333")
+		String cardNo,
+		@Schema(description = "Transaction unique number to cancel", example = "88")
+		Long transactionUniqueNo
+	) {
+	}
+
+	@Schema(name = "PaymentResponse")
+	public record PaymentResponse(
+		@Schema(description = "Target type", example = "card")
+		String targetType,
+		@Schema(description = "Target number", example = "5241111122223333")
+		String targetNo,
+		@Schema(description = "Transaction unique number", example = "88")
+		Long transactionUniqueNo,
+		@Schema(description = "Transaction date", example = "20260324")
+		String transactionDate,
+		@Schema(description = "Transaction time", example = "092700")
+		String transactionTime,
+		@Schema(description = "Transaction amount", example = "28900")
+		Long amount,
+		@Schema(description = "Transaction status", example = "BILLED")
+		String status
+	) {
+	}
 }

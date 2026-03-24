@@ -82,6 +82,16 @@ public enum AccountErrorCode implements ErrorCode {
 		"ACCOUNT_018",
 		"Invalid credit card transaction API response"
 	),
+	CREDIT_CARD_TRANSACTION_CANCEL_API_CALL_FAILED(
+		HttpStatus.BAD_GATEWAY,
+		"ACCOUNT_027",
+		"Credit card transaction cancel API call failed"
+	),
+	INVALID_CREDIT_CARD_TRANSACTION_CANCEL_API_RESPONSE(
+		HttpStatus.BAD_GATEWAY,
+		"ACCOUNT_028",
+		"Invalid credit card transaction cancel API response"
+	),
 	LINKED_CARD_QUERY_API_CALL_FAILED(
 		HttpStatus.BAD_GATEWAY,
 		"ACCOUNT_022",
