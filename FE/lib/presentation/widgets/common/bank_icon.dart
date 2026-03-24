@@ -14,6 +14,7 @@ class BankIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Container(
       width: size,
       height: size,
@@ -25,7 +26,7 @@ class BankIcon extends StatelessWidget {
       child: Text(
         bankName.substring(0, 1),
         style: AppTextStyles.bodySm.copyWith(
-          color: AppColors.white,
+          color: colors.white,
           fontWeight: FontWeight.w700,
           fontSize: size * 0.4,
         ),
@@ -52,7 +53,7 @@ class BankIcon extends StatelessWidget {
       case '기업은행':
         return const Color(0xFF005BAC);
       default:
-        return AppColors.gray500;
+        return Colors.grey;
     }
   }
 }

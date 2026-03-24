@@ -26,6 +26,7 @@ class _CategoryListState extends State<CategoryList> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     // 금액 순 정렬
     final sortedCategories = [...widget.categories]
       ..sort((a, b) => b.amount.compareTo(a.amount));
@@ -63,7 +64,7 @@ class _CategoryListState extends State<CategoryList> {
                     child: Text(
                       category.name,
                       style: AppTextStyles.bodyMd.copyWith(
-                        color: AppColors.textSecondary,
+                        color: colors.textSecondary,
                         fontWeight: FontWeight.w600,
                         fontSize: 14.sp,
                       ),
@@ -84,7 +85,7 @@ class _CategoryListState extends State<CategoryList> {
                                 ? '${CurrencyFormatter.formatKRW(category.amount)} / ${CurrencyFormatter.formatKRW(widget.totalAmount!)}'
                                 : CurrencyFormatter.formatKRW(category.amount),
                             style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textSecondary,
+                              color: colors.textSecondary,
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w500,
                             ),
@@ -106,7 +107,7 @@ class _CategoryListState extends State<CategoryList> {
                       MoreProgressBar(
                         progress: barRatio,
                         color: AppColors.orange500,
-                        backgroundColor: const Color(0xFFF0F0F0),
+                        backgroundColor: colors.gray50,
                         height: 14.h,
                       ),
                     ],
@@ -123,7 +124,7 @@ class _CategoryListState extends State<CategoryList> {
             onTap: () => setState(() => _isExpanded = !_isExpanded),
             child: Icon(
               _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-              color: AppColors.gray900,
+              color: colors.gray900,
               size: 28.w,
             ),
           ),

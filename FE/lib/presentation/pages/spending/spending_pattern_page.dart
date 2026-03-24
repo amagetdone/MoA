@@ -37,13 +37,14 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final patternState = ref.watch(spendingPatternViewModelProvider);
     final touchedIndex = ref.watch(spendingViewModelProvider).touchedPieIndex;
     final spendingViewModel = ref.read(spendingViewModelProvider.notifier);
 
     if (patternState.isLoading) {
       return Scaffold(
-        backgroundColor: AppColors.bgPrimary,
+        backgroundColor: colors.bgPrimary,
         appBar: const MoreAppBar(title: '', showBack: true, showNotification: true),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -58,7 +59,7 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
     final total = result.totalExpense;
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       appBar: const MoreAppBar(
         title: '',
         showBack: true,
@@ -72,12 +73,12 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('소비 패턴 분석', style: AppTextStyles.headingMd.copyWith(fontSize: 20.sp, fontWeight: FontWeight.bold)),
+              Text('소비 패턴 분석', style: AppTextStyles.headingMd.copyWith(fontSize: 20.sp, fontWeight: FontWeight.bold, color: colors.textPrimary)),
               SizedBox(height: 4.h),
               Text(
                 '지난 달 소비내역을 기반으로 분석된 내용이에요.',
                 style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.textTertiary,
+                  color: colors.textTertiary,
                   fontSize: 12.sp,
                 ),
               ),
@@ -88,7 +89,7 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
                 padding: EdgeInsets.all(24.w),
                 child: Column(
                   children: [
-                    _SummaryRow(label: '총 수입', value: result.totalIncome, color: AppColors.textPrimary),
+                    _SummaryRow(label: '총 수입', value: result.totalIncome, color: colors.textPrimary),
                     SizedBox(height: 16.h),
                     _SummaryRow(label: '총 지출', value: result.totalExpense, color: AppColors.orange500),
                   ],
@@ -138,13 +139,13 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
                                   fontSize: 16.sp,
                                   color: touchedIndex != null
                                       ? _sectionColors[touchedIndex]
-                                      : AppColors.textPrimary,
+                                      : colors.textPrimary,
                                 ),
                               ),
                               Text(
                                 touchedIndex != null ? _sectionLabels[touchedIndex] : '총지출',
                                 style: AppTextStyles.caption.copyWith(
-                                  color: AppColors.textTertiary,
+                                  color: colors.textTertiary,
                                   fontSize: 12.sp,
                                 ),
                               ),
@@ -208,13 +209,14 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
                           style: AppTextStyles.bodyMd.copyWith(
                             fontWeight: FontWeight.bold,
                             fontSize: 16.sp,
+                            color: colors.textPrimary,
                           ),
                         ),
                         SizedBox(height: 4.h),
                         Text(
                           '이전 달 전체 지출 대비 카테고리별 금액이에요.',
                           style: AppTextStyles.caption.copyWith(
-                            color: AppColors.textTertiary,
+                            color: colors.textTertiary,
                             fontSize: 12.sp,
                           ),
                         ),
@@ -275,13 +277,14 @@ class _SummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
           style: AppTextStyles.bodyMd.copyWith(
-            color: AppColors.textSecondary,
+            color: colors.textSecondary,
             fontSize: 15.sp,
           ),
         ),
@@ -306,6 +309,7 @@ class _LegendItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -324,7 +328,7 @@ class _LegendItem extends StatelessWidget {
                 label,
                 overflow: TextOverflow.ellipsis,
                 style: AppTextStyles.caption.copyWith(
-                  color: AppColors.textSecondary,
+                  color: colors.textSecondary,
                   fontSize: 12.sp,
                 ),
               ),
@@ -332,7 +336,7 @@ class _LegendItem extends StatelessWidget {
                 CurrencyFormatter.formatKRW(amount),
                 overflow: TextOverflow.ellipsis,
                 style: AppTextStyles.caption.copyWith(
-                  color: AppColors.textTertiary,
+                  color: colors.textTertiary,
                   fontSize: 11.sp,
                 ),
               ),

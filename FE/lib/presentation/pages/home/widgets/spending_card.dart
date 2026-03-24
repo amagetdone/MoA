@@ -22,94 +22,60 @@ class SpendingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 남은 비율 → 오렌지 배경이 위에서 아래로 줄어듦
+    final colors = AppColors.of(context);
     final remainRatio = totalAmount > 0
         ? (remainingAmount / totalAmount).clamp(0.0, 1.0)
         : 0.0;
+    final todayTarget = DateTime.now().weekday / 7;
+    // 여유자금: 남은 비율이 (1 - 오늘까지 써도 되는 비율)보다 높거나 같으면 초록
+    final isOnTrack = remainRatio >= (1 - todayTarget);
+    final amountColor = isOnTrack ? const Color(0xFF53A65A) : AppColors.red500;
 
     return GaugeCard(
       fillRatio: remainRatio,
       fillColor: AppColors.orange500.withValues(alpha: 0.15),
       fillFromTop: false,
+      todayLineFromTop: true,
+      todayLineColor: amountColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Row(
-                children: [
-                  Text(
-                    '여유자금',
-                    style: AppTextStyles.bodySm.copyWith(
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  SizedBox(width: 4.w),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 1.h),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(999.r),
-                      color: AppColors.orange500.withValues(alpha: 0.15),
-                    ),
-                    child: Text(
-                      'D-$daysRemaining',
-                      style: TextStyle(
-                        color: AppColors.orange500,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 9.sp,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 6.h),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Row(
-                  children: [
-                    Text(
-                      CurrencyFormatter.formatKRW(remainingAmount),
-                      style: AppTextStyles.headingMd.copyWith(
-                        color: AppColors.orange500,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    SizedBox(width: 4.w),
-                    Text(
-                      '남음',
-                      style: TextStyle(
-                        color: AppColors.textTertiary,
-                        fontSize: 11.sp,
-                      ),
-                    ),
-                  ],
+              Icon(Icons.account_balance_wallet_outlined,
+                  size: 14.w, color: amountColor),
+              SizedBox(width: 4.w),
+              Text(
+                '여유자금',
+                style: AppTextStyles.caption.copyWith(
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11.sp,
                 ),
               ),
             ],
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '/ ${CurrencyFormatter.formatKRW(totalAmount)} (${CurrencyFormatter.formatKRW(usedAmount)} 사용)',
-                style: TextStyle(
-                  color: AppColors.textTertiary,
-                  fontSize: 10.sp,
-                ),
+          SizedBox(height: 10.h),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              CurrencyFormatter.formatKRW(remainingAmount),
+              style: AppTextStyles.headingMd.copyWith(
+                color: amountColor,
+                fontWeight: FontWeight.w800,
+                fontSize: 17.sp,
               ),
-              SizedBox(height: 2.h),
-              Text(
-                '하루 ${CurrencyFormatter.formatKRW(dailyAvailable)} 사용 가능',
-                style: TextStyle(
-                  color: AppColors.textTertiary,
-                  fontSize: 10.sp,
-                ),
-              ),
-            ],
+            ),
+          ),
+          SizedBox(height: 6.h),
+          Text(
+            '/ ${CurrencyFormatter.formatKRW(totalAmount)}',
+            style: TextStyle(
+              color: colors.textTertiary,
+              fontSize: 10.sp,
+            ),
           ),
         ],
       ),
@@ -125,23 +91,29 @@ class GaugeCard extends StatelessWidget {
     required this.fillColor,
     required this.child,
     this.fillFromTop = false,
+    this.todayLineFromTop = false,
+    this.todayLineColor,
   });
 
   final double fillRatio;
   final Color fillColor;
   final Widget child;
-  /// true: 위에서 아래로 채움 (소비 → 줄어듦), false: 아래에서 위로 채움 (저축 → 차오름)
   final bool fillFromTop;
+  final bool todayLineFromTop;
+  final Color? todayLineColor;
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final todayRatio = DateTime.now().weekday / 7;
+
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
+        color: colors.bgSurface,
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
+            color: colors.cardShadow,
             offset: Offset(0, 2.h),
             blurRadius: 8.r,
           ),
@@ -150,6 +122,7 @@ class GaugeCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
+          // Gauge fill
           Positioned.fill(
             child: Align(
               alignment: fillFromTop
@@ -161,8 +134,12 @@ class GaugeCard extends StatelessWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      begin: fillFromTop ? Alignment.bottomCenter : Alignment.topCenter,
-                      end: fillFromTop ? Alignment.topCenter : Alignment.bottomCenter,
+                      begin: fillFromTop
+                          ? Alignment.bottomCenter
+                          : Alignment.topCenter,
+                      end: fillFromTop
+                          ? Alignment.topCenter
+                          : Alignment.bottomCenter,
                       colors: [
                         fillColor.withValues(alpha: 0.0),
                         fillColor,
@@ -174,6 +151,16 @@ class GaugeCard extends StatelessWidget {
               ),
             ),
           ),
+          // Today marker line
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _WeekDividerPainter(
+                todayRatio: todayRatio,
+                todayColor: todayLineColor ?? colors.borderDefault.withValues(alpha: 0.5),
+                fromTop: todayLineFromTop,
+              ),
+            ),
+          ),
           Padding(
             padding: EdgeInsets.all(14.w),
             child: child,
@@ -182,4 +169,42 @@ class GaugeCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _WeekDividerPainter extends CustomPainter {
+  _WeekDividerPainter({
+    required this.todayRatio,
+    required this.todayColor,
+    required this.fromTop,
+  });
+
+  final double todayRatio;
+  final Color todayColor;
+  final bool fromTop;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final todayPaint = Paint()
+      ..color = todayColor
+      ..strokeWidth = 1.2;
+
+    // fromTop: 위에서 아래 (여유자금) → todayY = height * todayRatio
+    // !fromTop: 아래에서 위 (저축) → todayY = height * (1 - todayRatio)
+    final todayY = fromTop
+        ? size.height * todayRatio
+        : size.height * (1 - todayRatio);
+
+    final lineWidth = size.width * 0.15;
+    canvas.drawLine(
+      Offset(size.width - lineWidth, todayY),
+      Offset(size.width, todayY),
+      todayPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _WeekDividerPainter oldDelegate) =>
+      oldDelegate.todayRatio != todayRatio ||
+      oldDelegate.todayColor != todayColor ||
+      oldDelegate.fromTop != fromTop;
 }

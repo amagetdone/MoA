@@ -55,12 +55,13 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final state = ref.watch(spendingBudgetViewModelProvider);
     final setup = state.setup;
     final extraFunds = setup.remainingFreeAmount;
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       appBar: const MoreAppBar(title: '', showBack: true, showNotification: true),
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -75,12 +76,12 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('월 수입 · 주간 예산 설정', style: AppTextStyles.headingLg),
+                    Text('월 수입 · 주간 예산 설정', style: AppTextStyles.headingLg.copyWith(color: colors.textPrimary)),
                     SizedBox(height: 12.h),
                     Text(
                       '월 수입을 기반으로 주간 예산 금액이 자동 배분 됩니다.',
                       style: AppTextStyles.bodySm.copyWith(
-                        color: AppColors.textTertiary,
+                        color: colors.textTertiary,
                         fontSize: 12.sp,
                         height: 1.4,
                       ),
@@ -100,6 +101,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                                 style: AppTextStyles.bodyMd.copyWith(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 17.sp,
+                                  color: colors.textPrimary,
                                 ),
                               ),
                               Flexible(
@@ -108,7 +110,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.edit_outlined, size: 20, color: Colors.black),
+                                      Icon(Icons.edit_outlined, size: 20, color: colors.textPrimary),
                                       SizedBox(width: 8.w),
                                       Flexible(
                                         child: FittedBox(
@@ -118,6 +120,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                                             style: AppTextStyles.headingLg.copyWith(
                                               fontSize: 20.sp,
                                               fontWeight: FontWeight.bold,
+                                              color: colors.textPrimary,
                                             ),
                                           ),
                                         ),
@@ -129,7 +132,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                             ],
                           ),
                           SizedBox(height: 24.h),
-                          const Divider(color: Color(0xFFEEEEEE), thickness: 1),
+                          Divider(color: colors.borderDefault, thickness: 1),
                           SizedBox(height: 16.h),
 
                           Text(
@@ -137,6 +140,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                             style: AppTextStyles.bodyLg.copyWith(
                               fontWeight: FontWeight.bold,
                               fontSize: 18.sp,
+                              color: colors.textPrimary,
                             ),
                           ),
                           SizedBox(height: 24.h),
@@ -185,7 +189,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                             ),
                           ],
                           SizedBox(height: 32.h),
-                          const Divider(color: Color(0xFF333333), thickness: 1.5),
+                          Divider(color: colors.textPrimary, thickness: 1.5),
                           SizedBox(height: 32.h),
 
                           Row(
@@ -196,6 +200,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                                 style: AppTextStyles.bodyMd.copyWith(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 18.sp,
+                                  color: colors.textPrimary,
                                 ),
                               ),
                               FittedBox(
@@ -215,7 +220,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           Text(
                             '고정/변동/저축비를 제외한 자유롭게 사용 가능한 금액',
                             style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textTertiary,
+                              color: colors.textTertiary,
                               fontSize: 11.sp,
                             ),
                           ),
@@ -264,6 +269,7 @@ class _BudgetSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -275,17 +281,17 @@ class _BudgetSectionHeader extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.arrow_right_alt, color: AppColors.textPrimary, size: 22.w),
+                  Icon(Icons.arrow_right_alt, color: colors.textPrimary, size: 22.w),
                   SizedBox(width: 6.w),
                   Text(
                     label,
-                    style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold, fontSize: 17.sp),
+                    style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold, fontSize: 17.sp, color: colors.textPrimary),
                   ),
                   if (isExpandable) ...[
                     SizedBox(width: 4.w),
                     Icon(
                       isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                      color: AppColors.textTertiary,
+                      color: colors.textTertiary,
                       size: 20.w,
                     ),
                   ],
@@ -304,7 +310,7 @@ class _BudgetSectionHeader extends StatelessWidget {
         SizedBox(height: 4.h),
         Text(
           description,
-          style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary, fontSize: 12.sp),
+          style: AppTextStyles.caption.copyWith(color: colors.textTertiary, fontSize: 12.sp),
         ),
       ],
     );
@@ -324,6 +330,7 @@ class _EssentialCategoryList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Column(
       children: essentials.map((e) {
         final barRatio = totalAmount > 0
@@ -342,7 +349,7 @@ class _EssentialCategoryList extends StatelessWidget {
                   Text(
                     e.categoryName,
                     style: AppTextStyles.bodySm.copyWith(
-                      color: AppColors.textSecondary,
+                      color: colors.textSecondary,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -354,7 +361,7 @@ class _EssentialCategoryList extends StatelessWidget {
                           '${CurrencyFormatter.formatKRW(e.plannedAmount)} / ${CurrencyFormatter.formatKRW(totalAmount)}',
                           overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.caption.copyWith(
-                            color: isOver ? Colors.red : AppColors.textTertiary,
+                            color: isOver ? Colors.red : colors.textTertiary,
                             fontSize: 11.sp,
                           ),
                         ),
@@ -376,7 +383,7 @@ class _EssentialCategoryList extends StatelessWidget {
               MoreProgressBar(
                 progress: barRatio,
                 color: isOver ? Colors.red : AppColors.orange500,
-                backgroundColor: const Color(0xFFF0F0F0),
+                backgroundColor: colors.gray50,
                 height: 8.h,
               ),
             ],
@@ -435,16 +442,17 @@ class _EditIncomeDialogState extends State<_EditIncomeDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return AlertDialog(
-      backgroundColor: Colors.white,
+      backgroundColor: colors.bgSurface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('총 예산 수정', style: AppTextStyles.headingMd),
+          Text('총 예산 수정', style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary)),
           IconButton(
             onPressed: () => _controller.text = _formatWithComma(widget.currentIncome.toString()),
-            icon: const Icon(Icons.refresh, color: AppColors.textTertiary),
+            icon: Icon(Icons.refresh, color: colors.textTertiary),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
           ),
@@ -454,7 +462,7 @@ class _EditIncomeDialogState extends State<_EditIncomeDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('한 달 총 수입(예산)을 입력해주세요.', style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary)),
+          Text('한 달 총 수입(예산)을 입력해주세요.', style: AppTextStyles.bodySm.copyWith(color: colors.textTertiary)),
           SizedBox(height: 16.h),
           TextField(
             controller: _controller,
@@ -471,7 +479,7 @@ class _EditIncomeDialogState extends State<_EditIncomeDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('취소', style: TextStyle(color: AppColors.textTertiary)),
+          child: Text('취소', style: TextStyle(color: colors.textTertiary)),
         ),
         TextButton(
           onPressed: () {

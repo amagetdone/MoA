@@ -19,6 +19,7 @@ class MoreBottomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(24.w, 8.h, 24.w, 16.h),
@@ -36,7 +37,7 @@ class MoreBottomButton extends StatelessWidget {
                       // Background
                       Container(
                         decoration: BoxDecoration(
-                          color: AppColors.gray100,
+                          color: colors.gray100,
                           borderRadius: BorderRadius.circular(4.r),
                         ),
                       ),
@@ -46,12 +47,12 @@ class MoreBottomButton extends StatelessWidget {
                         child: Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(4.r),
-                            gradient: const LinearGradient(
+                            gradient: LinearGradient(
                               colors: [
-                                AppColors.white,
+                                colors.white,
                                 AppColors.orange500,
                               ],
-                              stops: [0.0, 0.7],
+                              stops: const [0.0, 0.7],
                             ),
                           ),
                         ),
@@ -69,12 +70,12 @@ class MoreBottomButton extends StatelessWidget {
                 onPressed: enabled ? onPressed : null,
                 style: ButtonStyle(
                   backgroundColor: WidgetStateProperty.resolveWith((states) {
-                    if (!enabled) return AppColors.gray100;
+                    if (!enabled) return colors.gray100;
                     if (states.contains(WidgetState.pressed)) return AppColors.orange600;
-                    return AppColors.buttonPrimary;
+                    return colors.buttonPrimary;
                   }),
                   foregroundColor: WidgetStateProperty.all(
-                    enabled ? AppColors.white : AppColors.textTertiary,
+                    enabled ? colors.white : colors.textTertiary,
                   ),
                   elevation: WidgetStateProperty.all(0),
                   shape: WidgetStateProperty.all(
@@ -86,7 +87,7 @@ class MoreBottomButton extends StatelessWidget {
                 child: Text(
                   text,
                   style: AppTextStyles.bodyLg.copyWith(
-                    color: enabled ? AppColors.white : AppColors.textTertiary,
+                    color: enabled ? colors.white : colors.textTertiary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

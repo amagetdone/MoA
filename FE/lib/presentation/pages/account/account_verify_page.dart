@@ -134,8 +134,9 @@ class _AccountVerifyPageState extends ConsumerState<AccountVerifyPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       appBar: MoreAppBar(title: widget.isOnboarding ? '' : '계좌인증', showBack: true),
       body: Padding(
         padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
@@ -146,6 +147,7 @@ class _AccountVerifyPageState extends ConsumerState<AccountVerifyPage> {
               Text(
                 '계좌인증',
                 style: AppTextStyles.headingLg.copyWith(
+                  color: colors.textPrimary,
                   fontSize: 24.sp,
                   fontWeight: FontWeight.bold,
                 ),
@@ -154,7 +156,7 @@ class _AccountVerifyPageState extends ConsumerState<AccountVerifyPage> {
               Text(
                 '1원을 보내드렸어요.',
                 style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.textTertiary,
+                  color: colors.textTertiary,
                   fontSize: 14.sp,
                 ),
               ),
@@ -164,7 +166,7 @@ class _AccountVerifyPageState extends ConsumerState<AccountVerifyPage> {
             Text(
               '입금자 명에 표기된 숫자를 입력하세요',
               style: AppTextStyles.headingMd.copyWith(
-                color: AppColors.gray900,
+                color: colors.gray900,
                 fontSize: 18.sp,
               ),
               textAlign: TextAlign.center,
@@ -176,8 +178,8 @@ class _AccountVerifyPageState extends ConsumerState<AccountVerifyPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(4, (index) {
                 return Container(
-                  width: 56.w,
-                  height: 64.h,
+                  width: 64.w,
+                  height: 72.h,
                   margin: EdgeInsets.symmetric(horizontal: 6.w),
                   child: TextField(
                     controller: _digitControllers[index],
@@ -185,11 +187,12 @@ class _AccountVerifyPageState extends ConsumerState<AccountVerifyPage> {
                     keyboardType: TextInputType.number,
                     textAlign: TextAlign.center,
                     maxLength: 1,
-                    style: AppTextStyles.headingLg.copyWith(fontSize: 24.sp),
+                    style: AppTextStyles.headingLg.copyWith(color: colors.textPrimary, fontSize: 24.sp),
                     decoration: InputDecoration(
                       counterText: '',
+                      contentPadding: EdgeInsets.symmetric(vertical: 16.h),
                       filled: true,
-                      fillColor: AppColors.gray50,
+                      fillColor: colors.gray50,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12.r),
                         borderSide: BorderSide.none,
@@ -218,12 +221,12 @@ class _AccountVerifyPageState extends ConsumerState<AccountVerifyPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.timer_outlined, size: 18.w, color: AppColors.gray500),
+                Icon(Icons.timer_outlined, size: 18.w, color: colors.gray500),
                 SizedBox(width: 4.w),
                 Text(
                   _timerText,
                   style: AppTextStyles.bodyMd.copyWith(
-                    color: AppColors.gray500,
+                    color: colors.gray500,
                     fontSize: 14.sp,
                   ),
                 ),

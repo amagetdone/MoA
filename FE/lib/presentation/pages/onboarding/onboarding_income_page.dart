@@ -87,11 +87,12 @@ class _OnboardingIncomePageState extends ConsumerState<OnboardingIncomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final onboardingState = ref.watch(onboardingViewModelProvider);
     final isSaving = _isLoading || onboardingState.isLoading;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colors.bgSurface,
       appBar: MoreAppBar(
         title: '계획 수립 중',
         showBack: true,
@@ -105,7 +106,7 @@ class _OnboardingIncomePageState extends ConsumerState<OnboardingIncomePage> {
               width: double.infinity,
               padding: EdgeInsets.all(20.w),
               decoration: BoxDecoration(
-                color: AppColors.gray50,
+                color: colors.gray50,
                 borderRadius: BorderRadius.circular(16.r),
               ),
               child: Column(
@@ -114,7 +115,7 @@ class _OnboardingIncomePageState extends ConsumerState<OnboardingIncomePage> {
                   Text(
                     '수입을 확인해주세요.',
                     style: AppTextStyles.headingMd.copyWith(
-                      color: AppColors.gray900,
+                      color: colors.gray900,
                       fontSize: 18.sp,
                     ),
                   ),
@@ -122,7 +123,7 @@ class _OnboardingIncomePageState extends ConsumerState<OnboardingIncomePage> {
                   Text(
                     '분석한 월 평균 수입이에요. 다르다면 직접 수정해주세요.',
                     style: AppTextStyles.bodySm.copyWith(
-                      color: AppColors.gray500,
+                      color: colors.gray500,
                       fontSize: 13.sp,
                     ),
                   ),
@@ -133,7 +134,7 @@ class _OnboardingIncomePageState extends ConsumerState<OnboardingIncomePage> {
             Text(
               '월 평균 수입',
               style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.gray700,
+                color: colors.gray700,
                 fontWeight: FontWeight.w600,
                 fontSize: 13.sp,
               ),
@@ -145,17 +146,17 @@ class _OnboardingIncomePageState extends ConsumerState<OnboardingIncomePage> {
               readOnly: !_isEditing,
               inputFormatters: [CurrencyInputFormatter()],
               style: AppTextStyles.headingLg.copyWith(
-                color: AppColors.gray900,
+                color: colors.gray900,
                 fontSize: 24.sp,
               ),
               decoration: InputDecoration(
                 suffixText: '원',
                 suffixStyle: AppTextStyles.headingMd.copyWith(
-                  color: AppColors.gray500,
+                  color: colors.gray500,
                   fontSize: 18.sp,
                 ),
                 filled: true,
-                fillColor: AppColors.gray50,
+                fillColor: colors.gray50,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12.r),
                   borderSide: BorderSide.none,
@@ -196,7 +197,7 @@ class _OnboardingIncomePageState extends ConsumerState<OnboardingIncomePage> {
                             }
                           },
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: AppColors.borderDefault),
+                      side: BorderSide(color: colors.borderDefault),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16.r),
                       ),
@@ -204,7 +205,7 @@ class _OnboardingIncomePageState extends ConsumerState<OnboardingIncomePage> {
                     child: Text(
                       '이대로 진행',
                       style: AppTextStyles.bodyMd.copyWith(
-                        color: AppColors.gray700,
+                        color: colors.gray700,
                         fontWeight: FontWeight.w600,
                         fontSize: 15.sp,
                       ),

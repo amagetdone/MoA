@@ -23,13 +23,14 @@ class MoreDateField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: AppTextStyles.bodySm.copyWith(
-            color: AppColors.textSecondary,
+            color: colors.textSecondary,
           ),
         ),
         SizedBox(height: 8.h),
@@ -38,11 +39,11 @@ class MoreDateField extends StatelessWidget {
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
             decoration: BoxDecoration(
-              color: AppColors.bgSurface,
+              color: colors.bgSurface,
               borderRadius: BorderRadius.circular(16.r),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
+                  color: colors.cardShadow,
                   offset: Offset(0, 2.h),
                   blurRadius: 8.r,
                 ),
@@ -57,15 +58,15 @@ class MoreDateField extends StatelessWidget {
                         : 'YYYY.MM.DD',
                     style: AppTextStyles.bodyMd.copyWith(
                       color: value != null
-                          ? AppColors.textPrimary
-                          : AppColors.textTertiary,
+                          ? colors.textPrimary
+                          : colors.textTertiary,
                     ),
                   ),
                 ),
                 Icon(
                   Icons.calendar_today_outlined,
                   size: 20.w,
-                  color: AppColors.textTertiary,
+                  color: colors.textTertiary,
                 ),
               ],
             ),
@@ -98,6 +99,7 @@ class MoreDateField extends StatelessWidget {
 
     int daysInMonth(int year, int month) => DateUtils.getDaysInMonth(year, month);
 
+    final colors = AppColors.of(context);
     await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -116,7 +118,7 @@ class MoreDateField extends StatelessWidget {
             return Container(
               height: 360.h,
               decoration: BoxDecoration(
-                color: AppColors.bgSurface,
+                color: colors.bgSurface,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
               ),
               child: Column(
@@ -131,7 +133,7 @@ class MoreDateField extends StatelessWidget {
                           child: Text(
                             '취소',
                             style: AppTextStyles.bodyMd.copyWith(
-                              color: AppColors.textTertiary,
+                              color: colors.textTertiary,
                             ),
                           ),
                         ),
@@ -145,7 +147,7 @@ class MoreDateField extends StatelessWidget {
                           child: Text(
                             '확인',
                             style: AppTextStyles.bodyMd.copyWith(
-                              color: isInvalid ? AppColors.gray100 : AppColors.orange500,
+                              color: isInvalid ? colors.gray100 : AppColors.orange500,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -153,7 +155,7 @@ class MoreDateField extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Divider(height: 1, color: AppColors.borderDefault),
+                  Divider(height: 1, color: colors.borderDefault),
                   if (isInvalid)
                     Padding(
                       padding: EdgeInsets.only(top: 8.h),

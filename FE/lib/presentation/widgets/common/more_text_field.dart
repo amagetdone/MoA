@@ -38,18 +38,19 @@ class MoreTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary)),
+        Text(label, style: AppTextStyles.bodySm.copyWith(color: colors.textSecondary)),
         SizedBox(height: 8.h),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.bgSurface,
+            color: colors.bgSurface,
             borderRadius: BorderRadius.circular(16.r),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
+                color: colors.cardShadow,
                 offset: Offset(0, 2.h),
                 blurRadius: 8.r,
               ),
@@ -64,12 +65,12 @@ class MoreTextField extends StatelessWidget {
             onChanged: onChanged,
             onTap: onTap,
             maxLines: maxLines,
-            style: AppTextStyles.bodyMd,
+            style: AppTextStyles.bodyMd.copyWith(color: colors.textPrimary),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.textTertiary),
+              hintStyle: AppTextStyles.bodyMd.copyWith(color: colors.textTertiary),
               suffixText: suffix,
-              suffixStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary),
+              suffixStyle: AppTextStyles.bodyMd.copyWith(color: colors.textSecondary),
               suffixIcon: suffixIcon,
               filled: true,
               fillColor: Colors.transparent,
@@ -83,7 +84,7 @@ class MoreTextField extends StatelessWidget {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16.r),
-                borderSide: const BorderSide(color: AppColors.buttonPrimary, width: 2),
+                borderSide: BorderSide(color: colors.buttonPrimary, width: 2),
               ),
               contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
             ),

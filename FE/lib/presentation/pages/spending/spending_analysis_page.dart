@@ -33,11 +33,12 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final state = ref.watch(spendingViewModelProvider);
     final viewModel = ref.read(spendingViewModelProvider.notifier);
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       appBar: MoreAppBar(
         title: '',
         showBack: false,
@@ -57,12 +58,12 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('지출 내역', style: AppTextStyles.headingMd.copyWith(fontSize: 20.sp, fontWeight: FontWeight.bold)),
+                  Text('지출 내역', style: AppTextStyles.headingMd.copyWith(fontSize: 20.sp, fontWeight: FontWeight.bold, color: colors.textPrimary)),
                   SizedBox(height: 4.h),
                   Text(
                     '주, 월 단위로 소비 내역을 확인할 수 있어요.',
                     style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textTertiary,
+                      color: colors.textTertiary,
                       fontSize: 12.sp,
                     ),
                   ),
@@ -112,7 +113,7 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('지출 그래프', style: AppTextStyles.headingMd),
+                              Text('지출 그래프', style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary)),
                               GestureDetector(
                                 onTap: () => context.push(AppRoutes.spendingBudget),
                                 child: Text(
@@ -145,14 +146,14 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('카테고리별 지출', style: AppTextStyles.headingMd),
+                          Text('카테고리별 지출', style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary)),
                           SizedBox(height: 4.h),
                           Text(
                             state.isWeekly
                                 ? '이번 주 전체 지출 대비 카테고리별 금액이에요.'
                                 : '이번 달 전체 지출 대비 카테고리별 금액이에요.',
                             style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textTertiary,
+                              color: colors.textTertiary,
                               fontSize: 12.sp,
                             ),
                           ),
@@ -206,6 +207,7 @@ class _SpendingSummaryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColors.of(context);
     final viewModel = ref.read(spendingViewModelProvider.notifier);
     final periodLabel = state.isWeekly
         ? _weekLabel(state.selectedWeekStart)
@@ -234,7 +236,7 @@ class _SpendingSummaryCard extends ConsumerWidget {
                       fit: BoxFit.scaleDown,
                       child: Text(
                         periodLabel,
-                        style: AppTextStyles.headingMd,
+                        style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary),
                       ),
                     ),
                     FittedBox(
@@ -242,7 +244,7 @@ class _SpendingSummaryCard extends ConsumerWidget {
                       child: Text(
                         periodRange,
                         style: AppTextStyles.caption
-                            .copyWith(color: AppColors.textTertiary),
+                            .copyWith(color: colors.textTertiary),
                       ),
                     ),
                   ],
@@ -264,13 +266,13 @@ class _SpendingSummaryCard extends ConsumerWidget {
               children: [
                 Text(
                   '총 지출  ',
-                  style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary),
+                  style: AppTextStyles.bodyMd.copyWith(color: colors.textSecondary),
                 ),
                 Text(
                   CurrencyFormatter.formatKRW(
                     state.isWeekly ? state.weeklyExpenseAmount : state.monthlyExpenseAmount,
                   ),
-                  style: AppTextStyles.headingMd.copyWith(fontSize: 22.sp),
+                  style: AppTextStyles.headingMd.copyWith(fontSize: 22.sp, color: colors.textPrimary),
                 ),
               ],
             ),
@@ -280,4 +282,3 @@ class _SpendingSummaryCard extends ConsumerWidget {
     );
   }
 }
-

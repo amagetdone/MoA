@@ -19,62 +19,58 @@ class SavingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 저축액 / 총 저축 목표 비율 → 아래에서 위로 초록 차오름
+    final colors = AppColors.of(context);
     final fillRatio = savingTargetAmount > 0
         ? (weeklySaved / savingTargetAmount).clamp(0.0, 1.0)
         : 0.0;
+    final todayTarget = DateTime.now().weekday / 7;
+    // 저축: 구분선보다 높거나 같으면 초록, 낮으면 빨간
+    final isOnTrack = fillRatio >= todayTarget;
+    final amountColor = isOnTrack ? const Color(0xFF53A65A) : AppColors.red500;
 
     return GaugeCard(
       fillRatio: fillRatio,
       fillColor: const Color(0xFF69BD5F).withValues(alpha: 0.15),
       fillFromTop: false,
+      todayLineColor: amountColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
+              Icon(Icons.savings_outlined, size: 14.w, color: amountColor),
+              SizedBox(width: 4.w),
               Text(
-                '이번 주 저축',
-                style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              SizedBox(height: 6.h),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  CurrencyFormatter.formatKRW(weeklySaved),
-                  style: AppTextStyles.headingMd.copyWith(
-                    color: const Color(0xFF53A65A),
-                    fontWeight: FontWeight.w800,
-                  ),
+                '저축',
+                style: AppTextStyles.caption.copyWith(
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11.sp,
                 ),
               ),
             ],
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '/ ${CurrencyFormatter.formatKRW(savingTargetAmount)}',
-                style: TextStyle(
-                  color: AppColors.textTertiary,
-                  fontSize: 11.sp,
-                ),
+          SizedBox(height: 10.h),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              CurrencyFormatter.formatKRW(weeklySaved),
+              style: AppTextStyles.headingMd.copyWith(
+                color: amountColor,
+                fontWeight: FontWeight.w800,
+                fontSize: 17.sp,
               ),
-              SizedBox(height: 2.h),
-              Text(
-                '$savingProgressRate% 달성',
-                style: TextStyle(
-                  color: AppColors.textTertiary,
-                  fontSize: 10.sp,
-                ),
-              ),
-            ],
+            ),
+          ),
+          SizedBox(height: 6.h),
+          Text(
+            '/ ${CurrencyFormatter.formatKRW(savingTargetAmount)}',
+            style: TextStyle(
+              color: colors.textTertiary,
+              fontSize: 10.sp,
+            ),
           ),
         ],
       ),

@@ -29,12 +29,14 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
   final TextEditingController _descriptionController = TextEditingController();
   DateTime? _startDate = DateTime.now();
   DateTime? _endDate;
+  int _selectedPriority = 1;
 
   @override
   void dispose() {
     _nameController.dispose();
     _amountController.dispose();
     _descriptionController.dispose();
+    _priorityController.dispose();
     super.dispose();
   }
 
@@ -50,7 +52,6 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
 
     final targetAmount =
         int.tryParse(_amountController.text.replaceAll(',', '').trim()) ?? 0;
-    final currentGoals = ref.read(goalViewModelProvider).inProgressGoals;
     final goal = Goal(
       id: 'goal_${DateTime.now().millisecondsSinceEpoch}',
       name: _nameController.text.trim(),
@@ -61,7 +62,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
       currentAmount: 0,
       startDate: _startDate!,
       endDate: _endDate!,
-      priority: currentGoals.length + 1,
+      priority: widget.isOnboarding ? 1 : _selectedPriority,
       status: GoalStatus.inProgress,
     );
 
@@ -86,10 +87,116 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
     }
   }
 
+  final TextEditingController _priorityController = TextEditingController(text: '1');
+
+  int get _maxPriority {
+    final currentGoals = ref.read(goalViewModelProvider).inProgressGoals;
+    return currentGoals.length + 1;
+  }
+
+  void _changePriority(int delta) {
+    final next = _selectedPriority + delta;
+    if (next < 1 || next > _maxPriority) return;
+    setState(() {
+      _selectedPriority = next;
+      _priorityController.text = '$next';
+    });
+  }
+
+  Widget _buildPrioritySelector(AppColorScheme colors) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
+      decoration: BoxDecoration(
+        color: colors.bgSurface,
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: colors.cardShadow,
+            offset: Offset(0, 2.h),
+            blurRadius: 8.r,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Number input
+          Expanded(
+            child: TextField(
+              controller: _priorityController,
+              keyboardType: TextInputType.number,
+              style: AppTextStyles.bodyMd.copyWith(color: colors.textPrimary),
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(vertical: 14.h),
+                isDense: true,
+                hintText: '1',
+                hintStyle: AppTextStyles.bodyMd.copyWith(color: colors.textTertiary),
+              ),
+              onChanged: (value) {
+                final parsed = int.tryParse(value);
+                if (parsed != null && parsed >= 1 && parsed <= _maxPriority) {
+                  setState(() => _selectedPriority = parsed);
+                }
+              },
+              onSubmitted: (_) {
+                final clamped = _selectedPriority.clamp(1, _maxPriority);
+                setState(() {
+                  _selectedPriority = clamped;
+                  _priorityController.text = '$clamped';
+                });
+              },
+            ),
+          ),
+          // Up / Down arrows stacked
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildArrowButton(
+                icon: Icons.keyboard_arrow_up,
+                onTap: () => _changePriority(1),
+                enabled: _selectedPriority < _maxPriority,
+                colors: colors,
+              ),
+              _buildArrowButton(
+                icon: Icons.keyboard_arrow_down,
+                onTap: () => _changePriority(-1),
+                enabled: _selectedPriority > 1,
+                colors: colors,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildArrowButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    required bool enabled,
+    required AppColorScheme colors,
+  }) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: SizedBox(
+        width: 32.w,
+        height: 24.h,
+        child: Icon(
+          icon,
+          size: 20.w,
+          color: enabled ? colors.textSecondary : colors.borderDefault,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       appBar: MoreAppBar(
         title: widget.isOnboarding ? '' : '새 목표 만들기',
         showBack: true,
@@ -110,6 +217,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
               Text(
                 '첫 번째 목표 설정',
                 style: AppTextStyles.headingLg.copyWith(
+                  color: colors.textPrimary,
                   fontSize: 24.sp,
                   fontWeight: FontWeight.bold,
                 ),
@@ -118,7 +226,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
               Text(
                 '달성하고 싶은 목표를 설정해주세요.',
                 style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.textTertiary,
+                  color: colors.textTertiary,
                   fontSize: 14.sp,
                 ),
               ),
@@ -137,17 +245,17 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
             Text(
               '목표 설명 (선택)',
               style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.textSecondary,
+                color: colors.textSecondary,
               ),
             ),
             SizedBox(height: 8.h),
             Container(
               decoration: BoxDecoration(
-                color: AppColors.bgSurface,
+                color: colors.bgSurface,
                 borderRadius: BorderRadius.circular(16.r),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
+                    color: colors.cardShadow,
                     offset: Offset(0, 2.h),
                     blurRadius: 8.r,
                   ),
@@ -157,11 +265,11 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
                 controller: _descriptionController,
                 minLines: 1,
                 maxLines: null,
-                style: AppTextStyles.bodyMd.copyWith(color: AppColors.gray900),
+                style: AppTextStyles.bodyMd.copyWith(color: colors.gray900),
                 decoration: InputDecoration(
                   hintText: '목표에 대한 설명을 입력해주세요',
                   hintStyle: AppTextStyles.bodyMd.copyWith(
-                    color: AppColors.textTertiary,
+                    color: colors.textTertiary,
                   ),
                   filled: true,
                   fillColor: Colors.transparent,
@@ -175,8 +283,8 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16.r),
-                    borderSide: const BorderSide(
-                      color: AppColors.buttonPrimary,
+                    borderSide: BorderSide(
+                      color: colors.buttonPrimary,
                       width: 2,
                     ),
                   ),
@@ -200,6 +308,19 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
               onChanged: (_) => setState(() {}),
             ),
             SizedBox(height: 24.h),
+
+            // Priority selector (only for non-onboarding)
+            if (!widget.isOnboarding) ...[
+              Text(
+                '목표 우선순위',
+                style: AppTextStyles.bodySm.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+              SizedBox(height: 8.h),
+              _buildPrioritySelector(colors),
+              SizedBox(height: 24.h),
+            ],
 
             // Start date & End date in one row
             Row(

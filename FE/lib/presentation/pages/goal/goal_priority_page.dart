@@ -25,13 +25,14 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final goalState = ref.watch(goalViewModelProvider);
     final displayGoals = _hasChanges
         ? _reorderedGoals
         : List<Goal>.from(goalState.inProgressGoals);
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       appBar: const MoreAppBar(title: '목표 우선순위'),
       body: Column(
         children: [
@@ -40,7 +41,7 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
             child: Text(
               '드래그하여 우선순위를 변경하세요',
               style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.textTertiary,
+                color: colors.textTertiary,
               ),
             ),
           ),
@@ -52,7 +53,7 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
                     child: Text(
                       '진행 중인 목표가 없습니다.',
                       style: AppTextStyles.bodyMd.copyWith(
-                        color: AppColors.textTertiary,
+                        color: colors.textTertiary,
                       ),
                     ),
                   )
@@ -92,14 +93,14 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
                                 width: 28.w,
                                 height: 28.w,
                                 decoration: BoxDecoration(
-                                  color: index == 0 ? AppColors.orange500 : AppColors.gray100,
+                                  color: index == 0 ? AppColors.orange500 : colors.gray100,
                                   borderRadius: BorderRadius.circular(8.r),
                                 ),
                                 child: Center(
                                   child: Text(
                                     '${index + 1}',
                                     style: AppTextStyles.bodySm.copyWith(
-                                      color: index == 0 ? Colors.white : AppColors.textPrimary,
+                                      color: index == 0 ? Colors.white : colors.textPrimary,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
@@ -114,7 +115,7 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
                                       goal.name,
                                       style: AppTextStyles.bodyMd.copyWith(
                                         fontWeight: FontWeight.w600,
-                                        color: AppColors.textPrimary,
+                                        color: colors.textPrimary,
                                       ),
                                     ),
                                     SizedBox(height: 2.h),
@@ -123,7 +124,7 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
                                         goal.targetAmount,
                                       ),
                                       style: AppTextStyles.bodySm.copyWith(
-                                        color: AppColors.textTertiary,
+                                        color: colors.textTertiary,
                                       ),
                                     ),
                                   ],
@@ -133,7 +134,7 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
                                 index: index,
                                 child: Icon(
                                   Icons.drag_handle,
-                                  color: AppColors.textTertiary,
+                                  color: colors.textTertiary,
                                   size: 24.w,
                                 ),
                               ),

@@ -111,6 +111,7 @@ class _GoalVideoThumbState extends State<GoalVideoThumb> {
     final height = widget.size;
 
     if (widget.forceLoading || !_ready || _error) {
+      final colors = AppColors.of(context);
       return Container(
         width: width,
         height: height,
@@ -121,13 +122,13 @@ class _GoalVideoThumbState extends State<GoalVideoThumb> {
             end: Alignment.bottomCenter,
             colors: [Color(0xFFFFF2E0), Color(0xFFF6FAEF)],
           ),
-          border: Border.all(color: AppColors.gray500.withValues(alpha: 0.15)),
+          border: Border.all(color: colors.gray500.withValues(alpha: 0.15)),
         ),
         child: Center(
           child: _error
               ? Icon(
                   Icons.broken_image_outlined,
-                  color: AppColors.textTertiary,
+                  color: colors.textTertiary,
                   size: height * 0.4,
                 )
               : SizedBox(
@@ -136,7 +137,7 @@ class _GoalVideoThumbState extends State<GoalVideoThumb> {
                   child: CircularProgressIndicator(
                     strokeWidth: 2.4,
                     color: AppColors.orange500,
-                    backgroundColor: AppColors.gray500.withValues(alpha: 0.2),
+                    backgroundColor: colors.gray500.withValues(alpha: 0.2),
                   ),
                 ),
         ),

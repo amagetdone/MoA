@@ -25,8 +25,9 @@ class AccountCompletePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColors.of(context);
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       appBar: const MoreAppBar(title: '', showBack: true),
       body: Padding(
         padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
@@ -36,6 +37,7 @@ class AccountCompletePage extends ConsumerWidget {
             Text(
               '연동완료',
               style: AppTextStyles.headingLg.copyWith(
+                color: colors.textPrimary,
                 fontSize: 24.sp,
                 fontWeight: FontWeight.bold,
               ),
@@ -44,7 +46,7 @@ class AccountCompletePage extends ConsumerWidget {
             Text(
               '연동이 완료되었습니다.',
               style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.textTertiary,
+                color: colors.textTertiary,
                 fontSize: 14.sp,
               ),
             ),
@@ -67,7 +69,7 @@ class AccountCompletePage extends ConsumerWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 22.sp,
-                          color: Colors.black87,
+                          color: colors.textPrimary,
                         ),
                       ),
                     ),
@@ -79,6 +81,7 @@ class AccountCompletePage extends ConsumerWidget {
                       Text(
                         bankName,
                         style: AppTextStyles.bodyMd.copyWith(
+                          color: colors.textPrimary,
                           fontWeight: FontWeight.bold,
                           fontSize: 16.sp,
                         ),
@@ -87,7 +90,7 @@ class AccountCompletePage extends ConsumerWidget {
                       Text(
                         accountNumber,
                         style: AppTextStyles.bodySm.copyWith(
-                          color: AppColors.textSecondary,
+                          color: colors.textSecondary,
                           fontSize: 14.sp,
                         ),
                       ),

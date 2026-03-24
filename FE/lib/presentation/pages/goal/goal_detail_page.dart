@@ -32,22 +32,23 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final goalState = ref.watch(goalViewModelProvider);
     final goal = goalState.findGoalById(widget.goalId);
     final isDetailLoading = goalState.isDetailLoading(widget.goalId);
     final history = goalState.savingsHistoryFor(widget.goalId);
 
     if (goalState.isLoading || (goal == null && isDetailLoading)) {
-      return const Scaffold(
-        backgroundColor: AppColors.bgPrimary,
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: colors.bgPrimary,
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (goal == null) {
       return Scaffold(
-        backgroundColor: AppColors.bgPrimary,
-        appBar: AppBar(backgroundColor: AppColors.bgPrimary, elevation: 0),
+        backgroundColor: colors.bgPrimary,
+        appBar: AppBar(backgroundColor: colors.bgPrimary, elevation: 0),
         body: const Center(child: Text('목표를 찾을 수 없습니다.')),
       );
     }
@@ -58,7 +59,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
     );
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       body: SafeArea(
         child: Column(
           children: [
@@ -70,7 +71,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
                     icon: Icon(
                       Icons.chevron_left,
                       size: 28.r,
-                      color: AppColors.textPrimary,
+                      color: colors.textPrimary,
                     ),
                     onPressed: () => context.pop(),
                   ),
@@ -84,7 +85,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
                             goal.name,
                             style: AppTextStyles.headingMd.copyWith(
                               fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary,
+                              color: colors.textPrimary,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -94,7 +95,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
                         Text(
                           '$currentWeek주차 / 총 ${goal.totalWeeks}주',
                           style: AppTextStyles.bodySm.copyWith(
-                            color: AppColors.textTertiary,
+                            color: colors.textTertiary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -104,7 +105,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
                   Icon(
                     Icons.notifications_outlined,
                     size: 24.r,
-                    color: AppColors.textPrimary,
+                    color: colors.textPrimary,
                   ),
                 ],
               ),
@@ -130,14 +131,14 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
                               '목표 설명',
                               style: AppTextStyles.bodyMd.copyWith(
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
+                                color: colors.textPrimary,
                               ),
                             ),
                             SizedBox(height: 6.h),
                             Text(
                               goal.description!,
                               style: AppTextStyles.bodyMd.copyWith(
-                                color: AppColors.textSecondary,
+                                color: colors.textSecondary,
                               ),
                             ),
                           ],
@@ -174,6 +175,7 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final remaining = CurrencyFormatter.formatKRW(goal.remainingAmount);
     final current = CurrencyFormatter.formatKRW(goal.currentAmount);
     final target = CurrencyFormatter.formatKRW(goal.targetAmount);
@@ -217,7 +219,7 @@ class _HeroCard extends StatelessWidget {
                       label: goal.remainingDays >= 0
                           ? 'D-${goal.remainingDays}'
                           : 'D+${-goal.remainingDays}',
-                      bgColor: Colors.black.withValues(alpha: 0.35),
+                      bgColor: colors.cardShadow,
                       textColor: goal.remainingDays < 0
                           ? AppColors.red500
                           : Colors.white,
@@ -270,7 +272,7 @@ class _HeroCard extends StatelessWidget {
                               Text(
                                 '총 $target',
                                 style: AppTextStyles.bodySm.copyWith(
-                                  color: AppColors.textTertiary,
+                                  color: colors.textTertiary,
                                 ),
                               ),
                             ],
@@ -279,7 +281,7 @@ class _HeroCard extends StatelessWidget {
                           Text(
                             '현재 저축액',
                             style: AppTextStyles.bodySm.copyWith(
-                              color: AppColors.textTertiary,
+                              color: colors.textTertiary,
                             ),
                           ),
                         ],
@@ -291,14 +293,14 @@ class _HeroCard extends StatelessWidget {
                 MoreProgressBar(
                   progress: goal.progressRate,
                   color: AppColors.green500,
-                  backgroundColor: AppColors.gray500.withValues(alpha: 0.12),
+                  backgroundColor: colors.gray500.withValues(alpha: 0.12),
                   height: 8.h,
                 ),
                 SizedBox(height: 8.h),
                 Text(
                   '목표까지 $remaining 남음',
                   style: AppTextStyles.bodySm.copyWith(
-                    color: AppColors.textTertiary,
+                    color: colors.textTertiary,
                   ),
                 ),
               ],
@@ -317,6 +319,7 @@ class _WeeklySummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final weeklyMission = goal.weeklyMission;
     final weeklyBudget = goal.weeklyBudget;
 
@@ -329,7 +332,7 @@ class _WeeklySummaryCard extends StatelessWidget {
             '주간 계획 요약',
             style: AppTextStyles.bodyMd.copyWith(
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: colors.textPrimary,
             ),
           ),
           SizedBox(height: 12.h),
@@ -371,6 +374,7 @@ class _SummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Padding(
       padding: EdgeInsets.only(bottom: 8.h),
       child: Row(
@@ -378,12 +382,12 @@ class _SummaryRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary),
+            style: AppTextStyles.bodySm.copyWith(color: colors.textTertiary),
           ),
           Text(
             value,
             style: AppTextStyles.bodyMd.copyWith(
-              color: AppColors.textPrimary,
+              color: colors.textPrimary,
               fontWeight: FontWeight.w700,
             ),
           ),

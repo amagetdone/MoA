@@ -110,10 +110,11 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final displayBanks = _showAllBanks ? _allBanks : _allBanks.take(9).toList();
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       appBar: MoreAppBar(
         title: widget.isOnboarding ? '' : '계좌 연동',
         showBack: true,
@@ -129,6 +130,7 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
               Text(
                 '계좌 연동',
                 style: AppTextStyles.headingLg.copyWith(
+                  color: colors.textPrimary,
                   fontSize: 24.sp,
                   fontWeight: FontWeight.bold,
                 ),
@@ -137,7 +139,7 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
               Text(
                 '은행을 선택하고 계좌번호를 입력해주세요.',
                 style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.textTertiary,
+                  color: colors.textTertiary,
                   fontSize: 14.sp,
                 ),
               ),
@@ -146,7 +148,7 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
             Text(
               '은행 선택',
               style: AppTextStyles.headingMd.copyWith(
-                color: AppColors.textPrimary,
+                color: colors.textPrimary,
                 fontSize: 18.sp,
               ),
             ),
@@ -166,8 +168,16 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
                 final bank = displayBanks[index];
                 final isSelected = _selectedBank?.code == bank.code;
                 return GestureDetector(
-                  onTap: () {
-                    setState(() => _selectedBank = bank);
+                  onTap: _isAccountVerified
+                      ? null
+                      : () {
+                    setState(() {
+                      if (_selectedBank?.code != bank.code) {
+                        _accountNumberController.clear();
+                        _isAccountVerified = false;
+                      }
+                      _selectedBank = bank;
+                    });
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       _accountFocusNode.requestFocus();
                       _scrollController.animateTo(
@@ -179,14 +189,14 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
                   },
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: colors.bgSurface,
                       borderRadius: BorderRadius.circular(12.r),
                       border: Border.all(
                         color: isSelected ? AppColors.orange500 : Colors.transparent,
                         width: 1.5,
                       ),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
+                        BoxShadow(color: colors.cardShadow, blurRadius: 4, offset: const Offset(0, 2)),
                       ],
                     ),
                     child: Column(
@@ -201,8 +211,8 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
                                 return Container(
-                                  color: const Color(0xFFF5F5F5),
-                                  child: Center(child: Text('B', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp, color: Colors.black87))),
+                                  color: colors.gray50,
+                                  child: Center(child: Text('B', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp, color: colors.textPrimary))),
                                 );
                               },
                             ),
@@ -214,7 +224,7 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
                           child: Text(
                             bank.name,
                             style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textPrimary,
+                              color: colors.textPrimary,
                               fontSize: 11.sp,
                               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                             ),
@@ -234,7 +244,7 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
               child: Center(
                 child: Icon(
                   _showAllBanks ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                  color: Colors.black38,
+                  color: colors.dimText,
                   size: 24.w,
                 ),
               ),
@@ -242,35 +252,40 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
 
             if (_selectedBank != null) ...[
               SizedBox(height: 20.h),
-              Text('계좌번호', style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold, fontSize: 15.sp)),
+              Text('계좌번호', style: AppTextStyles.bodyMd.copyWith(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15.sp)),
               SizedBox(height: 12.h),
               TextField(
                 controller: _accountNumberController,
                 focusNode: _accountFocusNode,
+                enabled: !_isAccountVerified,
                 keyboardType: TextInputType.number,
-                style: TextStyle(fontSize: 14.sp),
+                style: TextStyle(fontSize: 14.sp, color: colors.textPrimary),
                 decoration: InputDecoration(
                   hintText: '계좌번호를 입력해주세요.',
-                  hintStyle: AppTextStyles.bodySm.copyWith(color: const Color(0xFFCCCCCC), fontSize: 13.sp),
+                  hintStyle: AppTextStyles.bodySm.copyWith(color: colors.textTertiary, fontSize: 13.sp),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: colors.bgSurface,
                   contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12.r),
-                    borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
+                    borderSide: BorderSide(color: colors.borderDefault),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12.r),
-                    borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
+                    borderSide: BorderSide(color: colors.borderDefault),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12.r),
                     borderSide: const BorderSide(color: AppColors.orange500, width: 1.2),
                   ),
+                  disabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                    borderSide: BorderSide(color: colors.borderDefault),
+                  ),
                   suffixIcon: Padding(
                     padding: EdgeInsets.only(right: 8.w),
                     child: TextButton(
-                      onPressed: _accountNumberController.text.isNotEmpty && !_isVerifying
+                      onPressed: _accountNumberController.text.isNotEmpty && !_isVerifying && !_isAccountVerified
                           ? () async {
                               setState(() => _isVerifying = true);
                               try {
@@ -311,7 +326,7 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
                               ? AppColors.green500
                               : (_accountNumberController.text.isNotEmpty
                                   ? AppColors.orange500
-                                  : AppColors.textTertiary),
+                                  : colors.textTertiary),
                           fontWeight: FontWeight.w600,
                           fontSize: 13.sp,
                         ),

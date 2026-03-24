@@ -46,10 +46,11 @@ class _GoalLoadingPageState extends State<GoalLoadingPage>
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: colors.bgSurface,
         body: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -59,7 +60,7 @@ class _GoalLoadingPageState extends State<GoalLoadingPage>
                 child: Text(
                   '분석 중',
                   style: AppTextStyles.headingLg.copyWith(
-                    color: AppColors.gray900,
+                    color: colors.gray900,
                     fontSize: 22.sp,
                   ),
                 ),
@@ -106,7 +107,7 @@ class _GoalLoadingPageState extends State<GoalLoadingPage>
                             : '거의 다 됐어요!\n잠시만 기다려주세요.',
                         textAlign: TextAlign.center,
                         style: AppTextStyles.headingMd.copyWith(
-                          color: AppColors.gray900,
+                          color: colors.gray900,
                           fontSize: 18.sp,
                         ),
                       ),

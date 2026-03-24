@@ -54,10 +54,11 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final List<BankInfo> displayBanks = isExpanded ? allBanks : allBanks.take(9).toList();
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       appBar: const MoreAppBar(title: '', showBack: true),
       body: Column(
         children: [
@@ -69,9 +70,9 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('은행 선택', style: AppTextStyles.headingLg.copyWith(fontSize: 22.sp, fontWeight: FontWeight.bold)),
+                  Text('은행 선택', style: AppTextStyles.headingLg.copyWith(color: colors.textPrimary, fontSize: 22.sp, fontWeight: FontWeight.bold)),
                   SizedBox(height: 4.h),
-                  Text('은행을 선택하세요.', style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary, fontSize: 13.sp)),
+                  Text('은행을 선택하세요.', style: AppTextStyles.bodySm.copyWith(color: colors.textTertiary, fontSize: 13.sp)),
                   SizedBox(height: 20.h),
 
                   GridView.builder(
@@ -88,8 +89,16 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                       final bank = displayBanks[index];
                       final isSelected = selectedBank == bank.name;
                       return GestureDetector(
-                        onTap: () {
-                          setState(() => selectedBank = bank.name);
+                        onTap: _isAccountVerified
+                            ? null
+                            : () {
+                          setState(() {
+                            if (selectedBank != bank.name) {
+                              _accountController.clear();
+                              _isAccountVerified = false;
+                            }
+                            selectedBank = bank.name;
+                          });
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             _accountFocusNode.requestFocus();
                             _scrollController.animateTo(
@@ -101,14 +110,14 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                         },
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: colors.bgSurface,
                             borderRadius: BorderRadius.circular(12.r),
                             border: Border.all(
                               color: isSelected ? AppColors.orange500 : Colors.transparent,
                               width: 1.5,
                             ),
                             boxShadow: [
-                              BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
+                              BoxShadow(color: colors.cardShadow, blurRadius: 4, offset: const Offset(0, 2)),
                             ],
                           ),
                           child: Column(
@@ -123,8 +132,8 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                                     fit: BoxFit.cover,
                                     errorBuilder: (context, error, stackTrace) {
                                       return Container(
-                                        color: const Color(0xFFF5F5F5),
-                                        child: Center(child: Text('B', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp, color: Colors.black87))),
+                                        color: colors.gray50,
+                                        child: Center(child: Text('B', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp, color: colors.textPrimary))),
                                       );
                                     },
                                   ),
@@ -136,7 +145,7 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                                 child: Text(
                                     bank.name,
                                     style: AppTextStyles.caption.copyWith(
-                                        color: AppColors.textPrimary,
+                                        color: colors.textPrimary,
                                         fontSize: 11.sp,
                                         fontWeight: isSelected ? FontWeight.bold : FontWeight.w500
                                     )
@@ -156,42 +165,47 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                     child: Center(
                       child: Icon(
                         isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                        color: Colors.black38,
+                        color: colors.dimText,
                         size: 24.w,
                       ),
                     ),
                   ),
                   SizedBox(height: 20.h),
 
-                  Text('계좌번호', style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.bold, fontSize: 15.sp)),
+                  Text('계좌번호', style: AppTextStyles.bodyMd.copyWith(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15.sp)),
                   SizedBox(height: 12.h),
                   TextField(
                     controller: _accountController,
                     focusNode: _accountFocusNode,
+                    enabled: !_isAccountVerified,
                     keyboardType: TextInputType.number,
-                    style: TextStyle(fontSize: 14.sp),
+                    style: TextStyle(fontSize: 14.sp, color: colors.textPrimary),
                     decoration: InputDecoration(
                       hintText: '계좌번호를 입력해주세요.',
-                      hintStyle: AppTextStyles.bodySm.copyWith(color: const Color(0xFFCCCCCC), fontSize: 13.sp),
+                      hintStyle: AppTextStyles.bodySm.copyWith(color: colors.textTertiary, fontSize: 13.sp),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: colors.bgSurface,
                       contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12.r),
-                        borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
+                        borderSide: BorderSide(color: colors.borderDefault),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12.r),
-                        borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
+                        borderSide: BorderSide(color: colors.borderDefault),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12.r),
                         borderSide: const BorderSide(color: AppColors.orange500, width: 1.2),
                       ),
+                      disabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                        borderSide: BorderSide(color: colors.borderDefault),
+                      ),
                       suffixIcon: Padding(
                         padding: EdgeInsets.only(right: 8.w),
                         child: TextButton(
-                          onPressed: _accountController.text.isNotEmpty && !_isVerifying
+                          onPressed: _accountController.text.isNotEmpty && !_isVerifying && !_isAccountVerified
                               ? () async {
                                   setState(() => _isVerifying = true);
                                   try {
@@ -232,7 +246,7 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                                   ? AppColors.green500
                                   : (_accountController.text.isNotEmpty
                                       ? AppColors.orange500
-                                      : AppColors.textTertiary),
+                                      : colors.textTertiary),
                               fontWeight: FontWeight.w600,
                               fontSize: 13.sp,
                             ),

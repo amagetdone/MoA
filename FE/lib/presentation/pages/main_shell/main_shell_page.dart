@@ -37,21 +37,22 @@ class MainShellPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColors.of(context);
     final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       body: navigationShell,
       bottomNavigationBar: Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: AppColors.bgSurface,
+          color: colors.bgSurface,
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(16.r),
             topRight: Radius.circular(16.r),
           ),
-          border: const Border(
-            top: BorderSide(color: AppColors.borderDefault, width: 0.5),
+          border: Border(
+            top: BorderSide(color: colors.borderDefault, width: 0.5),
           ),
         ),
         child: Column(
@@ -59,7 +60,7 @@ class MainShellPage extends ConsumerWidget {
           children: [
             SizedBox(height: 6.h),
             NavigationBar(
-              backgroundColor: AppColors.bgSurface,
+              backgroundColor: colors.bgSurface,
               indicatorColor: AppColors.orange50,
               elevation: 0,
               height: 58.h,

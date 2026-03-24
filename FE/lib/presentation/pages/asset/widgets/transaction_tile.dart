@@ -18,13 +18,14 @@ class TransactionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final isExpense = transaction.type == TransactionType.expense;
     final isIncome = transaction.type == TransactionType.income;
     final amountColor = isExpense
         ? AppColors.red500
         : isIncome
             ? AppColors.green500
-            : AppColors.textPrimary;
+            : colors.textPrimary;
     final amountPrefix = isExpense
         ? '-'
         : isIncome
@@ -62,7 +63,7 @@ class TransactionTile extends StatelessWidget {
                   Text(
                     transaction.title,
                     style: AppTextStyles.bodyMd.copyWith(
-                      color: AppColors.textPrimary,
+                      color: colors.textPrimary,
                       fontSize: 14.sp,
                     ),
                     maxLines: 1,
@@ -72,7 +73,7 @@ class TransactionTile extends StatelessWidget {
                   Text(
                     timeFormat.format(transaction.dateTime),
                     style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textTertiary,
+                      color: colors.textTertiary,
                       fontSize: 11.sp,
                     ),
                   ),

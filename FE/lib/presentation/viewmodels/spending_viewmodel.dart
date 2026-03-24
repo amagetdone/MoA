@@ -44,11 +44,9 @@ class SpendingState {
         selectedMonthStart = selectedMonthStart ?? _thisMonthStart();
 
   static DateTime _thisWeekStart() {
-    // TODO: 테스트용 1월 1주차 - 원복 필요
-    return DateTime(2026, 1, 5);
-    // final now = DateTime.now();
-    // final monday = now.subtract(Duration(days: now.weekday - 1));
-    // return DateTime(monday.year, monday.month, monday.day);
+    final now = DateTime.now();
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+    return DateTime(monday.year, monday.month, monday.day);
   }
 
   static DateTime _thisMonthStart() {

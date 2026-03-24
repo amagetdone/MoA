@@ -31,6 +31,7 @@ class GoalCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColors.of(context);
     final percent = (goal.progressRate * 100).toInt().toString();
     final isExpired = goal.remainingDays < 0;
 
@@ -47,12 +48,12 @@ class GoalCard extends ConsumerWidget {
                 width: 72.w,
                 height: 72.w,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: colors.bgSurface,
                   borderRadius: BorderRadius.circular(16.r),
-                  border: Border.all(color: AppColors.borderDefault, width: 1),
+                  border: Border.all(color: colors.borderDefault, width: 1),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
+                      color: colors.cardShadow,
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
@@ -91,7 +92,7 @@ class GoalCard extends ConsumerWidget {
                           style: AppTextStyles.bodySm.copyWith(
                             color: isExpired
                                 ? AppColors.red500
-                                : AppColors.textTertiary,
+                                : colors.textTertiary,
                             fontWeight: FontWeight.w500,
                             height: 1.1,
                           ),
@@ -113,7 +114,7 @@ class GoalCard extends ConsumerWidget {
                     goal.name,
                     style: AppTextStyles.bodyLg.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      color: colors.textPrimary,
                       height: 1.15,
                     ),
                     maxLines: 1,
@@ -126,7 +127,7 @@ class GoalCard extends ConsumerWidget {
                   Text(
                     '${CurrencyFormatter.formatKRW(goal.currentAmount)} / ${CurrencyFormatter.formatKRW(goal.targetAmount)} ($percent%)',
                     style: AppTextStyles.bodySm.copyWith(
-                      color: AppColors.textTertiary,
+                      color: colors.textTertiary,
                       fontWeight: FontWeight.w500,
                       height: 1.1,
                     ),
@@ -138,7 +139,7 @@ class GoalCard extends ConsumerWidget {
                   MoreProgressBar(
                     progress: goal.progressRate,
                     color: AppColors.orange500,
-                    backgroundColor: AppColors.gray500.withValues(alpha: 0.15),
+                    backgroundColor: colors.gray500.withValues(alpha: 0.15),
                     height: 6.h,
                   ),
                 ],
@@ -158,8 +159,9 @@ class _KebabMenu extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColors.of(context);
     return PopupMenuButton<String>(
-      icon: Icon(Icons.more_horiz, size: 18.w, color: AppColors.textTertiary),
+      icon: Icon(Icons.more_horiz, size: 18.w, color: colors.textTertiary),
       padding: EdgeInsets.zero,
       iconSize: 18.w,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
@@ -202,7 +204,7 @@ class _KebabMenu extends ConsumerWidget {
               Icon(
                 Icons.edit_outlined,
                 size: 18.w,
-                color: AppColors.textTertiary,
+                color: colors.textTertiary,
               ),
             ],
           ),
@@ -215,7 +217,7 @@ class _KebabMenu extends ConsumerWidget {
               Icon(
                 Icons.delete_outline,
                 size: 18.w,
-                color: AppColors.textTertiary,
+                color: colors.textTertiary,
               ),
             ],
           ),

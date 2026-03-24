@@ -14,7 +14,6 @@ import 'package:more_app/presentation/pages/home/widgets/spending_card.dart';
 import 'package:more_app/presentation/pages/home/widgets/spending_rose_chart.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/spending_viewmodel.dart';
-import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 import 'package:more_app/presentation/widgets/common/more_empty_state.dart';
 
@@ -36,16 +35,117 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final state = ref.watch(homeViewModelProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
-      appBar: const MoreAppBar(showBack: false, showLogo: true, showNotification: true),
-      body: _buildBody(context, ref, state),
+      backgroundColor: colors.bgPrimary,
+      body: Column(
+        children: [
+          // Custom header with week bar
+          Builder(builder: (context) {
+            final now = DateTime.now();
+            final monday = now.subtract(Duration(days: now.weekday - 1));
+            final sunday = monday.add(const Duration(days: 6));
+            const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+
+            return Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.orange500,
+                    AppColors.orange300,
+                  ],
+                ),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(24.r),
+                ),
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 16.h),
+                  child: Column(
+                    children: [
+                      // Title row
+                      Row(
+                        children: [
+                          Text(
+                            '이번 주 현황',
+                            style: AppTextStyles.headingLg.copyWith(
+                              color: const Color(0xFFFFFFFF),
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${monday.month}/${monday.day} - ${sunday.month}/${sunday.day}',
+                            style: AppTextStyles.caption.copyWith(
+                              color: const Color(0xFFFFFFFF).withValues(alpha: 0.7),
+                              fontSize: 11.sp,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 14.h),
+                      // Week day bar
+                      Row(
+                        children: List.generate(7, (i) {
+                          final isToday = i == now.weekday - 1;
+                          final isPast = i < now.weekday - 1;
+                          return Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 2.w),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    weekdays[i],
+                                    style: TextStyle(
+                                      fontSize: 10.sp,
+                                      fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
+                                      color: isToday
+                                          ? const Color(0xFFFFFFFF)
+                                          : isPast
+                                              ? const Color(0xFFFFFFFF).withValues(alpha: 0.7)
+                                              : const Color(0xFFFFFFFF).withValues(alpha: 0.35),
+                                    ),
+                                  ),
+                                  SizedBox(height: 4.h),
+                                  Container(
+                                    height: 4.h,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(2.r),
+                                      color: isToday
+                                          ? const Color(0xFFFFFFFF)
+                                          : isPast
+                                              ? const Color(0xFFFFFFFF).withValues(alpha: 0.4)
+                                              : const Color(0xFFFFFFFF).withValues(alpha: 0.15),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+          // Body
+          Expanded(child: _buildBody(context, ref, state)),
+        ],
+      ),
     );
   }
 
   Widget _buildBody(BuildContext context, WidgetRef ref, HomeState state) {
+    final colors = AppColors.of(context);
     if (state.isLoading) {
       return const SizedBox.shrink();
     }
@@ -57,13 +157,13 @@ class _HomePageState extends ConsumerState<HomePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('홈 데이터를 불러오지 못했습니다.', style: AppTextStyles.bodyLg),
+              Text('홈 데이터를 불러오지 못했습니다.', style: AppTextStyles.bodyLg.copyWith(color: colors.textPrimary)),
               SizedBox(height: 8.h),
               Text(
                 state.errorMessage!,
                 textAlign: TextAlign.center,
                 style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.textTertiary,
+                  color: colors.textTertiary,
                 ),
               ),
               SizedBox(height: 16.h),
@@ -90,6 +190,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _buildNoAccount(BuildContext context) {
+    final colors = AppColors.of(context);
     return Center(
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 24.w),
@@ -100,6 +201,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               '계좌를 연결해주세요.',
               style: AppTextStyles.headingLg.copyWith(
                 fontWeight: FontWeight.w700,
+                color: colors.textPrimary,
               ),
             ),
             SizedBox(height: 12.h),
@@ -107,7 +209,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               '계좌를 연결하면 소비 분석을 통해\n똑똑한 저축 계획을 세울게요!',
               textAlign: TextAlign.center,
               style: AppTextStyles.bodyMd.copyWith(
-                color: AppColors.textTertiary,
+                color: colors.textTertiary,
               ),
             ),
             SizedBox(height: 32.h),
@@ -135,13 +237,14 @@ class _HomePageState extends ConsumerState<HomePage> {
                       '새로운 계좌 연결하기',
                       style: AppTextStyles.bodyMd.copyWith(
                         fontWeight: FontWeight.w600,
+                        color: colors.textPrimary,
                       ),
                     ),
                     SizedBox(height: 4.h),
                     Text(
                       '계좌를 추가하고 자산을 관리하세요!',
                       style: AppTextStyles.bodySm.copyWith(
-                        color: AppColors.textTertiary,
+                        color: colors.textTertiary,
                       ),
                     ),
                   ],
@@ -163,58 +266,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     final topGoals = _sortedGoals(state.activeGoals).take(3).toList();
 
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 24.h),
+      padding: EdgeInsets.fromLTRB(20.w, 14.h, 20.w, 24.h),
       child: Column(
         children: [
-          IntrinsicHeight(
-            child: Row(
-              children: [
-                Expanded(
-                  child: SpendingCard(
-                    totalAmount: state.weeklyBudget,
-                    usedAmount: state.weeklySpent,
-                    remainingAmount: state.weeklyRemaining,
-                    daysRemaining: state.daysRemaining,
-                    dailyAvailable: state.dailyAvailable,
-                  ),
-                ),
-                SizedBox(width: 8.w),
-                Expanded(
-                  child: SavingsCard(
-                    weeklySaved: state.weeklySaved,
-                    savingTargetAmount: state.savingTargetAmount,
-                    savingProgressRate: state.savingProgressRate,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 8.h),
-
-          AssetCard(
-            totalAsset: state.totalAsset,
-            accounts: orderedAccounts,
-          ),
-          SizedBox(height: 8.h),
-
-          // 이번 주 소비 rose 차트
-          // TODO: 테스트용 1월 1주차 하드코딩 - 원복 필요
-          Builder(builder: (context) {
-            final spendingState = ref.watch(spendingViewModelProvider);
-            if (!spendingState.isLoading && spendingState.categories.isNotEmpty) {
-              const weekLabel = '1월 1주차';
-              return Padding(
-                padding: EdgeInsets.only(bottom: 8.h),
-                child: SpendingRoseChart(
-                  categories: spendingState.categories,
-                  weekLabel: weekLabel,
-                ),
-              );
-            }
-            return const SizedBox.shrink();
-          }),
-
-          // 목표 카드
+          // 1) 목표
           showGoalEmptyState
               ? MoreEmptyState(
                   message: '첫 번째 저축 목표를 세워보세요',
@@ -225,12 +280,98 @@ class _HomePageState extends ConsumerState<HomePage> {
                   goals: topGoals,
                   onViewAll: () => context.go(AppRoutes.goalTab),
                 ),
+          SizedBox(height: 10.h),
+
+          // 3) 저축 + 여유자금 (가로)
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                Expanded(
+                  child: SavingsCard(
+                    weeklySaved: state.weeklySaved,
+                    savingTargetAmount: state.savingTargetAmount,
+                    savingProgressRate: state.savingProgressRate,
+                  ),
+                ),
+                SizedBox(width: 10.w),
+                Expanded(
+                  child: SpendingCard(
+                    totalAmount: state.weeklyBudget,
+                    usedAmount: state.weeklySpent,
+                    remainingAmount: state.weeklyRemaining,
+                    daysRemaining: state.daysRemaining,
+                    dailyAvailable: state.dailyAvailable,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 10.h),
+
+          // 이번 주 소비 rose 차트
+          Builder(builder: (context) {
+            final colors = AppColors.of(context);
+            final spendingState = ref.watch(spendingViewModelProvider);
+            final weekStart = spendingState.selectedWeekStart;
+            final weekOfMonth = ((weekStart.day - 1) ~/ 7) + 1;
+            final weekLabel = '${weekStart.month}월 $weekOfMonth주차';
+
+            if (!spendingState.isLoading && spendingState.categories.isNotEmpty) {
+              return Padding(
+                padding: EdgeInsets.only(bottom: 8.h),
+                child: SpendingRoseChart(
+                  categories: spendingState.categories,
+                  weekLabel: weekLabel,
+                ),
+              );
+            }
+            return Padding(
+              padding: EdgeInsets.only(bottom: 8.h),
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(16.w),
+                decoration: BoxDecoration(
+                  color: colors.bgSurface,
+                  borderRadius: BorderRadius.circular(20.r),
+                  boxShadow: [
+                    BoxShadow(color: colors.cardShadow, blurRadius: 8, offset: const Offset(0, 2)),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '소비',
+                      style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.w700, color: colors.textPrimary),
+                    ),
+                    SizedBox(height: 40.h),
+                    Center(child: Icon(Icons.pie_chart_outline, size: 48.w, color: colors.gray100)),
+                    SizedBox(height: 12.h),
+                    Center(
+                      child: Text(
+                        '아직 소비 내역이 없어요',
+                        style: AppTextStyles.bodySm.copyWith(color: colors.textTertiary),
+                      ),
+                    ),
+                    SizedBox(height: 32.h),
+                  ],
+                ),
+              ),
+            );
+          }),
+
+          // 자산 카드
+          AssetCard(
+            totalAsset: state.totalAsset,
+            accounts: orderedAccounts,
+          ),
         ],
       ),
     );
   }
 
   Widget _buildNoGoal(BuildContext context) {
+    final colors = AppColors.of(context);
     return Center(
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 24.w),
@@ -241,6 +382,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               '첫 번째 저축 목표를 세워보세요.',
               style: AppTextStyles.headingLg.copyWith(
                 fontWeight: FontWeight.w700,
+                color: colors.textPrimary,
               ),
             ),
             SizedBox(height: 12.h),
@@ -248,7 +390,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               '목표에 도달할 수 있게 제가 도와드릴게요!',
               textAlign: TextAlign.center,
               style: AppTextStyles.bodyMd.copyWith(
-                color: AppColors.textTertiary,
+                color: colors.textTertiary,
               ),
             ),
             SizedBox(height: 32.h),
@@ -271,13 +413,14 @@ class _HomePageState extends ConsumerState<HomePage> {
                       '첫 목표 세우러 가기',
                       style: AppTextStyles.bodyMd.copyWith(
                         fontWeight: FontWeight.w600,
+                        color: colors.textPrimary,
                       ),
                     ),
                     SizedBox(height: 4.h),
                     Text(
                       '목표를 세우고, 돈을 모아봐요!',
                       style: AppTextStyles.bodySm.copyWith(
-                        color: AppColors.textTertiary,
+                        color: colors.textTertiary,
                       ),
                     ),
                   ],
