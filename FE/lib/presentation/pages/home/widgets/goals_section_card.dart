@@ -8,7 +8,7 @@ import 'package:more_app/domain/entities/goal.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/widgets/common/goal_video_thumb.dart';
 
-class GoalsSectionCard extends StatelessWidget {
+class GoalsSectionCard extends StatefulWidget {
   const GoalsSectionCard({
     super.key,
     required this.goals,
@@ -19,205 +19,238 @@ class GoalsSectionCard extends StatelessWidget {
   final VoidCallback onViewAll;
 
   @override
-  Widget build(BuildContext context) {
-    if (goals.isEmpty) return const SizedBox.shrink();
+  State<GoalsSectionCard> createState() => _GoalsSectionCardState();
+}
 
-    final goal = goals.first;
+class _GoalsSectionCardState extends State<GoalsSectionCard> {
+  int _currentPage = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.goals.isEmpty) return const SizedBox.shrink();
+
     final colors = AppColors.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final percent = (goal.progressRate * 100).toStringAsFixed(0);
-    final dDayText = goal.remainingDays >= 0
-        ? 'D-${goal.remainingDays}'
-        : 'D+${-goal.remainingDays}';
+    final pageCount = widget.goals.length;
 
-    return GestureDetector(
-      onTap: () => context.push(AppRoutes.goalDetailLocation(goal.id)),
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20.r),
-          color: colors.bgSurface,
-          boxShadow: [
-            BoxShadow(
-              color: colors.cardShadow,
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            // Bottom inner glow
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: 80.h,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.vertical(
-                    bottom: Radius.circular(20.r),
-                  ),
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: isDark
-                        ? [
-                            Colors.transparent,
-                            const Color(0xFF5B8DEF).withValues(alpha: 0.04),
-                            const Color(0xFFE8873B).withValues(alpha: 0.06),
-                          ]
-                        : [
-                            Colors.transparent,
-                            const Color(0xFF5B8DEF).withValues(alpha: 0.03),
-                            const Color(0xFFE8873B).withValues(alpha: 0.05),
-                          ],
-                  ),
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20.r),
+        color: colors.bgSurface,
+        boxShadow: [
+          BoxShadow(
+            color: colors.cardShadow,
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Bottom inner glow
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 80.h,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(20.r),
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: isDark
+                      ? [
+                          Colors.transparent,
+                          const Color(0xFF5B8DEF).withValues(alpha: 0.04),
+                          const Color(0xFFE8873B).withValues(alpha: 0.06),
+                        ]
+                      : [
+                          Colors.transparent,
+                          const Color(0xFF5B8DEF).withValues(alpha: 0.03),
+                          const Color(0xFFE8873B).withValues(alpha: 0.05),
+                        ],
                 ),
               ),
             ),
-            // Content
-            Padding(
-              padding: EdgeInsets.fromLTRB(16.w, 16.w, 16.w, 14.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Row(
-                    children: [
-                      Text(
-                        '내 목표',
-                        style: AppTextStyles.bodyMd.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: colors.textPrimary,
-                        ),
+          ),
+          // Content
+          Padding(
+            padding: EdgeInsets.fromLTRB(16.w, 16.w, 16.w, 14.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Text(
+                      '목표',
+                      style: AppTextStyles.bodyMd.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colors.textPrimary,
                       ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: onViewAll,
-                        child: Row(
-                          children: [
-                            Text(
-                              '전체보기',
-                              style: AppTextStyles.caption.copyWith(
-                                color: colors.textTertiary,
-                                fontWeight: FontWeight.w500,
-                                fontSize: 11.sp,
-                              ),
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: widget.onViewAll,
+                      child: Row(
+                        children: [
+                          Text(
+                            '전체보기',
+                            style: AppTextStyles.caption.copyWith(
+                              color: colors.textTertiary,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 11.sp,
                             ),
-                            Icon(Icons.chevron_right, size: 14.w, color: colors.textTertiary),
-                          ],
-                        ),
+                          ),
+                          Icon(Icons.chevron_right, size: 14.w, color: colors.textTertiary),
+                        ],
                       ),
-                    ],
-                  ),
-                  SizedBox(height: 6.h),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 6.h),
 
-                  // Goal info
-                  Row(
-                    children: [
-                      GoalVideoThumb(
-                        goalId: goal.id,
-                        assetPath: goal.sketchVideoAssetPath,
-                        iconName: goal.iconName,
-                        progressRate: goal.progressRate,
-                        size: 52.w,
-                        borderRadius: 16.r,
-                      ),
-                      SizedBox(width: 14.w),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    goal.name,
-                                    style: AppTextStyles.bodyMd.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      color: colors.textPrimary,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
-                                  decoration: BoxDecoration(
-                                    color: colors.textPrimary.withValues(alpha: 0.06),
-                                    borderRadius: BorderRadius.circular(999.r),
-                                  ),
-                                  child: Text(
-                                    dDayText,
-                                    style: AppTextStyles.caption.copyWith(
-                                      color: colors.textSecondary,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 10.sp,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 2.h),
-                            Text(
-                              '${CurrencyFormatter.formatKRW(goal.currentAmount)} / ${CurrencyFormatter.formatKRW(goal.targetAmount)}',
-                              style: AppTextStyles.caption.copyWith(
-                                color: colors.textTertiary,
-                                fontSize: 11.sp,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                // PageView for goals
+                SizedBox(
+                  height: 90.h,
+                  child: PageView.builder(
+                    itemCount: pageCount,
+                    onPageChanged: (i) => setState(() => _currentPage = i),
+                    physics: const BouncingScrollPhysics(),
+                    itemBuilder: (context, index) {
+                      return _GoalItem(goal: widget.goals[index]);
+                    },
                   ),
+                ),
+                // Page dots
+                if (pageCount > 1) ...[
                   SizedBox(height: 6.h),
-
-                  // Progress bar + percent
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Stack(
-                          children: [
-                            Container(
-                              height: 6.h,
-                              decoration: BoxDecoration(
-                                color: AppColors.orange500.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(3.r),
-                              ),
-                            ),
-                            FractionallySizedBox(
-                              widthFactor: goal.progressRate.clamp(0.0, 1.0),
-                              child: Container(
-                                height: 6.h,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(3.r),
-                                  gradient: const LinearGradient(
-                                    colors: [AppColors.orange300, AppColors.orange500],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(width: 10.w),
-                      Text(
-                        '$percent%',
-                        style: AppTextStyles.bodySm.copyWith(
-                          color: AppColors.orange500,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 12.sp,
-                        ),
-                      ),
-                    ],
+                  Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(pageCount, (i) {
+                        return Container(
+                          width: i == _currentPage ? 14.w : 5.w,
+                          height: 5.w,
+                          margin: EdgeInsets.symmetric(horizontal: 2.w),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(3.r),
+                            color: i == _currentPage
+                                ? AppColors.orange500
+                                : colors.borderDefault,
+                          ),
+                        );
+                      }),
+                    ),
                   ),
                 ],
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GoalItem extends StatelessWidget {
+  const _GoalItem({required this.goal});
+  final Goal goal;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final percent = (goal.progressRate * 100).toStringAsFixed(0);
+
+    return GestureDetector(
+      onTap: () => context.push(AppRoutes.goalDetailLocation(goal.id)),
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        children: [
+          // Goal info
+          Row(
+            children: [
+              GoalVideoThumb(
+                goalId: goal.id,
+                assetPath: goal.sketchVideoAssetPath,
+                iconName: goal.iconName,
+                progressRate: goal.progressRate,
+                size: 48.w,
+                borderRadius: 14.r,
+              ),
+              SizedBox(width: 14.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      goal.name,
+                      style: AppTextStyles.bodyMd.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colors.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      '${CurrencyFormatter.formatKRW(goal.currentAmount)} / ${CurrencyFormatter.formatKRW(goal.targetAmount)}',
+                      style: AppTextStyles.caption.copyWith(
+                        color: colors.textTertiary,
+                        fontSize: 11.sp,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+
+          // Progress bar + percent
+          Row(
+            children: [
+              Expanded(
+                child: Stack(
+                  children: [
+                    Container(
+                      height: 6.h,
+                      decoration: BoxDecoration(
+                        color: AppColors.orange500.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(3.r),
+                      ),
+                    ),
+                    FractionallySizedBox(
+                      widthFactor: goal.progressRate.clamp(0.0, 1.0),
+                      child: Container(
+                        height: 6.h,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(3.r),
+                          gradient: const LinearGradient(
+                            colors: [AppColors.orange300, AppColors.orange500],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 10.w),
+              Text(
+                '$percent%',
+                style: AppTextStyles.bodySm.copyWith(
+                  color: AppColors.orange500,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12.sp,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

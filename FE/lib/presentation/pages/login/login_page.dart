@@ -127,6 +127,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
         final result = next.authResult;
         if (result.status == 'TEMP') {
           context.go(AppRoutes.onboardingProfile);
+        } else if (result.status == 'ACTIVE') {
+          context.go(AppRoutes.home);
         } else if (next.isTest) {
           context.go(AppRoutes.onboarding);
         } else {

@@ -4,6 +4,7 @@ class SpendingCategory {
   final int budget;
   final int colorValue;
   final String iconKey;
+  final double? ratio;
 
   const SpendingCategory({
     required this.name,
@@ -11,6 +12,7 @@ class SpendingCategory {
     required this.budget,
     required this.colorValue,
     required this.iconKey,
+    this.ratio,
   });
 
   double get usageRate => budget > 0 ? (amount / budget).clamp(0.0, 1.0) : 0.0;
@@ -21,6 +23,7 @@ class SpendingCategory {
     int? budget,
     int? colorValue,
     String? iconKey,
+    double? ratio,
   }) {
     return SpendingCategory(
       name: name ?? this.name,
@@ -28,6 +31,7 @@ class SpendingCategory {
       budget: budget ?? this.budget,
       colorValue: colorValue ?? this.colorValue,
       iconKey: iconKey ?? this.iconKey,
+      ratio: ratio ?? this.ratio,
     );
   }
 }
@@ -51,8 +55,9 @@ class WeeklySpending {
 class DailySpending {
   final DateTime date;
   final int amount;
+  final String? label;
 
-  const DailySpending({required this.date, required this.amount});
+  const DailySpending({required this.date, required this.amount, this.label});
 }
 
 class WeeklyAnalysisResult {

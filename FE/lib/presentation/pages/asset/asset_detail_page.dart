@@ -17,7 +17,8 @@ class AssetDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final isIncome = transaction.type == TransactionType.income;
-    final isCard = transaction.memo == 'VARIABLE' || transaction.memo == 'FIXED';
+    final memoUpper = transaction.memo?.toUpperCase();
+    final isCard = memoUpper == 'VARIABLE' || memoUpper == 'FIXED';
     final dateFormat = DateFormat('yyyy.MM.dd. HH:mm');
 
     return Scaffold(
@@ -36,8 +37,13 @@ class AssetDetailPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
+                    '결제 상세',
+                    style: AppTextStyles.headingLg.copyWith(color: colors.textPrimary),
+                  ),
+                  SizedBox(height: 16.h),
+                  Text(
                     transaction.title,
-                    style: AppTextStyles.headingLg.copyWith(color: colors.textPrimary, fontSize: 24.sp),
+                    style: AppTextStyles.headingLg.copyWith(fontSize: 24.sp, color: colors.textPrimary),
                   ),
                   SizedBox(height: 8.h),
                   Row(
@@ -53,7 +59,7 @@ class AssetDetailPage extends StatelessWidget {
                           style: AppTextStyles.caption.copyWith(color: AppColors.orange500, fontWeight: FontWeight.bold),
                         ),
                       ),
-                      if (transaction.memo != null) ...[
+                      if (transaction.memo != null && memoUpper != 'FIXED' && memoUpper != 'VARIABLE') ...[
                         SizedBox(width: 8.w),
                         Container(
                           padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
@@ -62,7 +68,7 @@ class AssetDetailPage extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10.r),
                           ),
                           child: Text(
-                            transaction.memo == 'FIXED' ? '고정비' : transaction.memo == 'VARIABLE' ? '변동비' : transaction.memo!,
+                            transaction.memo!,
                             style: AppTextStyles.caption.copyWith(color: colors.gray500, fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -94,7 +100,7 @@ class AssetDetailPage extends StatelessWidget {
                         CurrencyFormatter.formatKRW(transaction.amount),
                         style: AppTextStyles.bodyLg.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: isIncome ? AppColors.green500 : colors.textPrimary,
+                          color: isIncome ? const Color(0xFF81C784) : colors.textPrimary,
                         ),
                       ),
                     ],

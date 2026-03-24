@@ -89,24 +89,12 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                '이번 주 소비',
-                style: AppTextStyles.bodyMd.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: colors.textPrimary,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                widget.weekLabel,
-                style: TextStyle(
-                  color: colors.textTertiary,
-                  fontSize: 11.sp,
-                ),
-              ),
-            ],
+          Text(
+            '소비',
+            style: AppTextStyles.bodyMd.copyWith(
+              fontWeight: FontWeight.w700,
+              color: colors.textPrimary,
+            ),
           ),
           SizedBox(height: 16.h),
 

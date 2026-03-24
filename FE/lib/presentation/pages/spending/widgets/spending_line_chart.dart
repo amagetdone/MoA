@@ -8,7 +8,7 @@ import 'package:more_app/core/utils/currency_formatter.dart';
 
 double _niceInterval(double maxVal, bool isWeekly) {
   // 주간: 4칸, 월간 비교: 3칸 기준으로 nice step 계산
-  final raw = maxVal / (isWeekly ? 4.0 : 3.0);
+  final raw = maxVal / (isWeekly ? 4.0 : 4.0);
   const steps = [10000.0, 20000.0, 50000.0, 100000.0, 200000.0, 500000.0, 1000000.0, 2000000.0, 5000000.0];
   for (final step in steps) {
     if (raw <= step) return step;
@@ -103,7 +103,7 @@ class SpendingLineChart extends StatelessWidget {
                       final date = data[i].date;
                       final label = isWeekly
                           ? ['월', '화', '수', '목', '금', '토', '일'][i % 7]
-                          : '${date.month}월';
+                          : '${i + 1}주';
                       return Padding(
                         padding: EdgeInsets.only(top: 4.h),
                         child: Text(

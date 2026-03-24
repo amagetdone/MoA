@@ -37,11 +37,10 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final patternState = ref.watch(spendingPatternViewModelProvider);
     final touchedIndex = ref.watch(spendingViewModelProvider).touchedPieIndex;
     final spendingViewModel = ref.read(spendingViewModelProvider.notifier);
-
-    final colors = AppColors.of(context);
 
     if (patternState.isLoading) {
       return Scaffold(
@@ -74,11 +73,11 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('소비 패턴 분석', style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary, fontSize: 20.sp, fontWeight: FontWeight.bold)),
+              Text('소비 패턴 분석', style: AppTextStyles.headingMd.copyWith(fontSize: 20.sp, fontWeight: FontWeight.bold, color: colors.textPrimary)),
               SizedBox(height: 4.h),
               Text(
-                '지난 3개월 간 소비내역을 기반으로 분석된 내용입니다.',
-                style: AppTextStyles.caption.copyWith(
+                '지난 달 소비내역을 기반으로 분석된 내용이에요.',
+                style: AppTextStyles.bodySm.copyWith(
                   color: colors.textTertiary,
                   fontSize: 12.sp,
                 ),
@@ -93,12 +92,6 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
                     _SummaryRow(label: '총 수입', value: result.totalIncome, color: colors.textPrimary),
                     SizedBox(height: 16.h),
                     _SummaryRow(label: '총 지출', value: result.totalExpense, color: AppColors.orange500),
-                    Divider(height: 32, color: colors.borderDefault),
-                    _SummaryRow(
-                      label: '잔여 금액',
-                      value: result.totalIncome - result.totalExpense,
-                      color: const Color(0xFF4CAF50),
-                    ),
                   ],
                 ),
               ),
@@ -108,6 +101,7 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
               MoreCard(
                 padding: EdgeInsets.all(24.w),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SizedBox(
                       height: 220.h,
@@ -207,28 +201,26 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
                     SizedBox(height: 32.h),
 
                     // 카테고리별 지출
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '카테고리별 지출',
-                            style: AppTextStyles.bodyMd.copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16.sp,
-                            ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '카테고리별 지출',
+                          style: AppTextStyles.bodyMd.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16.sp,
+                            color: colors.textPrimary,
                           ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            '3개월 전체 지출에서 차지하는 비율',
-                            style: AppTextStyles.caption.copyWith(
-                              color: colors.textTertiary,
-                              fontSize: 12.sp,
-                            ),
+                        ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          '이전 달 전체 지출 대비 카테고리별 금액이에요.',
+                          style: AppTextStyles.caption.copyWith(
+                            color: colors.textTertiary,
+                            fontSize: 12.sp,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                     SizedBox(height: 24.h),
                     CategoryList(
@@ -328,24 +320,28 @@ class _LegendItem extends StatelessWidget {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         SizedBox(width: 8.w),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: AppTextStyles.caption.copyWith(
-                color: colors.textSecondary,
-                fontSize: 12.sp,
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.caption.copyWith(
+                  color: colors.textSecondary,
+                  fontSize: 12.sp,
+                ),
               ),
-            ),
-            Text(
-              CurrencyFormatter.formatKRW(amount),
-              style: AppTextStyles.caption.copyWith(
-                color: colors.textTertiary,
-                fontSize: 11.sp,
+              Text(
+                CurrencyFormatter.formatKRW(amount),
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.caption.copyWith(
+                  color: colors.textTertiary,
+                  fontSize: 11.sp,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );

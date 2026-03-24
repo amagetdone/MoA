@@ -36,7 +36,6 @@ class RealAuthRemoteDataSource implements AuthRemoteDataSource {
       data: {'refreshToken': refreshToken},
     );
 
-    print('[RefreshToken] raw response.data = ${response.data}');
     return TokenRefreshResponseDto.fromJson(response.data as Map<String, dynamic>);
   }
 

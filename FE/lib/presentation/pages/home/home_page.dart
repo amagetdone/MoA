@@ -12,10 +12,8 @@ import 'package:more_app/presentation/pages/home/widgets/goals_section_card.dart
 import 'package:more_app/presentation/pages/home/widgets/savings_card.dart';
 import 'package:more_app/presentation/pages/home/widgets/spending_card.dart';
 import 'package:more_app/presentation/pages/home/widgets/spending_rose_chart.dart';
-import 'package:more_app/domain/entities/spending.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/spending_viewmodel.dart';
-import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 import 'package:more_app/presentation/widgets/common/more_empty_state.dart';
 
@@ -42,8 +40,107 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     return Scaffold(
       backgroundColor: colors.bgPrimary,
-      appBar: const MoreAppBar(showBack: false, showLogo: true, showNotification: true),
-      body: _buildBody(context, ref, state),
+      body: Column(
+        children: [
+          // Custom header with week bar
+          Builder(builder: (context) {
+            final now = DateTime.now();
+            final monday = now.subtract(Duration(days: now.weekday - 1));
+            final sunday = monday.add(const Duration(days: 6));
+            const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+
+            return Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.orange500,
+                    AppColors.orange300,
+                  ],
+                ),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(24.r),
+                ),
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 16.h),
+                  child: Column(
+                    children: [
+                      // Title row
+                      Row(
+                        children: [
+                          Text(
+                            '이번 주 현황',
+                            style: AppTextStyles.headingLg.copyWith(
+                              color: const Color(0xFFFFFFFF),
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${monday.month}/${monday.day} - ${sunday.month}/${sunday.day}',
+                            style: AppTextStyles.caption.copyWith(
+                              color: const Color(0xFFFFFFFF).withValues(alpha: 0.7),
+                              fontSize: 11.sp,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 14.h),
+                      // Week day bar
+                      Row(
+                        children: List.generate(7, (i) {
+                          final isToday = i == now.weekday - 1;
+                          final isPast = i < now.weekday - 1;
+                          return Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 2.w),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    weekdays[i],
+                                    style: TextStyle(
+                                      fontSize: 10.sp,
+                                      fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
+                                      color: isToday
+                                          ? const Color(0xFFFFFFFF)
+                                          : isPast
+                                              ? const Color(0xFFFFFFFF).withValues(alpha: 0.7)
+                                              : const Color(0xFFFFFFFF).withValues(alpha: 0.35),
+                                    ),
+                                  ),
+                                  SizedBox(height: 4.h),
+                                  Container(
+                                    height: 4.h,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(2.r),
+                                      color: isToday
+                                          ? const Color(0xFFFFFFFF)
+                                          : isPast
+                                              ? const Color(0xFFFFFFFF).withValues(alpha: 0.4)
+                                              : const Color(0xFFFFFFFF).withValues(alpha: 0.15),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+          // Body
+          Expanded(child: _buildBody(context, ref, state)),
+        ],
+      ),
     );
   }
 
@@ -166,10 +263,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     required bool showGoalEmptyState,
   }) {
     final orderedAccounts = _orderedAccounts(state.accounts);
-    final topGoals = _sortedGoals(state.activeGoals).take(1).toList();
+    final topGoals = _sortedGoals(state.activeGoals).take(3).toList();
 
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 24.h),
+      padding: EdgeInsets.fromLTRB(20.w, 14.h, 20.w, 24.h),
       child: Column(
         children: [
           // 1) 목표
@@ -183,59 +280,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   goals: topGoals,
                   onViewAll: () => context.go(AppRoutes.goalTab),
                 ),
-          SizedBox(height: 8.h),
-
-          // 2) 이번 주 기간 표시
-          Builder(builder: (context) {
-            final colors = AppColors.of(context);
-            final now = DateTime.now();
-            final monday = now.subtract(Duration(days: now.weekday - 1));
-            final sunday = monday.add(const Duration(days: 6));
-            final daysLeft = sunday.difference(now).inDays + 1;
-            final daysPassed = now.weekday;
-            final progress = daysPassed / 7;
-
-            return Padding(
-              padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 4.h),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        '${monday.month}/${monday.day} - ${sunday.month}/${sunday.day}',
-                        style: AppTextStyles.caption.copyWith(
-                          color: colors.textTertiary,
-                          fontSize: 11.sp,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        '$daysLeft일 남음',
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.orange500,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 11.sp,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 6.h),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(2.r),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 3.h,
-                      backgroundColor: colors.borderDefault.withValues(alpha: 0.4),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.orange500.withValues(alpha: 0.5),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-          SizedBox(height: 4.h),
+          SizedBox(height: 10.h),
 
           // 3) 저축 + 여유자금 (가로)
           IntrinsicHeight(
@@ -248,7 +293,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     savingProgressRate: state.savingProgressRate,
                   ),
                 ),
-                SizedBox(width: 8.w),
+                SizedBox(width: 10.w),
                 Expanded(
                   child: SpendingCard(
                     totalAmount: state.weeklyBudget,
@@ -261,7 +306,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               ],
             ),
           ),
-          SizedBox(height: 8.h),
+          SizedBox(height: 10.h),
 
           // 이번 주 소비 rose 차트
           Builder(builder: (context) {
@@ -271,23 +316,11 @@ class _HomePageState extends ConsumerState<HomePage> {
             final weekOfMonth = ((weekStart.day - 1) ~/ 7) + 1;
             final weekLabel = '${weekStart.month}월 $weekOfMonth주차';
 
-            // TODO: 테스트용 하드코딩 데이터 - 테스트 후 원복
-            const testCategories = [
-              SpendingCategory(name: '식비', amount: 85000, budget: 120000, colorValue: 0xFFFF7043, iconKey: 'restaurant'),
-              SpendingCategory(name: '교통', amount: 32000, budget: 50000, colorValue: 0xFF42A5F5, iconKey: 'directions_bus'),
-              SpendingCategory(name: '쇼핑', amount: 67000, budget: 80000, colorValue: 0xFFAB47BC, iconKey: 'shopping_bag'),
-              SpendingCategory(name: '카페', amount: 28000, budget: 40000, colorValue: 0xFF8D6E63, iconKey: 'coffee'),
-              SpendingCategory(name: '문화', amount: 15000, budget: 30000, colorValue: 0xFF66BB6A, iconKey: 'movie'),
-            ];
-            const useTestData = true;
-            final categories = useTestData ? testCategories : spendingState.categories;
-            final hasData = categories.isNotEmpty && (useTestData || !spendingState.isLoading);
-
-            if (hasData) {
+            if (!spendingState.isLoading && spendingState.categories.isNotEmpty) {
               return Padding(
                 padding: EdgeInsets.only(bottom: 8.h),
                 child: SpendingRoseChart(
-                  categories: categories,
+                  categories: spendingState.categories,
                   weekLabel: weekLabel,
                 ),
               );
@@ -307,18 +340,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          '이번 주 소비',
-                          style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.w700, color: colors.textPrimary),
-                        ),
-                        const Spacer(),
-                        Text(
-                          weekLabel,
-                          style: TextStyle(color: colors.textTertiary, fontSize: 11.sp),
-                        ),
-                      ],
+                    Text(
+                      '소비',
+                      style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.w700, color: colors.textPrimary),
                     ),
                     SizedBox(height: 40.h),
                     Center(child: Icon(Icons.pie_chart_outline, size: 48.w, color: colors.gray100)),

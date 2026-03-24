@@ -200,7 +200,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
             _MenuListItem(
               icon: Icons.pie_chart_outline,
               title: '소비패턴 분석',
-              subtitle: '지난 3개월 간 소비패턴 분석',
+              subtitle: '지난 달 소비패턴 분석',
               onTap: () => context.push(AppRoutes.spendingPattern),
             ),
             _MenuListItem(

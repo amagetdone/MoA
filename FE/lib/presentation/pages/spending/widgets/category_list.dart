@@ -37,14 +37,19 @@ class _CategoryListState extends State<CategoryList> {
       children: [
         ...displayItems.map((category) {
           final bool useTotalRatio = widget.totalAmount != null && widget.totalAmount! > 0;
-          final ratio = useTotalRatio
-              ? (category.amount / widget.totalAmount!).clamp(0.0, 1.0)
-              : category.budget > 0
-                  ? (category.amount / category.budget).clamp(0.0, 1.0)
-                  : 0.0;
-          final percentLabel = useTotalRatio
-              ? '${(ratio * 100).round()}%'
-              : null;
+          final backendRatio = category.ratio; // 백엔드에서 % 단위로 옴 (예: 25.5)
+          final bool useBackendRatio = backendRatio != null && backendRatio > 0;
+
+          // 텍스트 표시용 % 값
+          final displayPercent = useBackendRatio
+              ? backendRatio
+              : useTotalRatio
+                  ? (category.amount / widget.totalAmount! * 100)
+                  : category.budget > 0
+                      ? (category.amount / category.budget * 100)
+                      : 0.0;
+          // 프로그레스 바용 0.0~1.0
+          final barRatio = (displayPercent / 100).clamp(0.0, 1.0);
 
           return Padding(
             padding: EdgeInsets.only(bottom: 24.h),
@@ -76,17 +81,19 @@ class _CategoryListState extends State<CategoryList> {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           Text(
-                            CurrencyFormatter.formatKRW(category.amount),
+                            useTotalRatio
+                                ? '${CurrencyFormatter.formatKRW(category.amount)} / ${CurrencyFormatter.formatKRW(widget.totalAmount!)}'
+                                : CurrencyFormatter.formatKRW(category.amount),
                             style: AppTextStyles.caption.copyWith(
                               color: colors.textSecondary,
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          if (percentLabel != null) ...[
+                          if (useTotalRatio) ...[
                             SizedBox(width: 6.w),
                             Text(
-                              percentLabel,
+                              '(${displayPercent.toStringAsFixed(1)}%)',
                               style: AppTextStyles.caption.copyWith(
                                 color: AppColors.orange500,
                                 fontSize: 12.sp,
@@ -98,7 +105,7 @@ class _CategoryListState extends State<CategoryList> {
                       ),
                       SizedBox(height: 6.h),
                       MoreProgressBar(
-                        progress: ratio,
+                        progress: barRatio,
                         color: AppColors.orange500,
                         backgroundColor: colors.gray50,
                         height: 14.h,
