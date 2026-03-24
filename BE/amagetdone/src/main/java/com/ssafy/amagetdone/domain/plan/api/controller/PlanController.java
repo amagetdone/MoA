@@ -7,12 +7,14 @@ import com.ssafy.amagetdone.domain.plan.api.dto.PlanCreateResponse;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanDetailResponse;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanListItemResponse;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanPriorityUpdateRequest;
+import com.ssafy.amagetdone.domain.plan.api.dto.PlanUpdateRequest;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanWeeklyPlansPageResponse;
 import com.ssafy.amagetdone.domain.plan.application.usecase.CreatePlanUseCase;
 import com.ssafy.amagetdone.domain.plan.application.usecase.DeletePlanUseCase;
 import com.ssafy.amagetdone.domain.plan.application.usecase.GetPlanDetailUseCase;
 import com.ssafy.amagetdone.domain.plan.application.usecase.ListPlanWeeklyPlansUseCase;
 import com.ssafy.amagetdone.domain.plan.application.usecase.ListPlansUseCase;
+import com.ssafy.amagetdone.domain.plan.application.usecase.UpdatePlanUseCase;
 import com.ssafy.amagetdone.domain.plan.application.usecase.UpdatePlanPrioritiesUseCase;
 import com.ssafy.amagetdone.global.response.ApiResponse;
 import com.ssafy.amagetdone.global.security.AuthenticatedMember;
@@ -45,6 +47,7 @@ public class PlanController {
 	private final GetPlanDetailUseCase getPlanDetailUseCase;
 	private final ListPlanWeeklyPlansUseCase listPlanWeeklyPlansUseCase;
 	private final UpdatePlanPrioritiesUseCase updatePlanPrioritiesUseCase;
+	private final UpdatePlanUseCase updatePlanUseCase;
 
 	public PlanController(
 		CreatePlanUseCase createPlanUseCase,
@@ -52,7 +55,8 @@ public class PlanController {
 		ListPlansUseCase listPlansUseCase,
 		GetPlanDetailUseCase getPlanDetailUseCase,
 		ListPlanWeeklyPlansUseCase listPlanWeeklyPlansUseCase,
-		UpdatePlanPrioritiesUseCase updatePlanPrioritiesUseCase
+		UpdatePlanPrioritiesUseCase updatePlanPrioritiesUseCase,
+		UpdatePlanUseCase updatePlanUseCase
 	) {
 		this.createPlanUseCase = createPlanUseCase;
 		this.deletePlanUseCase = deletePlanUseCase;
@@ -60,6 +64,7 @@ public class PlanController {
 		this.getPlanDetailUseCase = getPlanDetailUseCase;
 		this.listPlanWeeklyPlansUseCase = listPlanWeeklyPlansUseCase;
 		this.updatePlanPrioritiesUseCase = updatePlanPrioritiesUseCase;
+		this.updatePlanUseCase = updatePlanUseCase;
 	}
 
 	@Operation(summary = "목표 목록 조회", security = @SecurityRequirement(name = "bearerAuth"))
@@ -109,6 +114,17 @@ public class PlanController {
 			"목표가 생성되었습니다.",
 			createPlanUseCase.execute(authenticatedMember.userId(), request)
 		);
+	}
+
+	@Operation(summary = "목표 수정", security = @SecurityRequirement(name = "bearerAuth"))
+	@PatchMapping("/{planId}")
+	public ApiResponse<Void> updatePlan(
+		@AuthenticationPrincipal AuthenticatedMember authenticatedMember,
+		@PathVariable Integer planId,
+		@Valid @RequestBody PlanUpdateRequest request
+	) {
+		updatePlanUseCase.execute(authenticatedMember.userId(), planId, request);
+		return ApiResponse.ok("목표가 수정되었습니다.", null);
 	}
 
 	@Operation(summary = "목표 삭제", security = @SecurityRequirement(name = "bearerAuth"))

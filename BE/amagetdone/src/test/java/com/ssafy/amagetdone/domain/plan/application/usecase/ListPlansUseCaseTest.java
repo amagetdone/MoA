@@ -10,6 +10,7 @@ import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanListItemResponse;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
 
 import org.junit.jupiter.api.Test;
@@ -64,9 +65,35 @@ class ListPlansUseCaseTest {
 		assertEquals("iPad purchase", response.get(0).title());
 		assertEquals(14L, response.get(0).dday());
 		assertEquals(0, response.get(0).achievementRate().compareTo(new java.math.BigDecimal("32")));
+		assertEquals("PENDING", response.get(0).aiPipelineStatus());
 		assertEquals(2L, response.get(1).planId());
 		assertEquals(72L, response.get(1).dday());
 		assertEquals(0, response.get(1).achievementRate().compareTo(new java.math.BigDecimal("33.3")));
+		assertEquals("FAILED", response.get(1).aiPipelineStatus());
+	}
+
+	@Test
+	void doesNotRoundIncompleteAchievementRateUpToHundredPercent() {
+		Plan nearlyCompletedPlan = instantiatePlan(
+			1,
+			"Nearly completed plan",
+			899_990L,
+			900_000L,
+			1,
+			3,
+			LocalDate.now().plusDays(10),
+			PlanStatus.WAITING
+		);
+
+		given(planRepository.findAllByUserIdAndDeletedFalseAndStatusIn(
+			1,
+			List.of(PlanStatus.WAITING, PlanStatus.ACTIVE, PlanStatus.PAUSED)
+		))
+			.willReturn(List.of(nearlyCompletedPlan));
+
+		List<PlanListItemResponse> response = listPlansUseCase.execute(1);
+
+		assertEquals(0, response.get(0).achievementRate().compareTo(new java.math.BigDecimal("99.9")));
 	}
 
 	private Plan instantiatePlan(
@@ -88,6 +115,7 @@ class ListPlansUseCaseTest {
 			.targetWeeks(targetWeeks)
 			.endDate(endDate)
 			.status(status)
+			.aiPipelineStatus(status == PlanStatus.WAITING ? PlanAiPipelineStatus.PENDING : PlanAiPipelineStatus.FAILED)
 			.build();
 		ReflectionTestUtils.setField(plan, "id", id);
 		return plan;
