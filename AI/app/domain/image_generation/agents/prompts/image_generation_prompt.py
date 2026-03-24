@@ -1,4 +1,3 @@
-import re
 from langchain_core.prompts import ChatPromptTemplate
 
 
@@ -27,11 +26,10 @@ _IMAGE_GENERATION_PROMPT = ChatPromptTemplate.from_messages(
                 "- clean, premium animated-film rendering\n"
                 "- warm, aspirational, emotionally clear visual storytelling\n"
                 "\n"
-                "Structured input rules:\n"
-                "- [title]: semantic metadata only, for internal concept understanding\n"
-                "- [description] or [Subject]: the actual visual goal request\n"
-                "- Never render [title] literally as text in the image\n"
-                "- Never render user-provided words literally unless the user explicitly asks for visible text\n"
+                "Input handling rules:\n"
+                "- Treat the full user prompt as the single goal request without splitting or rewriting it.\n"
+                "- If the user prompt contains markers such as [title], [description], or [subject], keep them only as part of the raw request context.\n"
+                "- Never render user-provided words literally unless the user explicitly asks for visible text.\n"
                 "\n"
                 "Brand and model handling:\n"
                 "- If the user mentions a brand or product model, interpret it through visual design cues rather than visible text.\n"
@@ -39,7 +37,12 @@ _IMAGE_GENERATION_PROMPT = ChatPromptTemplate.from_messages(
                 "- Avoid visible logos, brand names, model names, and packaging text unless explicitly requested.\n"
                 "\n"
                 "Strong text suppression rule:\n"
-                "Do not generate readable text in the image. Avoid Korean, English, Japanese, Chinese, letters, words, numbers, logos, brand marks, model names, watermarks, signatures, labels, captions, UI text, banners, title text, packaging text, and emblem-like typography. If text would normally appear, leave it blank or replace it with non-readable decorative visual elements.\n"
+                "Do not generate readable text in the image. Avoid Korean, English, Japanese, Chinese, letters, words, numbers, logos, brand marks, model names, watermarks, signatures, labels, captions, UI text, banners, title text, packaging text, and emblem-like typography. If text would normally appear, omit it completely and leave the area clean.\n"
+                "\n"
+                "Strong overlay suppression rule:\n"
+                "Do not add speech bubbles, thought bubbles, caption boxes, comic panels, stickers, badges, label cards, callouts, dialog balloons, chat balloons, subtitles, UI overlays, app chrome, infographic overlays, floating annotations, poster frames, or decorative text containers.\n"
+                "Do not replace missing text with swirls, scribbles, placeholder glyphs, icon clusters, or non-readable marks inside overlay shapes.\n"
+                "Express communication, emphasis, and storytelling only through pose, facial expression, composition, lighting, props, and environment.\n"
                 "\n"
                 "Make explicit when useful:\n"
                 "- the subject based on the profile image\n"
@@ -70,14 +73,15 @@ _IMAGE_GENERATION_PROMPT = ChatPromptTemplate.from_messages(
                 "Create a polished image-generation prompt using the following inputs.\n"
                 "\n"
                 "User profile image: subject identity only\n"
-                "Title metadata: {title}\n"
-                "Goal request: {subject}\n"
+                "Goal request: {user_prompt}\n"
                 "\n"
                 "Important requirements:\n"
                 "- use the profile image only for the user's identity and appearance\n"
                 "- combine the profile subject and the user's goal into one coherent final image\n"
                 "- render the final result in a polished Pixar-style 3D animated look\n"
                 "- do not output readable text, letters, numbers, logos, brand names, model names, or watermarks\n"
+                "- avoid speech bubbles, caption cards, comic panels, UI overlays, stickers, badges, and infographic callouts\n"
+                "- if text would normally appear, omit it instead of adding placeholder symbols or overlay shapes\n"
                 "- keep the result clean, cohesive, and production-ready"
             ),
         ),
@@ -85,28 +89,8 @@ _IMAGE_GENERATION_PROMPT = ChatPromptTemplate.from_messages(
 )
 
 
-def parse_structured_user_prompt(user_prompt: str) -> tuple[str, str]:
-    title_match = re.search(
-        r"\[title\]\s*(.*?)(?=\s*\[(?:description|subject)\]|\s*$)",
-        user_prompt,
-        re.IGNORECASE | re.DOTALL,
-    )
-    subject_match = re.search(
-        r"\[(?:description|subject)\]\s*(.*)$",
-        user_prompt,
-        re.IGNORECASE | re.DOTALL,
-    )
-
-    title = title_match.group(1).strip() if title_match else ""
-    subject = subject_match.group(1).strip() if subject_match else user_prompt.strip()
-
-    return title, subject
-
-
 def build_image_generation_prompt(user_prompt: str) -> str:
-    title, subject = parse_structured_user_prompt(user_prompt)
     messages = _IMAGE_GENERATION_PROMPT.format_messages(
-        title=title,
-        subject=subject,
+        user_prompt=user_prompt.strip(),
     )
     return "\n".join(message.content for message in messages)

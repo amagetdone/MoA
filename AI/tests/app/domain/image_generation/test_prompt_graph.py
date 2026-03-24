@@ -17,17 +17,18 @@ def test_build_image_generation_prompt_expands_user_edit_goal() -> None:
     assert "512x512" in prompt
     assert "single final image" in prompt
     assert "- grids" in prompt
+    assert "speech bubbles" in prompt
+    assert "UI overlays" in prompt
     assert prompt != "Turn the reference image into a polished cyberpunk banana poster."
 
 
-def test_build_image_generation_prompt_supports_title_and_description_format() -> None:
+def test_build_image_generation_prompt_keeps_structured_input_as_raw_goal_request() -> None:
     prompt = build_image_generation_prompt(
         "[Title] 노트북 구매 [description] 삼성 노트북 신상 구매"
     )
 
-    assert "Title metadata: 노트북 구매" in prompt
-    assert "Goal request: 삼성 노트북 신상 구매" in prompt
-    assert "Goal request: [Title] 노트북 구매 [description] 삼성 노트북 신상 구매" not in prompt
+    assert "Goal request: [Title] 노트북 구매 [description] 삼성 노트북 신상 구매" in prompt
+    assert "Title metadata:" not in prompt
 
 
 def test_image_generation_graph_builds_prompt_and_delegates_generation() -> None:
