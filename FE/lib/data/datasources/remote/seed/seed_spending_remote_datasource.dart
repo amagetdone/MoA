@@ -11,12 +11,12 @@ class SeedSpendingRemoteDataSource implements SpendingRemoteDataSource {
   final SeedDataStore _dataStore;
 
   @override
-  Future<void> syncTransactions({int months = 3, bool relabel = false}) async {
+  Future<void> syncTransactions({int months = 1, bool relabel = false}) async {
     // seed 환경에서는 no-op
   }
 
   @override
-  Future<void> analyzeTransactions({int months = 3, bool relabel = false}) async {
+  Future<void> analyzeTransactions({int months = 1, bool relabel = false}) async {
     // seed 환경에서는 no-op
   }
 
@@ -67,6 +67,17 @@ class SeedSpendingRemoteDataSource implements SpendingRemoteDataSource {
   @override
   Future<MonthlyTransactionSummary> fetchMonthlyTransactionSummary(DateTime monthStart) async {
     return const MonthlyTransactionSummary();
+  }
+
+  @override
+  Future<MonthlyTransactionSummary> fetchWeeklyTransactionSummary(DateTime weekStart) async {
+    return const MonthlyTransactionSummary();
+  }
+
+  @override
+  Future<MonthlyAnalysisTriggerDto> analyzeMonthlyTransactions(String yearMonth) async {
+    await Future.delayed(const Duration(milliseconds: 120));
+    return const MonthlyAnalysisTriggerDto();
   }
 
   @override

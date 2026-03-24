@@ -72,6 +72,37 @@ class MonthlyAnalysisDto {
   }
 }
 
+class MonthlyAnalysisTriggerDto {
+  final int averageIncome;
+  final int averageExpense;
+  final int remainingAmount;
+  final double fixedExpenseRatio;
+  final double variableExpenseRatio;
+  final List<WeeklyCategoryExpenseDto> categoryExpenses;
+
+  const MonthlyAnalysisTriggerDto({
+    this.averageIncome = 0,
+    this.averageExpense = 0,
+    this.remainingAmount = 0,
+    this.fixedExpenseRatio = 0.0,
+    this.variableExpenseRatio = 0.0,
+    this.categoryExpenses = const [],
+  });
+
+  factory MonthlyAnalysisTriggerDto.fromJson(Map<String, dynamic> json) {
+    return MonthlyAnalysisTriggerDto(
+      averageIncome: json['averageIncome'] as int? ?? 0,
+      averageExpense: json['averageExpense'] as int? ?? 0,
+      remainingAmount: json['remainingAmount'] as int? ?? 0,
+      fixedExpenseRatio: (json['fixedExpenseRatio'] as num?)?.toDouble() ?? 0.0,
+      variableExpenseRatio: (json['variableExpenseRatio'] as num?)?.toDouble() ?? 0.0,
+      categoryExpenses: (json['categoryExpenses'] as List<dynamic>? ?? [])
+          .map((e) => WeeklyCategoryExpenseDto.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
 class WeeklyCategoryExpenseDto {
   final int categoryId;
   final String categoryName;
@@ -89,7 +120,7 @@ class WeeklyCategoryExpenseDto {
     return WeeklyCategoryExpenseDto(
       categoryId: json['categoryId'] as int? ?? 0,
       categoryName: json['categoryName'] as String? ?? '',
-      amount: json['amount'] as int? ?? 0,
+      amount: json['actualSpentAmount'] as int? ?? json['amount'] as int? ?? 0,
       ratio: (json['ratio'] as num?)?.toDouble() ?? 0.0,
     );
   }

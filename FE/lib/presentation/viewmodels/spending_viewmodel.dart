@@ -5,6 +5,7 @@ import 'package:more_app/presentation/providers/app_data_providers.dart';
 
 class SpendingState {
   final bool isLoading;
+  final bool isPeriodLoading;
   final String? errorMessage;
   final bool isWeekly;
   final List<SpendingCategory> categories;
@@ -23,6 +24,7 @@ class SpendingState {
 
   SpendingState({
     this.isLoading = false,
+    this.isPeriodLoading = false,
     this.errorMessage,
     this.isWeekly = true,
     this.categories = const [],
@@ -58,6 +60,7 @@ class SpendingState {
 
   SpendingState copyWith({
     bool? isLoading,
+    bool? isPeriodLoading,
     String? errorMessage,
     bool clearErrorMessage = false,
     bool? isWeekly,
@@ -77,6 +80,7 @@ class SpendingState {
   }) {
     return SpendingState(
       isLoading: isLoading ?? this.isLoading,
+      isPeriodLoading: isPeriodLoading ?? this.isPeriodLoading,
       errorMessage: clearErrorMessage
           ? null
           : errorMessage ?? this.errorMessage,
@@ -115,10 +119,10 @@ class SpendingViewModel extends StateNotifier<SpendingState> {
 
     try {
       try {
-        await _repository.syncTransactions();
+        await _repository.syncTransactions(months: 3);
       } catch (_) {}
       try {
-        await _repository.analyzeTransactions();
+        await _repository.analyzeTransactions(months: 3);
       } catch (_) {}
       final overview = await _repository.fetchSpendingOverview();
       state = state.copyWith(
@@ -135,6 +139,7 @@ class SpendingViewModel extends StateNotifier<SpendingState> {
   }
 
   Future<void> _loadPeriodData() async {
+    state = state.copyWith(isPeriodLoading: true);
     try {
       if (state.isWeekly) {
         final dailySpendings = await _repository.fetchWeeklyDailySpending(state.selectedWeekStart);
@@ -142,41 +147,24 @@ class SpendingViewModel extends StateNotifier<SpendingState> {
         state = state.copyWith(
           categories: result.categories,
           dailySpendings: dailySpendings,
-          weeklyExpenseAmount: dailySpendings.fold<int>(0, (sum, d) => sum + d.amount),
+          weeklyExpenseAmount: result.expenseAmount,
+          isPeriodLoading: false,
         );
       } else {
         final selected = state.selectedMonthStart;
-        final prev1 = DateTime(selected.year, selected.month - 1, 1);
-        final prev2 = DateTime(selected.year, selected.month - 2, 1);
 
         final result = await _repository.fetchMonthlyAnalysis(selected);
         final monthlySpendings = await _repository.fetchMonthlyDailySpending(selected);
-        final currentTotal = monthlySpendings.fold<int>(0, (sum, d) => sum + d.amount);
-
-        final priorTotals = await Future.wait([prev2, prev1].map((m) async {
-          try {
-            final spendings = await _repository.fetchMonthlyDailySpending(m);
-            return spendings.fold<int>(0, (sum, d) => sum + d.amount);
-          } catch (_) {
-            return 0;
-          }
-        }));
-
-        final comparisons = [
-          DailySpending(date: prev2, amount: priorTotals[0]),
-          DailySpending(date: prev1, amount: priorTotals[1]),
-          DailySpending(date: selected, amount: currentTotal),
-        ];
 
         state = state.copyWith(
           categories: result.categories,
           monthlySpendings: monthlySpendings,
-          monthlyComparisons: comparisons,
-          monthlyExpenseAmount: currentTotal,
+          monthlyExpenseAmount: result.expenseAmount,
+          isPeriodLoading: false,
         );
       }
     } catch (e) {
-      state = state.copyWith(errorMessage: e.toString());
+      state = state.copyWith(isPeriodLoading: false, errorMessage: e.toString());
     }
   }
 

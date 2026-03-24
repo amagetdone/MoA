@@ -39,7 +39,7 @@ class SpendingPatternViewModel extends StateNotifier<SpendingPatternState> {
     state = state.copyWith(isLoading: true);
     try {
       final now = DateTime.now();
-      final result = await _repository.fetchThreeMonthPattern(
+      final result = await _repository.fetchPreviousMonthPattern(
         DateTime(now.year, now.month, 1),
       );
       state = state.copyWith(isLoading: false, result: result);
