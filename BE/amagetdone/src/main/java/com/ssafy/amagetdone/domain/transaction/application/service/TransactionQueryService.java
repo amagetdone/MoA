@@ -312,7 +312,7 @@ public class TransactionQueryService {
 		List<Projection> essentialExpenseProjections = pureExpenseProjections.stream()
 			.filter(this::isEssentialExpense)
 			.toList();
-		List<WeeklyTransactionAnalysisDto.CategoryExpense> categoryExpenses = buildWeeklyCategoryExpenses(essentialExpenseProjections);
+		List<WeeklyTransactionAnalysisDto.CategoryExpense> categoryExpenses = buildWeeklyCategoryExpenses(pureExpenseProjections);
 		long expenseAmount = pureExpenseProjections.stream()
 			.mapToLong(projection -> projection.transaction().getTransactionBalance())
 			.sum();
@@ -400,36 +400,25 @@ public class TransactionQueryService {
 				targetMonth.atDay(1).with(TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY)),
 				targetMonth.atEndOfMonth()
 			);
-		List<Integer> snapshotIds = snapshots.stream()
-			.map(EssentialExpenseSnapshotWeek::getId)
-			.toList();
-		List<EssentialExpenseSnapshotWeekCategory> snapshotCategories = snapshotIds.isEmpty()
-			? List.of()
-			: essentialExpenseSnapshotWeekCategoryRepository.findAllBySnapshotWeek_IdIn(snapshotIds);
-		Map<Integer, Long> essentialCategoryAmounts = snapshotCategories.stream()
-			.collect(Collectors.groupingBy(
-				item -> item.getCategory().getId(),
-				Collectors.summingLong(EssentialExpenseSnapshotWeekCategory::getAmount)
-			));
-		Map<Integer, Category> categoriesById = snapshotCategories.stream()
-			.collect(Collectors.toMap(
-				item -> item.getCategory().getId(),
-				EssentialExpenseSnapshotWeekCategory::getCategory,
-				(left, right) -> left
-			));
-		long expenseAmount = projections.stream()
+		List<Projection> pureExpenseProjections = projections.stream()
 			.filter(this::isPureExpense)
+			.toList();
+		long expenseAmount = pureExpenseProjections.stream()
 			.mapToLong(projection -> projection.transaction().getTransactionBalance())
 			.sum();
 		long monthlyEssentialAmount = snapshots.stream().mapToLong(EssentialExpenseSnapshotWeek::getEssentialAmount).sum();
 
-		List<MonthlyTransactionAnalysisDto.CategoryExpense> categoryExpenses = essentialCategoryAmounts.entrySet().stream()
+		List<MonthlyTransactionAnalysisDto.CategoryExpense> categoryExpenses = pureExpenseProjections.stream()
+			.collect(Collectors.groupingBy(
+				this::resolveCategory,
+				Collectors.summingLong(projection -> projection.transaction().getTransactionBalance())
+			))
+			.entrySet().stream()
 			.map(entry -> {
-				Category category = categoriesById.get(entry.getKey());
 				double ratio = expenseAmount == 0L ? 0d : (entry.getValue() * 100d) / expenseAmount;
 				return new MonthlyTransactionAnalysisDto.CategoryExpense(
-					category.getId(),
-					category.getName(),
+					entry.getKey().getId(),
+					entry.getKey().getName(),
 					entry.getValue(),
 					round(ratio)
 				);
@@ -640,7 +629,7 @@ public class TransactionQueryService {
 			.map(entry -> new WeeklyTransactionAnalysisDto.CategoryExpense(
 				entry.getKey().categoryId(),
 				entry.getKey().categoryName(),
-				entry.getValue(),
+				0L,
 				entry.getValue(),
 				0L
 			))
