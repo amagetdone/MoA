@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
+import 'package:more_app/presentation/viewmodels/menu_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/auth_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/theme_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
@@ -18,6 +19,22 @@ class SettingsPage extends ConsumerWidget {
     final colors = AppColors.of(context);
     final themeMode = ref.watch(themeProvider);
     final isDark = themeMode == ThemeMode.dark;
+    final menuState = ref.watch(menuViewModelProvider);
+
+    ref.listen<String?>(
+      menuViewModelProvider.select((state) => state.errorMessage),
+      (previous, next) {
+        if (next == null || next == previous || !context.mounted) {
+          return;
+        }
+
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(content: Text(next)),
+          );
+      },
+    );
 
     return Scaffold(
       backgroundColor: colors.bgPrimary,
@@ -59,7 +76,7 @@ class SettingsPage extends ConsumerWidget {
                   Switch(
                     value: isDark,
                     onChanged: (_) => ref.read(themeProvider.notifier).toggle(),
-                    activeColor: AppColors.orange500,
+                    activeThumbColor: AppColors.orange500,
                   ),
                 ],
               ),
@@ -67,13 +84,56 @@ class SettingsPage extends ConsumerWidget {
             SizedBox(height: 10.h),
 
             // Notification
-            _SettingsCard(
-              icon: Icons.notifications_outlined,
-              title: '알림',
-              subtitle: '알림 설정',
-              onTap: () {
-                // TODO: navigate to notification settings
-              },
+            MoreCard(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40.w,
+                    height: 40.w,
+                    decoration: BoxDecoration(
+                      color: colors.gray50,
+                      borderRadius: BorderRadius.circular(10.r),
+                      border: Border.all(color: colors.borderDefault),
+                    ),
+                    child: Icon(
+                      Icons.notifications_outlined,
+                      size: 20.w,
+                      color: colors.gray500,
+                    ),
+                  ),
+                  SizedBox(width: 14.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '푸시 알림',
+                          style: AppTextStyles.bodyMd.copyWith(
+                            color: colors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          '목표 생성 결과와 거래 알림을 받아보세요',
+                          style: AppTextStyles.caption.copyWith(
+                            color: colors.textTertiary,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch(
+                    value: menuState.notificationEnabled,
+                    onChanged: (value) => ref
+                        .read(menuViewModelProvider.notifier)
+                        .toggleNotification(value),
+                    activeThumbColor: AppColors.orange500,
+                  ),
+                ],
+              ),
             ),
             SizedBox(height: 10.h),
 

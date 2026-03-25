@@ -35,7 +35,11 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
 
     return Scaffold(
       backgroundColor: colors.bgPrimary,
-      appBar: const MoreAppBar(showBack: false, showLogo: true, showNotification: true),
+      appBar: const MoreAppBar(
+        showBack: false,
+        showLogo: true,
+        showNotification: false,
+      ),
       body: goalState.isLoading
           ? const SizedBox.shrink()
           : goalState.errorMessage != null

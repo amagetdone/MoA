@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -67,23 +69,27 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
     );
 
     try {
-      await ref.read(goalViewModelProvider.notifier).addGoal(goal);
+      final createdGoal = await ref.read(goalViewModelProvider.notifier).addGoal(goal);
+      unawaited(ref.read(homeViewModelProvider.notifier).loadData());
+
+      if (!mounted) return;
+
+      if (widget.isOnboarding) {
+        context.go(AppRoutes.onboardingLoading, extra: {'nextRoute': AppRoutes.onboardingPlan});
+      } else {
+        context.go(
+          AppRoutes.goalLoadingLocation(
+            createdGoal.id,
+            source: 'create',
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('목표 생성에 실패했습니다: $e')),
       );
       return;
-    }
-
-    await ref.read(homeViewModelProvider.notifier).loadData();
-
-    if (!mounted) return;
-
-    if (widget.isOnboarding) {
-      context.go(AppRoutes.onboardingLoading, extra: {'nextRoute': AppRoutes.onboardingPlan});
-    } else {
-      context.go(AppRoutes.goalLoading);
     }
   }
 

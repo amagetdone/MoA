@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:more_app/core/notifications/push_notification_sync_service.dart';
 import 'package:more_app/domain/entities/auth_result.dart';
 import 'package:more_app/domain/repositories/auth_repository.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
@@ -39,9 +40,11 @@ class AuthError extends AuthState {
 }
 
 class AuthViewModel extends StateNotifier<AuthState> {
-  AuthViewModel(this._repository) : super(const AuthInitial());
+  AuthViewModel(this._repository, this._pushNotificationSyncService)
+    : super(const AuthInitial());
 
   final AuthRepository _repository;
+  final PushNotificationSyncService _pushNotificationSyncService;
   int _socialLoginAttempt = 0;
 
   bool _isSilentLoginInterruption(Object error) {
@@ -64,6 +67,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
       }
 
       state = AuthAuthenticated(result);
+      unawaited(_pushNotificationSyncService.syncTokenIfEnabled());
     } catch (error) {
       if (attempt != _socialLoginAttempt) {
         return;
@@ -85,6 +89,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
     try {
       final result = await _repository.loginWithTest(id: id);
       state = AuthAuthenticated(result, isTest: true);
+      unawaited(_pushNotificationSyncService.syncTokenIfEnabled());
     } catch (error) {
       state = AuthError(error.toString());
     }
@@ -108,6 +113,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
       final result = await _repository.autoLogin();
       if (result != null) {
         state = AuthAutoLoginSuccess(result);
+        unawaited(_pushNotificationSyncService.syncTokenIfEnabled());
       } else {
         state = const AuthUnauthenticated();
       }
@@ -120,6 +126,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
     state = const AuthLoading();
     try {
       await _repository.logout();
+      unawaited(_pushNotificationSyncService.handleLogout());
       state = const AuthUnauthenticated();
     } catch (error) {
       state = AuthError(error.toString());
@@ -130,5 +137,8 @@ class AuthViewModel extends StateNotifier<AuthState> {
 final authViewModelProvider = StateNotifierProvider<AuthViewModel, AuthState>((
   ref,
 ) {
-  return AuthViewModel(ref.read(authRepositoryProvider));
+  return AuthViewModel(
+    ref.read(authRepositoryProvider),
+    ref.read(pushNotificationSyncServiceProvider),
+  );
 });

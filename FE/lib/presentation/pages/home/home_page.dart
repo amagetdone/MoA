@@ -14,8 +14,6 @@ import 'package:more_app/presentation/pages/home/widgets/spending_card.dart';
 import 'package:more_app/presentation/pages/home/widgets/spending_rose_chart.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/spending_viewmodel.dart';
-import 'package:more_app/presentation/widgets/common/more_card.dart';
-import 'package:more_app/presentation/widgets/common/more_empty_state.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -179,81 +177,11 @@ class _HomePageState extends ConsumerState<HomePage> {
       );
     }
 
-    switch (state.status) {
-      case HomeStatus.noAccount:
-        return _buildNoAccount(context);
-      case HomeStatus.noGoal:
-        return _buildNoGoal(context);
-      case HomeStatus.ready:
-        return _buildDashboard(context, state, showGoalEmptyState: false);
-    }
-  }
-
-  Widget _buildNoAccount(BuildContext context) {
-    final colors = AppColors.of(context);
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24.w),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            Text(
-              '계좌를 연결해주세요.',
-              style: AppTextStyles.headingLg.copyWith(
-                fontWeight: FontWeight.w700,
-                color: colors.textPrimary,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            Text(
-              '계좌를 연결하면 소비 분석을 통해\n똑똑한 저축 계획을 세울게요!',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodyMd.copyWith(
-                color: colors.textTertiary,
-              ),
-            ),
-            SizedBox(height: 32.h),
-            GestureDetector(
-              onTap: () async {
-                await context.push(AppRoutes.accountAdd);
-                if (mounted) {
-                  ref.read(homeViewModelProvider.notifier).loadData();
-                }
-              },
-              child: MoreCard(
-                child: Column(
-                  children: [
-                    Container(
-                      width: 48.w,
-                      height: 48.w,
-                      decoration: BoxDecoration(
-                        color: AppColors.orange500,
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      child: Icon(Icons.add, color: Colors.white, size: 28.w),
-                    ),
-                    SizedBox(height: 12.h),
-                    Text(
-                      '새로운 계좌 연결하기',
-                      style: AppTextStyles.bodyMd.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: colors.textPrimary,
-                      ),
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      '계좌를 추가하고 자산을 관리하세요!',
-                      style: AppTextStyles.bodySm.copyWith(
-                        color: colors.textTertiary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return _buildDashboard(
+      context,
+      state,
+      showGoalEmptyState: state.activeGoals.isEmpty,
+      showAccountEmptyState: state.accounts.isEmpty,
     );
   }
 
@@ -261,25 +189,27 @@ class _HomePageState extends ConsumerState<HomePage> {
     BuildContext context,
     HomeState state, {
     required bool showGoalEmptyState,
+    required bool showAccountEmptyState,
   }) {
     final orderedAccounts = _orderedAccounts(state.accounts);
     final topGoals = _sortedGoals(state.activeGoals).take(3).toList();
+    final spendingState = ref.watch(spendingViewModelProvider);
+    final weekStart = spendingState.selectedWeekStart;
+    final weekOfMonth = ((weekStart.day - 1) ~/ 7) + 1;
+    final weekLabel = '${weekStart.month}월 $weekOfMonth주차';
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(20.w, 14.h, 20.w, 24.h),
       child: Column(
         children: [
           // 1) 목표
-          showGoalEmptyState
-              ? MoreEmptyState(
-                  message: '첫 번째 저축 목표를 세워보세요',
-                  buttonText: '목표 만들기',
-                  onTap: () => context.push(AppRoutes.goalCreate),
-                )
-              : GoalsSectionCard(
-                  goals: topGoals,
-                  onViewAll: () => context.go(AppRoutes.goalTab),
-                ),
+          GoalsSectionCard(
+            goals: topGoals,
+            onViewAll: () => context.go(AppRoutes.goalTab),
+            onAddGoal: showGoalEmptyState
+                ? () => context.push(AppRoutes.goalCreate)
+                : null,
+          ),
           SizedBox(height: 10.h),
 
           // 3) 저축 + 여유자금 (가로)
@@ -311,11 +241,6 @@ class _HomePageState extends ConsumerState<HomePage> {
           // 이번 주 소비 rose 차트
           Builder(builder: (context) {
             final colors = AppColors.of(context);
-            final spendingState = ref.watch(spendingViewModelProvider);
-            final weekStart = spendingState.selectedWeekStart;
-            final weekOfMonth = ((weekStart.day - 1) ~/ 7) + 1;
-            final weekLabel = '${weekStart.month}월 $weekOfMonth주차';
-
             if (!spendingState.isLoading && spendingState.categories.isNotEmpty) {
               return Padding(
                 padding: EdgeInsets.only(bottom: 8.h),
@@ -349,11 +274,36 @@ class _HomePageState extends ConsumerState<HomePage> {
                     SizedBox(height: 12.h),
                     Center(
                       child: Text(
-                        '아직 소비 내역이 없어요',
+                        showAccountEmptyState
+                            ? '계좌를 연결하면 소비 분석을 보여드릴게요'
+                            : '소비 내역이 쌓이면 분석을 보여드릴게요',
                         style: AppTextStyles.bodySm.copyWith(color: colors.textTertiary),
+                        textAlign: TextAlign.center,
                       ),
                     ),
-                    SizedBox(height: 32.h),
+                    SizedBox(height: 16.h),
+                    if (showAccountEmptyState)
+                      Center(
+                        child: GestureDetector(
+                          onTap: () => context.push(AppRoutes.accountAdd),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+                            decoration: BoxDecoration(
+                              color: AppColors.orange50,
+                              borderRadius: BorderRadius.circular(999.r),
+                            ),
+                            child: Text(
+                              '계좌 연결하기',
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.orange500,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 11.sp,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    SizedBox(height: 16.h),
                   ],
                 ),
               ),
@@ -366,69 +316,6 @@ class _HomePageState extends ConsumerState<HomePage> {
             accounts: orderedAccounts,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildNoGoal(BuildContext context) {
-    final colors = AppColors.of(context);
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24.w),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            Text(
-              '첫 번째 저축 목표를 세워보세요.',
-              style: AppTextStyles.headingLg.copyWith(
-                fontWeight: FontWeight.w700,
-                color: colors.textPrimary,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            Text(
-              '목표에 도달할 수 있게 제가 도와드릴게요!',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodyMd.copyWith(
-                color: colors.textTertiary,
-              ),
-            ),
-            SizedBox(height: 32.h),
-            GestureDetector(
-              onTap: () => context.push(AppRoutes.goalCreate),
-              child: MoreCard(
-                child: Column(
-                  children: [
-                    Container(
-                      width: 48.w,
-                      height: 48.w,
-                      decoration: BoxDecoration(
-                        color: AppColors.orange500,
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      child: Icon(Icons.add, color: Colors.white, size: 28.w),
-                    ),
-                    SizedBox(height: 12.h),
-                    Text(
-                      '첫 목표 세우러 가기',
-                      style: AppTextStyles.bodyMd.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: colors.textPrimary,
-                      ),
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      '목표를 세우고, 돈을 모아봐요!',
-                      style: AppTextStyles.bodySm.copyWith(
-                        color: colors.textTertiary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

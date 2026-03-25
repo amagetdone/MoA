@@ -247,6 +247,7 @@ class MockApiGoalRemoteDataSource implements GoalRemoteDataSource {
       totalWeeksOverride: weeksToGoal,
       detailLoaded: true,
       apiStatus: createdResponse['status'] as String?,
+      aiPipelineStatus: GoalAiPipelineStatus.pending,
     );
   }
 
@@ -292,7 +293,10 @@ class MockApiGoalRemoteDataSource implements GoalRemoteDataSource {
     };
     _planDetails[planId] = detailJson;
 
-    return goal;
+    return goal.copyWith(
+      aiPipelineStatus: GoalAiPipelineStatus.pending,
+      clearSketchVideoAssetPath: true,
+    );
   }
 
   @override
@@ -432,6 +436,9 @@ class MockApiGoalRemoteDataSource implements GoalRemoteDataSource {
       weekNumber: weekNumber,
       dday: dday,
       achievementRateOverride: achievementRate,
+      aiPipelineStatus: _videoUrls[planId] == null
+          ? null
+          : GoalAiPipelineStatus.succeeded,
     );
   }
 
@@ -478,6 +485,9 @@ class MockApiGoalRemoteDataSource implements GoalRemoteDataSource {
       currentWeekOverride: currentWeek,
       totalWeeksOverride: totalWeeks,
       detailLoaded: true,
+      aiPipelineStatus: _videoUrls[planId] == null
+          ? null
+          : GoalAiPipelineStatus.succeeded,
     );
   }
 

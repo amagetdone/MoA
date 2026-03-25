@@ -56,6 +56,8 @@ dependencies:
 
   # 환경변수
   flutter_dotenv: ^5.2.1
+  firebase_core: ^4.1.1
+  firebase_messaging: ^16.0.1
 
   # 유틸리티
   logger: ^2.5.0

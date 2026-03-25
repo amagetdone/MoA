@@ -42,6 +42,7 @@ class SeedGoalRemoteDataSource implements GoalRemoteDataSource {
       currentWeekOverride: goal.currentWeekNumber,
       totalWeeksOverride: goal.totalWeeks,
       detailLoaded: true,
+      aiPipelineStatus: goal.aiPipelineStatus ?? GoalAiPipelineStatus.succeeded,
     );
   }
 
@@ -117,7 +118,13 @@ class SeedGoalRemoteDataSource implements GoalRemoteDataSource {
   @override
   Future<Goal> createGoal(Goal goal) async {
     final snapshot = await _dataStore.mutate((snapshot) {
-      final updatedGoals = List<Goal>.from(snapshot.goals)..add(goal);
+      final updatedGoals = List<Goal>.from(snapshot.goals)
+        ..add(
+          goal.copyWith(
+            aiPipelineStatus: GoalAiPipelineStatus.pending,
+            clearSketchVideoAssetPath: true,
+          ),
+        );
       final updatedHistory = Map<String, List<DailySpending>>.from(
         snapshot.goalSavingsHistoryByGoalId,
       )..putIfAbsent(goal.id, () => const []);
@@ -141,7 +148,10 @@ class SeedGoalRemoteDataSource implements GoalRemoteDataSource {
         throw StateError('Goal not found.');
       }
 
-      updatedGoals[index] = goal;
+      updatedGoals[index] = goal.copyWith(
+        aiPipelineStatus: GoalAiPipelineStatus.pending,
+        clearSketchVideoAssetPath: true,
+      );
       return snapshot.copyWith(goals: updatedGoals);
     });
 

@@ -126,7 +126,7 @@ class GoalViewModel extends StateNotifier<GoalState> {
     state = state.copyWith(showAchieved: showAchieved);
   }
 
-  Future<void> addGoal(Goal goal) async {
+  Future<Goal> addGoal(Goal goal) async {
     final createdGoal = await _repository.createGoal(goal);
     state = state.copyWith(
       goals: [...state.goals, createdGoal],
@@ -135,15 +135,58 @@ class GoalViewModel extends StateNotifier<GoalState> {
         createdGoal.id: const [],
       },
     );
+    return createdGoal;
   }
 
   Future<void> updateGoal(Goal goal) async {
-    final updatedGoal = await _repository.updateGoal(goal);
+    try {
+      final updatedGoal = await _repository.updateGoal(goal);
+      state = state.copyWith(
+        clearErrorMessage: true,
+        goals: state.goals
+            .map((item) => item.id == updatedGoal.id ? updatedGoal : item)
+            .toList(),
+      );
+    } catch (error) {
+      state = state.copyWith(errorMessage: error.toString());
+      rethrow;
+    }
+  }
+
+  Future<void> retryGoalVideoGeneration(String goalId) async {
+    final goal = state.findGoalById(goalId);
+    if (goal == null) {
+      return;
+    }
+
+    final pendingGoal = goal.copyWith(
+      aiPipelineStatus: GoalAiPipelineStatus.pending,
+      clearSketchVideoAssetPath: true,
+    );
+
     state = state.copyWith(
+      clearErrorMessage: true,
       goals: state.goals
-          .map((item) => item.id == updatedGoal.id ? updatedGoal : item)
+          .map((item) => item.id == goalId ? pendingGoal : item)
           .toList(),
     );
+
+    try {
+      final updatedGoal = await _repository.updateGoal(goal);
+      state = state.copyWith(
+        goals: state.goals
+            .map((item) => item.id == goalId ? updatedGoal : item)
+            .toList(),
+      );
+    } catch (error) {
+      state = state.copyWith(
+        errorMessage: error.toString(),
+        goals: state.goals
+            .map((item) => item.id == goalId ? goal : item)
+            .toList(),
+      );
+      rethrow;
+    }
   }
 
   Future<void> removeGoal(String goalId) async {
@@ -164,6 +207,29 @@ class GoalViewModel extends StateNotifier<GoalState> {
   Future<void> reorderGoals(List<Goal> reordered) async {
     final reorderedGoals = await _repository.saveGoalPriority(reordered);
     state = state.copyWith(goals: reorderedGoals);
+  }
+
+  Future<Goal?> refreshGoalStatus(String goalId) async {
+    try {
+      final goals = await _repository.fetchGoals();
+      state = state.copyWith(
+        goals: goals,
+        clearErrorMessage: true,
+      );
+      return _findGoal(goals, goalId);
+    } catch (error) {
+      state = state.copyWith(errorMessage: error.toString());
+      return state.findGoalById(goalId);
+    }
+  }
+
+  Goal? _findGoal(List<Goal> goals, String goalId) {
+    for (final goal in goals) {
+      if (goal.id == goalId) {
+        return goal;
+      }
+    }
+    return null;
   }
 }
 

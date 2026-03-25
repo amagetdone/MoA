@@ -50,6 +50,8 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
         data['weeklyBudget'] as Map<String, dynamic>?,
       ),
       apiStatus: data['status'] as String?,
+      aiPipelineStatus: GoalAiPipelineStatus.pending,
+      clearSketchVideoAssetPath: true,
     );
   }
 
@@ -171,7 +173,18 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
 
   @override
   Future<Goal> updateGoal(Goal goal) async {
-    throw UnimplementedError('Goal update API is not available.');
+    await _dio.patch(
+      'v1/plans/${goal.id}',
+      data: {
+        'title': goal.name,
+        'description': goal.description ?? '',
+      },
+    );
+
+    return goal.copyWith(
+      aiPipelineStatus: GoalAiPipelineStatus.pending,
+      clearSketchVideoAssetPath: true,
+    );
   }
 
   @override
@@ -201,7 +214,13 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
     final weekNumber = (json['weekNumber'] as num?)?.toInt();
     final dday = (json['dday'] as num?)?.toInt();
     final achievementRate = (json['achievementRate'] as num?)?.toDouble();
-    final videoUrl = await _fetchVideoUrlSafely(planId);
+    final aiPipelineStatus = parseGoalAiPipelineStatus(
+      json['aiPipelineStatus'] as String?,
+    );
+    final videoUrl = aiPipelineStatus == null ||
+            aiPipelineStatus == GoalAiPipelineStatus.succeeded
+        ? await _fetchVideoUrlSafely(planId)
+        : null;
 
     final endDate = _inferEndDate(dday);
     final startDate = _inferStartDate(
@@ -229,6 +248,7 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
       weekNumber: weekNumber,
       dday: dday,
       achievementRateOverride: achievementRate,
+      aiPipelineStatus: aiPipelineStatus,
     );
   }
 

@@ -43,7 +43,7 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
         title: '',
         showBack: false,
         showLogo: true,
-        showNotification: true,
+        showNotification: false,
       ),
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())

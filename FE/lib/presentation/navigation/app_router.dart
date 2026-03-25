@@ -10,14 +10,17 @@ import 'package:more_app/presentation/pages/asset/asset_page.dart';
 import 'package:more_app/domain/entities/transaction.dart' as tx;
 import 'package:more_app/presentation/pages/goal/goal_create_page.dart';
 import 'package:more_app/presentation/pages/goal/goal_detail_page.dart';
+import 'package:more_app/presentation/pages/goal/goal_edit_page.dart';
 import 'package:more_app/presentation/pages/goal/goal_list_page.dart';
 import 'package:more_app/presentation/pages/goal/goal_loading_page.dart';
 import 'package:more_app/presentation/pages/goal/goal_plan_page.dart';
+import 'package:more_app/presentation/pages/goal/goal_preview_page.dart';
 import 'package:more_app/presentation/pages/goal/goal_priority_page.dart';
 import 'package:more_app/presentation/pages/home/home_page.dart';
 import 'package:more_app/presentation/pages/login/login_page.dart';
 import 'package:more_app/presentation/pages/main_shell/main_shell_page.dart';
 import 'package:more_app/presentation/pages/menu/menu_page.dart';
+import 'package:more_app/presentation/pages/notification/notification_page.dart';
 import 'package:more_app/presentation/pages/menu/settings_page.dart';
 import 'package:more_app/presentation/pages/onboarding/onboarding_analysis_page.dart';
 import 'package:more_app/presentation/pages/onboarding/onboarding_income_page.dart';
@@ -63,12 +66,21 @@ abstract class AppRoutes {
   static const String accountVerify = '/account/verify';
   static const String accountComplete = '/account/complete';
   static const String goalCreate = '/goal/create';
+  static const String goalEdit = '/goal/edit';
   static const String goalLoading = '/goal/loading';
   static const String goalPlan = '/goal/plan';
+  static const String goalPreview = '/goal/preview';
   static const String goalDetail = '/goal/detail';
   static const String goalPriority = '/goal/priority';
   static const String settings = '/settings';
+  static const String notifications = '/notifications';
 
+  static String goalEditLocation(String goalId) => '$goalEdit?id=$goalId';
+  static String goalLoadingLocation(
+    String goalId, {
+    String source = 'create',
+  }) => '$goalLoading?id=$goalId&source=$source';
+  static String goalPreviewLocation(String goalId) => '$goalPreview?id=$goalId';
   static String goalDetailLocation(String goalId) => '$goalDetail?id=$goalId';
   static String assetDetailLocation(String transactionId) => '$assetDetail?id=$transactionId';
 }
@@ -173,10 +185,29 @@ final appRouter = GoRouter(
       return AccountCompletePage(isOnboarding: false, bankName: extra?['bankName'] ?? '', accountNumber: extra?['accountNumber'] ?? '');
     }),
     GoRoute(path: AppRoutes.goalCreate, builder: (context, state) => const GoalCreatePage(isOnboarding: false)),
-    GoRoute(path: AppRoutes.goalLoading, builder: (context, state) => const GoalLoadingPage()),
+    GoRoute(
+      path: AppRoutes.goalEdit,
+      builder: (context, state) => GoalEditPage(
+        goalId: state.uri.queryParameters['id'] ?? '',
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.goalLoading,
+      builder: (context, state) => GoalLoadingPage(
+        goalId: state.uri.queryParameters['id'] ?? '',
+        source: state.uri.queryParameters['source'] ?? 'create',
+      ),
+    ),
     GoRoute(path: AppRoutes.goalPlan, builder: (context, state) => const GoalPlanPage()),
+    GoRoute(
+      path: AppRoutes.goalPreview,
+      builder: (context, state) => GoalPreviewPage(
+        goalId: state.uri.queryParameters['id'] ?? '',
+      ),
+    ),
     GoRoute(path: AppRoutes.goalPriority, builder: (context, state) => const GoalPriorityPage()),
     GoRoute(path: AppRoutes.spendingBudget, builder: (context, state) => const SpendingBudgetPage()),
+    GoRoute(path: AppRoutes.notifications, builder: (context, state) => const NotificationPage()),
     GoRoute(
       path: AppRoutes.spendingPattern,
       parentNavigatorKey: _rootNavigatorKey,

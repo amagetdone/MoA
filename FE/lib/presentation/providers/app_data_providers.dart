@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:more_app/core/notifications/push_notification_sync_service.dart';
 import 'package:more_app/core/network/api_client.dart';
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
 import 'package:more_app/data/datasources/remote/account_remote_datasource.dart';
@@ -9,9 +10,11 @@ import 'package:more_app/data/datasources/remote/goal_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/home_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/mock/mock_api_goal_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/menu_remote_datasource.dart';
+import 'package:more_app/data/datasources/remote/push_notification_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/real/real_auth_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/real/real_account_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/real/real_goal_remote_datasource.dart';
+import 'package:more_app/data/datasources/remote/real/real_push_notification_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/seed/seed_data_store.dart';
 import 'package:more_app/data/datasources/remote/real/real_home_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/real/real_menu_remote_datasource.dart';
@@ -28,6 +31,7 @@ import 'package:more_app/data/repositories/auth_repository_impl.dart';
 import 'package:more_app/data/repositories/goal_repository_impl.dart';
 import 'package:more_app/data/repositories/home_repository_impl.dart';
 import 'package:more_app/data/repositories/menu_repository_impl.dart';
+import 'package:more_app/data/repositories/notification_inbox_repository_impl.dart';
 import 'package:more_app/data/repositories/budget_repository_impl.dart';
 import 'package:more_app/data/repositories/spending_repository_impl.dart';
 import 'package:more_app/domain/repositories/account_repository.dart';
@@ -35,8 +39,10 @@ import 'package:more_app/domain/repositories/auth_repository.dart';
 import 'package:more_app/domain/repositories/goal_repository.dart';
 import 'package:more_app/domain/repositories/home_repository.dart';
 import 'package:more_app/domain/repositories/menu_repository.dart';
+import 'package:more_app/domain/repositories/notification_inbox_repository.dart';
 import 'package:more_app/domain/repositories/budget_repository.dart';
 import 'package:more_app/domain/repositories/spending_repository.dart';
+import 'package:more_app/domain/entities/app_notification_item.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 
 final appLocalDataSourceProvider = Provider<AppLocalDataSource>((ref) {
@@ -61,6 +67,45 @@ final authLocalDataSourceProvider = Provider<AuthLocalDataSource>((ref) {
 
 final socialAuthDataSourceProvider = Provider<SocialAuthDataSource>((ref) {
   return SocialAuthDataSourceImpl();
+});
+
+final pushNotificationRemoteDataSourceProvider =
+    Provider<PushNotificationRemoteDataSource>((ref) {
+  return RealPushNotificationRemoteDataSource(
+    dio: ref.read(apiClientProvider).dio,
+  );
+});
+
+final pushNotificationSyncServiceProvider =
+    Provider<PushNotificationSyncService>((ref) {
+  final service = PushNotificationSyncService(
+    remoteDataSource: ref.read(pushNotificationRemoteDataSourceProvider),
+    authLocalDataSource: ref.read(authLocalDataSourceProvider),
+    appLocalDataSource: ref.read(appLocalDataSourceProvider),
+    notificationInboxRepository: ref.read(notificationInboxRepositoryProvider),
+  );
+  ref.onDispose(service.dispose);
+  return service;
+});
+
+final notificationInboxRepositoryProvider =
+    Provider<NotificationInboxRepository>((ref) {
+  final repository = NotificationInboxRepositoryImpl();
+  return repository;
+});
+
+final notificationInboxProvider =
+    StreamProvider<List<AppNotificationItem>>((ref) async* {
+  final repository = ref.read(notificationInboxRepositoryProvider);
+  await repository.initialize();
+  yield* repository.watchNotifications();
+});
+
+final unreadNotificationCountProvider = Provider<int>((ref) {
+  return ref.watch(notificationInboxProvider).maybeWhen(
+        data: (items) => items.where((item) => !item.isRead).length,
+        orElse: () => 0,
+      );
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {

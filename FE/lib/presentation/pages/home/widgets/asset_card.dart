@@ -20,13 +20,64 @@ class AssetCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final hasAccounts = accounts.isNotEmpty;
     return MoreCard(
-      onTap: () => context.push(AppRoutes.asset),
+      onTap: () => context.push(hasAccounts ? AppRoutes.asset : AppRoutes.accountAdd),
       padding: EdgeInsets.all(16.w),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
+      child: hasAccounts
+          ? Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '총 자산',
+                        style: TextStyle(
+                          color: colors.textTertiary,
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          CurrencyFormatter.formatKRW(totalAsset),
+                          style: TextStyle(
+                            fontSize: 22.sp,
+                            fontWeight: FontWeight.w800,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => context.push(AppRoutes.accountManage),
+                  child: Row(
+                    children: [
+                      Text(
+                        '계좌 관리',
+                        style: TextStyle(
+                          color: colors.textTertiary,
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right,
+                        size: 16.w,
+                        color: colors.textTertiary,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -37,44 +88,42 @@ class AssetCard extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                SizedBox(height: 2.h),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
+                SizedBox(height: 6.h),
+                Text(
+                  CurrencyFormatter.formatKRW(totalAsset),
+                  style: TextStyle(
+                    fontSize: 22.sp,
+                    fontWeight: FontWeight.w800,
+                    color: colors.textPrimary,
+                  ),
+                ),
+                SizedBox(height: 10.h),
+                Text(
+                  '연결된 계좌가 없어요. 계좌를 추가해주세요.',
+                  style: TextStyle(
+                    color: colors.textTertiary,
+                    fontSize: 12.sp,
+                    height: 1.4,
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.orange50,
+                    borderRadius: BorderRadius.circular(999.r),
+                  ),
                   child: Text(
-                    CurrencyFormatter.formatKRW(totalAsset),
+                    '계좌 연결하기',
                     style: TextStyle(
-                      fontSize: 22.sp,
-                      fontWeight: FontWeight.w800,
-                      color: colors.textPrimary,
+                      color: AppColors.orange500,
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
               ],
             ),
-          ),
-          GestureDetector(
-            onTap: () => context.push(AppRoutes.accountManage),
-            child: Row(
-              children: [
-                Text(
-                  '계좌 관리',
-                  style: TextStyle(
-                    color: colors.textTertiary,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right,
-                  size: 16.w,
-                  color: colors.textTertiary,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

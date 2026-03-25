@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
+import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/providers/app_data_providers.dart';
 
-class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
+class MoreAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final String? title;
   final bool showBack;
   final bool showLogo;
@@ -32,8 +35,9 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => Size.fromHeight(50.h);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors.of(context);
+    final unreadCount = ref.watch(unreadNotificationCountProvider);
     final actionWidgets = <Widget>[
       if (skipText != null)
         TextButton(
@@ -47,8 +51,40 @@ class MoreAppBar extends StatelessWidget implements PreferredSizeWidget {
         Padding(
           padding: EdgeInsets.only(right: 16.w),
           child: IconButton(
-            icon: Icon(Icons.notifications_none, size: 24.w, color: colors.textPrimary),
-            onPressed: () {},
+            onPressed: () => context.push(AppRoutes.notifications),
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  Icons.notifications_none,
+                  size: 24.w,
+                  color: colors.textPrimary,
+                ),
+                if (unreadCount > 0)
+                  Positioned(
+                    right: -2.w,
+                    top: -1.h,
+                    child: Container(
+                      constraints: BoxConstraints(minWidth: 16.w, minHeight: 16.w),
+                      padding: EdgeInsets.symmetric(horizontal: 4.w),
+                      decoration: BoxDecoration(
+                        color: AppColors.red500,
+                        borderRadius: BorderRadius.circular(999.r),
+                      ),
+                      child: Center(
+                        child: Text(
+                          unreadCount > 99 ? '99+' : '$unreadCount',
+                          style: AppTextStyles.caption.copyWith(
+                            color: colors.white,
+                            fontSize: 9.sp,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ...?actions,

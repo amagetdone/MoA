@@ -13,10 +13,12 @@ class GoalsSectionCard extends StatefulWidget {
     super.key,
     required this.goals,
     required this.onViewAll,
+    this.onAddGoal,
   });
 
   final List<Goal> goals;
   final VoidCallback onViewAll;
+  final VoidCallback? onAddGoal;
 
   @override
   State<GoalsSectionCard> createState() => _GoalsSectionCardState();
@@ -27,8 +29,6 @@ class _GoalsSectionCardState extends State<GoalsSectionCard> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.goals.isEmpty) return const SizedBox.shrink();
-
     final colors = AppColors.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pageCount = widget.goals.length;
@@ -95,11 +95,11 @@ class _GoalsSectionCardState extends State<GoalsSectionCard> {
                     ),
                     const Spacer(),
                     GestureDetector(
-                      onTap: widget.onViewAll,
+                      onTap: pageCount == 0 ? widget.onAddGoal : widget.onViewAll,
                       child: Row(
                         children: [
                           Text(
-                            '전체보기',
+                            pageCount == 0 ? '추가하기' : '전체보기',
                             style: AppTextStyles.caption.copyWith(
                               color: colors.textTertiary,
                               fontWeight: FontWeight.w500,
@@ -114,18 +114,20 @@ class _GoalsSectionCardState extends State<GoalsSectionCard> {
                 ),
                 SizedBox(height: 6.h),
 
-                // PageView for goals
-                SizedBox(
-                  height: 90.h,
-                  child: PageView.builder(
-                    itemCount: pageCount,
-                    onPageChanged: (i) => setState(() => _currentPage = i),
-                    physics: const BouncingScrollPhysics(),
-                    itemBuilder: (context, index) {
-                      return _GoalItem(goal: widget.goals[index]);
-                    },
+                if (pageCount == 0)
+                  _GoalEmptyBody(onTap: widget.onAddGoal)
+                else
+                  SizedBox(
+                    height: 90.h,
+                    child: PageView.builder(
+                      itemCount: pageCount,
+                      onPageChanged: (i) => setState(() => _currentPage = i),
+                      physics: const BouncingScrollPhysics(),
+                      itemBuilder: (context, index) {
+                        return _GoalItem(goal: widget.goals[index]);
+                      },
+                    ),
                   ),
-                ),
                 // Page dots
                 if (pageCount > 1) ...[
                   SizedBox(height: 6.h),
@@ -157,6 +159,78 @@ class _GoalsSectionCardState extends State<GoalsSectionCard> {
   }
 }
 
+class _GoalEmptyBody extends StatelessWidget {
+  const _GoalEmptyBody({this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 18.h),
+        decoration: BoxDecoration(
+          color: AppColors.orange50.withValues(alpha: 0.45),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: AppColors.orange300.withValues(alpha: 0.45),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 42.w,
+              height: 42.w,
+              decoration: BoxDecoration(
+                color: AppColors.orange500,
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              child: Icon(Icons.flag_outlined, color: Colors.white, size: 22.w),
+            ),
+            SizedBox(height: 10.h),
+            Text(
+              '아직 목표가 없어요',
+              style: AppTextStyles.bodySm.copyWith(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              '첫 번째 저축 목표를 추가해주세요',
+              style: AppTextStyles.caption.copyWith(
+                color: colors.textTertiary,
+                fontSize: 11.sp,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 10.h),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 7.h),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(999.r),
+              ),
+              child: Text(
+                '목표 추가하기',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.orange500,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11.sp,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _GoalItem extends StatelessWidget {
   const _GoalItem({required this.goal});
   final Goal goal;
@@ -176,11 +250,14 @@ class _GoalItem extends StatelessWidget {
             children: [
               GoalVideoThumb(
                 goalId: goal.id,
-                assetPath: goal.sketchVideoAssetPath,
+                assetPath: goal.isAiPending || goal.isAiFailed
+                    ? null
+                    : goal.sketchVideoAssetPath,
                 iconName: goal.iconName,
                 progressRate: goal.progressRate,
                 size: 48.w,
                 borderRadius: 14.r,
+                forceLoading: goal.isAiPending,
               ),
               SizedBox(width: 14.w),
               Expanded(
@@ -204,6 +281,19 @@ class _GoalItem extends StatelessWidget {
                         fontSize: 11.sp,
                       ),
                     ),
+                    if (goal.isAiPending || goal.isAiFailed) ...[
+                      SizedBox(height: 3.h),
+                      Text(
+                        goal.isAiPending ? 'AI 영상 생성 중' : 'AI 영상 재시도 필요',
+                        style: AppTextStyles.caption.copyWith(
+                          color: goal.isAiPending
+                              ? AppColors.orange500
+                              : AppColors.red500,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 10.sp,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
