@@ -176,11 +176,14 @@ class _GoalItem extends StatelessWidget {
             children: [
               GoalVideoThumb(
                 goalId: goal.id,
-                assetPath: goal.sketchVideoAssetPath,
+                assetPath: goal.isAiPending || goal.isAiFailed
+                    ? null
+                    : goal.sketchVideoAssetPath,
                 iconName: goal.iconName,
                 progressRate: goal.progressRate,
                 size: 48.w,
                 borderRadius: 14.r,
+                forceLoading: goal.isAiPending,
               ),
               SizedBox(width: 14.w),
               Expanded(
@@ -204,6 +207,19 @@ class _GoalItem extends StatelessWidget {
                         fontSize: 11.sp,
                       ),
                     ),
+                    if (goal.isAiPending || goal.isAiFailed) ...[
+                      SizedBox(height: 3.h),
+                      Text(
+                        goal.isAiPending ? 'AI 영상 생성 중' : 'AI 영상 재시도 필요',
+                        style: AppTextStyles.caption.copyWith(
+                          color: goal.isAiPending
+                              ? AppColors.orange500
+                              : AppColors.red500,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 10.sp,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

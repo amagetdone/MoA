@@ -347,6 +347,9 @@ Goal _goalFromJson(Map<String, dynamic> json) {
     totalWeeksOverride: (json['totalWeeksOverride'] as num?)?.toInt(),
     detailLoaded: json['detailLoaded'] as bool? ?? false,
     apiStatus: json['apiStatus'] as String?,
+    aiPipelineStatus: parseGoalAiPipelineStatus(
+      json['aiPipelineStatus'] as String?,
+    ),
   );
 }
 
@@ -397,6 +400,7 @@ Map<String, dynamic> _goalToJson(Goal goal) {
     'totalWeeksOverride': goal.totalWeeksOverride,
     'detailLoaded': goal.detailLoaded,
     'apiStatus': goal.apiStatus,
+    'aiPipelineStatus': goalAiPipelineStatusToWire(goal.aiPipelineStatus),
   };
 }
 

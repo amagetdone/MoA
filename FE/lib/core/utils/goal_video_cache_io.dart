@@ -63,6 +63,17 @@ class GoalVideoCache {
     return GoalVideoSource.asset(fallbackAsset);
   }
 
+  static Future<void> evict(String goalId) async {
+    final directory = await _getGoalVideoDirectory();
+    for (final ext in const ['mp4', 'webm']) {
+      final file = File('${directory.path}/goal_$goalId.$ext');
+      if (await file.exists()) {
+        await file.delete();
+      }
+    }
+    _pendingDownloads.remove(goalId);
+  }
+
   static Future<String?> _downloadOnce(String goalId, String url) {
     return _pendingDownloads.putIfAbsent(goalId, () async {
       try {

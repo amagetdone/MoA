@@ -64,11 +64,14 @@ class GoalCard extends ConsumerWidget {
                   child: GoalVideoThumb(
                     key: ValueKey('card_${goal.id}'),
                     goalId: goal.id,
-                    assetPath: goal.sketchVideoAssetPath,
+                    assetPath: goal.isAiPending || goal.isAiFailed
+                        ? null
+                        : goal.sketchVideoAssetPath,
                     iconName: goal.iconName,
                     progressRate: goal.progressRate,
                     size: 72.w,
                     borderRadius: 0,
+                    forceLoading: goal.isAiPending,
                   ),
                 ),
               ),
@@ -98,6 +101,10 @@ class GoalCard extends ConsumerWidget {
                           ),
                         ),
                       ),
+                      if (goal.isAiPending || goal.isAiFailed) ...[
+                        SizedBox(width: 6.w),
+                        _GoalAiStatusChip(goal: goal),
+                      ],
                       // 터치 타겟 패딩 제거
                       SizedBox(
                         width: 28.w,
@@ -146,6 +153,33 @@ class GoalCard extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GoalAiStatusChip extends StatelessWidget {
+  const _GoalAiStatusChip({required this.goal});
+
+  final Goal goal;
+
+  @override
+  Widget build(BuildContext context) {
+    final isPending = goal.isAiPending;
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: isPending
+            ? AppColors.orange500.withValues(alpha: 0.12)
+            : AppColors.red500.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999.r),
+      ),
+      child: Text(
+        isPending ? '생성 중' : '재시도 필요',
+        style: AppTextStyles.caption.copyWith(
+          color: isPending ? AppColors.orange500 : AppColors.red500,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

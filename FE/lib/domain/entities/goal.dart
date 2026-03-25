@@ -25,6 +25,7 @@ class Goal {
   final int? totalWeeksOverride;
   final bool detailLoaded;
   final String? apiStatus;
+  final GoalAiPipelineStatus? aiPipelineStatus;
 
   const Goal({
     required this.id,
@@ -51,6 +52,7 @@ class Goal {
     this.totalWeeksOverride,
     this.detailLoaded = false,
     this.apiStatus,
+    this.aiPipelineStatus,
   });
 
   double get progressRate {
@@ -99,6 +101,15 @@ class Goal {
       weeklyPlans.isNotEmpty ||
       description != null;
 
+  bool get isAiPending =>
+      aiPipelineStatus == GoalAiPipelineStatus.pending ||
+      aiPipelineStatus == GoalAiPipelineStatus.processing;
+
+  bool get isAiFailed => aiPipelineStatus == GoalAiPipelineStatus.failed;
+
+  bool get isAiSucceeded =>
+      aiPipelineStatus == GoalAiPipelineStatus.succeeded;
+
   Goal copyWith({
     String? id,
     String? name,
@@ -124,6 +135,8 @@ class Goal {
     int? totalWeeksOverride,
     bool? detailLoaded,
     String? apiStatus,
+    GoalAiPipelineStatus? aiPipelineStatus,
+    bool clearSketchVideoAssetPath = false,
   }) {
     return Goal(
       id: id ?? this.id,
@@ -136,7 +149,9 @@ class Goal {
       priority: priority ?? this.priority,
       status: status ?? this.status,
       iconName: iconName ?? this.iconName,
-      sketchVideoAssetPath: sketchVideoAssetPath ?? this.sketchVideoAssetPath,
+      sketchVideoAssetPath: clearSketchVideoAssetPath
+          ? null
+          : sketchVideoAssetPath ?? this.sketchVideoAssetPath,
       dDay: dDay ?? this.dDay,
       apiProgressRate: apiProgressRate ?? this.apiProgressRate,
       weekNumber: weekNumber ?? this.weekNumber,
@@ -151,6 +166,7 @@ class Goal {
       totalWeeksOverride: totalWeeksOverride ?? this.totalWeeksOverride,
       detailLoaded: detailLoaded ?? this.detailLoaded,
       apiStatus: apiStatus ?? this.apiStatus,
+      aiPipelineStatus: aiPipelineStatus ?? this.aiPipelineStatus,
     );
   }
 }
@@ -238,3 +254,35 @@ class GoalWeeklyBudget {
 }
 
 enum GoalStatus { inProgress, achieved, failed }
+
+enum GoalAiPipelineStatus { pending, processing, succeeded, failed }
+
+GoalAiPipelineStatus? parseGoalAiPipelineStatus(String? value) {
+  switch (value?.toUpperCase()) {
+    case 'PENDING':
+      return GoalAiPipelineStatus.pending;
+    case 'PROCESSING':
+      return GoalAiPipelineStatus.processing;
+    case 'SUCCEEDED':
+      return GoalAiPipelineStatus.succeeded;
+    case 'FAILED':
+      return GoalAiPipelineStatus.failed;
+    default:
+      return null;
+  }
+}
+
+String? goalAiPipelineStatusToWire(GoalAiPipelineStatus? status) {
+  switch (status) {
+    case GoalAiPipelineStatus.pending:
+      return 'PENDING';
+    case GoalAiPipelineStatus.processing:
+      return 'PROCESSING';
+    case GoalAiPipelineStatus.succeeded:
+      return 'SUCCEEDED';
+    case GoalAiPipelineStatus.failed:
+      return 'FAILED';
+    case null:
+      return null;
+  }
+}

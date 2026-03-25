@@ -22,6 +22,8 @@ class GoalDetailPage extends ConsumerStatefulWidget {
 }
 
 class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
+  bool _isRetryingVideo = false;
+
   @override
   void initState() {
     super.initState();
@@ -118,7 +120,11 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
                   children: [
                     _HeroCard(
                       goal: goal,
-                      showVideoLoading: isDetailLoading && goal.sketchVideoAssetPath == null,
+                      showVideoLoading:
+                          goal.isAiPending ||
+                          (isDetailLoading && goal.sketchVideoAssetPath == null),
+                      isRetryingVideo: _isRetryingVideo,
+                      onRetryVideo: goal.isAiFailed ? () => _retryGoalVideo(goal) : null,
                     ),
                     SizedBox(height: 14.h),
                     if (goal.description != null && goal.description!.isNotEmpty) ...[
@@ -162,16 +168,44 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
       ),
     );
   }
+
+  Future<void> _retryGoalVideo(Goal goal) async {
+    if (_isRetryingVideo) {
+      return;
+    }
+
+    setState(() => _isRetryingVideo = true);
+    try {
+      await ref
+          .read(goalViewModelProvider.notifier)
+          .retryGoalVideoGeneration(goal.id);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('AI 영상 재시도에 실패했습니다: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isRetryingVideo = false);
+      }
+    }
+  }
 }
 
 class _HeroCard extends StatelessWidget {
   const _HeroCard({
     required this.goal,
     this.showVideoLoading = false,
+    this.isRetryingVideo = false,
+    this.onRetryVideo,
   });
 
   final Goal goal;
   final bool showVideoLoading;
+  final bool isRetryingVideo;
+  final VoidCallback? onRetryVideo;
 
   @override
   Widget build(BuildContext context) {
@@ -193,7 +227,9 @@ class _HeroCard extends StatelessWidget {
                 child: GoalVideoThumb(
                   key: ValueKey('detail_${goal.id}'),
                   goalId: goal.id,
-                  assetPath: goal.sketchVideoAssetPath,
+                  assetPath: goal.isAiPending || goal.isAiFailed
+                      ? null
+                      : goal.sketchVideoAssetPath,
                   iconName: goal.iconName,
                   progressRate: goal.progressRate,
                   size: 200.w,
@@ -234,6 +270,70 @@ class _HeroCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (goal.isAiPending || goal.isAiFailed) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+                    decoration: BoxDecoration(
+                      color: goal.isAiPending
+                          ? AppColors.orange500.withValues(alpha: 0.10)
+                          : AppColors.red500.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14.r),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          goal.isAiPending
+                              ? Icons.hourglass_top_rounded
+                              : Icons.refresh_rounded,
+                          color: goal.isAiPending
+                              ? AppColors.orange500
+                              : AppColors.red500,
+                          size: 18.w,
+                        ),
+                        SizedBox(width: 10.w),
+                        Expanded(
+                          child: Text(
+                            goal.isAiPending
+                                ? 'AI 스케치 영상을 생성 중입니다.'
+                                : 'AI 영상 생성에 실패했습니다. 수정 기반으로 재시도할 수 있습니다.',
+                            style: AppTextStyles.bodySm.copyWith(
+                              color: goal.isAiPending
+                                  ? AppColors.orange500
+                                  : AppColors.red500,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        if (goal.isAiFailed && onRetryVideo != null) ...[
+                          SizedBox(width: 12.w),
+                          TextButton(
+                            onPressed: isRetryingVideo ? null : onRetryVideo,
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 12.w,
+                                vertical: 8.h,
+                              ),
+                              backgroundColor: AppColors.red500,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(999.r),
+                              ),
+                            ),
+                            child: Text(
+                              isRetryingVideo ? '요청 중' : '재시도',
+                              style: AppTextStyles.caption.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 14.h),
+                ],
                 Row(
                   children: [
                     Container(

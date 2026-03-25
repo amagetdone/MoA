@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:more_app/core/utils/goal_video_cache.dart';
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
 import 'package:more_app/data/datasources/remote/goal_remote_datasource.dart';
 import 'package:more_app/domain/entities/goal.dart';
@@ -32,7 +33,10 @@ class GoalRepositoryImpl implements GoalRepository {
     try {
       final goal = await _remoteDataSource.findGoalById(id);
       if (goal != null) {
-        await _upsertGoal(goal);
+        final existing = await _localDataSource.getGoalById(id);
+        final mergedGoal = _mergeGoal(existing, goal);
+        await _upsertGoal(mergedGoal);
+        return mergedGoal;
       }
       return goal;
     } catch (_) {
@@ -45,6 +49,7 @@ class GoalRepositoryImpl implements GoalRepository {
     try {
       await _remoteDataSource.deleteGoal(id);
     } finally {
+      await GoalVideoCache.evict(id);
       await _localDataSource.removeGoal(id);
     }
   }
@@ -114,11 +119,12 @@ class GoalRepositoryImpl implements GoalRepository {
   @override
   Future<Goal> updateGoal(Goal goal) async {
     try {
+      await GoalVideoCache.evict(goal.id);
       final updatedGoal = await _remoteDataSource.updateGoal(goal);
       await _localDataSource.updateGoal(updatedGoal);
       return updatedGoal;
     } catch (_) {
-      return _localDataSource.updateGoal(goal);
+      rethrow;
     }
   }
 
@@ -141,5 +147,25 @@ class GoalRepositoryImpl implements GoalRepository {
     }
 
     await _localDataSource.updateGoal(goal);
+  }
+
+  Goal _mergeGoal(Goal? existing, Goal incoming) {
+    if (existing == null) {
+      return incoming;
+    }
+
+    var merged = incoming.copyWith(
+      iconName: incoming.iconName ?? existing.iconName,
+      sketchVideoAssetPath:
+          incoming.sketchVideoAssetPath ?? existing.sketchVideoAssetPath,
+      apiStatus: incoming.apiStatus ?? existing.apiStatus,
+      aiPipelineStatus: incoming.aiPipelineStatus ?? existing.aiPipelineStatus,
+    );
+
+    if (merged.isAiPending || merged.isAiFailed) {
+      merged = merged.copyWith(clearSketchVideoAssetPath: true);
+    }
+
+    return merged;
   }
 }

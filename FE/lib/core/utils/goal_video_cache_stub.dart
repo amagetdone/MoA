@@ -36,4 +36,6 @@ class GoalVideoCache {
 
     return GoalVideoSource.asset(fallbackAsset);
   }
+
+  static Future<void> evict(String goalId) async {}
 }
