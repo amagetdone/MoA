@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
+import 'package:more_app/domain/entities/spending.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/pages/spending/widgets/category_list.dart';
 import 'package:more_app/presentation/viewmodels/onboarding_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
@@ -45,6 +47,20 @@ class _OnboardingAnalysisPageState extends ConsumerState<OnboardingAnalysisPage>
     final sectionAmounts = [fixedAmount, variableAmount, freeAmount];
     final sectionTotal = sectionAmounts.fold<int>(0, (sum, amount) => sum + amount);
     final categories = analysis?.categoryExpenses ?? const <CategoryExpense>[];
+    final categoryItems = categories
+        .map(
+          (category) => SpendingCategory(
+            name: category.categoryName,
+            amount: category.amount,
+            budget: averageExpense,
+            colorValue: AppColors.orange500.toARGB32(),
+            iconKey: 'more_horiz',
+            ratio: averageExpense > 0
+                ? (category.amount / averageExpense) * 100
+                : 0,
+          ),
+        )
+        .toList();
 
     return PopScope(
       canPop: false,
@@ -221,23 +237,10 @@ class _OnboardingAnalysisPageState extends ConsumerState<OnboardingAnalysisPage>
                       ],
                     ),
                     SizedBox(height: 24.h),
-                    ...categories.asMap().entries.map((entry) {
-                      final category = entry.value;
-                      final ratio = averageExpense > 0
-                          ? (category.amount / averageExpense).clamp(0.0, 1.0)
-                          : 0.0;
-                      return Padding(
-                        padding: EdgeInsets.only(
-                          bottom: entry.key < categories.length - 1 ? 12.h : 0,
-                        ),
-                        child: _CategoryBar(
-                          name: category.categoryName,
-                          amount: category.amount,
-                          totalAmount: averageExpense,
-                          ratio: ratio,
-                        ),
-                      );
-                    }),
+                    CategoryList(
+                      categories: categoryItems,
+                      totalAmount: averageExpense,
+                    ),
                   ],
                 ),
               ),
@@ -369,85 +372,6 @@ class _LegendItem extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CategoryBar extends StatelessWidget {
-  const _CategoryBar({
-    required this.name,
-    required this.amount,
-    required this.totalAmount,
-    required this.ratio,
-  });
-
-  final String name;
-  final int amount;
-  final int totalAmount;
-  final double ratio;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    final percent = totalAmount > 0 ? (ratio * 100).toStringAsFixed(1) : '0.0';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                name,
-                style: AppTextStyles.bodyMd.copyWith(
-                  color: colors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            Flexible(
-              child: RichText(
-                textAlign: TextAlign.end,
-                text: TextSpan(
-                  style: AppTextStyles.bodySm.copyWith(color: colors.textPrimary),
-                  children: [
-                    TextSpan(
-                      text: CurrencyFormatter.formatKRW(amount),
-                      style: AppTextStyles.bodyMd.copyWith(
-                        color: colors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    TextSpan(
-                      text: ' / ${CurrencyFormatter.formatKRW(totalAmount)} ',
-                      style: AppTextStyles.bodySm.copyWith(
-                        color: colors.textTertiary,
-                      ),
-                    ),
-                    TextSpan(
-                      text: '($percent%)',
-                      style: AppTextStyles.bodyMd.copyWith(
-                        color: AppColors.orange500,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 8.h),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999.r),
-          child: LinearProgressIndicator(
-            value: ratio,
-            minHeight: 8.h,
-            backgroundColor: colors.gray50,
-            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.orange500),
           ),
         ),
       ],
