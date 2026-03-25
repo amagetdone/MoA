@@ -3,6 +3,8 @@ package com.ssafy.amagetdone.domain.account.application.usecase;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.ssafy.amagetdone.domain.account.api.dto.AccountAdminDto;
 import com.ssafy.amagetdone.domain.account.exception.AccountErrorCode;
@@ -34,6 +36,7 @@ public class InitializeCardTransactionOverridesUseCase {
 	private final TransactionAnalysisResultRepository transactionAnalysisResultRepository;
 	private final CardRealTransactionScenario cardRealTransactionScenario;
 	private final TransactionCategoryAssignmentService transactionCategoryAssignmentService;
+	private final CardTransactionOverrideBulkSavePort cardTransactionOverrideBulkSavePort;
 
 	public InitializeCardTransactionOverridesUseCase(
 		CardRepository cardRepository,
@@ -41,7 +44,8 @@ public class InitializeCardTransactionOverridesUseCase {
 		CardTransactionOverrideRepository cardTransactionOverrideRepository,
 		TransactionAnalysisResultRepository transactionAnalysisResultRepository,
 		CardRealTransactionScenario cardRealTransactionScenario,
-		TransactionCategoryAssignmentService transactionCategoryAssignmentService
+		TransactionCategoryAssignmentService transactionCategoryAssignmentService,
+		CardTransactionOverrideBulkSavePort cardTransactionOverrideBulkSavePort
 	) {
 		this.cardRepository = cardRepository;
 		this.merchantRepository = merchantRepository;
@@ -49,6 +53,7 @@ public class InitializeCardTransactionOverridesUseCase {
 		this.transactionAnalysisResultRepository = transactionAnalysisResultRepository;
 		this.cardRealTransactionScenario = cardRealTransactionScenario;
 		this.transactionCategoryAssignmentService = transactionCategoryAssignmentService;
+		this.cardTransactionOverrideBulkSavePort = cardTransactionOverrideBulkSavePort;
 	}
 
 	@Transactional
@@ -60,6 +65,7 @@ public class InitializeCardTransactionOverridesUseCase {
 		if (seeds.isEmpty()) {
 			throw new AccountException(AccountErrorCode.TRANSACTION_INIT_SEED_NOT_FOUND);
 		}
+		Map<Integer, Merchant> seededMerchantsById = loadSeededMerchants(seeds);
 		Map<String, Category> assignedCategories = transactionCategoryAssignmentService.assignCategories(
 			seeds.stream()
 				.map(CardSeed::merchantName)
@@ -68,23 +74,23 @@ public class InitializeCardTransactionOverridesUseCase {
 
 		deleteExistingAnalysisResults(card.getCardUniqueNo());
 		cardTransactionOverrideRepository.deleteByCard_CardUniqueNo(card.getCardUniqueNo());
-		cardTransactionOverrideRepository.saveAll(
-			seeds.stream()
-				.map(seed -> CardTransactionOverride.builder()
-					.id(toEntityId("CARD_INIT", card.getCardUniqueNo(), seed.transactionUniqueNo()))
-					.category(resolveCategory(assignedCategories, seed.merchantName()))
-					.transactionDateTime(seed.transactionDateTime())
-					.transactionBalance(seed.transactionBalance())
-					.transactionMemo(seed.merchantName())
-					.transactionUniqueNo(seed.transactionUniqueNo())
-					.merchant(resolveMerchant(seed))
-					.cardStatus(!CANCELED_STATUS.equals(seed.transactionStatus()))
-					.billStatementsYn(PURCHASED_STATUS.equals(seed.purchaseStatus()))
-					.billStatementsStatus(seed.transactionStatus())
-					.card(card)
-					.build())
-				.toList()
-		);
+		List<CardTransactionOverride> transactions = seeds.stream()
+			.map(seed -> CardTransactionOverride.builder()
+				.id(toEntityId("CARD_INIT", card.getCardUniqueNo(), seed.transactionUniqueNo()))
+				.category(resolveCategory(assignedCategories, seed.merchantName()))
+				.transactionDateTime(seed.transactionDateTime())
+				.transactionBalance(seed.transactionBalance())
+				.transactionMemo(seed.merchantName())
+				.transactionUniqueNo(seed.transactionUniqueNo())
+				.merchant(resolveMerchant(seed, seededMerchantsById))
+				.cardStatus(!CANCELED_STATUS.equals(seed.transactionStatus()))
+				.billStatementsYn(PURCHASED_STATUS.equals(seed.purchaseStatus()))
+				.billStatementsStatus(seed.transactionStatus())
+				.card(card)
+				.build())
+			.map(CardTransactionOverride.class::cast)
+			.toList();
+		cardTransactionOverrideBulkSavePort.saveAll(transactions);
 
 		return new AccountAdminDto.TransactionInitResponse(
 			"card",
@@ -93,14 +99,28 @@ public class InitializeCardTransactionOverridesUseCase {
 		);
 	}
 
-	private Merchant resolveMerchant(CardSeed seed) {
-		return merchantRepository.findById(seed.merchantId())
-			.orElseGet(() -> merchantRepository.save(
-				Merchant.builder()
-					.id(seed.merchantId())
-					.name(seed.merchantName())
-					.build()
-			));
+	private Map<Integer, Merchant> loadSeededMerchants(List<CardSeed> seeds) {
+		Map<Integer, Merchant> merchantsById = merchantRepository.findAllById(
+			seeds.stream()
+				.map(CardSeed::merchantId)
+				.distinct()
+				.toList()
+		).stream().collect(Collectors.toMap(Merchant::getId, Function.identity()));
+		boolean hasMissingMerchant = seeds.stream()
+			.map(CardSeed::merchantId)
+			.anyMatch(merchantId -> !merchantsById.containsKey(merchantId));
+		if (hasMissingMerchant) {
+			throw new AccountException(AccountErrorCode.ACCOUNT_ERROR);
+		}
+		return merchantsById;
+	}
+
+	private Merchant resolveMerchant(CardSeed seed, Map<Integer, Merchant> merchantsById) {
+		Merchant merchant = merchantsById.get(seed.merchantId());
+		if (merchant == null) {
+			throw new AccountException(AccountErrorCode.ACCOUNT_ERROR);
+		}
+		return merchant;
 	}
 
 	private void validateRequest(String cardNo) {

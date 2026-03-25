@@ -2,6 +2,7 @@ package com.ssafy.amagetdone.global.init;
 
 import java.util.List;
 
+import com.ssafy.amagetdone.domain.account.application.usecase.InitializeMerchantCatalogUseCase;
 import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.domain.account.model.repository.CategoryRepository;
 import com.ssafy.amagetdone.domain.member.application.usecase.EnsureTestSocialUsersInitializedUseCase;
@@ -46,18 +47,22 @@ public class DataInitializer {
 		);
 
 		private final CategoryRepository categoryRepository;
+		private final InitializeMerchantCatalogUseCase initializeMerchantCatalogUseCase;
 		private final EnsureTestSocialUsersInitializedUseCase ensureTestSocialUsersInitializedUseCase;
 
 		public InitService(
 			CategoryRepository categoryRepository,
+			InitializeMerchantCatalogUseCase initializeMerchantCatalogUseCase,
 			EnsureTestSocialUsersInitializedUseCase ensureTestSocialUsersInitializedUseCase
 		) {
 			this.categoryRepository = categoryRepository;
+			this.initializeMerchantCatalogUseCase = initializeMerchantCatalogUseCase;
 			this.ensureTestSocialUsersInitializedUseCase = ensureTestSocialUsersInitializedUseCase;
 		}
 
 		public void initialize() {
 			categoryInit();
+			merchantInit();
 			testSocialUsersInit();
 		}
 
@@ -69,6 +74,10 @@ public class DataInitializer {
 
 		public void testSocialUsersInit() {
 			ensureTestSocialUsersInitializedUseCase.execute();
+		}
+
+		public void merchantInit() {
+			initializeMerchantCatalogUseCase.execute();
 		}
 	}
 }

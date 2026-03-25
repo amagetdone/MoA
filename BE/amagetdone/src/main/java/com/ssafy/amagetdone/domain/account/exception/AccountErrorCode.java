@@ -116,6 +116,11 @@ public enum AccountErrorCode implements ErrorCode {
 		HttpStatus.BAD_REQUEST,
 		"ACCOUNT_026",
 		"Invalid linked card unique number"
+	),
+	MERCHANT_CATALOG_OUT_OF_SYNC(
+		HttpStatus.CONFLICT,
+		"ACCOUNT_029",
+		"Merchant catalog is out of sync with remote source"
 	);
 
 	private final HttpStatus httpStatus;
