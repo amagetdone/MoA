@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:more_app/core/notifications/push_notification_sync_service.dart';
 import 'package:more_app/core/network/api_client.dart';
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
 import 'package:more_app/data/datasources/remote/account_remote_datasource.dart';
@@ -9,9 +10,11 @@ import 'package:more_app/data/datasources/remote/goal_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/home_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/mock/mock_api_goal_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/menu_remote_datasource.dart';
+import 'package:more_app/data/datasources/remote/push_notification_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/real/real_auth_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/real/real_account_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/real/real_goal_remote_datasource.dart';
+import 'package:more_app/data/datasources/remote/real/real_push_notification_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/seed/seed_data_store.dart';
 import 'package:more_app/data/datasources/remote/real/real_home_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/real/real_menu_remote_datasource.dart';
@@ -61,6 +64,24 @@ final authLocalDataSourceProvider = Provider<AuthLocalDataSource>((ref) {
 
 final socialAuthDataSourceProvider = Provider<SocialAuthDataSource>((ref) {
   return SocialAuthDataSourceImpl();
+});
+
+final pushNotificationRemoteDataSourceProvider =
+    Provider<PushNotificationRemoteDataSource>((ref) {
+  return RealPushNotificationRemoteDataSource(
+    dio: ref.read(apiClientProvider).dio,
+  );
+});
+
+final pushNotificationSyncServiceProvider =
+    Provider<PushNotificationSyncService>((ref) {
+  final service = PushNotificationSyncService(
+    remoteDataSource: ref.read(pushNotificationRemoteDataSourceProvider),
+    authLocalDataSource: ref.read(authLocalDataSourceProvider),
+    appLocalDataSource: ref.read(appLocalDataSourceProvider),
+  );
+  ref.onDispose(service.dispose);
+  return service;
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {

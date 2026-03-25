@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'package:more_app/core/theme/app_theme.dart';
 import 'package:more_app/core/utils/app_env.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/providers/app_data_providers.dart';
 import 'package:more_app/presentation/viewmodels/theme_viewmodel.dart';
 import 'package:more_app/presentation/widgets/preview/web_preview_shell.dart';
 
@@ -42,7 +44,35 @@ Future<void> main() async {
     }
   }
 
-  runApp(const ProviderScope(child: MoreApp()));
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    try {
+      await Firebase.initializeApp();
+    } catch (_) {}
+  }
+
+  runApp(const ProviderScope(child: AppBootstrap()));
+}
+
+class AppBootstrap extends ConsumerStatefulWidget {
+  const AppBootstrap({super.key});
+
+  @override
+  ConsumerState<AppBootstrap> createState() => _AppBootstrapState();
+}
+
+class _AppBootstrapState extends ConsumerState<AppBootstrap> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(
+      () => ref.read(pushNotificationSyncServiceProvider).initialize(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const MoreApp();
+  }
 }
 
 class MoreApp extends ConsumerWidget {

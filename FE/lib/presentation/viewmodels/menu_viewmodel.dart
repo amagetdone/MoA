@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:more_app/core/notifications/push_notification_sync_service.dart';
 import 'package:more_app/domain/repositories/menu_repository.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
 import 'package:more_app/presentation/viewmodels/auth_viewmodel.dart';
@@ -59,11 +60,13 @@ class MenuState {
 }
 
 class MenuViewModel extends StateNotifier<MenuState> {
-  MenuViewModel(this._repository) : super(const MenuState(isLoading: true)) {
+  MenuViewModel(this._repository, this._pushNotificationSyncService)
+    : super(const MenuState(isLoading: true)) {
     loadData();
   }
 
   final MenuRepository _repository;
+  final PushNotificationSyncService _pushNotificationSyncService;
 
   Future<void> loadData() async {
     state = state.copyWith(isLoading: true, clearErrorMessage: true);
@@ -88,8 +91,24 @@ class MenuViewModel extends StateNotifier<MenuState> {
   }
 
   Future<void> toggleNotification(bool value) async {
-    final summary = await _repository.updateNotification(value);
-    state = state.copyWith(notificationEnabled: summary.notificationEnabled);
+    try {
+      final resolved = await _pushNotificationSyncService.setNotificationsEnabled(
+        value,
+      );
+      final summary = await _repository.updateNotification(resolved);
+      state = state.copyWith(
+        notificationEnabled: summary.notificationEnabled,
+        clearErrorMessage: true,
+      );
+
+      if (value && !resolved) {
+        state = state.copyWith(
+          errorMessage: '알림 권한이 허용되지 않아 푸시 알림을 켤 수 없습니다.',
+        );
+      }
+    } catch (error) {
+      state = state.copyWith(errorMessage: error.toString());
+    }
   }
 
   Future<void> toggleBiometric(bool value) async {
@@ -104,5 +123,6 @@ final menuViewModelProvider = StateNotifierProvider<MenuViewModel, MenuState>((
   ref.watch(authViewModelProvider);
   return MenuViewModel(
     ref.read(menuRepositoryProvider),
+    ref.read(pushNotificationSyncServiceProvider),
   );
 });
