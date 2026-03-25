@@ -48,7 +48,7 @@ public class TransactionCategoryAssignmentService {
 			? Map.of()
 			: merchantInferenceApiClient.labelMerchants(normalizedTexts).results().stream()
 				.collect(Collectors.toMap(
-					result -> normalizeText(hasText(result.normalizedMerchantText()) ? result.normalizedMerchantText() : result.merchantText()),
+					result -> normalizeText(hasText(result.merchantText()) ? result.merchantText() : result.normalizedMerchantText()),
 					Function.identity(),
 					(left, right) -> left,
 					LinkedHashMap::new

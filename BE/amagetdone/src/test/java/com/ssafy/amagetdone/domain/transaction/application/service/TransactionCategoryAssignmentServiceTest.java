@@ -48,4 +48,25 @@ class TransactionCategoryAssignmentServiceTest {
 		assertThat(assignedCategories.get("Unknown")).isSameAs(defaultCategory);
 		verify(merchantInferenceApiClient).labelMerchants(List.of("Starbucks", "Unknown"));
 	}
+
+	@Test
+	void assignCategoriesUsesMerchantTextFromResponseForLookup() {
+		TransactionCategoryAssignmentService service = new TransactionCategoryAssignmentService(
+			categoryRepository,
+			merchantInferenceApiClient
+		);
+		Category transportCategory = Category.create(1, "교통비");
+		Category defaultCategory = Category.create(4, "기타서비스");
+		given(categoryRepository.findAll()).willReturn(List.of(transportCategory, defaultCategory));
+		given(merchantInferenceApiClient.labelMerchants(List.of("UT 택시"))).willReturn(
+			new MerchantInferenceDto.Response(List.of(
+				new MerchantInferenceDto.Result("UT 택시", "ut 택시", "교통비", "교통비", 0.96, false, 0.7)
+			))
+		);
+
+		Map<String, Category> assignedCategories = service.assignCategories(List.of("UT 택시"));
+
+		assertThat(assignedCategories.get("UT 택시")).isSameAs(transportCategory);
+		verify(merchantInferenceApiClient).labelMerchants(List.of("UT 택시"));
+	}
 }

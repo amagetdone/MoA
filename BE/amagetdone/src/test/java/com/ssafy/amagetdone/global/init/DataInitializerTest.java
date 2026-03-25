@@ -5,6 +5,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.ssafy.amagetdone.domain.account.model.repository.CategoryRepository;
+import com.ssafy.amagetdone.domain.account.application.usecase.InitializeMerchantCatalogUseCase;
 import com.ssafy.amagetdone.domain.member.application.usecase.EnsureTestSocialUsersInitializedUseCase;
 
 import org.junit.jupiter.api.Test;
@@ -21,10 +22,14 @@ class DataInitializerTest {
 	@Mock
 	private EnsureTestSocialUsersInitializedUseCase ensureTestSocialUsersInitializedUseCase;
 
+	@Mock
+	private InitializeMerchantCatalogUseCase initializeMerchantCatalogUseCase;
+
 	@Test
 	void categoryInitSeedsDefaultsWhenRepositoryIsEmpty() {
 		DataInitializer.InitService initService = new DataInitializer.InitService(
 			categoryRepository,
+			initializeMerchantCatalogUseCase,
 			ensureTestSocialUsersInitializedUseCase
 		);
 		given(categoryRepository.count()).willReturn(0L);
@@ -38,6 +43,7 @@ class DataInitializerTest {
 	void categoryInitSkipsWhenRepositoryAlreadyHasRows() {
 		DataInitializer.InitService initService = new DataInitializer.InitService(
 			categoryRepository,
+			initializeMerchantCatalogUseCase,
 			ensureTestSocialUsersInitializedUseCase
 		);
 		given(categoryRepository.count()).willReturn(3L);
@@ -51,6 +57,7 @@ class DataInitializerTest {
 	void initializeSeedsCategoriesAndTestSocialUsers() {
 		DataInitializer.InitService initService = new DataInitializer.InitService(
 			categoryRepository,
+			initializeMerchantCatalogUseCase,
 			ensureTestSocialUsersInitializedUseCase
 		);
 		given(categoryRepository.count()).willReturn(0L);
@@ -58,6 +65,7 @@ class DataInitializerTest {
 		initService.initialize();
 
 		verify(categoryRepository).saveAll(org.mockito.ArgumentMatchers.anyList());
+		verify(initializeMerchantCatalogUseCase).execute();
 		verify(ensureTestSocialUsersInitializedUseCase).execute();
 	}
 }
