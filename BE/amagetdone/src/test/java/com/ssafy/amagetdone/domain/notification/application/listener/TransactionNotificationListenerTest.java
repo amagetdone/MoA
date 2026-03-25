@@ -20,6 +20,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 @ExtendWith(MockitoExtension.class)
 class TransactionNotificationListenerTest {
@@ -67,6 +69,16 @@ class TransactionNotificationListenerTest {
 		transactionNotificationListener.handleTransactionSynced(event);
 
 		verify(deviceTokenService).disable(11);
+	}
+
+	@Test
+	void handlesTransactionsAfterCommit() throws NoSuchMethodException {
+		TransactionalEventListener annotation = TransactionNotificationListener.class
+			.getMethod("handleTransactionSynced", TransactionSyncedEvent.class)
+			.getAnnotation(TransactionalEventListener.class);
+
+		org.assertj.core.api.Assertions.assertThat(annotation).isNotNull();
+		org.assertj.core.api.Assertions.assertThat(annotation.phase()).isEqualTo(TransactionPhase.AFTER_COMMIT);
 	}
 
 	private TransactionSyncedEvent event() {
