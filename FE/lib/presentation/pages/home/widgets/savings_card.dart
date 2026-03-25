@@ -20,6 +20,7 @@ class SavingsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final isEmpty = savingTargetAmount <= 0;
     final fillRatio = savingTargetAmount > 0
         ? (weeklySaved / savingTargetAmount).clamp(0.0, 1.0)
         : 0.0;
@@ -66,10 +67,13 @@ class SavingsCard extends StatelessWidget {
           ),
           SizedBox(height: 6.h),
           Text(
-            '/ ${CurrencyFormatter.formatKRW(savingTargetAmount)}',
+            isEmpty
+                ? '저축 목표를 추가해주세요'
+                : '/ ${CurrencyFormatter.formatKRW(savingTargetAmount)}',
             style: TextStyle(
-              color: colors.textTertiary,
+              color: isEmpty ? AppColors.orange500 : colors.textTertiary,
               fontSize: 10.sp,
+              fontWeight: isEmpty ? FontWeight.w700 : FontWeight.w400,
             ),
           ),
         ],

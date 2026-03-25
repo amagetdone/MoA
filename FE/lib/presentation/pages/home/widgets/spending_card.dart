@@ -23,6 +23,7 @@ class SpendingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final isEmpty = totalAmount <= 0;
     final remainRatio = totalAmount > 0
         ? (remainingAmount / totalAmount).clamp(0.0, 1.0)
         : 0.0;
@@ -71,10 +72,13 @@ class SpendingCard extends StatelessWidget {
           ),
           SizedBox(height: 6.h),
           Text(
-            '/ ${CurrencyFormatter.formatKRW(totalAmount)}',
+            isEmpty
+                ? '계좌를 연결해주세요'
+                : '/ ${CurrencyFormatter.formatKRW(totalAmount)}',
             style: TextStyle(
-              color: colors.textTertiary,
+              color: isEmpty ? AppColors.orange500 : colors.textTertiary,
               fontSize: 10.sp,
+              fontWeight: isEmpty ? FontWeight.w700 : FontWeight.w400,
             ),
           ),
         ],
