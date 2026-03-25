@@ -30,7 +30,8 @@ class DataInitializerTest {
 		DataInitializer.InitService initService = new DataInitializer.InitService(
 			categoryRepository,
 			initializeMerchantCatalogUseCase,
-			ensureTestSocialUsersInitializedUseCase
+			ensureTestSocialUsersInitializedUseCase,
+			true
 		);
 		given(categoryRepository.count()).willReturn(0L);
 
@@ -44,7 +45,8 @@ class DataInitializerTest {
 		DataInitializer.InitService initService = new DataInitializer.InitService(
 			categoryRepository,
 			initializeMerchantCatalogUseCase,
-			ensureTestSocialUsersInitializedUseCase
+			ensureTestSocialUsersInitializedUseCase,
+			true
 		);
 		given(categoryRepository.count()).willReturn(3L);
 
@@ -58,7 +60,8 @@ class DataInitializerTest {
 		DataInitializer.InitService initService = new DataInitializer.InitService(
 			categoryRepository,
 			initializeMerchantCatalogUseCase,
-			ensureTestSocialUsersInitializedUseCase
+			ensureTestSocialUsersInitializedUseCase,
+			true
 		);
 		given(categoryRepository.count()).willReturn(0L);
 
@@ -66,6 +69,23 @@ class DataInitializerTest {
 
 		verify(categoryRepository).saveAll(org.mockito.ArgumentMatchers.anyList());
 		verify(initializeMerchantCatalogUseCase).execute();
+		verify(ensureTestSocialUsersInitializedUseCase).execute();
+	}
+
+	@Test
+	void initializeSkipsMerchantInitWhenMerchantInitializationIsDisabled() {
+		DataInitializer.InitService initService = new DataInitializer.InitService(
+			categoryRepository,
+			initializeMerchantCatalogUseCase,
+			ensureTestSocialUsersInitializedUseCase,
+			false
+		);
+		given(categoryRepository.count()).willReturn(0L);
+
+		initService.initialize();
+
+		verify(categoryRepository).saveAll(org.mockito.ArgumentMatchers.anyList());
+		verify(initializeMerchantCatalogUseCase, never()).execute();
 		verify(ensureTestSocialUsersInitializedUseCase).execute();
 	}
 }
