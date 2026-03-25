@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
+import 'package:more_app/presentation/providers/app_data_providers.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/spending_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/goal_viewmodel.dart';
@@ -39,6 +40,7 @@ class MainShellPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors.of(context);
     final bottomInset = MediaQuery.of(context).padding.bottom;
+    final unreadCount = ref.watch(unreadNotificationCountProvider);
 
     return Scaffold(
       backgroundColor: colors.bgPrimary,
@@ -84,8 +86,14 @@ class MainShellPage extends ConsumerWidget {
                   label: '목표',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.menu_outlined, size: 24.r),
-                  selectedIcon: Icon(Icons.menu, color: AppColors.orange500, size: 24.r),
+                  icon: _MenuNavIcon(
+                    unreadCount: unreadCount,
+                    selected: false,
+                  ),
+                  selectedIcon: _MenuNavIcon(
+                    unreadCount: unreadCount,
+                    selected: true,
+                  ),
                   label: '메뉴',
                 ),
               ],
@@ -94,6 +102,43 @@ class MainShellPage extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _MenuNavIcon extends StatelessWidget {
+  const _MenuNavIcon({
+    required this.unreadCount,
+    required this.selected,
+  });
+
+  final int unreadCount;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(
+          selected ? Icons.menu : Icons.menu_outlined,
+          color: selected ? AppColors.orange500 : null,
+          size: 24.r,
+        ),
+        if (unreadCount > 0)
+          Positioned(
+            right: -1.w,
+            top: -1.h,
+            child: Container(
+              width: 8.w,
+              height: 8.w,
+              decoration: const BoxDecoration(
+                color: AppColors.red500,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

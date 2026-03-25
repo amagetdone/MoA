@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/navigation/auth_route_resolver.dart';
 import 'package:more_app/presentation/viewmodels/auth_viewmodel.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
@@ -31,12 +32,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
     final state = ref.read(authViewModelProvider);
     if (state is AuthAutoLoginSuccess) {
-      final result = state.authResult;
-      if (result.status == 'TEMP') {
-        context.go(AppRoutes.onboardingProfile);
-      } else {
-          context.go(AppRoutes.home);
-      }
+      context.go(resolvePostAuthRoute(state.authResult));
     } else {
       context.go(AppRoutes.login);
     }

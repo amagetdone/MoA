@@ -8,7 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/web_window_focus_listener.dart';
-import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/navigation/auth_route_resolver.dart';
 import 'package:more_app/presentation/viewmodels/auth_viewmodel.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -124,16 +124,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
       }
 
       if (next is AuthAuthenticated) {
-        final result = next.authResult;
-        if (result.status == 'TEMP') {
-          context.go(AppRoutes.onboardingProfile);
-        } else if (result.status == 'ACTIVE') {
-          context.go(AppRoutes.home);
-        } else if (next.isTest) {
-          context.go(AppRoutes.onboarding);
-        } else {
-          context.go(AppRoutes.home);
-        }
+        context.go(
+          resolvePostAuthRoute(next.authResult, isTest: next.isTest),
+        );
       }
     });
 
