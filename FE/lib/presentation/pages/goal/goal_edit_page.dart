@@ -207,7 +207,12 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
       if (!mounted) {
         return;
       }
-      context.go(AppRoutes.goalLoadingLocation(goal.id));
+      context.go(
+        AppRoutes.goalLoadingLocation(
+          goal.id,
+          source: 'edit',
+        ),
+      );
     } catch (error) {
       if (!mounted) {
         return;

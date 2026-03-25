@@ -77,7 +77,12 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
       if (widget.isOnboarding) {
         context.go(AppRoutes.onboardingLoading, extra: {'nextRoute': AppRoutes.onboardingPlan});
       } else {
-        context.go(AppRoutes.goalLoadingLocation(createdGoal.id));
+        context.go(
+          AppRoutes.goalLoadingLocation(
+            createdGoal.id,
+            source: 'create',
+          ),
+        );
       }
     } catch (e) {
       if (!mounted) return;

@@ -76,7 +76,10 @@ abstract class AppRoutes {
   static const String notifications = '/notifications';
 
   static String goalEditLocation(String goalId) => '$goalEdit?id=$goalId';
-  static String goalLoadingLocation(String goalId) => '$goalLoading?id=$goalId';
+  static String goalLoadingLocation(
+    String goalId, {
+    String source = 'create',
+  }) => '$goalLoading?id=$goalId&source=$source';
   static String goalPreviewLocation(String goalId) => '$goalPreview?id=$goalId';
   static String goalDetailLocation(String goalId) => '$goalDetail?id=$goalId';
   static String assetDetailLocation(String transactionId) => '$assetDetail?id=$transactionId';
@@ -192,6 +195,7 @@ final appRouter = GoRouter(
       path: AppRoutes.goalLoading,
       builder: (context, state) => GoalLoadingPage(
         goalId: state.uri.queryParameters['id'] ?? '',
+        source: state.uri.queryParameters['source'] ?? 'create',
       ),
     ),
     GoRoute(path: AppRoutes.goalPlan, builder: (context, state) => const GoalPlanPage()),

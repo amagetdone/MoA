@@ -15,9 +15,11 @@ class GoalLoadingPage extends ConsumerStatefulWidget {
   const GoalLoadingPage({
     super.key,
     required this.goalId,
+    this.source = 'create',
   });
 
   final String goalId;
+  final String source;
 
   @override
   ConsumerState<GoalLoadingPage> createState() => _GoalLoadingPageState();
@@ -151,6 +153,22 @@ class _GoalLoadingPageState extends ConsumerState<GoalLoadingPage>
     final notificationEnabled =
         !menuState.isLoading && menuState.notificationEnabled;
     final goalName = goal?.name ?? '목표';
+    final isEditFlow = widget.source == 'edit';
+    final titleText = isFailed
+        ? (isEditFlow ? '이미지 재생성 실패' : '이미지 생성 실패')
+        : (isEditFlow ? '이미지 다시 생성 중' : '이미지 생성 중');
+    final primaryMessage = isFailed
+        ? (isEditFlow
+            ? '변경된 목표로 이미지를 다시 만드는 중 문제가 생겼어요.\n다시 시도하거나 나중에 확인해주세요.'
+            : 'AI가 이미지를 만드는 중 문제가 생겼어요.\n다시 시도하거나 나중에 확인해주세요.')
+        : (isEditFlow
+            ? '변경된 목표로 이미지를 다시 생성하고 있어요.\n완성되면 새 이미지로 보여드릴게요.'
+            : 'AI가 목표 이미지를 생성하고 있어요.\n완성되면 자동으로 보여드릴게요.');
+    final secondaryMessage = isFailed
+        ? '알림을 켜 두면 재시도 후 완료될 때 바로 확인할 수 있어요.'
+        : (isEditFlow
+            ? '지금 기다리거나, 알림을 켜 두고 새 이미지가 완성되면 다시 확인할 수 있어요.'
+            : '지금 기다리거나, 알림을 켜 두고 나중에 다시 확인할 수 있어요.');
 
     return PopScope(
       canPop: false,
@@ -163,7 +181,7 @@ class _GoalLoadingPageState extends ConsumerState<GoalLoadingPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isFailed ? '이미지 생성 실패' : '이미지 생성 중',
+                  titleText,
                   style: AppTextStyles.headingLg.copyWith(
                     color: colors.gray900,
                     fontSize: 22.sp,
@@ -216,9 +234,7 @@ class _GoalLoadingPageState extends ConsumerState<GoalLoadingPage>
                         ),
                         SizedBox(height: 32.h),
                         Text(
-                          isFailed
-                              ? 'AI가 이미지를 만드는 중 문제가 생겼어요.\n다시 시도하거나 나중에 확인해주세요.'
-                              : 'AI가 목표 이미지를 생성하고 있어요.\n완성되면 자동으로 보여드릴게요.',
+                          primaryMessage,
                           textAlign: TextAlign.center,
                           style: AppTextStyles.headingMd.copyWith(
                             color: colors.gray900,
@@ -227,9 +243,7 @@ class _GoalLoadingPageState extends ConsumerState<GoalLoadingPage>
                         ),
                         SizedBox(height: 18.h),
                         Text(
-                          isFailed
-                              ? '알림을 켜 두면 재시도 후 완료될 때 바로 확인할 수 있어요.'
-                              : '지금 기다리거나, 알림을 켜 두고 나중에 다시 확인할 수 있어요.',
+                          secondaryMessage,
                           textAlign: TextAlign.center,
                           style: AppTextStyles.bodySm.copyWith(
                             color: colors.textSecondary,
