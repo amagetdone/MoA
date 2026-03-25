@@ -10,6 +10,7 @@ import 'package:more_app/presentation/pages/asset/asset_page.dart';
 import 'package:more_app/domain/entities/transaction.dart' as tx;
 import 'package:more_app/presentation/pages/goal/goal_create_page.dart';
 import 'package:more_app/presentation/pages/goal/goal_detail_page.dart';
+import 'package:more_app/presentation/pages/goal/goal_edit_page.dart';
 import 'package:more_app/presentation/pages/goal/goal_list_page.dart';
 import 'package:more_app/presentation/pages/goal/goal_loading_page.dart';
 import 'package:more_app/presentation/pages/goal/goal_plan_page.dart';
@@ -65,6 +66,7 @@ abstract class AppRoutes {
   static const String accountVerify = '/account/verify';
   static const String accountComplete = '/account/complete';
   static const String goalCreate = '/goal/create';
+  static const String goalEdit = '/goal/edit';
   static const String goalLoading = '/goal/loading';
   static const String goalPlan = '/goal/plan';
   static const String goalPreview = '/goal/preview';
@@ -73,6 +75,7 @@ abstract class AppRoutes {
   static const String settings = '/settings';
   static const String notifications = '/notifications';
 
+  static String goalEditLocation(String goalId) => '$goalEdit?id=$goalId';
   static String goalLoadingLocation(String goalId) => '$goalLoading?id=$goalId';
   static String goalPreviewLocation(String goalId) => '$goalPreview?id=$goalId';
   static String goalDetailLocation(String goalId) => '$goalDetail?id=$goalId';
@@ -179,6 +182,12 @@ final appRouter = GoRouter(
       return AccountCompletePage(isOnboarding: false, bankName: extra?['bankName'] ?? '', accountNumber: extra?['accountNumber'] ?? '');
     }),
     GoRoute(path: AppRoutes.goalCreate, builder: (context, state) => const GoalCreatePage(isOnboarding: false)),
+    GoRoute(
+      path: AppRoutes.goalEdit,
+      builder: (context, state) => GoalEditPage(
+        goalId: state.uri.queryParameters['id'] ?? '',
+      ),
+    ),
     GoRoute(
       path: AppRoutes.goalLoading,
       builder: (context, state) => GoalLoadingPage(
