@@ -31,6 +31,7 @@ import 'package:more_app/data/repositories/auth_repository_impl.dart';
 import 'package:more_app/data/repositories/goal_repository_impl.dart';
 import 'package:more_app/data/repositories/home_repository_impl.dart';
 import 'package:more_app/data/repositories/menu_repository_impl.dart';
+import 'package:more_app/data/repositories/notification_inbox_repository_impl.dart';
 import 'package:more_app/data/repositories/budget_repository_impl.dart';
 import 'package:more_app/data/repositories/spending_repository_impl.dart';
 import 'package:more_app/domain/repositories/account_repository.dart';
@@ -38,8 +39,10 @@ import 'package:more_app/domain/repositories/auth_repository.dart';
 import 'package:more_app/domain/repositories/goal_repository.dart';
 import 'package:more_app/domain/repositories/home_repository.dart';
 import 'package:more_app/domain/repositories/menu_repository.dart';
+import 'package:more_app/domain/repositories/notification_inbox_repository.dart';
 import 'package:more_app/domain/repositories/budget_repository.dart';
 import 'package:more_app/domain/repositories/spending_repository.dart';
+import 'package:more_app/domain/entities/app_notification_item.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 
 final appLocalDataSourceProvider = Provider<AppLocalDataSource>((ref) {
@@ -79,9 +82,30 @@ final pushNotificationSyncServiceProvider =
     remoteDataSource: ref.read(pushNotificationRemoteDataSourceProvider),
     authLocalDataSource: ref.read(authLocalDataSourceProvider),
     appLocalDataSource: ref.read(appLocalDataSourceProvider),
+    notificationInboxRepository: ref.read(notificationInboxRepositoryProvider),
   );
   ref.onDispose(service.dispose);
   return service;
+});
+
+final notificationInboxRepositoryProvider =
+    Provider<NotificationInboxRepository>((ref) {
+  final repository = NotificationInboxRepositoryImpl();
+  return repository;
+});
+
+final notificationInboxProvider =
+    StreamProvider<List<AppNotificationItem>>((ref) async* {
+  final repository = ref.read(notificationInboxRepositoryProvider);
+  await repository.initialize();
+  yield* repository.watchNotifications();
+});
+
+final unreadNotificationCountProvider = Provider<int>((ref) {
+  return ref.watch(notificationInboxProvider).maybeWhen(
+        data: (items) => items.where((item) => !item.isRead).length,
+        orElse: () => 0,
+      );
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {

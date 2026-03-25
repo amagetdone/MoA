@@ -18,6 +18,7 @@ import 'package:more_app/presentation/pages/home/home_page.dart';
 import 'package:more_app/presentation/pages/login/login_page.dart';
 import 'package:more_app/presentation/pages/main_shell/main_shell_page.dart';
 import 'package:more_app/presentation/pages/menu/menu_page.dart';
+import 'package:more_app/presentation/pages/notification/notification_page.dart';
 import 'package:more_app/presentation/pages/menu/settings_page.dart';
 import 'package:more_app/presentation/pages/onboarding/onboarding_analysis_page.dart';
 import 'package:more_app/presentation/pages/onboarding/onboarding_income_page.dart';
@@ -68,6 +69,7 @@ abstract class AppRoutes {
   static const String goalDetail = '/goal/detail';
   static const String goalPriority = '/goal/priority';
   static const String settings = '/settings';
+  static const String notifications = '/notifications';
 
   static String goalDetailLocation(String goalId) => '$goalDetail?id=$goalId';
   static String assetDetailLocation(String transactionId) => '$assetDetail?id=$transactionId';
@@ -177,6 +179,7 @@ final appRouter = GoRouter(
     GoRoute(path: AppRoutes.goalPlan, builder: (context, state) => const GoalPlanPage()),
     GoRoute(path: AppRoutes.goalPriority, builder: (context, state) => const GoalPriorityPage()),
     GoRoute(path: AppRoutes.spendingBudget, builder: (context, state) => const SpendingBudgetPage()),
+    GoRoute(path: AppRoutes.notifications, builder: (context, state) => const NotificationPage()),
     GoRoute(
       path: AppRoutes.spendingPattern,
       parentNavigatorKey: _rootNavigatorKey,

@@ -4,19 +4,27 @@ import 'dart:math';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:more_app/core/notifications/notification_inbox_persistence.dart';
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
 import 'package:more_app/data/datasources/local/auth_local_datasource.dart';
 import 'package:more_app/data/datasources/remote/push_notification_remote_datasource.dart';
+import 'package:more_app/domain/repositories/notification_inbox_repository.dart';
+
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await NotificationInboxPersistence.saveRemoteMessage(message);
+}
 
 class PushNotificationSyncService {
   PushNotificationSyncService({
     required PushNotificationRemoteDataSource remoteDataSource,
     required AuthLocalDataSource authLocalDataSource,
     required AppLocalDataSource appLocalDataSource,
+    required NotificationInboxRepository notificationInboxRepository,
     FlutterSecureStorage? secureStorage,
   }) : _remoteDataSource = remoteDataSource,
        _authLocalDataSource = authLocalDataSource,
        _appLocalDataSource = appLocalDataSource,
+       _notificationInboxRepository = notificationInboxRepository,
        _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   static const _installationIdKey = 'push_installation_id';
@@ -24,9 +32,12 @@ class PushNotificationSyncService {
   final PushNotificationRemoteDataSource _remoteDataSource;
   final AuthLocalDataSource _authLocalDataSource;
   final AppLocalDataSource _appLocalDataSource;
+  final NotificationInboxRepository _notificationInboxRepository;
   final FlutterSecureStorage _secureStorage;
 
   StreamSubscription<String>? _tokenRefreshSubscription;
+  StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
+  StreamSubscription<RemoteMessage>? _messageOpenedSubscription;
   bool _initialized = false;
 
   bool get _isSupportedMobilePlatform {
@@ -59,16 +70,47 @@ class PushNotificationSyncService {
       preferences.notificationEnabled,
     );
 
+    await _notificationInboxRepository.initialize();
+
     _tokenRefreshSubscription = FirebaseMessaging.instance.onTokenRefresh.listen(
       (token) {
         unawaited(_upsertTokenIfAllowed(token));
       },
     );
+
+    _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen((
+      message,
+    ) {
+      unawaited(_notificationInboxRepository.saveRemoteMessage(message));
+    });
+
+    _messageOpenedSubscription = FirebaseMessaging.onMessageOpenedApp.listen((
+      message,
+    ) {
+      unawaited(
+        _notificationInboxRepository.saveRemoteMessage(
+          message,
+          markAsRead: true,
+        ),
+      );
+    });
+
+    final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+    if (initialMessage != null) {
+      await _notificationInboxRepository.saveRemoteMessage(
+        initialMessage,
+        markAsRead: true,
+      );
+    }
   }
 
   Future<void> dispose() async {
     await _tokenRefreshSubscription?.cancel();
+    await _foregroundMessageSubscription?.cancel();
+    await _messageOpenedSubscription?.cancel();
     _tokenRefreshSubscription = null;
+    _foregroundMessageSubscription = null;
+    _messageOpenedSubscription = null;
     _initialized = false;
   }
 
