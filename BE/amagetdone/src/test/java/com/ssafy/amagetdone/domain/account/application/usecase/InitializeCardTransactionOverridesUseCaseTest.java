@@ -110,7 +110,7 @@ class InitializeCardTransactionOverridesUseCaseTest {
 		assertThat(response.targetType()).isEqualTo("card");
 		assertThat(response.targetNo()).isEqualTo("5241111122223333");
 		assertThat(response.transactionCount()).isEqualTo(captor.getValue().size());
-		assertThat(captor.getValue().size()).isGreaterThanOrEqualTo(80);
+		assertThat(captor.getValue().size()).isGreaterThanOrEqualTo(600);
 		assertThat(captor.getValue())
 			.extracting(CardTransactionOverride::getTransactionDateTime)
 			.map(YearMonth::from)
@@ -119,8 +119,13 @@ class InitializeCardTransactionOverridesUseCaseTest {
 			.extracting(CardTransactionOverride::getTransactionDateTime)
 			.map(dateTime -> dateTime.toLocalDate())
 			.contains(LocalDate.of(2026, 3, 20));
-		assertThat(countFoodMerchants(captor.getValue())).isGreaterThanOrEqualTo(35);
-		assertThat(countTransportMerchants(captor.getValue())).isGreaterThanOrEqualTo(15);
+		assertThat(countFoodMerchants(captor.getValue())).isGreaterThanOrEqualTo(180);
+		assertThat(countTransportMerchants(captor.getValue())).isGreaterThanOrEqualTo(90);
+		assertThat(countConvenienceMerchants(captor.getValue())).isGreaterThanOrEqualTo(70);
+		assertThat(countCafeMerchants(captor.getValue())).isGreaterThanOrEqualTo(60);
+		assertThat(countShoppingOrLifestyleMerchants(captor.getValue())).isGreaterThanOrEqualTo(90);
+		assertThat(countSubscriptionOrOnlineMerchants(captor.getValue())).isGreaterThanOrEqualTo(24);
+		assertThat(countCanceledOrPendingTransactions(captor.getValue())).isGreaterThanOrEqualTo(8);
 	}
 
 	@Test
@@ -148,30 +153,50 @@ class InitializeCardTransactionOverridesUseCaseTest {
 
 	private long countFoodMerchants(List<CardTransactionOverride> transactions) {
 		return transactions.stream()
-			.map(transaction -> transaction.getMerchant().getName())
-			.filter(name -> name.contains("버거")
-				|| name.contains("김밥")
-				|| name.contains("맘스터치")
-				|| name.contains("한솥")
-				|| name.contains("국밥")
-				|| name.contains("마라")
-				|| name.contains("우동")
-				|| name.contains("덮밥")
-				|| name.contains("카페")
-				|| name.contains("치킨")
-				|| name.contains("토스트")
-				|| name.contains("분식"))
+			.map(transaction -> transaction.getMerchant().getId())
+			.filter(merchantId -> merchantId >= 101001 && merchantId <= 101020)
 			.count();
 	}
 
 	private long countTransportMerchants(List<CardTransactionOverride> transactions) {
 		return transactions.stream()
-			.map(transaction -> transaction.getMerchant().getName())
-			.filter(name -> name.contains("택시")
-				|| name.contains("지하철")
-				|| name.contains("버스")
-				|| name.contains("코레일")
-				|| name.contains("유페이"))
+			.map(transaction -> transaction.getMerchant().getId())
+			.filter(merchantId -> merchantId >= 202001 && merchantId <= 202010)
+			.count();
+	}
+
+	private long countConvenienceMerchants(List<CardTransactionOverride> transactions) {
+		return transactions.stream()
+			.map(transaction -> transaction.getMerchant().getId())
+			.filter(merchantId -> merchantId >= 102001 && merchantId <= 102010)
+			.count();
+	}
+
+	private long countCafeMerchants(List<CardTransactionOverride> transactions) {
+		return transactions.stream()
+			.map(transaction -> transaction.getMerchant().getId())
+			.filter(merchantId -> merchantId >= 103001 && merchantId <= 103010)
+			.count();
+	}
+
+	private long countShoppingOrLifestyleMerchants(List<CardTransactionOverride> transactions) {
+		return transactions.stream()
+			.map(transaction -> transaction.getMerchant().getId())
+			.filter(merchantId -> (merchantId >= 105001 && merchantId <= 105010)
+				|| (merchantId >= 106001 && merchantId <= 106010))
+			.count();
+	}
+
+	private long countSubscriptionOrOnlineMerchants(List<CardTransactionOverride> transactions) {
+		return transactions.stream()
+			.map(transaction -> transaction.getMerchant().getId())
+			.filter(merchantId -> merchantId >= 104001 && merchantId <= 104010)
+			.count();
+	}
+
+	private long countCanceledOrPendingTransactions(List<CardTransactionOverride> transactions) {
+		return transactions.stream()
+			.filter(transaction -> !transaction.isCardStatus() || !transaction.isBillStatementsYn())
 			.count();
 	}
 }

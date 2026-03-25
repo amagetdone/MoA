@@ -17,10 +17,11 @@ class TransactionSeedScenarioSanityTest {
 	void accountSeedsCoverExtendedMonthsAndStayNetPositive() {
 		AccountRealTransactionScenario scenario = new AccountRealTransactionScenario();
 
+		assertThat(scenario.completedMonthSeeds()).hasSizeGreaterThanOrEqualTo(70);
 		assertThat(scenario.completedMonthSeeds())
 			.extracting(AccountSeed::transactionDateTime)
 			.map(YearMonth::from)
-			.contains(YearMonth.of(2026, 1), YearMonth.of(2026, 2), YearMonth.of(2026, 3));
+			.contains(YearMonth.of(2025, 12), YearMonth.of(2026, 1), YearMonth.of(2026, 2), YearMonth.of(2026, 3));
 
 		Map<YearMonth, Long> monthlyNetAmounts = scenario.completedMonthSeeds().stream()
 			.filter(seed -> YearMonth.from(seed.transactionDateTime()).getYear() == 2026)
@@ -39,12 +40,26 @@ class TransactionSeedScenarioSanityTest {
 	}
 
 	@Test
-	void cardSeedsCoverExtendedMonths() {
+	void cardSeedsCoverExtendedMonthsWithBalancedMonthlyCounts() {
 		CardRealTransactionScenario scenario = new CardRealTransactionScenario();
 
+		assertThat(scenario.completedMonthSeeds()).hasSizeGreaterThanOrEqualTo(600);
 		assertThat(scenario.completedMonthSeeds())
 			.extracting(CardSeed::transactionDateTime)
 			.map(YearMonth::from)
-			.contains(YearMonth.of(2026, 1), YearMonth.of(2026, 2), YearMonth.of(2026, 3));
+			.contains(YearMonth.of(2025, 12), YearMonth.of(2026, 1), YearMonth.of(2026, 2), YearMonth.of(2026, 3));
+
+		Map<YearMonth, Long> monthlyCounts = scenario.completedMonthSeeds().stream()
+			.collect(Collectors.groupingBy(
+				seed -> YearMonth.from(seed.transactionDateTime()),
+				Collectors.counting()
+			));
+
+		assertThat(monthlyCounts)
+			.containsKeys(YearMonth.of(2025, 12), YearMonth.of(2026, 1), YearMonth.of(2026, 2), YearMonth.of(2026, 3));
+		assertThat(monthlyCounts.get(YearMonth.of(2025, 12))).isBetween(170L, 210L);
+		assertThat(monthlyCounts.get(YearMonth.of(2026, 1))).isBetween(170L, 210L);
+		assertThat(monthlyCounts.get(YearMonth.of(2026, 2))).isBetween(150L, 190L);
+		assertThat(monthlyCounts.get(YearMonth.of(2026, 3))).isBetween(110L, 145L);
 	}
 }
