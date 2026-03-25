@@ -2,6 +2,7 @@ package com.ssafy.amagetdone.domain.account.application.usecase;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -96,6 +97,52 @@ class InitializeAccountTransactionOverridesUseCaseTest {
 			.contains(LocalDate.of(2026, 3, 25));
 		assertThat(countTransferLikeTransactions(captor.getValue())).isGreaterThanOrEqualTo(40);
 		assertThat(countDirectSpendingLikeTransactions(captor.getValue())).isLessThanOrEqualTo(4);
+	}
+
+	@Test
+	void executeSeedsMonthlySalaryDepositsOnSecondDayOfEachMonth() {
+		Account account = Account.create(
+			User.builder().id(1).build(),
+			"0012345678901234",
+			"product-1",
+			"Main account",
+			"Demand deposit",
+			"001",
+			"Bank",
+			"KRW"
+		);
+		Category category = Category.create(4, "etc");
+		InitializeAccountTransactionOverridesUseCase useCase = new InitializeAccountTransactionOverridesUseCase(
+			accountRepository,
+			accountTransactionOverrideRepository,
+			transactionAnalysisResultRepository,
+			new AccountRealTransactionScenario(),
+			transactionCategoryAssignmentService
+		);
+		given(accountRepository.findByAccountNo("0012345678901234")).willReturn(Optional.of(account));
+		given(accountTransactionOverrideRepository.findAllByAccount_Id(account.getId())).willReturn(List.of());
+		given(transactionCategoryAssignmentService.assignCategories(org.mockito.ArgumentMatchers.anyList())).willAnswer(invocation -> {
+			List<String> texts = invocation.getArgument(0);
+			return texts.stream().collect(Collectors.toMap(Function.identity(), value -> category, (left, right) -> left));
+		});
+
+		useCase.execute(new AccountAdminDto.AccountTransactionInitRequest("0012345678901234"));
+
+		ArgumentCaptor<List<AccountTransactionOverride>> captor = listCaptor();
+		verify(accountTransactionOverrideRepository).saveAll(captor.capture());
+		assertThat(captor.getValue())
+			.filteredOn(transaction -> "SSAFY 급여".equals(transaction.getTransactionSummary()))
+			.extracting(
+				transaction -> transaction.getTransactionDateTime().toLocalDate(),
+				AccountTransactionOverride::getTransactionType,
+				AccountTransactionOverride::getTransactionBalance
+			)
+			.containsExactlyInAnyOrder(
+				tuple(LocalDate.of(2025, 12, 2), 1, 3_500_000L),
+				tuple(LocalDate.of(2026, 1, 2), 1, 3_500_000L),
+				tuple(LocalDate.of(2026, 2, 2), 1, 3_500_000L),
+				tuple(LocalDate.of(2026, 3, 2), 1, 3_500_000L)
+			);
 	}
 
 	@Test

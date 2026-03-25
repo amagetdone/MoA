@@ -55,7 +55,7 @@ public class AccountRealTransactionScenario {
 
 	private static List<SeedDraft> decemberDrafts() {
 		return List.of(
-			draft(2025, 12, 12, 9, 0, 1, "급여", 500_000, "SSAFY 급여"),
+			draft(2025, 12, 2, 9, 0, 1, "급여", 3_500_000, "SSAFY 급여"),
 			draft(2025, 12, 12, 10, 10, 2, "주거관리비", 85_000, "관리비 이체"),
 			draft(2025, 12, 13, 12, 20, 2, "네이버페이 충전", 30_000, "네이버페이"),
 			draft(2025, 12, 14, 18, 15, 2, "삼성페이 충전", 20_000, "삼성페이"),
@@ -78,7 +78,7 @@ public class AccountRealTransactionScenario {
 
 	private static List<SeedDraft> januaryDrafts() {
 		return List.of(
-			draft(2026, 1, 3, 9, 5, 1, "급여", 500_000, "SSAFY 급여"),
+			draft(2026, 1, 2, 9, 0, 1, "급여", 3_500_000, "SSAFY 급여"),
 			draft(2026, 1, 4, 10, 25, 2, "주거관리비", 85_000, "관리비 이체"),
 			draft(2026, 1, 5, 12, 0, 2, "네이버페이 충전", 40_000, "네이버페이"),
 			draft(2026, 1, 6, 18, 5, 2, "삼성페이 충전", 25_000, "삼성페이"),
@@ -102,7 +102,7 @@ public class AccountRealTransactionScenario {
 
 	private static List<SeedDraft> februaryDrafts() {
 		return List.of(
-			draft(2026, 2, 1, 9, 0, 1, "급여", 520_000, "SSAFY 급여"),
+			draft(2026, 2, 2, 9, 0, 1, "급여", 3_500_000, "SSAFY 급여"),
 			draft(2026, 2, 2, 10, 10, 2, "주거관리비", 85_000, "관리비 이체"),
 			draft(2026, 2, 3, 12, 20, 2, "네이버페이 충전", 35_000, "네이버페이"),
 			draft(2026, 2, 4, 18, 15, 2, "삼성페이 충전", 30_000, "삼성페이"),
@@ -125,7 +125,7 @@ public class AccountRealTransactionScenario {
 
 	private static List<SeedDraft> marchDrafts() {
 		return List.of(
-			draft(2026, 3, 3, 9, 5, 1, "급여", 520_000, "SSAFY 급여"),
+			draft(2026, 3, 2, 9, 0, 1, "급여", 3_500_000, "SSAFY 급여"),
 			draft(2026, 3, 4, 10, 25, 2, "주거관리비", 85_000, "관리비 이체"),
 			draft(2026, 3, 5, 12, 0, 2, "네이버페이 충전", 30_000, "네이버페이"),
 			draft(2026, 3, 6, 18, 5, 2, "삼성페이 충전", 25_000, "삼성페이"),

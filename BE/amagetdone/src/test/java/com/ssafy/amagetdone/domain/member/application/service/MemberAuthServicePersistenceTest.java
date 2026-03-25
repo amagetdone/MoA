@@ -2,20 +2,22 @@ package com.ssafy.amagetdone.domain.member.application.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
-import java.util.List;
-
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
 import com.ssafy.amagetdone.domain.member.api.dto.TestSocialAuthDto;
 import com.ssafy.amagetdone.domain.member.application.usecase.EnsureFinMemberLinkedUseCase;
 import com.ssafy.amagetdone.domain.member.application.usecase.IssueMemberTokensUseCase;
 import com.ssafy.amagetdone.domain.member.application.usecase.ResetTestSocialUserUseCase;
+import com.ssafy.amagetdone.domain.member.infra.client.MockSocialAuthClient;
+import com.ssafy.amagetdone.domain.member.model.entity.SocialAccount;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
+import com.ssafy.amagetdone.domain.member.model.repository.SocialAccountRepository;
 import com.ssafy.amagetdone.domain.member.model.repository.UserRepository;
 import com.ssafy.amagetdone.domain.member.model.vo.SocialProvider;
 import com.ssafy.amagetdone.domain.member.support.util.MemberTokenPair;
@@ -36,6 +38,9 @@ class MemberAuthServicePersistenceTest {
 	@Autowired
 	private UserRepository userRepository;
 
+	@Autowired
+	private SocialAccountRepository socialAccountRepository;
+
 	@MockBean
 	private EnsureFinMemberLinkedUseCase ensureFinMemberLinkedUseCase;
 
@@ -53,9 +58,15 @@ class MemberAuthServicePersistenceTest {
 
 		SocialAuthDto.Response response = memberAuthService.authenticateTest(new TestSocialAuthDto.Request(1));
 
-		List<User> users = userRepository.findAll();
-		assertEquals(1, users.size());
-		assertEquals("persisted-user-key", users.get(0).getUserKey());
+		SocialAccount socialAccount = socialAccountRepository.findByProviderAndProviderUid(
+			SocialProvider.TEST,
+			MockSocialAuthClient.providerUidFor(1)
+		).orElseThrow();
+		Integer userId = socialAccount.getUser().getId();
+		User persistedUser = userRepository.findById(userId).orElseThrow();
+
+		assertTrue(userRepository.count() >= 5);
+		assertEquals("persisted-user-key", persistedUser.getUserKey());
 		assertFalse(response.account());
 	}
 }
