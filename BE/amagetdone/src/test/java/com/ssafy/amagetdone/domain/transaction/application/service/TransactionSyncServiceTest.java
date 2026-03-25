@@ -25,6 +25,7 @@ import com.ssafy.amagetdone.domain.account.model.repository.CategoryRepository;
 import com.ssafy.amagetdone.domain.account.model.repository.MerchantRepository;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.vo.UserStatus;
+import com.ssafy.amagetdone.domain.notification.application.event.TransactionSyncedEvent;
 import com.ssafy.amagetdone.domain.transaction.infra.client.SsafyCardTransactionApiClient;
 import com.ssafy.amagetdone.domain.transaction.infra.client.SsafyDemandDepositTransactionApiClient;
 import com.ssafy.amagetdone.domain.transaction.infra.client.dto.CardTransactionDto;
@@ -40,6 +41,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -76,6 +78,9 @@ class TransactionSyncServiceTest {
 
 	@Mock
 	private TransactionCategoryAssignmentService transactionCategoryAssignmentService;
+
+	@Mock
+	private ApplicationEventPublisher applicationEventPublisher;
 
 	@Test
 	void syncSeedsAccountTransactionsWhenNoLocalTransactionExists() {
@@ -127,6 +132,13 @@ class TransactionSyncServiceTest {
 		assertEquals(1001L, saved.getTransactionUniqueNo());
 		assertEquals(LocalDateTime.of(2026, 3, 12, 10, 30), saved.getTransactionDateTime());
 		assertEquals(15000L, saved.getTransactionBalance());
+		verify(applicationEventPublisher).publishEvent(org.mockito.ArgumentMatchers.argThat((Object event) ->
+			event instanceof TransactionSyncedEvent syncedEvent
+				&& syncedEvent.userId().equals(1)
+				&& "ACCOUNT".equals(syncedEvent.sourceType())
+				&& "1001".equals(syncedEvent.transactionId())
+				&& syncedEvent.amount().equals(15000L)
+		));
 	}
 
 	@Test
@@ -208,6 +220,7 @@ class TransactionSyncServiceTest {
 		service.syncLatest(1, 6, false);
 
 		verify(accountTransactionOverrideRepository, never()).saveAll(anyList());
+		verify(applicationEventPublisher, never()).publishEvent(any(TransactionSyncedEvent.class));
 	}
 
 	@Test
@@ -362,6 +375,13 @@ class TransactionSyncServiceTest {
 		assertEquals(merchant, saved.getMerchant());
 		assertEquals(card, saved.getCard());
 		assertEquals(defaultCategory, saved.getCategory());
+		verify(applicationEventPublisher).publishEvent(org.mockito.ArgumentMatchers.argThat((Object event) ->
+			event instanceof TransactionSyncedEvent syncedEvent
+				&& syncedEvent.userId().equals(1)
+				&& "CARD".equals(syncedEvent.sourceType())
+				&& "5002".equals(syncedEvent.transactionId())
+				&& syncedEvent.amount().equals(6200L)
+		));
 	}
 
 	@Test
@@ -591,7 +611,8 @@ class TransactionSyncServiceTest {
 			demandDepositTransactionApiClient,
 			cardTransactionApiClient,
 			dateRangeFactory,
-			transactionCategoryAssignmentService
+			transactionCategoryAssignmentService,
+			applicationEventPublisher
 		);
 	}
 }

@@ -20,8 +20,7 @@ public class PlanPriorityService {
 
 	private static final List<PlanStatus> PRIORITY_MANAGED_STATUSES = List.of(
 		PlanStatus.WAITING,
-		PlanStatus.ACTIVE,
-		PlanStatus.PAUSED
+		PlanStatus.ACTIVE
 	);
 
 	private final PlanRepository planRepository;
@@ -42,6 +41,15 @@ public class PlanPriorityService {
 
 	@Transactional
 	public void compactPrioritiesAfterDeletion(Integer userId, Integer priority) {
+		compactPriorities(userId, priority);
+	}
+
+	@Transactional
+	public void compactPrioritiesAfterCompletion(Integer userId, Integer priority) {
+		compactPriorities(userId, priority);
+	}
+
+	private void compactPriorities(Integer userId, Integer priority) {
 		planRepository.findAllByUserIdAndDeletedFalseAndStatusInAndPriorityGreaterThanOrderByPriorityAsc(
 			userId,
 			PRIORITY_MANAGED_STATUSES,

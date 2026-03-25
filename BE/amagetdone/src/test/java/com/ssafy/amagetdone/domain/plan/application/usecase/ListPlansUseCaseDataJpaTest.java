@@ -49,7 +49,7 @@ class ListPlansUseCaseDataJpaTest {
 			today,
 			today.plusDays(21)
 		);
-		persistPlan(
+		Plan completedPlan = persistPlan(
 			user,
 			"Completed plan",
 			PlanStatus.COMPLETED,
@@ -64,10 +64,16 @@ class ListPlansUseCaseDataJpaTest {
 		List<PlanListItemResponse> response = listPlansUseCase.execute(user.getId());
 
 		assertThat(response)
-			.extracting(PlanListItemResponse::planId, PlanListItemResponse::title, PlanListItemResponse::aiPipelineStatus)
+			.extracting(
+				PlanListItemResponse::planId,
+				PlanListItemResponse::title,
+				PlanListItemResponse::status,
+				PlanListItemResponse::aiPipelineStatus
+			)
 			.containsExactly(
-				org.assertj.core.groups.Tuple.tuple(waitingPlan.getId().longValue(), "Future plan", "PENDING"),
-				org.assertj.core.groups.Tuple.tuple(activePlan.getId().longValue(), "Current plan", "PENDING")
+				org.assertj.core.groups.Tuple.tuple(waitingPlan.getId().longValue(), "Future plan", "WAITING", "PENDING"),
+				org.assertj.core.groups.Tuple.tuple(activePlan.getId().longValue(), "Current plan", "ACTIVE", "PENDING"),
+				org.assertj.core.groups.Tuple.tuple(completedPlan.getId().longValue(), "Completed plan", "COMPLETED", "PENDING")
 			);
 	}
 
@@ -92,8 +98,46 @@ class ListPlansUseCaseDataJpaTest {
 		List<PlanListItemResponse> response = listPlansUseCase.execute(user.getId());
 
 		assertThat(response)
-			.extracting(PlanListItemResponse::planId, PlanListItemResponse::title, PlanListItemResponse::aiPipelineStatus)
-			.containsExactly(org.assertj.core.groups.Tuple.tuple(failedAiPlan.getId().longValue(), "Video failed plan", "FAILED"));
+			.extracting(
+				PlanListItemResponse::planId,
+				PlanListItemResponse::title,
+				PlanListItemResponse::status,
+				PlanListItemResponse::aiPipelineStatus
+			)
+			.containsExactly(org.assertj.core.groups.Tuple.tuple(failedAiPlan.getId().longValue(), "Video failed plan", "WAITING", "FAILED"));
+	}
+
+	@Test
+	void executeExcludesDeletedCancelledPlans() {
+		User user = persistUser("plan-list-cancelled@example.com");
+		LocalDate today = LocalDate.now();
+
+		Plan visiblePlan = persistPlan(
+			user,
+			"Visible plan",
+			PlanStatus.ACTIVE,
+			1,
+			today,
+			today.plusDays(7)
+		);
+		Plan deletedCancelledPlan = persistPlan(
+			user,
+			"Deleted cancelled plan",
+			PlanStatus.CANCELLED,
+			2,
+			today.minusDays(10),
+			today.plusDays(10)
+		);
+		deletedCancelledPlan.setDeleted(true);
+
+		entityManager.flush();
+		entityManager.clear();
+
+		List<PlanListItemResponse> response = listPlansUseCase.execute(user.getId());
+
+		assertThat(response)
+			.extracting(PlanListItemResponse::planId, PlanListItemResponse::title)
+			.containsExactly(org.assertj.core.groups.Tuple.tuple(visiblePlan.getId().longValue(), "Visible plan"));
 	}
 
 	private User persistUser(String email) {

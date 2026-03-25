@@ -13,6 +13,7 @@ services:
       REDIS_HOST: ${REDIS_HOST:-redis}
     volumes:
       - ./.env:/app/.env:ro
+      - ./more_key.json:/app/more_key.json:ro
     depends_on:
       - postgres
       - redis

@@ -24,12 +24,14 @@ import com.ssafy.amagetdone.domain.transaction.model.entity.AccountTransactionOv
 import com.ssafy.amagetdone.domain.transaction.model.entity.CardTransactionOverride;
 import com.ssafy.amagetdone.domain.transaction.model.repository.AccountTransactionOverrideRepository;
 import com.ssafy.amagetdone.domain.transaction.model.repository.CardTransactionOverrideRepository;
+import com.ssafy.amagetdone.domain.notification.application.event.TransactionSyncedEvent;
 import com.ssafy.amagetdone.domain.transaction.support.util.TransactionDateRangeFactory;
 import com.ssafy.amagetdone.domain.transaction.support.util.TransactionDateRangeFactory.DateRange;
 import com.ssafy.amagetdone.domain.transaction.support.util.TransactionMerchantTextResolver;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,6 +56,7 @@ public class TransactionSyncService {
 	private final SsafyCardTransactionApiClient cardTransactionApiClient;
 	private final TransactionDateRangeFactory dateRangeFactory;
 	private final TransactionCategoryAssignmentService transactionCategoryAssignmentService;
+	private final ApplicationEventPublisher applicationEventPublisher;
 
 	public SyncResult syncLatest(Integer userId, int months, boolean forceFullSync) {
 		List<Account> linkedAccounts = accountRepository.findAllLinkedAccountsByUserId(userId).stream()
@@ -120,6 +123,7 @@ public class TransactionSyncService {
 			.toList();
 
 		accountTransactionOverrideRepository.saveAll(transactions);
+		publishAccountTransactionEvents(account.getUser().getId(), transactions);
 		return transactions.size();
 	}
 
@@ -172,7 +176,36 @@ public class TransactionSyncService {
 			.toList();
 
 		cardTransactionOverrideRepository.saveAll(transactions);
+		publishCardTransactionEvents(card.getWithdrawalAccount().getUser().getId(), transactions);
 		return transactions.size();
+	}
+
+	private void publishAccountTransactionEvents(Integer userId, List<AccountTransactionOverride> transactions) {
+		if (userId == null) {
+			return;
+		}
+		transactions.forEach(transaction -> applicationEventPublisher.publishEvent(new TransactionSyncedEvent(
+			userId,
+			"ACCOUNT",
+			String.valueOf(transaction.getTransactionUniqueNo()),
+			transaction.getTransactionBalance(),
+			transaction.getTransactionSummary(),
+			transaction.getTransactionDateTime()
+		)));
+	}
+
+	private void publishCardTransactionEvents(Integer userId, List<CardTransactionOverride> transactions) {
+		if (userId == null) {
+			return;
+		}
+		transactions.forEach(transaction -> applicationEventPublisher.publishEvent(new TransactionSyncedEvent(
+			userId,
+			"CARD",
+			String.valueOf(transaction.getTransactionUniqueNo()),
+			transaction.getTransactionBalance(),
+			transaction.getMerchant() == null ? transaction.getTransactionMemo() : transaction.getMerchant().getName(),
+			transaction.getTransactionDateTime()
+		)));
 	}
 
 	private boolean matchesLatestAccount(AccountTransactionOverride latestLocal, DemandDepositTransactionDto.Item latestRemote) {
