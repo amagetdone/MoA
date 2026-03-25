@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:more_app/domain/entities/app_notification_item.dart';
+import 'package:more_app/presentation/navigation/app_router.dart';
 
 class NotificationInboxPersistence {
   static const _boxName = 'more_notification_inbox_box';
@@ -116,9 +117,29 @@ class NotificationInboxPersistence {
       body: body,
       createdAt: createdAt,
       type: payload['type'] ?? 'general',
-      route: payload['route'],
+      route: _resolveRoute(payload),
       payload: payload,
       isRead: markAsRead,
     );
+  }
+
+  static String? _resolveRoute(Map<String, String> payload) {
+    final explicitRoute = payload['route'];
+    if (explicitRoute != null && explicitRoute.isNotEmpty) {
+      return explicitRoute;
+    }
+
+    final type = payload['type']?.toUpperCase();
+    final planId = payload['planId'];
+
+    if (type == 'PLAN_AI_COMPLETED' && planId != null && planId.isNotEmpty) {
+      final status = payload['aiPipelineStatus']?.toUpperCase();
+      if (status == 'SUCCEEDED') {
+        return AppRoutes.goalPreviewLocation(planId);
+      }
+      return AppRoutes.goalDetailLocation(planId);
+    }
+
+    return null;
   }
 }

@@ -9,6 +9,7 @@ import 'package:more_app/data/datasources/local/app_local_datasource.dart';
 import 'package:more_app/data/datasources/local/auth_local_datasource.dart';
 import 'package:more_app/data/datasources/remote/push_notification_remote_datasource.dart';
 import 'package:more_app/domain/repositories/notification_inbox_repository.dart';
+import 'package:more_app/presentation/navigation/app_router.dart';
 
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await NotificationInboxPersistence.saveRemoteMessage(message);
@@ -39,6 +40,7 @@ class PushNotificationSyncService {
   StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
   StreamSubscription<RemoteMessage>? _messageOpenedSubscription;
   bool _initialized = false;
+  String? _lastOpenedMessageId;
 
   bool get _isSupportedMobilePlatform {
     if (kIsWeb) {
@@ -87,20 +89,12 @@ class PushNotificationSyncService {
     _messageOpenedSubscription = FirebaseMessaging.onMessageOpenedApp.listen((
       message,
     ) {
-      unawaited(
-        _notificationInboxRepository.saveRemoteMessage(
-          message,
-          markAsRead: true,
-        ),
-      );
+      unawaited(_handleOpenedMessage(message));
     });
 
     final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) {
-      await _notificationInboxRepository.saveRemoteMessage(
-        initialMessage,
-        markAsRead: true,
-      );
+      await _handleOpenedMessage(initialMessage);
     }
   }
 
@@ -223,6 +217,30 @@ class PushNotificationSyncService {
       fcmToken: token,
       platform: _platform,
     );
+  }
+
+  Future<void> _handleOpenedMessage(RemoteMessage message) async {
+    final item = NotificationInboxPersistence.mapRemoteMessageToInboxItem(
+      message,
+      markAsRead: true,
+    );
+    if (item == null) {
+      return;
+    }
+
+    await _notificationInboxRepository.saveNotification(item);
+    _navigateFromNotification(item.route, item.id);
+  }
+
+  void _navigateFromNotification(String? route, String messageId) {
+    if (route == null || route.isEmpty || _lastOpenedMessageId == messageId) {
+      return;
+    }
+
+    _lastOpenedMessageId = messageId;
+    Future<void>.delayed(const Duration(milliseconds: 250), () {
+      appRouter.go(route);
+    });
   }
 
   Future<String> _getOrCreateInstallationId() async {

@@ -13,6 +13,7 @@ import 'package:more_app/presentation/pages/goal/goal_detail_page.dart';
 import 'package:more_app/presentation/pages/goal/goal_list_page.dart';
 import 'package:more_app/presentation/pages/goal/goal_loading_page.dart';
 import 'package:more_app/presentation/pages/goal/goal_plan_page.dart';
+import 'package:more_app/presentation/pages/goal/goal_preview_page.dart';
 import 'package:more_app/presentation/pages/goal/goal_priority_page.dart';
 import 'package:more_app/presentation/pages/home/home_page.dart';
 import 'package:more_app/presentation/pages/login/login_page.dart';
@@ -66,11 +67,14 @@ abstract class AppRoutes {
   static const String goalCreate = '/goal/create';
   static const String goalLoading = '/goal/loading';
   static const String goalPlan = '/goal/plan';
+  static const String goalPreview = '/goal/preview';
   static const String goalDetail = '/goal/detail';
   static const String goalPriority = '/goal/priority';
   static const String settings = '/settings';
   static const String notifications = '/notifications';
 
+  static String goalLoadingLocation(String goalId) => '$goalLoading?id=$goalId';
+  static String goalPreviewLocation(String goalId) => '$goalPreview?id=$goalId';
   static String goalDetailLocation(String goalId) => '$goalDetail?id=$goalId';
   static String assetDetailLocation(String transactionId) => '$assetDetail?id=$transactionId';
 }
@@ -175,8 +179,19 @@ final appRouter = GoRouter(
       return AccountCompletePage(isOnboarding: false, bankName: extra?['bankName'] ?? '', accountNumber: extra?['accountNumber'] ?? '');
     }),
     GoRoute(path: AppRoutes.goalCreate, builder: (context, state) => const GoalCreatePage(isOnboarding: false)),
-    GoRoute(path: AppRoutes.goalLoading, builder: (context, state) => const GoalLoadingPage()),
+    GoRoute(
+      path: AppRoutes.goalLoading,
+      builder: (context, state) => GoalLoadingPage(
+        goalId: state.uri.queryParameters['id'] ?? '',
+      ),
+    ),
     GoRoute(path: AppRoutes.goalPlan, builder: (context, state) => const GoalPlanPage()),
+    GoRoute(
+      path: AppRoutes.goalPreview,
+      builder: (context, state) => GoalPreviewPage(
+        goalId: state.uri.queryParameters['id'] ?? '',
+      ),
+    ),
     GoRoute(path: AppRoutes.goalPriority, builder: (context, state) => const GoalPriorityPage()),
     GoRoute(path: AppRoutes.spendingBudget, builder: (context, state) => const SpendingBudgetPage()),
     GoRoute(path: AppRoutes.notifications, builder: (context, state) => const NotificationPage()),

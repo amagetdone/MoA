@@ -126,7 +126,7 @@ class GoalViewModel extends StateNotifier<GoalState> {
     state = state.copyWith(showAchieved: showAchieved);
   }
 
-  Future<void> addGoal(Goal goal) async {
+  Future<Goal> addGoal(Goal goal) async {
     final createdGoal = await _repository.createGoal(goal);
     state = state.copyWith(
       goals: [...state.goals, createdGoal],
@@ -135,6 +135,7 @@ class GoalViewModel extends StateNotifier<GoalState> {
         createdGoal.id: const [],
       },
     );
+    return createdGoal;
   }
 
   Future<void> updateGoal(Goal goal) async {
@@ -206,6 +207,29 @@ class GoalViewModel extends StateNotifier<GoalState> {
   Future<void> reorderGoals(List<Goal> reordered) async {
     final reorderedGoals = await _repository.saveGoalPriority(reordered);
     state = state.copyWith(goals: reorderedGoals);
+  }
+
+  Future<Goal?> refreshGoalStatus(String goalId) async {
+    try {
+      final goals = await _repository.fetchGoals();
+      state = state.copyWith(
+        goals: goals,
+        clearErrorMessage: true,
+      );
+      return _findGoal(goals, goalId);
+    } catch (error) {
+      state = state.copyWith(errorMessage: error.toString());
+      return state.findGoalById(goalId);
+    }
+  }
+
+  Goal? _findGoal(List<Goal> goals, String goalId) {
+    for (final goal in goals) {
+      if (goal.id == goalId) {
+        return goal;
+      }
+    }
+    return null;
   }
 }
 

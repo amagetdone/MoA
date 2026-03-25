@@ -1,21 +1,35 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/viewmodels/goal_viewmodel.dart';
+import 'package:more_app/presentation/viewmodels/menu_viewmodel.dart';
+import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 
-class GoalLoadingPage extends StatefulWidget {
-  const GoalLoadingPage({super.key});
+class GoalLoadingPage extends ConsumerStatefulWidget {
+  const GoalLoadingPage({
+    super.key,
+    required this.goalId,
+  });
+
+  final String goalId;
 
   @override
-  State<GoalLoadingPage> createState() => _GoalLoadingPageState();
+  ConsumerState<GoalLoadingPage> createState() => _GoalLoadingPageState();
 }
 
-class _GoalLoadingPageState extends State<GoalLoadingPage>
+class _GoalLoadingPageState extends ConsumerState<GoalLoadingPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _animController;
-  int _phase = 0;
+  Timer? _pollTimer;
+  bool _isCheckingStatus = false;
+  bool _isRetrying = false;
+  bool _hasNavigated = false;
 
   @override
   void initState() {
@@ -24,98 +38,280 @@ class _GoalLoadingPageState extends State<GoalLoadingPage>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _runPhases());
-  }
 
-  Future<void> _runPhases() async {
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-
-    setState(() => _phase = 1);
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-
-    context.go(AppRoutes.goalPlan);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.goalId.isEmpty) {
+        context.go(AppRoutes.goalTab);
+        return;
+      }
+      _startPolling();
+    });
   }
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
     _animController.dispose();
     super.dispose();
+  }
+
+  Future<void> _startPolling() async {
+    await _pollGoalStatus();
+    _pollTimer ??= Timer.periodic(
+      const Duration(seconds: 4),
+      (_) => _pollGoalStatus(),
+    );
+  }
+
+  Future<void> _pollGoalStatus() async {
+    if (_isCheckingStatus || _hasNavigated || !mounted) {
+      return;
+    }
+
+    _isCheckingStatus = true;
+    try {
+      final goal = await ref
+          .read(goalViewModelProvider.notifier)
+          .refreshGoalStatus(widget.goalId);
+
+      if (!mounted || goal == null) {
+        return;
+      }
+
+      if (goal.isAiSucceeded) {
+        _pollTimer?.cancel();
+        _hasNavigated = true;
+        unawaited(
+          ref.read(goalViewModelProvider.notifier).loadGoalDetail(goal.id),
+        );
+        context.go(AppRoutes.goalPreviewLocation(goal.id));
+        return;
+      }
+
+      if (goal.isAiFailed) {
+        _pollTimer?.cancel();
+      }
+    } finally {
+      _isCheckingStatus = false;
+    }
+  }
+
+  Future<void> _enableNotifications() async {
+    await ref.read(menuViewModelProvider.notifier).toggleNotification(true);
+    if (!mounted) {
+      return;
+    }
+
+    final menuState = ref.read(menuViewModelProvider);
+    final message = menuState.notificationEnabled
+        ? '이미지가 완성되면 알림으로 알려드릴게요.'
+        : (menuState.errorMessage ?? '알림 권한을 확인해주세요.');
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _retryGeneration() async {
+    if (_isRetrying) {
+      return;
+    }
+
+    setState(() => _isRetrying = true);
+    try {
+      await ref
+          .read(goalViewModelProvider.notifier)
+          .retryGoalVideoGeneration(widget.goalId);
+      _pollTimer?.cancel();
+      _pollTimer = null;
+      _hasNavigated = false;
+      await _startPolling();
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('이미지 재생성 요청에 실패했습니다: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isRetrying = false);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final goalState = ref.watch(goalViewModelProvider);
+    final menuState = ref.watch(menuViewModelProvider);
+    final goal = goalState.findGoalById(widget.goalId);
+    final isFailed = goal?.isAiFailed ?? false;
+    final isPending = goal == null || goal.isAiPending || _isCheckingStatus;
+    final notificationEnabled =
+        !menuState.isLoading && menuState.notificationEnabled;
+    final goalName = goal?.name ?? '목표';
+
     return PopScope(
       canPop: false,
       child: Scaffold(
         backgroundColor: colors.bgSurface,
         body: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: EdgeInsets.only(left: 24.w, top: 24.h),
-                child: Text(
-                  '분석 중',
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 16.h),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isFailed ? '이미지 생성 실패' : '이미지 생성 중',
                   style: AppTextStyles.headingLg.copyWith(
                     color: colors.gray900,
                     fontSize: 22.sp,
                   ),
                 ),
-              ),
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 80.w,
-                        height: 48.h,
-                        child: AnimatedBuilder(
-                          animation: _animController,
-                          builder: (context, child) {
-                            return Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: List.generate(5, (index) {
-                                final delay = index * 0.15;
-                                final value =
-                                    (_animController.value + delay) % 1.0;
-                                final height =
-                                    12.h + 24.h * _barHeight(value);
-                                return Container(
-                                  width: 6.w,
-                                  height: height,
-                                  margin:
-                                      EdgeInsets.symmetric(horizontal: 3.w),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.orange500,
-                                    borderRadius:
-                                        BorderRadius.circular(3.r),
-                                  ),
-                                );
-                              }),
-                            );
-                          },
-                        ),
-                      ),
-                      SizedBox(height: 32.h),
-                      Text(
-                        _phase == 0
-                            ? '소비패턴 기반으로\n목표 계획을 수립 중입니다.'
-                            : '거의 다 됐어요!\n잠시만 기다려주세요.',
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.headingMd.copyWith(
-                          color: colors.gray900,
-                          fontSize: 18.sp,
-                        ),
-                      ),
-                    ],
+                SizedBox(height: 8.h),
+                Text(
+                  goalName,
+                  style: AppTextStyles.bodyMd.copyWith(
+                    color: AppColors.orange500,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-              ),
-            ],
+                Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 80.w,
+                          height: 48.h,
+                          child: AnimatedBuilder(
+                            animation: _animController,
+                            builder: (context, child) {
+                              return Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: List.generate(5, (index) {
+                                  final delay = index * 0.15;
+                                  final value =
+                                      (_animController.value + delay) % 1.0;
+                                  final height =
+                                      12.h + 24.h * _barHeight(value);
+                                  return Container(
+                                    width: 6.w,
+                                    height: height,
+                                    margin: EdgeInsets.symmetric(
+                                      horizontal: 3.w,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isFailed
+                                          ? AppColors.red500
+                                          : AppColors.orange500,
+                                      borderRadius: BorderRadius.circular(3.r),
+                                    ),
+                                  );
+                                }),
+                              );
+                            },
+                          ),
+                        ),
+                        SizedBox(height: 32.h),
+                        Text(
+                          isFailed
+                              ? 'AI가 이미지를 만드는 중 문제가 생겼어요.\n다시 시도하거나 나중에 확인해주세요.'
+                              : 'AI가 목표 이미지를 생성하고 있어요.\n완성되면 자동으로 보여드릴게요.',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.headingMd.copyWith(
+                            color: colors.gray900,
+                            fontSize: 18.sp,
+                          ),
+                        ),
+                        SizedBox(height: 18.h),
+                        Text(
+                          isFailed
+                              ? '알림을 켜 두면 재시도 후 완료될 때 바로 확인할 수 있어요.'
+                              : '지금 기다리거나, 알림을 켜 두고 나중에 다시 확인할 수 있어요.',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.bodySm.copyWith(
+                            color: colors.textSecondary,
+                            height: 1.5,
+                          ),
+                        ),
+                        SizedBox(height: 24.h),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 220),
+                          child: isFailed
+                              ? FilledButton.icon(
+                                  key: const ValueKey('retry'),
+                                  onPressed: _isRetrying
+                                      ? null
+                                      : _retryGeneration,
+                                  icon: const Icon(Icons.refresh_rounded),
+                                  label: Text(_isRetrying ? '요청 중...' : '다시 생성하기'),
+                                )
+                              : notificationEnabled
+                                  ? Container(
+                                      key: const ValueKey('notify-enabled'),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 14.w,
+                                        vertical: 12.h,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.orange500.withValues(
+                                          alpha: 0.08,
+                                        ),
+                                        borderRadius: BorderRadius.circular(16.r),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.notifications_active_outlined,
+                                            size: 18.w,
+                                            color: AppColors.orange500,
+                                          ),
+                                          SizedBox(width: 8.w),
+                                          Text(
+                                            '완료되면 알림으로 알려드릴게요',
+                                            style: AppTextStyles.bodySm.copyWith(
+                                              color: AppColors.orange500,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : OutlinedButton.icon(
+                                      key: const ValueKey('notify-request'),
+                                      onPressed: _enableNotifications,
+                                      icon: const Icon(
+                                        Icons.notifications_outlined,
+                                      ),
+                                      label: const Text('완료되면 알림받기'),
+                                    ),
+                        ),
+                        if (isPending) ...[
+                          SizedBox(height: 16.h),
+                          Text(
+                            '상태를 주기적으로 확인하고 있습니다.',
+                            style: AppTextStyles.caption.copyWith(
+                              color: colors.textTertiary,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        bottomNavigationBar: MoreBottomButton(
+          text: isFailed ? '목표 상세로 이동' : '나중에 확인할게요',
+          onPressed: () => context.go(
+            isFailed
+                ? AppRoutes.goalDetailLocation(widget.goalId)
+                : AppRoutes.goalTab,
           ),
         ),
       ),
@@ -123,6 +319,6 @@ class _GoalLoadingPageState extends State<GoalLoadingPage>
   }
 
   double _barHeight(double value) {
-    return (1 - (2 * value - 1).abs());
+    return 1 - (2 * value - 1).abs();
   }
 }
