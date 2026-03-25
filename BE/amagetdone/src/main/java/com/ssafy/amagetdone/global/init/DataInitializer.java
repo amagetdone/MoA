@@ -7,6 +7,7 @@ import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.domain.account.model.repository.CategoryRepository;
 import com.ssafy.amagetdone.domain.member.application.usecase.EnsureTestSocialUsersInitializedUseCase;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
@@ -49,20 +50,25 @@ public class DataInitializer {
 		private final CategoryRepository categoryRepository;
 		private final InitializeMerchantCatalogUseCase initializeMerchantCatalogUseCase;
 		private final EnsureTestSocialUsersInitializedUseCase ensureTestSocialUsersInitializedUseCase;
+		private final boolean merchantInitializationEnabled;
 
 		public InitService(
 			CategoryRepository categoryRepository,
 			InitializeMerchantCatalogUseCase initializeMerchantCatalogUseCase,
-			EnsureTestSocialUsersInitializedUseCase ensureTestSocialUsersInitializedUseCase
+			EnsureTestSocialUsersInitializedUseCase ensureTestSocialUsersInitializedUseCase,
+			@Value("${app.data-initializer.merchant.enabled:true}") boolean merchantInitializationEnabled
 		) {
 			this.categoryRepository = categoryRepository;
 			this.initializeMerchantCatalogUseCase = initializeMerchantCatalogUseCase;
 			this.ensureTestSocialUsersInitializedUseCase = ensureTestSocialUsersInitializedUseCase;
+			this.merchantInitializationEnabled = merchantInitializationEnabled;
 		}
 
 		public void initialize() {
 			categoryInit();
-			merchantInit();
+			if (merchantInitializationEnabled) {
+				merchantInit();
+			}
 			testSocialUsersInit();
 		}
 
