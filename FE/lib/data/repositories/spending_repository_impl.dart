@@ -1,8 +1,6 @@
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
-import 'package:more_app/data/datasources/remote/spending_remote_datasource.dart'
-    show SpendingRemoteDataSource, MonthlyTransactionSummary;
+import 'package:more_app/data/datasources/remote/spending_remote_datasource.dart';
 import 'package:more_app/data/models/app_snapshot_dto.dart';
-import 'package:more_app/data/models/weekly_analysis_dto.dart';
 import 'package:more_app/domain/entities/spending.dart';
 import 'package:more_app/domain/entities/spending_overview.dart';
 import 'package:more_app/domain/repositories/spending_repository.dart';
@@ -121,8 +119,7 @@ class SpendingRepositoryImpl implements SpendingRepository {
       final snapshot = await _remoteDataSource.fetchSpendingSnapshotDto();
       return _toOverview(snapshot);
     } catch (_) {
-      final snapshot = await _localDataSource.getSpendingSnapshotDto();
-      return _toOverview(snapshot);
+      return const SpendingOverview();
     }
   }
 
