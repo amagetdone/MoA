@@ -2,6 +2,7 @@ package com.ssafy.amagetdone.domain.account.support.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -17,11 +18,15 @@ class TransactionSeedScenarioSanityTest {
 	void accountSeedsCoverExtendedMonthsAndStayNetPositive() {
 		AccountRealTransactionScenario scenario = new AccountRealTransactionScenario();
 
-		assertThat(scenario.completedMonthSeeds()).hasSizeGreaterThanOrEqualTo(70);
+		assertThat(scenario.completedMonthSeeds()).hasSizeGreaterThanOrEqualTo(75);
 		assertThat(scenario.completedMonthSeeds())
 			.extracting(AccountSeed::transactionDateTime)
 			.map(YearMonth::from)
 			.contains(YearMonth.of(2025, 12), YearMonth.of(2026, 1), YearMonth.of(2026, 2), YearMonth.of(2026, 3));
+		assertThat(scenario.completedMonthSeeds())
+			.extracting(AccountSeed::transactionDateTime)
+			.map(dateTime -> dateTime.toLocalDate())
+			.contains(LocalDate.of(2026, 3, 25));
 
 		Map<YearMonth, Long> monthlyNetAmounts = scenario.completedMonthSeeds().stream()
 			.filter(seed -> YearMonth.from(seed.transactionDateTime()).getYear() == 2026)
@@ -43,11 +48,15 @@ class TransactionSeedScenarioSanityTest {
 	void cardSeedsCoverExtendedMonthsWithBalancedMonthlyCounts() {
 		CardRealTransactionScenario scenario = new CardRealTransactionScenario();
 
-		assertThat(scenario.completedMonthSeeds()).hasSizeGreaterThanOrEqualTo(600);
+		assertThat(scenario.completedMonthSeeds()).hasSizeGreaterThanOrEqualTo(680);
 		assertThat(scenario.completedMonthSeeds())
 			.extracting(CardSeed::transactionDateTime)
 			.map(YearMonth::from)
 			.contains(YearMonth.of(2025, 12), YearMonth.of(2026, 1), YearMonth.of(2026, 2), YearMonth.of(2026, 3));
+		assertThat(scenario.completedMonthSeeds())
+			.extracting(CardSeed::transactionDateTime)
+			.map(dateTime -> dateTime.toLocalDate())
+			.contains(LocalDate.of(2026, 3, 25));
 
 		Map<YearMonth, Long> monthlyCounts = scenario.completedMonthSeeds().stream()
 			.collect(Collectors.groupingBy(
@@ -60,6 +69,6 @@ class TransactionSeedScenarioSanityTest {
 		assertThat(monthlyCounts.get(YearMonth.of(2025, 12))).isBetween(170L, 210L);
 		assertThat(monthlyCounts.get(YearMonth.of(2026, 1))).isBetween(170L, 210L);
 		assertThat(monthlyCounts.get(YearMonth.of(2026, 2))).isBetween(150L, 190L);
-		assertThat(monthlyCounts.get(YearMonth.of(2026, 3))).isBetween(110L, 145L);
+		assertThat(monthlyCounts.get(YearMonth.of(2026, 3))).isBetween(145L, 170L);
 	}
 }

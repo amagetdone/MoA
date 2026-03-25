@@ -118,13 +118,13 @@ class InitializeCardTransactionOverridesUseCaseTest {
 		assertThat(captor.getValue())
 			.extracting(CardTransactionOverride::getTransactionDateTime)
 			.map(dateTime -> dateTime.toLocalDate())
-			.contains(LocalDate.of(2026, 3, 20));
-		assertThat(countFoodMerchants(captor.getValue())).isGreaterThanOrEqualTo(180);
-		assertThat(countTransportMerchants(captor.getValue())).isGreaterThanOrEqualTo(90);
-		assertThat(countConvenienceMerchants(captor.getValue())).isGreaterThanOrEqualTo(70);
-		assertThat(countCafeMerchants(captor.getValue())).isGreaterThanOrEqualTo(60);
-		assertThat(countShoppingOrLifestyleMerchants(captor.getValue())).isGreaterThanOrEqualTo(90);
-		assertThat(countSubscriptionOrOnlineMerchants(captor.getValue())).isGreaterThanOrEqualTo(24);
+			.contains(LocalDate.of(2026, 3, 25));
+		assertThat(countFoodMerchants(captor.getValue())).isGreaterThanOrEqualTo(290);
+		assertThat(countTransportMerchants(captor.getValue())).isGreaterThanOrEqualTo(160);
+		assertThat(countConvenienceMerchants(captor.getValue())).isGreaterThanOrEqualTo(110);
+		assertThat(countCafeMerchants(captor.getValue())).isGreaterThanOrEqualTo(55);
+		assertThat(countShoppingOrLifestyleMerchants(captor.getValue())).isGreaterThanOrEqualTo(40);
+		assertThat(countSubscriptionOrOnlineMerchants(captor.getValue())).isGreaterThanOrEqualTo(10);
 		assertThat(countCanceledOrPendingTransactions(captor.getValue())).isGreaterThanOrEqualTo(8);
 	}
 

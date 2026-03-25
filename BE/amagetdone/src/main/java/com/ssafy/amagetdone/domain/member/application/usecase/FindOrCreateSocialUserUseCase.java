@@ -57,10 +57,13 @@ public class FindOrCreateSocialUserUseCase {
 			return;
 		}
 		int testUserId = MockSocialAuthClient.resolveTestUserId(identity.providerUid());
-		user.applyTestSocialProfile(
+		user.markProfileEntered(
 			testSocialUserProperties.resolveNickname(testUserId),
-			testSocialUserProperties.resolveEmail(testUserId)
+			testSocialUserProperties.resolveEmail(testUserId),
+			testSocialUserProperties.resolveBirthDate(testUserId),
+			testSocialUserProperties.resolveHasFixedIncome(testUserId)
 		);
+		user.activate();
 	}
 
 	public record Result(

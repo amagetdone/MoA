@@ -175,7 +175,8 @@ class MemberAuthServiceTest {
 		SocialUserIdentity identity = new SocialUserIdentity(SocialProvider.TEST, "test-social-user-003");
 		User user = User.createPendingSocialUser();
 		setUserId(user, 10);
-		user.applyTestSocialProfile("tester3", "test3@test.com");
+		user.markProfileEntered("tester3", "test3@test.com", LocalDate.of(1997, 3, 1), true);
+		user.activate();
 		SocialAccount socialAccount = SocialAccount.create(user, SocialProvider.TEST, "test-social-user-003");
 		MemberTokenPair tokenPair = new MemberTokenPair("access-token", "refresh-token");
 
@@ -189,9 +190,10 @@ class MemberAuthServiceTest {
 
 		SocialAuthDto.Response response = memberAuthService.authenticateTest(request);
 
-		assertEquals("TEMP", response.status());
+		assertEquals("ACTIVE", response.status());
 		assertEquals("access-token", response.accessToken());
 		assertEquals("test3@test.com", user.getEmail());
+		assertTrue(user.isProfileCompleted());
 		assertEquals("ssafy-user-key", user.getUserKey());
 		assertTrue(containsLog(appender, "provider=TEST"));
 		verify(findOrCreateSocialUserUseCase).execute(identity);

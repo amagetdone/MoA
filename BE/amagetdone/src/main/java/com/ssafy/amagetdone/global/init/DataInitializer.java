@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.domain.account.model.repository.CategoryRepository;
+import com.ssafy.amagetdone.domain.member.application.usecase.EnsureTestSocialUsersInitializedUseCase;
 
 import org.springframework.stereotype.Component;
 
@@ -20,7 +21,7 @@ public class DataInitializer {
 
 	@PostConstruct
 	public void init() {
-		initService.categoryInit();
+		initService.initialize();
 	}
 
 	@Component
@@ -45,15 +46,29 @@ public class DataInitializer {
 		);
 
 		private final CategoryRepository categoryRepository;
+		private final EnsureTestSocialUsersInitializedUseCase ensureTestSocialUsersInitializedUseCase;
 
-		public InitService(CategoryRepository categoryRepository) {
+		public InitService(
+			CategoryRepository categoryRepository,
+			EnsureTestSocialUsersInitializedUseCase ensureTestSocialUsersInitializedUseCase
+		) {
 			this.categoryRepository = categoryRepository;
+			this.ensureTestSocialUsersInitializedUseCase = ensureTestSocialUsersInitializedUseCase;
+		}
+
+		public void initialize() {
+			categoryInit();
+			testSocialUsersInit();
 		}
 
 		public void categoryInit() {
 			if (categoryRepository.count() == 0) {
 				categoryRepository.saveAll(DEFAULT_CATEGORIES);
 			}
+		}
+
+		public void testSocialUsersInit() {
+			ensureTestSocialUsersInitializedUseCase.execute();
 		}
 	}
 }
