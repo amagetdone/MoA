@@ -19,11 +19,19 @@ class SpendingRoseChart extends StatefulWidget {
   const SpendingRoseChart({
     super.key,
     required this.categories,
-    required this.weekLabel,
+    required this.title,
+    this.subtitle,
+    this.onPrevious,
+    this.onNext,
+    this.canMoveNext = false,
   });
 
   final List<SpendingCategory> categories;
-  final String weekLabel;
+  final String title;
+  final String? subtitle;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+  final bool canMoveNext;
 
   @override
   State<SpendingRoseChart> createState() => _SpendingRoseChartState();
@@ -84,143 +92,180 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
             ? entries[_selectedIndex!]
             : null;
 
-    return MoreCard(
-      padding: EdgeInsets.all(16.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '소비',
-            style: AppTextStyles.bodyMd.copyWith(
-              fontWeight: FontWeight.w700,
-              color: colors.textPrimary,
-            ),
-          ),
-          SizedBox(height: 16.h),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 340;
+        final hasSelection =
+            _selectedIndex != null && _selectedIndex! < entries.length;
+        final cardPadding = isCompact ? 14.w : 16.w;
+        final centerSpaceRadius = isCompact ? 48.w : 55.w;
+        final baseRadius = isCompact ? 28.w : 32.w;
+        final selectedRadius = isCompact ? 34.w : 38.w;
+        final titleFontSize = 11.sp;
+        final legendFontSize = hasSelection
+            ? (isCompact ? 8.sp : 9.sp)
+            : (isCompact ? 9.sp : 10.sp);
 
-          // Donut chart
-          SizedBox(
-            height: 220.h,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                PieChart(
-                  PieChartData(
-                    sectionsSpace: 2,
-                    centerSpaceRadius: 55.w,
-                    startDegreeOffset: -90,
-                    pieTouchData: PieTouchData(
-                      touchCallback: (event, response) {
-                        if (response == null ||
-                            response.touchedSection == null) {
-                          return;
-                        }
-                        if (event is FlTapUpEvent) {
-                          final idx =
-                              response.touchedSection!.touchedSectionIndex;
-                          if (idx >= 0 && idx < entries.length) {
-                            setState(() {
-                              _selectedIndex =
-                                  _selectedIndex == idx ? null : idx;
-                            });
-                          }
-                        }
-                      },
+        return MoreCard(
+          padding: EdgeInsets.all(cardPadding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.title,
+                          style: AppTextStyles.bodyMd.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                        if (widget.subtitle != null) ...[
+                          SizedBox(height: 4.h),
+                          Text(
+                            widget.subtitle!,
+                            style: AppTextStyles.caption.copyWith(
+                              color: colors.textTertiary,
+                              fontSize: titleFontSize,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    sections: entries.asMap().entries.map((e) {
-                      final idx = e.key;
-                      final entry = e.value;
-                      final isSelected = _selectedIndex == idx;
-                      return PieChartSectionData(
-                        value: entry.amount.toDouble(),
-                        color: entry.color,
-                        radius: isSelected ? 38.w : 32.w,
-                        title: '',
-                      );
-                    }).toList(),
                   ),
-                ),
-                // Center label
-                IgnorePointer(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        centerEntry?.name ?? '총 소비',
-                        style: AppTextStyles.caption.copyWith(
-                          color: colors.textTertiary,
-                          fontSize: 11.sp,
-                        ),
-                      ),
-                      SizedBox(height: 2.h),
-                      Text(
-                        CurrencyFormatter.formatCompact(
-                          centerEntry?.amount ?? total,
-                        ),
-                        style: AppTextStyles.headingMd.copyWith(
-                          color: colors.textPrimary,
-                          fontSize: 15.sp,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Selected category detail
-          if (_selectedIndex != null && _selectedIndex! < entries.length) ...[
-            SizedBox(height: 8.h),
-            _SelectedInfo(entry: entries[_selectedIndex!], total: total),
-          ],
-
-          SizedBox(height: 12.h),
-
-          // Legend
-          Center(
-            child: Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 14.w,
-              runSpacing: 6.h,
-              children: entries.map((e) {
-                final percent = total > 0
-                    ? (e.amount / total * 100).toStringAsFixed(0)
-                    : '0';
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
+                ],
+              ),
+              SizedBox(height: hasSelection ? 8.h : (isCompact ? 10.h : 14.h)),
+              Expanded(
+                child: Stack(
+                  alignment: Alignment.center,
                   children: [
-                    Container(
-                      width: 8.w,
-                      height: 8.w,
-                      decoration: BoxDecoration(
-                        color: e.color,
-                        shape: BoxShape.circle,
+                    PieChart(
+                      PieChartData(
+                        sectionsSpace: 2,
+                        centerSpaceRadius: centerSpaceRadius,
+                        startDegreeOffset: -90,
+                        pieTouchData: PieTouchData(
+                          touchCallback: (event, response) {
+                            if (response == null ||
+                                response.touchedSection == null) {
+                              return;
+                            }
+                            if (event is FlTapUpEvent) {
+                              final idx =
+                                  response.touchedSection!.touchedSectionIndex;
+                              if (idx >= 0 && idx < entries.length) {
+                                setState(() {
+                                  _selectedIndex =
+                                      _selectedIndex == idx ? null : idx;
+                                });
+                              }
+                            }
+                          },
+                        ),
+                        sections: entries.asMap().entries.map((e) {
+                          final idx = e.key;
+                          final entry = e.value;
+                          final isSelected = _selectedIndex == idx;
+                          return PieChartSectionData(
+                            value: entry.amount.toDouble(),
+                            color: entry.color,
+                            radius: isSelected ? selectedRadius : baseRadius,
+                            title: '',
+                          );
+                        }).toList(),
                       ),
                     ),
-                    SizedBox(width: 4.w),
-                    Text(
-                      '${e.name} $percent%',
-                      style: TextStyle(
-                        color: colors.textTertiary,
-                        fontSize: 10.sp,
+                    IgnorePointer(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            centerEntry?.name ?? '총 소비',
+                            style: AppTextStyles.caption.copyWith(
+                              color: colors.textTertiary,
+                              fontSize: titleFontSize,
+                            ),
+                          ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            CurrencyFormatter.formatCompact(
+                              centerEntry?.amount ?? total,
+                            ),
+                            style: AppTextStyles.headingMd.copyWith(
+                              color: colors.textPrimary,
+                              fontSize: isCompact ? 14.sp : 15.sp,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                );
-              }).toList(),
-            ),
+                ),
+              ),
+              if (_selectedIndex != null && _selectedIndex! < entries.length) ...[
+                SizedBox(height: isCompact ? 4.h : 6.h),
+                _SelectedInfo(
+                  entry: entries[_selectedIndex!],
+                  total: total,
+                  compact: isCompact,
+                ),
+              ],
+              SizedBox(height: hasSelection ? 4.h : (isCompact ? 8.h : 10.h)),
+              Center(
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: hasSelection ? (isCompact ? 8.w : 12.w) : (isCompact ? 10.w : 14.w),
+                  runSpacing: hasSelection ? 4.h : 6.h,
+                  children: entries.map((e) {
+                    final percent = total > 0
+                        ? (e.amount / total * 100).toStringAsFixed(0)
+                        : '0';
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8.w,
+                          height: 8.w,
+                          decoration: BoxDecoration(
+                            color: e.color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        SizedBox(width: 4.w),
+                        Text(
+                          '${e.name} $percent%',
+                          style: TextStyle(
+                            color: colors.textTertiary,
+                            fontSize: legendFontSize,
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
 class _SelectedInfo extends StatelessWidget {
-  const _SelectedInfo({required this.entry, required this.total});
+  const _SelectedInfo({
+    required this.entry,
+    required this.total,
+    required this.compact,
+  });
   final _DonutEntry entry;
   final int total;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -229,7 +274,10 @@ class _SelectedInfo extends StatelessWidget {
         ? (entry.amount / total * 100).toStringAsFixed(1)
         : '0';
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 10.w : 14.w,
+        vertical: compact ? 7.h : 9.h,
+      ),
       decoration: BoxDecoration(
         color: entry.color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10.r),
@@ -250,6 +298,7 @@ class _SelectedInfo extends StatelessWidget {
             style: AppTextStyles.bodySm.copyWith(
               fontWeight: FontWeight.w700,
               color: colors.textPrimary,
+              fontSize: compact ? 12.sp : null,
             ),
           ),
           const Spacer(),
@@ -257,7 +306,7 @@ class _SelectedInfo extends StatelessWidget {
             '$percent%',
             style: TextStyle(
               color: entry.color,
-              fontSize: 13.sp,
+              fontSize: compact ? 12.sp : 13.sp,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -267,6 +316,7 @@ class _SelectedInfo extends StatelessWidget {
             style: AppTextStyles.bodySm.copyWith(
               fontWeight: FontWeight.w600,
               color: colors.textPrimary,
+              fontSize: compact ? 11.sp : null,
             ),
           ),
         ],

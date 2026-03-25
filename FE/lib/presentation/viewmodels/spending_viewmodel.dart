@@ -112,6 +112,17 @@ class SpendingViewModel extends StateNotifier<SpendingState> {
 
   final SpendingRepository _repository;
 
+  DateTime get _currentWeekStart {
+    final now = DateTime.now();
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+    return DateTime(monday.year, monday.month, monday.day);
+  }
+
+  DateTime get _currentMonthStart {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, 1);
+  }
+
   Future<void> loadData() async {
     state = state.copyWith(isLoading: true, clearErrorMessage: true);
 
@@ -173,13 +184,21 @@ class SpendingViewModel extends StateNotifier<SpendingState> {
 
   void navigatePeriod(int delta) {
     if (state.isWeekly) {
+      final nextWeekStart = state.selectedWeekStart.add(Duration(days: 7 * delta));
+      if (nextWeekStart.isAfter(_currentWeekStart)) {
+        return;
+      }
       state = state.copyWith(
-        selectedWeekStart: state.selectedWeekStart.add(Duration(days: 7 * delta)),
+        selectedWeekStart: nextWeekStart,
       );
     } else {
       final current = state.selectedMonthStart;
+      final nextMonthStart = DateTime(current.year, current.month + delta, 1);
+      if (nextMonthStart.isAfter(_currentMonthStart)) {
+        return;
+      }
       state = state.copyWith(
-        selectedMonthStart: DateTime(current.year, current.month + delta, 1),
+        selectedMonthStart: nextMonthStart,
       );
     }
     _loadPeriodData();
