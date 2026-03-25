@@ -46,7 +46,7 @@ class _AccountManagePageState extends ConsumerState<AccountManagePage> {
             : () => context.pop(),
         skipText: widget.isOnboarding ? '건너뛰기' : null,
         onSkip: widget.isOnboarding ? () => context.go(AppRoutes.home) : null,
-        showNotification: !widget.isOnboarding,
+        showNotification: false,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 20.w),

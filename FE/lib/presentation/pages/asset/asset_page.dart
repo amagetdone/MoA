@@ -156,7 +156,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
         title: '',
         backgroundColor: const Color(0xFFFFCC91).withValues(alpha: 0.6),
         showBack: true,
-        showNotification: true,
+        showNotification: false,
       ),
       body: Stack(
         children: [

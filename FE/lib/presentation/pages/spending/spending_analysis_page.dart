@@ -201,6 +201,17 @@ String _monthDateRange(DateTime monthStart) {
   return '${fmt(monthStart)} ~ ${fmt(lastDay)}';
 }
 
+DateTime _currentWeekStart() {
+  final now = DateTime.now();
+  final monday = now.subtract(Duration(days: now.weekday - 1));
+  return DateTime(monday.year, monday.month, monday.day);
+}
+
+DateTime _currentMonthStart() {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, 1);
+}
+
 class _SpendingSummaryCard extends ConsumerWidget {
   final SpendingState state;
   const _SpendingSummaryCard({required this.state});
@@ -215,6 +226,9 @@ class _SpendingSummaryCard extends ConsumerWidget {
     final periodRange = state.isWeekly
         ? _weekDateRange(state.selectedWeekStart)
         : _monthDateRange(state.selectedMonthStart);
+    final canMoveNext = state.isWeekly
+        ? state.selectedWeekStart.isBefore(_currentWeekStart())
+        : state.selectedMonthStart.isBefore(_currentMonthStart());
 
     return MoreCard(
       padding: EdgeInsets.symmetric(vertical: 24.h, horizontal: 16.w),
@@ -251,8 +265,14 @@ class _SpendingSummaryCard extends ConsumerWidget {
                 ),
               ),
               IconButton(
-                onPressed: () => viewModel.navigatePeriod(1),
-                icon: const Icon(Icons.arrow_right, size: 32),
+                onPressed: canMoveNext ? () => viewModel.navigatePeriod(1) : null,
+                icon: Icon(
+                  Icons.arrow_right,
+                  size: 32,
+                  color: canMoveNext
+                      ? colors.textPrimary
+                      : colors.textTertiary.withValues(alpha: 0.35),
+                ),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),

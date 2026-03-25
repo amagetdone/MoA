@@ -10,7 +10,6 @@ import 'package:more_app/presentation/viewmodels/spending_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 import 'package:more_app/presentation/pages/spending/widgets/category_list.dart';
-import 'package:more_app/domain/entities/spending.dart';
 
 const _sectionColors = [
   Color(0xFFE57373),
@@ -45,7 +44,7 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
     if (patternState.isLoading) {
       return Scaffold(
         backgroundColor: colors.bgPrimary,
-        appBar: const MoreAppBar(title: '', showBack: true, showNotification: true),
+        appBar: const MoreAppBar(title: '', showBack: true, showNotification: false),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -63,7 +62,7 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
       appBar: const MoreAppBar(
         title: '',
         showBack: true,
-        showNotification: true,
+        showNotification: false,
       ),
       body: Scrollbar(
         thumbVisibility: false,
@@ -175,30 +174,7 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
                     ),
                     SizedBox(height: 24.h),
 
-                    // 인사이트 박스
-                    if (result.topCategoryName.isNotEmpty)
-                      Container(
-                        padding: EdgeInsets.all(16.w),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF6ED),
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.lightbulb_outline, color: AppColors.orange500, size: 20),
-                            SizedBox(width: 8.w),
-                            Text(
-                              '${result.topCategoryName} 절약이 필요해보여요.',
-                              style: AppTextStyles.bodySm.copyWith(
-                                color: AppColors.orange500,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14.sp,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    SizedBox(height: 32.h),
+                    SizedBox(height: 8.h),
 
                     // 카테고리별 지출
                     Column(

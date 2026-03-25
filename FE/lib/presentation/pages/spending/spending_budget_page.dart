@@ -25,15 +25,6 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
   bool _isFixedExpanded = false;
   bool _isVariableExpanded = false;
 
-  String _formatWithComma(String value) {
-    if (value.isEmpty) return '';
-    final number = int.tryParse(value.replaceAll(',', '')) ?? 0;
-    return number.toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]},',
-    );
-  }
-
   Future<void> _showEditBudgetDialog(int currentIncome) async {
     final newValue = await showDialog<int>(
       context: context,
@@ -62,7 +53,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
 
     return Scaffold(
       backgroundColor: colors.bgPrimary,
-      appBar: const MoreAppBar(title: '', showBack: true, showNotification: true),
+      appBar: const MoreAppBar(title: '', showBack: true, showNotification: false),
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(

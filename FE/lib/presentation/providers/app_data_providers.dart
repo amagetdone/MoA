@@ -51,7 +51,9 @@ final appLocalDataSourceProvider = Provider<AppLocalDataSource>((ref) {
 
 final apiClientProvider = Provider<ApiClient>((ref) {
   return ApiClient(
-    onForceLogout: () => appRouter.go(AppRoutes.login),
+    onForceLogout: () => appRouter.go(
+      AppRoutes.loginLocation(reason: AppRoutes.sessionExpiredReason),
+    ),
   );
 });
 

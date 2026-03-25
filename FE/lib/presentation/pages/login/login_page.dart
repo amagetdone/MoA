@@ -8,11 +8,14 @@ import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/web_window_focus_listener.dart';
+import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/navigation/auth_route_resolver.dart';
 import 'package:more_app/presentation/viewmodels/auth_viewmodel.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({super.key, this.reason});
+
+  final String? reason;
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -154,6 +157,28 @@ class _LoginPageState extends ConsumerState<LoginPage>
                   fontWeight: FontWeight.w700,
                 ),
               ),
+              if (widget.reason == AppRoutes.sessionExpiredReason) ...[
+                SizedBox(height: 16.h),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.red500.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(
+                      color: AppColors.red500.withValues(alpha: 0.18),
+                    ),
+                  ),
+                  child: Text(
+                    '다른 기기에서 로그인되어 세션이 종료되었습니다. 다시 로그인해주세요.',
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
               const Spacer(flex: 4),
               _SocialLoginButton(
                 onPressed:

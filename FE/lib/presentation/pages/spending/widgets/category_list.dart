@@ -4,7 +4,6 @@ import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:more_app/domain/entities/spending.dart';
-import 'package:more_app/presentation/utils/spending_ui_mapper.dart';
 import 'package:more_app/presentation/widgets/common/more_progress_bar.dart';
 
 class CategoryList extends StatefulWidget {
@@ -27,11 +26,22 @@ class _CategoryListState extends State<CategoryList> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final labelStyle = AppTextStyles.bodyMd.copyWith(
+      color: colors.textSecondary,
+      fontWeight: FontWeight.w600,
+      fontSize: 14.sp,
+    );
     // 금액 순 정렬
     final sortedCategories = [...widget.categories]
       ..sort((a, b) => b.amount.compareTo(a.amount));
-    
+
     final displayItems = _isExpanded ? sortedCategories : sortedCategories.take(3).toList();
+    final labelWidth = _measureLabelWidth(
+      context: context,
+      labels: sortedCategories.map((category) => category.name),
+      style: labelStyle,
+    );
+    final contentGap = 12.w;
 
     return Column(
       children: [
@@ -53,70 +63,68 @@ class _CategoryListState extends State<CategoryList> {
 
           return Padding(
             padding: EdgeInsets.only(bottom: 24.h),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. 카테고리명 (좌측 하단)
-                SizedBox(
-                  width: 55.w,
-                  child: Padding(
-                    padding: EdgeInsets.only(bottom: 4.h),
-                    child: Text(
-                      category.name,
-                      style: AppTextStyles.bodyMd.copyWith(
-                        color: colors.textSecondary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14.sp,
+                Padding(
+                  padding: EdgeInsets.only(left: labelWidth + contentGap),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          useTotalRatio
+                              ? '${CurrencyFormatter.formatKRW(category.amount)} / ${CurrencyFormatter.formatKRW(widget.totalAmount!)}'
+                              : CurrencyFormatter.formatKRW(category.amount),
+                          textAlign: TextAlign.end,
+                          style: AppTextStyles.caption.copyWith(
+                            color: colors.textSecondary,
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
-                    ),
+                      if (useTotalRatio) ...[
+                        SizedBox(width: 6.w),
+                        Text(
+                          '(${displayPercent.toStringAsFixed(1)}%)',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.orange500,
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-                SizedBox(width: 8.w),
-                // 2. 우측 금액 및 바 그래프
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Text(
-                            useTotalRatio
-                                ? '${CurrencyFormatter.formatKRW(category.amount)} / ${CurrencyFormatter.formatKRW(widget.totalAmount!)}'
-                                : CurrencyFormatter.formatKRW(category.amount),
-                            style: AppTextStyles.caption.copyWith(
-                              color: colors.textSecondary,
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          if (useTotalRatio) ...[
-                            SizedBox(width: 6.w),
-                            Text(
-                              '(${displayPercent.toStringAsFixed(1)}%)',
-                              style: AppTextStyles.caption.copyWith(
-                                color: AppColors.orange500,
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ],
+                SizedBox(height: 8.h),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: labelWidth,
+                      child: Text(
+                        category.name,
+                        textAlign: TextAlign.center,
+                        style: labelStyle,
                       ),
-                      SizedBox(height: 6.h),
-                      MoreProgressBar(
+                    ),
+                    SizedBox(width: contentGap),
+                    Expanded(
+                      child: MoreProgressBar(
                         progress: barRatio,
                         color: AppColors.orange500,
                         backgroundColor: colors.gray50,
                         height: 14.h,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ],
             ),
           );
-        }).toList(),
+        }),
 
         // 확장/축소 화살표
         if (widget.categories.length > 3)
@@ -130,5 +138,27 @@ class _CategoryListState extends State<CategoryList> {
           ),
       ],
     );
+  }
+
+  double _measureLabelWidth({
+    required BuildContext context,
+    required Iterable<String> labels,
+    required TextStyle style,
+  }) {
+    final textDirection = Directionality.of(context);
+    var maxWidth = 0.0;
+
+    for (final label in labels) {
+      final painter = TextPainter(
+        text: TextSpan(text: label, style: style),
+        textDirection: textDirection,
+        maxLines: 1,
+      )..layout();
+      if (painter.width > maxWidth) {
+        maxWidth = painter.width;
+      }
+    }
+
+    return maxWidth + 8.w;
   }
 }

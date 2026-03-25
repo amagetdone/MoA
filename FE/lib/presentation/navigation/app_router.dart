@@ -36,6 +36,7 @@ import 'package:more_app/presentation/pages/splash/splash_page.dart';
 abstract class AppRoutes {
   static const String splash = '/';
   static const String login = '/login';
+  static const String sessionExpiredReason = 'session-expired';
   static const String home = '/home';
   static const String goalTab = '/goal';
   static const String spendingTab = '/spending';
@@ -76,6 +77,8 @@ abstract class AppRoutes {
   static const String notifications = '/notifications';
 
   static String goalEditLocation(String goalId) => '$goalEdit?id=$goalId';
+  static String loginLocation({String? reason}) =>
+      reason == null ? login : '$login?reason=$reason';
   static String goalLoadingLocation(
     String goalId, {
     String source = 'create',
@@ -96,7 +99,12 @@ final appRouter = GoRouter(
   initialLocation: AppRoutes.splash,
   routes: [
     GoRoute(path: AppRoutes.splash, builder: (context, state) => const SplashPage()),
-    GoRoute(path: AppRoutes.login, builder: (context, state) => const LoginPage()),
+    GoRoute(
+      path: AppRoutes.login,
+      builder: (context, state) => LoginPage(
+        reason: state.uri.queryParameters['reason'],
+      ),
+    ),
     GoRoute(path: AppRoutes.onboarding, pageBuilder: (context, state) => _fadeTransitionPage(state, const OnboardingPage())),
     GoRoute(path: AppRoutes.onboardingProfile, pageBuilder: (context, state) => _fadeTransitionPage(state, const ProfileSetupPage(isOnboarding: true))),
     GoRoute(path: AppRoutes.onboardingAccount, pageBuilder: (context, state) => _fadeTransitionPage(state, const AccountManagePage(isOnboarding: true))),

@@ -11,6 +11,7 @@ class RealHomeRemoteDataSource implements HomeRemoteDataSource {
 
   @override
   Future<HomeDashboard> fetchHomeDashboard() async {
+    await _allocateBudgetIfNeeded();
     final response = await _dio.get('budgets/home');
     final data = response.data as Map<String, dynamic>? ?? {};
 
@@ -65,5 +66,9 @@ class RealHomeRemoteDataSource implements HomeRemoteDataSource {
           ((weeklySaving['remainingToTargetAmount'] as num?)?.toInt() ?? 0),
       savingProgressRate: (weeklySaving['progressRate'] as num?)?.toInt() ?? 0,
     );
+  }
+
+  Future<void> _allocateBudgetIfNeeded() async {
+    await _dio.post('budgets/allocate');
   }
 }

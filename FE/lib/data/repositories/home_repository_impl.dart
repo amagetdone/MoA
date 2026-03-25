@@ -19,17 +19,14 @@ class HomeRepositoryImpl implements HomeRepository {
     try {
       final dashboard = await _remoteDataSource.fetchHomeDashboard();
       final cachedGoals = await _localDataSource.getGoals();
-      final activeGoals =
-          cachedGoals
-              .where((goal) => goal.status == GoalStatus.inProgress)
-              .toList()
-            ..sort((a, b) => a.priority.compareTo(b.priority));
+      final activeGoals = _mergeCachedGoalDetails(
+        remoteGoals: dashboard.activeGoals,
+        cachedGoals: cachedGoals,
+      );
 
       return HomeDashboard(
         accounts: dashboard.accounts,
-        activeGoals: activeGoals.isNotEmpty
-            ? activeGoals
-            : dashboard.activeGoals,
+        activeGoals: activeGoals,
         totalAsset: dashboard.totalAsset,
         weeklyBudget: dashboard.weeklyBudget,
         weeklySpent: dashboard.weeklySpent,
@@ -41,27 +38,53 @@ class HomeRepositoryImpl implements HomeRepository {
         savingProgressRate: dashboard.savingProgressRate,
       );
     } catch (_) {
-      final snapshot = await _localDataSource.getCachedSnapshot();
-      final totalAsset = snapshot.accounts.fold(0, (sum, account) {
-        return sum + account.balance;
-      });
-      final activeGoals =
-          snapshot.goals
-              .where((goal) => goal.status == GoalStatus.inProgress)
-              .toList()
-            ..sort((a, b) => a.priority.compareTo(b.priority));
-
-      return HomeDashboard(
-        accounts: snapshot.accounts,
-        activeGoals: activeGoals,
-        totalAsset: totalAsset,
-        weeklyBudget: snapshot.spending.weeklyBudget,
-        weeklySpent: snapshot.spending.categories.fold(
-          0,
-          (sum, item) => sum + item.amount,
-        ),
-        weeklySaved: snapshot.spending.monthlySavingsGoal ~/ 4,
-      );
+      return const HomeDashboard();
     }
+  }
+
+  List<Goal> _mergeCachedGoalDetails({
+    required List<Goal> remoteGoals,
+    required List<Goal> cachedGoals,
+  }) {
+    if (remoteGoals.isEmpty) {
+      return const [];
+    }
+
+    final cachedById = {
+      for (final goal in cachedGoals.where(
+        (goal) => goal.status == GoalStatus.inProgress,
+      ))
+        goal.id: goal,
+    };
+
+    final mergedGoals = remoteGoals.map((goal) {
+      final cached = cachedById[goal.id];
+      if (cached == null) {
+        return goal;
+      }
+
+      var merged = goal.copyWith(
+        iconName: cached.iconName,
+        sketchVideoAssetPath: cached.sketchVideoAssetPath,
+        graphData: cached.graphData,
+        weeklyPlans: cached.weeklyPlans,
+        weeklyMission: cached.weeklyMission,
+        weeklyBudget: cached.weeklyBudget,
+        currentWeekOverride: cached.currentWeekOverride,
+        totalWeeksOverride: cached.totalWeeksOverride,
+        detailLoaded: cached.detailLoaded,
+        apiStatus: cached.apiStatus,
+        aiPipelineStatus: cached.aiPipelineStatus,
+      );
+
+      if (merged.isAiPending || merged.isAiFailed) {
+        merged = merged.copyWith(clearSketchVideoAssetPath: true);
+      }
+
+      return merged;
+    }).toList()
+      ..sort((a, b) => a.priority.compareTo(b.priority));
+
+    return mergedGoals;
   }
 }

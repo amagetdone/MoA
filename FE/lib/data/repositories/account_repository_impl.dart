@@ -20,18 +20,7 @@ class AccountRepositoryImpl implements AccountRepository {
     try {
       return await _remoteDataSource.fetchAccountDashboard();
     } catch (_) {
-      final snapshot = await _localDataSource.getCachedSnapshot();
-      final totalAsset = snapshot.accounts.fold(0, (sum, account) {
-        return sum + account.balance;
-      });
-
-      return AccountDashboard(
-        accounts: snapshot.accounts,
-        transactions: List<Transaction>.from(snapshot.transactions)
-          ..sort((a, b) => b.dateTime.compareTo(a.dateTime)),
-        bankNames: List<String>.from(snapshot.bankNames),
-        totalAsset: totalAsset,
-      );
+      return const AccountDashboard();
     }
   }
 
