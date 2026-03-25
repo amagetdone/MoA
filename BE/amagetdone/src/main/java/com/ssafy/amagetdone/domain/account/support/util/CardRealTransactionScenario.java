@@ -133,7 +133,7 @@ public class CardRealTransactionScenario {
 		dayIndex = addMonth(drafts, 2025, 12, 31, dayIndex);
 		dayIndex = addMonth(drafts, 2026, 1, 31, dayIndex);
 		dayIndex = addMonth(drafts, 2026, 2, 28, dayIndex);
-		addMonth(drafts, 2026, 3, 20, dayIndex);
+		addMonth(drafts, 2026, 3, 25, dayIndex);
 		drafts.sort(Comparator.comparing(SeedDraft::transactionDateTime));
 
 		Map<String, Integer> daySequence = new HashMap<>();
@@ -200,32 +200,42 @@ public class CardRealTransactionScenario {
 	}
 
 	private static SeedDraft daytimeVariationDraft(LocalDate date, int dayIndex) {
-		return switch (dayIndex % 4) {
+		return switch (dayIndex % 5) {
 			case 0 -> draft(date, 16, 5 + (dayIndex % 25), pick(CAFE_MERCHANTS, dayIndex, 3, 0),
 				PURCHASED_STATUS, NORMAL_STATUS, 250L * (dayIndex % 4));
-			case 1 -> draft(date, 16, 12 + (dayIndex % 25), pick(SHOPPING_MERCHANTS, dayIndex, 4, 2),
-				PURCHASED_STATUS, NORMAL_STATUS, 700L * (dayIndex % 5));
-			case 2 -> draft(date, 16, 18 + (dayIndex % 25), pick(LIFE_MERCHANTS, dayIndex, 2, 4),
-				PURCHASED_STATUS, NORMAL_STATUS, 500L * (dayIndex % 3));
-			default -> draft(date, 16, 25 + (dayIndex % 20), pick(CAFE_MERCHANTS, dayIndex, 5, 6),
+			case 1 -> draft(date, 16, 12 + (dayIndex % 25), pick(CAFE_MERCHANTS, dayIndex, 5, 6),
 				PURCHASED_STATUS, NORMAL_STATUS, 300L * (dayIndex % 4));
+			case 2 -> draft(date, 17, 0 + (dayIndex % 20), pick(TRANSPORT_MERCHANTS, dayIndex, 4, 1),
+				PURCHASED_STATUS, NORMAL_STATUS, 200L * (dayIndex % 3));
+			case 3 -> draft(date, 17, 10 + (dayIndex % 20), pick(FOOD_MERCHANTS, dayIndex, 9, 3),
+				PURCHASED_STATUS, NORMAL_STATUS, 500L * (dayIndex % 4));
+			default -> draft(date, 16, 18 + (dayIndex % 25), pick(SHOPPING_MERCHANTS, dayIndex, 4, 2),
+				PURCHASED_STATUS, NORMAL_STATUS, 700L * (dayIndex % 4));
 		};
 	}
 
 	private static SeedDraft nightVariationDraft(LocalDate date, int dayIndex) {
-		return switch (dayIndex % 6) {
+		return switch (dayIndex % 10) {
 			case 0 -> draft(date, 19, 5 + (dayIndex % 30), pick(FOOD_MERCHANTS, dayIndex, 11, 5),
 				PURCHASED_STATUS, NORMAL_STATUS, 600L * (dayIndex % 5));
-			case 1 -> draft(date, 19, 15 + (dayIndex % 25), pick(SHOPPING_MERCHANTS, dayIndex, 6, 1),
-				PURCHASED_STATUS, NORMAL_STATUS, 900L * (dayIndex % 4));
-			case 2 -> draft(date, 20, 10 + (dayIndex % 20), pick(ONLINE_MERCHANTS, dayIndex, 3, 2),
-				PURCHASED_STATUS, NORMAL_STATUS, 500L * (dayIndex % 6));
-			case 3 -> draft(date, 19, 35 + (dayIndex % 20), pick(CAFE_MERCHANTS, dayIndex, 7, 4),
+			case 1 -> draft(date, 19, 15 + (dayIndex % 25), pick(TRANSPORT_MERCHANTS, dayIndex, 5, 2),
+				PURCHASED_STATUS, NORMAL_STATUS, 350L * (dayIndex % 3));
+			case 2 -> draft(date, 19, 25 + (dayIndex % 20), pick(CAFE_MERCHANTS, dayIndex, 7, 4),
 				PURCHASED_STATUS, NORMAL_STATUS, 200L * (dayIndex % 5));
-			case 4 -> draft(date, 20, 5 + (dayIndex % 20), pick(LIFE_MERCHANTS, dayIndex, 4, 1),
-				PURCHASED_STATUS, NORMAL_STATUS, 800L * (dayIndex % 4));
-			default -> draft(date, 20, 20 + (dayIndex % 20), pick(ONLINE_MERCHANTS, dayIndex, 5, 7),
-				PENDING_STATUS, dayIndex % 23 == 0 ? CANCELED_STATUS : NORMAL_STATUS, 400L * (dayIndex % 5));
+			case 3 -> draft(date, 19, 35 + (dayIndex % 20), pick(FOOD_MERCHANTS, dayIndex, 13, 7),
+				PURCHASED_STATUS, NORMAL_STATUS, 700L * (dayIndex % 4));
+			case 4 -> draft(date, 20, 10 + (dayIndex % 20), pick(ONLINE_MERCHANTS, dayIndex, 3, 2),
+				PENDING_STATUS, NORMAL_STATUS, 400L * (dayIndex % 4));
+			case 5 -> draft(date, 20, 0 + (dayIndex % 20), pick(FOOD_MERCHANTS, dayIndex, 15, 1),
+				PURCHASED_STATUS, NORMAL_STATUS, 600L * (dayIndex % 5));
+			case 6 -> draft(date, 20, 5 + (dayIndex % 20), pick(LIFE_MERCHANTS, dayIndex, 4, 1),
+				PURCHASED_STATUS, NORMAL_STATUS, 500L * (dayIndex % 3));
+			case 7 -> draft(date, 20, 12 + (dayIndex % 20), pick(TRANSPORT_MERCHANTS, dayIndex, 6, 3),
+				PURCHASED_STATUS, NORMAL_STATUS, 250L * (dayIndex % 3));
+			case 8 -> draft(date, 20, 20 + (dayIndex % 20), pick(FOOD_MERCHANTS, dayIndex, 17, 9),
+				PURCHASED_STATUS, NORMAL_STATUS, 500L * (dayIndex % 4));
+			default -> draft(date, 20, 28 + (dayIndex % 20), pick(SHOPPING_MERCHANTS, dayIndex, 6, 1),
+				PURCHASED_STATUS, dayIndex % 23 == 0 ? CANCELED_STATUS : NORMAL_STATUS, 800L * (dayIndex % 3));
 		};
 	}
 

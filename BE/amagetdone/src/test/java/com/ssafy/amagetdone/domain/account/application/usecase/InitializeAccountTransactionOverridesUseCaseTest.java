@@ -85,7 +85,7 @@ class InitializeAccountTransactionOverridesUseCaseTest {
 		assertThat(response.targetType()).isEqualTo("account");
 		assertThat(response.targetNo()).isEqualTo("0012345678901234");
 		assertThat(response.transactionCount()).isEqualTo(captor.getValue().size());
-		assertThat(captor.getValue().size()).isGreaterThanOrEqualTo(70);
+		assertThat(captor.getValue().size()).isGreaterThanOrEqualTo(75);
 		assertThat(captor.getValue())
 			.extracting(AccountTransactionOverride::getTransactionDateTime)
 			.map(YearMonth::from)
@@ -93,9 +93,9 @@ class InitializeAccountTransactionOverridesUseCaseTest {
 		assertThat(captor.getValue())
 			.extracting(AccountTransactionOverride::getTransactionDateTime)
 			.map(dateTime -> dateTime.toLocalDate())
-			.contains(LocalDate.of(2026, 3, 20));
-		assertThat(countTransferLikeTransactions(captor.getValue())).isGreaterThanOrEqualTo(35);
-		assertThat(countDirectSpendingLikeTransactions(captor.getValue())).isLessThanOrEqualTo(12);
+			.contains(LocalDate.of(2026, 3, 25));
+		assertThat(countTransferLikeTransactions(captor.getValue())).isGreaterThanOrEqualTo(40);
+		assertThat(countDirectSpendingLikeTransactions(captor.getValue())).isLessThanOrEqualTo(4);
 	}
 
 	@Test
@@ -147,7 +147,7 @@ class InitializeAccountTransactionOverridesUseCaseTest {
 		ArgumentCaptor<List<String>> captor = listCaptor();
 		verify(transactionCategoryAssignmentService).assignCategories(captor.capture());
 		assertThat(captor.getValue())
-			.anyMatch(text -> text.contains("카드결제") || text.contains("삼성월렛") || text.contains("네이버페이"));
+			.anyMatch(text -> text.contains("하나카드결제") || text.contains("삼성페이") || text.contains("네이버페이"));
 		assertThat(captor.getValue()).doesNotContain("생활비계좌");
 	}
 
@@ -161,16 +161,12 @@ class InitializeAccountTransactionOverridesUseCaseTest {
 			.map(transaction -> transaction.getTransactionSummary() + " " + transaction.getTransactionMemo())
 			.filter(text -> text.contains("버거")
 				|| text.contains("김밥")
-				|| text.contains("마라")
-				|| text.contains("우동")
 				|| text.contains("카페")
 				|| text.contains("택시")
 				|| text.contains("버스")
 				|| text.contains("지하철")
 				|| text.contains("편의점")
-				|| text.contains("맘스터치")
-				|| text.contains("한솥")
-				|| text.contains("우아한형제들"))
+				|| text.contains("식당"))
 			.count();
 	}
 
@@ -179,24 +175,17 @@ class InitializeAccountTransactionOverridesUseCaseTest {
 			.map(transaction -> transaction.getTransactionSummary() + " " + transaction.getTransactionMemo())
 			.filter(text -> text.contains("급여")
 				|| text.contains("지원금")
-				|| text.contains("용돈")
+				|| text.contains("정산")
 				|| text.contains("송금")
 				|| text.contains("이체")
 				|| text.contains("카드결제")
-				|| text.contains("삼성월렛")
+				|| text.contains("삼성페이")
 				|| text.contains("네이버페이")
-				|| text.contains("토스페이")
+				|| text.contains("토스")
 				|| text.contains("카카오페이")
-				|| text.contains("환급")
-				|| text.contains("장학")
-				|| text.contains("펌뱅킹")
-				|| text.contains("오픈뱅킹")
-				|| text.contains("자금결제부")
-				|| text.matches(".*김\\d\\d.*")
-				|| text.matches(".*정\\d\\d.*")
-				|| text.matches(".*하\\d\\d.*")
-				|| text.matches(".*서\\d\\d.*")
-				|| text.matches(".*오\\d\\d.*"))
+				|| text.contains("적금")
+				|| text.contains("장학금")
+				|| text.matches(".*[김이박장정]\\d\\d.*"))
 			.count();
 	}
 }
