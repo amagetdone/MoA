@@ -104,11 +104,6 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
                       ],
                     ),
                   ),
-                  Icon(
-                    Icons.notifications_outlined,
-                    size: 24.r,
-                    color: colors.textPrimary,
-                  ),
                 ],
               ),
             ),

@@ -26,7 +26,7 @@ class AssetDetailPage extends StatelessWidget {
       appBar: const MoreAppBar(
         title: '',
         showBack: true,
-        showNotification: true,
+        showNotification: false,
       ),
       body: Column(
         children: [
