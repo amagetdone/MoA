@@ -25,7 +25,7 @@ class _FakeChatbotService:
         )
         return {
             "conversation_id": conversation_id or "generated-id",
-            "answer": "이번 주 자유예산은 12000원 남아 있어요.",
+            "answer": "Weekly budget is healthy.",
             "warnings": [],
             "tool_summaries": [],
         }
@@ -43,20 +43,20 @@ def test_chatbot_message_endpoint_returns_json_response() -> None:
         response = client.post(
             "/v1/chatbot/messages",
             headers={"X-User-Id": "7"},
-            json={"message": "이번 주 예산 괜찮아?"},
+            json={"message": "Is my budget okay this week?"},
         )
 
     assert response.status_code == 200
     assert response.json() == {
         "conversation_id": "generated-id",
-        "answer": "이번 주 자유예산은 12000원 남아 있어요.",
+        "answer": "Weekly budget is healthy.",
         "warnings": [],
         "tool_summaries": [],
     }
     assert service.reply_calls == [
         {
             "user_id": 7,
-            "message": "이번 주 예산 괜찮아?",
+            "message": "Is my budget okay this week?",
             "conversation_id": None,
         }
     ]
@@ -72,7 +72,7 @@ def test_chatbot_message_endpoint_requires_user_id_header() -> None:
     with TestClient(app) as client:
         response = client.post(
             "/v1/chatbot/messages",
-            json={"message": "이번 주 예산 괜찮아?"},
+            json={"message": "Is my budget okay this week?"},
         )
 
     assert response.status_code == 422
@@ -108,7 +108,7 @@ def test_chatbot_message_endpoint_preserves_provided_conversation_id() -> None:
             "/v1/chatbot/messages",
             headers={"X-User-Id": "7"},
             json={
-                "message": "이번 주 예산 괜찮아?",
+                "message": "Is my budget okay this week?",
                 "conversation_id": "conv-1",
             },
         )
@@ -118,7 +118,68 @@ def test_chatbot_message_endpoint_preserves_provided_conversation_id() -> None:
     assert service.reply_calls == [
         {
             "user_id": 7,
-            "message": "이번 주 예산 괜찮아?",
+            "message": "Is my budget okay this week?",
             "conversation_id": "conv-1",
         }
     ]
+
+
+def test_chatbot_message_endpoint_rejects_blank_conversation_id() -> None:
+    app = create_app(
+        classifier=object(),
+        image_generation_service=object(),
+        chatbot_service=_FakeChatbotService(),
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/v1/chatbot/messages",
+            headers={"X-User-Id": "7"},
+            json={"message": "Hello", "conversation_id": "   "},
+        )
+
+    assert response.status_code == 422
+
+
+def test_chatbot_service_aclose_is_called_when_app_shuts_down() -> None:
+    class _ClosableChatbotService(_FakeChatbotService):
+        def __init__(self) -> None:
+            super().__init__()
+            self.aclose_calls = 0
+
+        async def aclose(self) -> None:
+            self.aclose_calls += 1
+
+    service = _ClosableChatbotService()
+    app = create_app(
+        classifier=object(),
+        image_generation_service=object(),
+        chatbot_service=service,
+    )
+
+    with TestClient(app):
+        pass
+
+    assert service.aclose_calls == 1
+
+
+def test_chatbot_service_close_is_called_when_app_shuts_down() -> None:
+    class _ClosableChatbotService(_FakeChatbotService):
+        def __init__(self) -> None:
+            super().__init__()
+            self.close_calls = 0
+
+        def close(self) -> None:
+            self.close_calls += 1
+
+    service = _ClosableChatbotService()
+    app = create_app(
+        classifier=object(),
+        image_generation_service=object(),
+        chatbot_service=service,
+    )
+
+    with TestClient(app):
+        pass
+
+    assert service.close_calls == 1

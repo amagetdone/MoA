@@ -14,6 +14,15 @@ class ChatbotMessageRequest(BaseModel):
             raise ValueError("message must not be blank")
         return value
 
+    @field_validator("conversation_id")
+    @classmethod
+    def validate_conversation_id(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if value.strip() == "":
+            raise ValueError("conversation_id must not be blank")
+        return value
+
 
 class ChatbotToolSummary(BaseModel):
     tool_name: str

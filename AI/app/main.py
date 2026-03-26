@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import inspect
 from typing import Callable, Any
 
 from fastapi import FastAPI
@@ -51,9 +52,9 @@ def create_app(
                 "image_generation_service",
                 None,
             )
-            close = getattr(image_generation_service, "aclose", None)
-            if callable(close):
-                await close()
+            await _close_service(image_generation_service)
+            chatbot_service = getattr(app.state, "chatbot_service", None)
+            await _close_service(chatbot_service)
 
     app = FastAPI(lifespan=lifespan, root_path=settings.api_root_path)
     app.state.classifier = classifier
@@ -73,3 +74,21 @@ def create_app(
 
 
 app = create_app()
+
+
+async def _close_service(service: Any) -> None:
+    if service is None:
+        return
+
+    close = getattr(service, "aclose", None)
+    if callable(close):
+        result = close()
+        if inspect.isawaitable(result):
+            await result
+        return
+
+    close = getattr(service, "close", None)
+    if callable(close):
+        result = close()
+        if inspect.isawaitable(result):
+            await result
