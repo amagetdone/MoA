@@ -13,10 +13,13 @@ import com.ssafy.amagetdone.domain.notification.application.event.TransactionSyn
 import com.ssafy.amagetdone.domain.notification.model.entity.DeviceToken;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 @ConditionalOnBean(FirebaseMessaging.class)
 public class FcmPushNotificationService implements PushNotificationService {
 
@@ -37,11 +40,36 @@ public class FcmPushNotificationService implements PushNotificationService {
 					.build())
 				.putAllData(buildData(event))
 				.build());
+			log.info(
+				"FCM transaction push sent. userId={}, deviceTokenId={}, platform={}, tokenSuffix={}, transactionId={}",
+				event.userId(),
+				deviceToken.getId(),
+				deviceToken.getPlatform(),
+				maskTokenSuffix(deviceToken.getFcmToken()),
+				event.transactionId()
+			);
 			return SendResult.SENT;
 		} catch (FirebaseMessagingException exception) {
 			if (isInvalidToken(exception.getMessagingErrorCode())) {
+				log.warn(
+					"FCM transaction push returned invalid token. userId={}, deviceTokenId={}, platform={}, tokenSuffix={}, errorCode={}",
+					event.userId(),
+					deviceToken.getId(),
+					deviceToken.getPlatform(),
+					maskTokenSuffix(deviceToken.getFcmToken()),
+					exception.getMessagingErrorCode()
+				);
 				return SendResult.INVALID_TOKEN;
 			}
+			log.error(
+				"FCM transaction push failed. userId={}, deviceTokenId={}, platform={}, tokenSuffix={}, errorCode={}",
+				event.userId(),
+				deviceToken.getId(),
+				deviceToken.getPlatform(),
+				maskTokenSuffix(deviceToken.getFcmToken()),
+				exception.getMessagingErrorCode(),
+				exception
+			);
 			return SendResult.FAILED;
 		}
 	}
@@ -57,11 +85,39 @@ public class FcmPushNotificationService implements PushNotificationService {
 					.build())
 				.putAllData(buildPlanAiData(event))
 				.build());
+			log.info(
+				"FCM plan AI push sent. userId={}, planId={}, deviceTokenId={}, platform={}, tokenSuffix={}, aiPipelineStatus={}",
+				event.userId(),
+				event.planId(),
+				deviceToken.getId(),
+				deviceToken.getPlatform(),
+				maskTokenSuffix(deviceToken.getFcmToken()),
+				event.aiPipelineStatus()
+			);
 			return SendResult.SENT;
 		} catch (FirebaseMessagingException exception) {
 			if (isInvalidToken(exception.getMessagingErrorCode())) {
+				log.warn(
+					"FCM plan AI push returned invalid token. userId={}, planId={}, deviceTokenId={}, platform={}, tokenSuffix={}, errorCode={}",
+					event.userId(),
+					event.planId(),
+					deviceToken.getId(),
+					deviceToken.getPlatform(),
+					maskTokenSuffix(deviceToken.getFcmToken()),
+					exception.getMessagingErrorCode()
+				);
 				return SendResult.INVALID_TOKEN;
 			}
+			log.error(
+				"FCM plan AI push failed. userId={}, planId={}, deviceTokenId={}, platform={}, tokenSuffix={}, errorCode={}",
+				event.userId(),
+				event.planId(),
+				deviceToken.getId(),
+				deviceToken.getPlatform(),
+				maskTokenSuffix(deviceToken.getFcmToken()),
+				exception.getMessagingErrorCode(),
+				exception
+			);
 			return SendResult.FAILED;
 		}
 	}
@@ -112,5 +168,13 @@ public class FcmPushNotificationService implements PushNotificationService {
 
 	private boolean isInvalidToken(MessagingErrorCode errorCode) {
 		return errorCode == MessagingErrorCode.UNREGISTERED || errorCode == MessagingErrorCode.INVALID_ARGUMENT;
+	}
+
+	private String maskTokenSuffix(String token) {
+		if (token == null || token.isBlank()) {
+			return "empty";
+		}
+		int length = token.length();
+		return length <= 8 ? token : token.substring(length - 8);
 	}
 }

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 
 import java.time.Clock;
@@ -47,9 +48,16 @@ class DeviceTokenServiceTest {
 	@Test
 	void upsertCreatesNewTokenWhenInstallationIsUnknown() {
 		User user = User.createPendingSocialUser();
+		DeviceToken savedToken = instantiateDeviceToken();
+		ReflectionTestUtils.setField(savedToken, "id", 101);
+		ReflectionTestUtils.setField(savedToken, "installationId", "install-1");
+		ReflectionTestUtils.setField(savedToken, "fcmToken", "token-1");
+		ReflectionTestUtils.setField(savedToken, "platform", DevicePlatform.ANDROID);
+		ReflectionTestUtils.setField(savedToken, "enabled", true);
 		given(entityManager.getReference(User.class, 1)).willReturn(user);
 		given(deviceTokenRepository.findByUser_IdAndInstallationIdAndDeletedFalse(1, "install-1"))
 			.willReturn(Optional.empty());
+		given(deviceTokenRepository.save(any(DeviceToken.class))).willReturn(savedToken);
 
 		deviceTokenService.upsert(1, "install-1", "token-1", DevicePlatform.ANDROID);
 

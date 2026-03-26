@@ -4,11 +4,14 @@ import com.ssafy.amagetdone.domain.notification.application.event.TransactionSyn
 import com.ssafy.amagetdone.domain.notification.application.service.DeviceTokenService;
 import com.ssafy.amagetdone.domain.notification.application.service.PushNotificationService;
 
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 @Component
+@Slf4j
 public class TransactionNotificationListener {
 
 	private final DeviceTokenService deviceTokenService;
@@ -24,10 +27,24 @@ public class TransactionNotificationListener {
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handleTransactionSynced(TransactionSyncedEvent event) {
+		log.info(
+			"Handling transaction synced event. userId={}, sourceType={}, transactionId={}, amount={}",
+			event.userId(),
+			event.sourceType(),
+			event.transactionId(),
+			event.amount()
+		);
 		deviceTokenService.findLatestActiveToken(event.userId())
 			.ifPresent(deviceToken -> {
 				PushNotificationService.SendResult result =
 					pushNotificationService.sendTransactionNotification(deviceToken, event);
+				log.info(
+					"Transaction push result. userId={}, deviceTokenId={}, platform={}, result={}",
+					event.userId(),
+					deviceToken.getId(),
+					deviceToken.getPlatform(),
+					result
+				);
 				if (result == PushNotificationService.SendResult.INVALID_TOKEN && deviceToken.getId() != null) {
 					deviceTokenService.disable(deviceToken.getId());
 				}
