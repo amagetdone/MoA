@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
@@ -38,7 +38,8 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
   final FocusNode _emailFocusNode = FocusNode();
   String? _selectedIncome;
   bool _isSubmitting = false;
-  File? _selectedImage;
+  Uint8List? _selectedImageBytes;
+  String? _selectedImageName;
   String? _existingImageUrl;
   bool _useDefaultImage = false;
 
@@ -86,20 +87,31 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
       imageQuality: 80,
     );
     if (picked != null) {
+      final bytes = await picked.readAsBytes();
       setState(() {
-        _selectedImage = File(picked.path);
+        _selectedImageBytes = bytes;
+        _selectedImageName = _resolvePickedImageName(picked);
         _useDefaultImage = false;
       });
     }
   }
 
+  String _resolvePickedImageName(XFile picked) {
+    final segments = picked.path.split(RegExp(r'[\\/]'));
+    final fileName = segments.isNotEmpty ? segments.last : '';
+    if (fileName.isNotEmpty) {
+      return fileName;
+    }
+    return 'profile_image.jpg';
+  }
+
   Future<void> _uploadProfileImage() async {
     final dio = ref.read(apiClientProvider).dio;
     final MultipartFile imageFile;
-    if (_selectedImage != null) {
-      imageFile = await MultipartFile.fromFile(
-        _selectedImage!.path,
-        filename: _selectedImage!.path.split('/').last,
+    if (_selectedImageBytes != null) {
+      imageFile = MultipartFile.fromBytes(
+        _selectedImageBytes!,
+        filename: _selectedImageName ?? 'profile_image.jpg',
       );
     } else {
       final byteData = await DefaultAssetBundle.of(context).load('assets/images/default_profile.png');
@@ -112,7 +124,6 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
     await dio.patch(
       'v1/members/me/profile-image',
       data: formData,
-      options: Options(contentType: 'multipart/form-data'),
     );
   }
 
@@ -199,7 +210,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
         },
       );
 
-      if (_selectedImage != null || _useDefaultImage) {
+      if (_selectedImageBytes != null || _useDefaultImage) {
         await _uploadProfileImage();
       }
 
@@ -225,15 +236,15 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
 
   Future<void> _pickBirthDate() async {
     final now = DateTime.now();
-    int selectedYear = 2000;
-    int selectedMonth = 1;
-    int selectedDay = 17;
+    int selectedYear = now.year;
+    int selectedMonth = now.month;
+    int selectedDay = now.day;
 
     // 기존 값이 있으면 파싱
     if (_birthDateController.text.isNotEmpty) {
       final parts = _birthDateController.text.split('.');
       if (parts.length == 3) {
-        selectedYear = int.tryParse(parts[0]) ?? 2000;
+        selectedYear = int.tryParse(parts[0]) ?? now.year;
         selectedMonth = int.tryParse(parts[1]) ?? 1;
         selectedDay = int.tryParse(parts[2]) ?? 1;
       }
@@ -258,7 +269,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
     int monthIndex = selectedMonth - 1;
     int dayIndex = selectedDay - 1;
     int yearIndex = years.indexOf(selectedYear);
-    if (yearIndex < 0) yearIndex = years.indexOf(2000);
+    if (yearIndex < 0) yearIndex = years.indexOf(now.year);
 
     final monthController = FixedExtentScrollController(
       initialItem: monthIndex,
@@ -452,9 +463,9 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                       decoration: BoxDecoration(
                         color: colors.gray100,
                         borderRadius: BorderRadius.circular(16.r),
-                        image: _selectedImage != null
+                        image: _selectedImageBytes != null
                             ? DecorationImage(
-                                image: FileImage(_selectedImage!),
+                                image: MemoryImage(_selectedImageBytes!),
                                 fit: BoxFit.cover,
                               )
                             : _useDefaultImage
@@ -469,7 +480,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                                       )
                                     : null,
                       ),
-                      child: _selectedImage == null && !_useDefaultImage && _existingImageUrl == null
+                      child: _selectedImageBytes == null && !_useDefaultImage && _existingImageUrl == null
                           ? Icon(
                               Icons.camera_alt_outlined,
                               size: 32.w,
@@ -488,7 +499,8 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                     GestureDetector(
                       onTap: () {
                         setState(() {
-                          _selectedImage = null;
+                          _selectedImageBytes = null;
+                          _selectedImageName = null;
                           _existingImageUrl = null;
                           _useDefaultImage = true;
                         });
@@ -547,10 +559,13 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                   }
                 },
                 errorText: _birthDateError,
-                suffixIcon: Icon(
-                  Icons.calendar_today,
-                  size: 20.w,
-                  color: colors.textTertiary,
+                suffixIcon: Padding(
+                  padding: EdgeInsets.only(right: 12.w),
+                  child: Icon(
+                    Icons.calendar_today,
+                    size: 20.w,
+                    color: colors.textTertiary,
+                  ),
                 ),
               ),
               SizedBox(height: 24.h),
