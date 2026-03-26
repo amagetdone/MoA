@@ -27,6 +27,7 @@ def build_chat_model(
         "api_key": settings.ai_api_key,
         "base_url": settings.openai_base_url,
         "streaming": True,
+        "disable_streaming": "tool_calling",
     }
     if callbacks:
         kwargs["callbacks"] = callbacks

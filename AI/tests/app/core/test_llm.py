@@ -64,6 +64,7 @@ def test_build_chat_model_attaches_langfuse_callbacks_when_configured(
     assert captured["api_key"] == "relay-key"
     assert captured["base_url"] == "https://example.com/v1"
     assert captured["streaming"] is True
+    assert captured["disable_streaming"] == "tool_calling"
     assert "callbacks" in captured
     assert len(captured["callbacks"]) == 1
     assert callback_calls == [{"public_key": "public-key"}]
@@ -102,4 +103,5 @@ def test_build_chat_model_omits_langfuse_callbacks_when_unconfigured(
 
     assert isinstance(model, _FakeChatOpenAI)
     assert captured["model"] == "gpt-4.1-mini"
+    assert captured["disable_streaming"] == "tool_calling"
     assert "callbacks" not in captured
