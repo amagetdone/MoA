@@ -98,20 +98,32 @@ class _GoalLoadingPageState extends ConsumerState<GoalLoadingPage>
     }
   }
 
-  Future<void> _enableNotifications() async {
-    await ref.read(menuViewModelProvider.notifier).toggleNotification(true);
+  Future<void> _enableNotificationsAndBrowse() async {
+    final menuNotifier = ref.read(menuViewModelProvider.notifier);
+    var currentMenuState = ref.read(menuViewModelProvider);
+
+    if (!currentMenuState.notificationEnabled) {
+      await menuNotifier.toggleNotification(true);
+      if (!mounted) {
+        return;
+      }
+      currentMenuState = ref.read(menuViewModelProvider);
+      if (!currentMenuState.notificationEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              currentMenuState.errorMessage ?? '알림 권한을 확인해주세요.',
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
     if (!mounted) {
       return;
     }
-
-    final menuState = ref.read(menuViewModelProvider);
-    final message = menuState.notificationEnabled
-        ? '이미지가 완성되면 알림으로 알려드릴게요.'
-        : (menuState.errorMessage ?? '알림 권한을 확인해주세요.');
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    context.go(AppRoutes.goalTab);
   }
 
   Future<void> _retryGeneration() async {
@@ -150,8 +162,6 @@ class _GoalLoadingPageState extends ConsumerState<GoalLoadingPage>
     final goal = goalState.findGoalById(widget.goalId);
     final isFailed = goal?.isAiFailed ?? false;
     final isPending = goal == null || goal.isAiPending || _isCheckingStatus;
-    final notificationEnabled =
-        !menuState.isLoading && menuState.notificationEnabled;
     final goalName = goal?.name ?? '목표';
     final isEditFlow = widget.source == 'edit';
     final titleText = isFailed
@@ -161,14 +171,10 @@ class _GoalLoadingPageState extends ConsumerState<GoalLoadingPage>
         ? (isEditFlow
             ? '변경된 목표로 이미지를 다시 만드는 중 문제가 생겼어요.\n다시 시도하거나 나중에 확인해주세요.'
             : 'AI가 이미지를 만드는 중 문제가 생겼어요.\n다시 시도하거나 나중에 확인해주세요.')
-        : (isEditFlow
-            ? '변경된 목표로 이미지를 다시 생성하고 있어요.\n완성되면 새 이미지로 보여드릴게요.'
-            : 'AI가 목표 이미지를 생성하고 있어요.\n완성되면 자동으로 보여드릴게요.');
+        : 'AI가 목표 이미지를 생성하고 있어요.\n완성되면 바로 보여드릴게요.';
     final secondaryMessage = isFailed
         ? '알림을 켜 두면 재시도 후 완료될 때 바로 확인할 수 있어요.'
-        : (isEditFlow
-            ? '지금 기다리거나, 알림을 켜 두고 새 이미지가 완성되면 다시 확인할 수 있어요.'
-            : '지금 기다리거나, 알림을 켜 두고 나중에 다시 확인할 수 있어요.');
+        : '현재 화면에서 기다리거나, 나중에 다시 확인할 수 있어요.';
 
     return PopScope(
       canPop: false,
@@ -251,62 +257,20 @@ class _GoalLoadingPageState extends ConsumerState<GoalLoadingPage>
                           ),
                         ),
                         SizedBox(height: 24.h),
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 220),
-                          child: isFailed
-                              ? FilledButton.icon(
-                                  key: const ValueKey('retry'),
-                                  onPressed: _isRetrying
-                                      ? null
-                                      : _retryGeneration,
-                                  icon: const Icon(Icons.refresh_rounded),
-                                  label: Text(_isRetrying ? '요청 중...' : '다시 생성하기'),
-                                )
-                              : notificationEnabled
-                                  ? Container(
-                                      key: const ValueKey('notify-enabled'),
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 14.w,
-                                        vertical: 12.h,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.orange500.withValues(
-                                          alpha: 0.08,
-                                        ),
-                                        borderRadius: BorderRadius.circular(16.r),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.notifications_active_outlined,
-                                            size: 18.w,
-                                            color: AppColors.orange500,
-                                          ),
-                                          SizedBox(width: 8.w),
-                                          Text(
-                                            '완료되면 알림으로 알려드릴게요',
-                                            style: AppTextStyles.bodySm.copyWith(
-                                              color: AppColors.orange500,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    )
-                                  : OutlinedButton.icon(
-                                      key: const ValueKey('notify-request'),
-                                      onPressed: _enableNotifications,
-                                      icon: const Icon(
-                                        Icons.notifications_outlined,
-                                      ),
-                                      label: const Text('완료되면 알림받기'),
-                                    ),
-                        ),
+                        if (isFailed)
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 220),
+                            child: FilledButton.icon(
+                              key: const ValueKey('retry'),
+                              onPressed: _isRetrying ? null : _retryGeneration,
+                              icon: const Icon(Icons.refresh_rounded),
+                              label: Text(_isRetrying ? '요청 중...' : '다시 생성하기'),
+                            ),
+                          ),
                         if (isPending) ...[
                           SizedBox(height: 16.h),
                           Text(
-                            '상태를 주기적으로 확인하고 있습니다.',
+                            '상태를 실시간으로 확인하고 있습니다.',
                             style: AppTextStyles.caption.copyWith(
                               color: colors.textTertiary,
                             ),
@@ -321,12 +285,10 @@ class _GoalLoadingPageState extends ConsumerState<GoalLoadingPage>
           ),
         ),
         bottomNavigationBar: MoreBottomButton(
-          text: isFailed ? '목표 상세로 이동' : '나중에 확인할게요',
-          onPressed: () => context.go(
-            isFailed
-                ? AppRoutes.goalDetailLocation(widget.goalId)
-                : AppRoutes.goalTab,
-          ),
+          text: isFailed ? '목표 상세로 이동' : '알림으로 받고, 앱을 더 둘러볼래요.',
+          onPressed: isFailed
+              ? () => context.go(AppRoutes.goalDetailLocation(widget.goalId))
+              : (menuState.isLoading ? null : _enableNotificationsAndBrowse),
         ),
       ),
     );
