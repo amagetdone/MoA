@@ -17,6 +17,7 @@ import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
 import 'package:more_app/presentation/viewmodels/theme_viewmodel.dart';
 import 'package:more_app/presentation/widgets/preview/web_preview_shell.dart';
+import 'package:more_app/presentation/widgets/security/biometric_app_lock.dart';
 
 class AppScrollBehavior extends MaterialScrollBehavior {
   @override
@@ -108,16 +109,18 @@ class MoreApp extends ConsumerWidget {
           builder: (context, routerChild) {
             final appContent = routerChild ?? const SizedBox.shrink();
 
+            final securedContent = BiometricAppLock(child: appContent);
+
             if (WebPreviewShell.isEnabled) {
               return WebPreviewShell(
                 designSize: _designSize,
                 minTextAdapt: true,
                 splitScreenMode: true,
-                child: appContent,
+                child: securedContent,
               );
             }
 
-            return appContent;
+            return securedContent;
           },
         );
       },

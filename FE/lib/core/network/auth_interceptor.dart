@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:more_app/core/auth/logout_intent_tracker.dart';
 import 'package:more_app/core/constants/app_constants.dart';
 
 class AuthInterceptor extends Interceptor {
@@ -101,6 +102,9 @@ class AuthInterceptor extends Interceptor {
   Future<void> _forceLogout() async {
     await _storage.delete(key: 'access_token');
     await _storage.delete(key: 'refresh_token');
+    if (LogoutIntentTracker.isUserInitiatedLogoutInProgress) {
+      return;
+    }
     onForceLogout?.call();
   }
 }

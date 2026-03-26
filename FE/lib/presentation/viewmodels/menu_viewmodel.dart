@@ -73,6 +73,9 @@ class MenuViewModel extends StateNotifier<MenuState> {
 
     try {
       final summary = await _repository.fetchMenuSummary();
+      if (!mounted) {
+        return;
+      }
 
       state = state.copyWith(
         isLoading: false,
@@ -86,6 +89,9 @@ class MenuViewModel extends StateNotifier<MenuState> {
         biometricEnabled: summary.biometricEnabled,
       );
     } catch (error) {
+      if (!mounted) {
+        return;
+      }
       state = state.copyWith(isLoading: false, errorMessage: error.toString());
     }
   }
@@ -96,6 +102,9 @@ class MenuViewModel extends StateNotifier<MenuState> {
         value,
       );
       final summary = await _repository.updateNotification(resolved);
+      if (!mounted) {
+        return;
+      }
       state = state.copyWith(
         notificationEnabled: summary.notificationEnabled,
         clearErrorMessage: true,
@@ -107,13 +116,29 @@ class MenuViewModel extends StateNotifier<MenuState> {
         );
       }
     } catch (error) {
+      if (!mounted) {
+        return;
+      }
       state = state.copyWith(errorMessage: error.toString());
     }
   }
 
   Future<void> toggleBiometric(bool value) async {
-    final summary = await _repository.updateBiometric(value);
-    state = state.copyWith(biometricEnabled: summary.biometricEnabled);
+    try {
+      final summary = await _repository.updateBiometric(value);
+      if (!mounted) {
+        return;
+      }
+      state = state.copyWith(
+        biometricEnabled: summary.biometricEnabled,
+        clearErrorMessage: true,
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      state = state.copyWith(errorMessage: error.toString());
+    }
   }
 }
 

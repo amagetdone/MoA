@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
+import 'package:more_app/presentation/providers/app_data_providers.dart';
 import 'package:more_app/presentation/viewmodels/menu_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/auth_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/theme_viewmodel.dart';
@@ -11,15 +13,93 @@ import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 
-class SettingsPage extends ConsumerWidget {
+class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends ConsumerState<SettingsPage> {
+  bool _isUpdatingBiometric = false;
+
+  Future<void> _handleBiometricToggle(bool enabled) async {
+    if (_isUpdatingBiometric) {
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    if (!enabled) {
+      setState(() => _isUpdatingBiometric = true);
+      try {
+        await ref.read(menuViewModelProvider.notifier).toggleBiometric(false);
+        await ref.read(biometricPreferenceProvider.notifier).setEnabled(false);
+      } finally {
+        if (mounted) {
+          setState(() => _isUpdatingBiometric = false);
+        }
+      }
+      return;
+    }
+
+    final isAvailable = await ref.read(biometricAuthServiceProvider).isBiometricAvailable();
+    if (!mounted) {
+      return;
+    }
+
+    if (!isAvailable) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('이 기기에서는 지문 인증을 사용할 수 없습니다.')),
+        );
+      return;
+    }
+
+    setState(() => _isUpdatingBiometric = true);
+    final authenticated = await ref.read(biometricAuthServiceProvider).authenticate(
+      reason: '지문 인증으로 앱 잠금을 활성화해주세요.',
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (!authenticated) {
+      setState(() => _isUpdatingBiometric = false);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('지문 인증이 완료되지 않아 앱 잠금을 켜지 않았습니다.')),
+        );
+      return;
+    }
+
+    try {
+      await ref.read(menuViewModelProvider.notifier).toggleBiometric(true);
+      await ref.read(biometricPreferenceProvider.notifier).setEnabled(true);
+    } finally {
+      if (mounted) {
+        setState(() => _isUpdatingBiometric = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final themeMode = ref.watch(themeProvider);
     final isDark = themeMode == ThemeMode.dark;
     final menuState = ref.watch(menuViewModelProvider);
+    final biometricEnabled = ref.watch(biometricPreferenceProvider);
+    final biometricAvailability = ref.watch(biometricAvailabilityProvider);
+    final showBiometric =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    final biometricAvailable = biometricAvailability.maybeWhen(
+      data: (value) => value,
+      orElse: () => false,
+    );
 
     ref.listen<String?>(
       menuViewModelProvider.select((state) => state.errorMessage),
@@ -137,16 +217,62 @@ class SettingsPage extends ConsumerWidget {
             ),
             SizedBox(height: 10.h),
 
-            // Security
-            _SettingsCard(
-              icon: Icons.lock_outline,
-              title: '보안',
-              subtitle: '보안 설정',
-              onTap: () {
-                // TODO: navigate to security settings
-              },
-            ),
-            SizedBox(height: 10.h),
+            if (showBiometric) ...[
+              MoreCard(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40.w,
+                      height: 40.w,
+                      decoration: BoxDecoration(
+                        color: colors.gray50,
+                        borderRadius: BorderRadius.circular(10.r),
+                        border: Border.all(color: colors.borderDefault),
+                      ),
+                      child: Icon(
+                        Icons.fingerprint,
+                        size: 20.w,
+                        color: colors.gray500,
+                      ),
+                    ),
+                    SizedBox(width: 14.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '앱 잠금',
+                            style: AppTextStyles.bodyMd.copyWith(
+                              color: colors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            biometricAvailable
+                                ? '앱을 다시 열 때 지문 인증으로 잠금을 해제해요'
+                                : '이 기기에서는 지문 인증을 사용할 수 없어요',
+                            style: AppTextStyles.caption.copyWith(
+                              color: colors.textTertiary,
+                              fontSize: 11.sp,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: biometricAvailable && biometricEnabled,
+                      onChanged: biometricAvailable && !_isUpdatingBiometric
+                          ? _handleBiometricToggle
+                          : null,
+                      activeThumbColor: AppColors.orange500,
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 10.h),
+            ],
 
             // Logout
             _SettingsCard(

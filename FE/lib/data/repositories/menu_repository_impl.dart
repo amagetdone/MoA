@@ -17,8 +17,18 @@ class MenuRepositoryImpl implements MenuRepository {
 
   @override
   Future<MenuSummary> fetchMenuSummary() async {
+    final preferences = await _localDataSource.getMenuPreferences();
+
     try {
-      return await _remoteDataSource.fetchMenuDashboard();
+      final summary = await _remoteDataSource.fetchMenuDashboard();
+      return MenuSummary(
+        user: summary.user,
+        activeGoalCount: summary.activeGoalCount,
+        achievedGoalCount: summary.achievedGoalCount,
+        totalSaved: summary.totalSaved,
+        notificationEnabled: preferences.notificationEnabled,
+        biometricEnabled: preferences.biometricEnabled,
+      );
     } catch (e) {
       final snapshot = await _localDataSource.getCachedSnapshot();
       return _toMenuSummary(snapshot);
@@ -27,28 +37,30 @@ class MenuRepositoryImpl implements MenuRepository {
 
   @override
   Future<MenuSummary> updateNotification(bool enabled) async {
+    await _localDataSource.updateMenuPreferences(
+      notificationEnabled: enabled,
+    );
+
     try {
-      return await _remoteDataSource.updateMenuPreferences(
+      await _remoteDataSource.updateMenuPreferences(
         notificationEnabled: enabled,
       );
-    } catch (_) {
-      await _localDataSource.updateMenuPreferences(
-        notificationEnabled: enabled,
-      );
-      return fetchMenuSummary();
-    }
+    } catch (_) {}
+
+    return fetchMenuSummary();
   }
 
   @override
   Future<MenuSummary> updateBiometric(bool enabled) async {
+    await _localDataSource.updateMenuPreferences(biometricEnabled: enabled);
+
     try {
-      return await _remoteDataSource.updateMenuPreferences(
+      await _remoteDataSource.updateMenuPreferences(
         biometricEnabled: enabled,
       );
-    } catch (_) {
-      await _localDataSource.updateMenuPreferences(biometricEnabled: enabled);
-      return fetchMenuSummary();
-    }
+    } catch (_) {}
+
+    return fetchMenuSummary();
   }
 
   MenuSummary _toMenuSummary(AppSnapshotDto snapshot) {

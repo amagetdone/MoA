@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:more_app/core/security/biometric_auth_service.dart';
 import 'package:more_app/core/notifications/push_notification_sync_service.dart';
 import 'package:more_app/core/network/api_client.dart';
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
@@ -44,6 +45,7 @@ import 'package:more_app/domain/repositories/budget_repository.dart';
 import 'package:more_app/domain/repositories/spending_repository.dart';
 import 'package:more_app/domain/entities/app_notification_item.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/viewmodels/biometric_preference_viewmodel.dart';
 
 final appLocalDataSourceProvider = Provider<AppLocalDataSource>((ref) {
   return AppLocalDataSourceImpl();
@@ -117,6 +119,21 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
     socialAuthDataSource: ref.read(socialAuthDataSourceProvider),
   );
 });
+
+final biometricAuthServiceProvider = Provider<BiometricAuthService>((ref) {
+  return BiometricAuthService();
+});
+
+final biometricAvailabilityProvider = FutureProvider<bool>((ref) {
+  return ref.read(biometricAuthServiceProvider).isBiometricAvailable();
+});
+
+final biometricPreferenceProvider =
+    StateNotifierProvider<BiometricPreferenceViewModel, bool>((ref) {
+      return BiometricPreferenceViewModel(
+        ref.read(appLocalDataSourceProvider),
+      );
+    });
 
 final seedDataStoreProvider = Provider<SeedDataStore>((ref) {
   return SeedDataStore();
