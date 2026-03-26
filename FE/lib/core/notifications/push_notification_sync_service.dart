@@ -254,9 +254,6 @@ class PushNotificationSyncService {
     }
 
     final preferences = await _appLocalDataSource.getMenuPreferences();
-    if (!preferences.notificationEnabled) {
-      return;
-    }
 
     AuthorizationStatus currentStatus;
     try {
@@ -272,8 +269,9 @@ class PushNotificationSyncService {
         currentStatus == AuthorizationStatus.provisional ||
         currentStatus == AuthorizationStatus.denied;
     if (isAlreadyResolved) {
-      if (currentStatus == AuthorizationStatus.authorized ||
-          currentStatus == AuthorizationStatus.provisional) {
+      if ((currentStatus == AuthorizationStatus.authorized ||
+              currentStatus == AuthorizationStatus.provisional) &&
+          preferences.notificationEnabled) {
         await syncTokenIfEnabled(promptPermission: false);
       }
       return;
@@ -281,7 +279,23 @@ class PushNotificationSyncService {
 
     _permissionPromptInProgress = true;
     try {
-      await syncTokenIfEnabled(promptPermission: true);
+      final settings = await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        announcement: false,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+        sound: true,
+      );
+
+      final isGranted =
+          settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
+
+      if (isGranted && preferences.notificationEnabled) {
+        await syncTokenIfEnabled(promptPermission: false);
+      }
     } finally {
       _permissionPromptInProgress = false;
     }
