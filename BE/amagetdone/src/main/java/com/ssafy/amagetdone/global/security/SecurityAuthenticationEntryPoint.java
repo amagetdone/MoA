@@ -27,6 +27,10 @@ public class SecurityAuthenticationEntryPoint implements AuthenticationEntryPoin
 		HttpServletResponse response,
 		AuthenticationException authException
 	) throws IOException {
+		if (response.isCommitted()) {
+			return;
+		}
+
 		MemberErrorCode errorCode = resolveErrorCode(authException);
 		response.setStatus(errorCode.httpStatus().value());
 		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
