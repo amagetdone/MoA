@@ -24,3 +24,13 @@ def get_image_generation_service(request: Request) -> Any:
             detail="image generation service is not initialized",
         )
     return service
+
+
+def get_chatbot_service(request: Request) -> Any:
+    service = getattr(request.app.state, "chatbot_service", None)
+    if service is None:
+        raise HTTPException(
+            status_code=503,
+            detail="chatbot service is not initialized",
+        )
+    return service
