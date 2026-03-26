@@ -14,14 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class CompleteMemberProfileUseCase {
 
 	private final UserRepository userRepository;
-	private final EnsureFinMemberLinkedUseCase ensureFinMemberLinkedUseCase;
 
-	public CompleteMemberProfileUseCase(
-		UserRepository userRepository,
-		EnsureFinMemberLinkedUseCase ensureFinMemberLinkedUseCase
-	) {
+	public CompleteMemberProfileUseCase(UserRepository userRepository) {
 		this.userRepository = userRepository;
-		this.ensureFinMemberLinkedUseCase = ensureFinMemberLinkedUseCase;
 	}
 
 	@Transactional
@@ -30,8 +25,6 @@ public class CompleteMemberProfileUseCase {
 			.orElseThrow(() -> new MemberException(MemberErrorCode.USER_NOT_FOUND));
 
 		user.markProfileEntered(nickname, email, birthDate, hasFixedIncome);
-		String userKey = ensureFinMemberLinkedUseCase.execute(userId, email);
-		user.updateUserKey(userKey);
 		user.activate();
 		return user;
 	}
