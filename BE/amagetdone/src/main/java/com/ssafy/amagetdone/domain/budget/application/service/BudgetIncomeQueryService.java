@@ -24,7 +24,7 @@ public class BudgetIncomeQueryService {
 	public BudgetIncomeDto.Response getCurrentIncome(Integer userId) {
 		LocalDate baseMonth = LocalDate.now().withDayOfMonth(1);
 		User userReference = entityManager.getReference(User.class, userId);
-		BudgetIncomeDto.Response response = budgetMonthRepository.findByUserAndBaseDate(userReference, baseMonth)
+		BudgetIncomeDto.Response response = budgetMonthRepository.findFirstByUserAndBaseDateOrderByIdDesc(userReference, baseMonth)
 			.map(budgetMonth -> new BudgetIncomeDto.Response(budgetMonth.getTotalIncomeAmount(), budgetMonth.getBaseDate()))
 			.orElseGet(() -> new BudgetIncomeDto.Response(0L, baseMonth));
 

@@ -65,7 +65,7 @@ class BudgetAllocationServiceTest {
 			planWeekAllocationRepository
 		);
 
-		Mockito.lenient().when(budgetMonthRepository.findByUserAndBaseDate(any(User.class), any(LocalDate.class)))
+		Mockito.lenient().when(budgetMonthRepository.findFirstByUserAndBaseDateOrderByIdDesc(any(User.class), any(LocalDate.class)))
 			.thenReturn(java.util.Optional.empty());
 		Mockito.lenient().when(
 			budgetWeekRepository.findByUserAndWeekStartDateBetweenOrderByWeekSequence(any(User.class), any(LocalDate.class), any(LocalDate.class))

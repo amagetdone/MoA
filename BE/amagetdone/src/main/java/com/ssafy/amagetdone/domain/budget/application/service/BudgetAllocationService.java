@@ -225,7 +225,7 @@ public class BudgetAllocationService {
 			LocalDate monthBaseDate = currentMonthStart;
 			BudgetMonth budgetMonth = referencedBudgetMonths.get(monthBaseDate);
 			if (budgetMonth == null) {
-				budgetMonth = budgetMonthRepository.findByUserAndBaseDate(user, monthBaseDate)
+				budgetMonth = budgetMonthRepository.findFirstByUserAndBaseDateOrderByIdDesc(user, monthBaseDate)
 					.orElseGet(() -> BudgetMonth.builder()
 						.user(user)
 						.baseDate(monthBaseDate)

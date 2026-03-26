@@ -50,7 +50,7 @@ public class BudgetAllocationTriggerService {
 		refreshEssentialExpenseMonthFromAnalysisUseCase.execute(userId, baseMonth);
 
 		User userReference = userReference(userId);
-		long monthlyIncome = budgetMonthRepository.findByUser_IdAndBaseDate(userId, baseMonth)
+		long monthlyIncome = budgetMonthRepository.findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, baseMonth)
 			.map(BudgetMonth::getTotalIncomeAmount)
 			.orElse(0L);
 

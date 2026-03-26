@@ -118,7 +118,7 @@ public class EssentialExpenseMonthRefreshService {
 			return;
 		}
 
-		BudgetMonth budgetMonth = budgetMonthRepository.findByUser_IdAndBaseDate(userId, normalizedBaseMonth)
+		BudgetMonth budgetMonth = budgetMonthRepository.findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, normalizedBaseMonth)
 			.orElseGet(() -> budgetMonthRepository.save(BudgetMonth.builder()
 				.user(userReference(userId))
 				.baseDate(normalizedBaseMonth)

@@ -24,7 +24,7 @@ public class BudgetIncomeCommandService {
 	public BudgetIncomeDto.Response saveIncome(Integer userId, BudgetIncomeDto.Request request) {
 		LocalDate baseMonth = LocalDate.now().withDayOfMonth(1);
 		User userReference = entityManager.getReference(User.class, userId);
-		BudgetMonth budgetMonth = budgetMonthRepository.findByUserAndBaseDate(userReference, baseMonth)
+		BudgetMonth budgetMonth = budgetMonthRepository.findFirstByUserAndBaseDateOrderByIdDesc(userReference, baseMonth)
 			.orElseGet(() -> BudgetMonth.builder()
 				.user(userReference)
 				.baseDate(baseMonth)
