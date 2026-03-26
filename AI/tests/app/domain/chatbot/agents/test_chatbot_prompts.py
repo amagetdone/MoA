@@ -11,3 +11,16 @@ def test_build_supervisor_prompt_includes_markdown_response_guidance() -> None:
     assert "user-scoped evidence" in prompt.casefold()
     assert "read-only" in prompt.casefold()
     assert "never speculate" in prompt.casefold()
+
+
+def test_build_supervisor_prompt_blocks_unsupported_operational_promises() -> None:
+    prompt = build_supervisor_prompt()
+    normalized_prompt = prompt.casefold()
+
+    assert "cannot sync accounts" in normalized_prompt
+    assert "cannot upload receipts" in normalized_prompt
+    assert "cannot change settings" in normalized_prompt
+    assert "do not claim that you can perform" in normalized_prompt
+    assert "only suggest follow-ups that this chatbot can actually support" in (
+        normalized_prompt
+    )
