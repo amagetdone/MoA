@@ -219,6 +219,61 @@ def test_reply_generates_conversation_id_when_missing() -> None:
     }
 
 
+def test_reply_without_conversation_id_reuses_latest_active_conversation() -> None:
+    current = {"now": datetime(2026, 3, 26, 9, 0, tzinfo=UTC)}
+    store = ConversationMemoryStore(
+        ttl=timedelta(days=3),
+        now_factory=lambda: current["now"],
+    )
+    store.append_user_message(user_id=7, conversation_id="conv-1", content="older")
+    current["now"] = datetime(2026, 3, 26, 10, 0, tzinfo=UTC)
+
+    factory = _FakeGraphFactory()
+    service = ChatbotService(
+        settings=_build_settings(),
+        graph_factory=factory,
+        tracer=_FakeTracer(),
+        conversation_store=store,
+        conversation_id_factory=lambda: "generated-conv",
+    )
+
+    async def run() -> dict[str, object]:
+        return await service.reply(
+            user_id=7,
+            message="How is my budget?",
+            conversation_id=None,
+        )
+
+    result = anyio.run(run)
+
+    assert result["conversation_id"] == "conv-1"
+    assert factory.graphs[7].reply_calls[0]["config"] == {
+        "configurable": {"thread_id": "moa:7:conv-1"}
+    }
+
+
+def test_get_latest_conversation_creates_conversation_when_missing() -> None:
+    service = ChatbotService(
+        settings=_build_settings(),
+        graph_factory=_FakeGraphFactory(),
+        tracer=_FakeTracer(),
+        conversation_store=ConversationMemoryStore(
+            ttl=timedelta(days=3),
+            now_factory=lambda: datetime(2026, 3, 26, 9, 0, tzinfo=UTC),
+        ),
+        conversation_id_factory=lambda: "generated-conv",
+    )
+
+    latest = service.get_latest_conversation(user_id=7)
+
+    assert latest == {
+        "conversation_id": "generated-conv",
+        "created_at": "2026-03-26T09:00:00+00:00",
+        "last_activity_at": "2026-03-26T09:00:00+00:00",
+        "expires_at": "2026-03-29T09:00:00+00:00",
+    }
+
+
 def test_reply_ignores_non_supervisor_messages_when_final_answer_missing() -> None:
     graph = _FakeGraph(
         reply_messages=[
@@ -298,6 +353,46 @@ def test_stream_reply_emits_only_supervisor_tokens_and_done() -> None:
         "configurable": {"thread_id": "moa:7:conv-1"}
     }
     assert tracer.calls[-1]["name"] == "chatbot.stream_reply"
+
+
+def test_stream_reply_without_conversation_id_reuses_latest_active_conversation() -> None:
+    current = {"now": datetime(2026, 3, 26, 9, 0, tzinfo=UTC)}
+    store = ConversationMemoryStore(
+        ttl=timedelta(days=3),
+        now_factory=lambda: current["now"],
+    )
+    store.append_user_message(user_id=7, conversation_id="conv-1", content="older")
+    current["now"] = datetime(2026, 3, 26, 10, 0, tzinfo=UTC)
+
+    factory = _FakeGraphFactory()
+    service = ChatbotService(
+        settings=_build_settings(),
+        graph_factory=factory,
+        tracer=_FakeTracer(),
+        conversation_store=store,
+        conversation_id_factory=lambda: "generated-conv",
+    )
+
+    async def run() -> list[dict[str, object]]:
+        events: list[dict[str, object]] = []
+        stream = await service.stream_reply(
+            user_id=7,
+            message="hello",
+            conversation_id=None,
+        )
+        async for event in stream:
+            events.append(event)
+        return events
+
+    events = anyio.run(run)
+
+    assert events[-1] == {
+        "event": "done",
+        "data": {"conversation_id": "conv-1"},
+    }
+    assert factory.graphs[7].stream_calls[0]["config"] == {
+        "configurable": {"thread_id": "moa:7:conv-1"}
+    }
 
 
 def test_reply_records_user_and_assistant_messages() -> None:
@@ -398,3 +493,30 @@ def test_get_conversation_history_raises_for_unknown_id() -> None:
 
     with pytest.raises(ConversationNotFoundError):
         service.get_conversation_history(user_id=7, conversation_id="missing")
+
+
+def test_get_latest_conversation_returns_latest_metadata() -> None:
+    current = {"now": datetime(2026, 3, 26, 9, 0, tzinfo=UTC)}
+    store = ConversationMemoryStore(
+        ttl=timedelta(days=3),
+        now_factory=lambda: current["now"],
+    )
+    service = ChatbotService(
+        settings=_build_settings(),
+        graph_factory=_FakeGraphFactory(),
+        tracer=_FakeTracer(),
+        conversation_store=store,
+    )
+
+    store.append_user_message(user_id=7, conversation_id="conv-1", content="first")
+    current["now"] = datetime(2026, 3, 26, 10, 0, tzinfo=UTC)
+    store.append_user_message(user_id=7, conversation_id="conv-2", content="second")
+
+    latest = service.get_latest_conversation(user_id=7)
+
+    assert latest == {
+        "conversation_id": "conv-2",
+        "created_at": "2026-03-26T10:00:00+00:00",
+        "last_activity_at": "2026-03-26T10:00:00+00:00",
+        "expires_at": "2026-03-29T10:00:00+00:00",
+    }

@@ -9,6 +9,7 @@ from fastapi.responses import StreamingResponse
 
 from app.api.dependencies import get_chatbot_service
 from app.domain.chatbot.api.dto.detail_dto import (
+    ChatbotConversationSummaryResponse,
     ChatbotConversationResponse,
     ChatbotMessageRequest,
     ChatbotMessageResponse,
@@ -57,6 +58,20 @@ async def stream_chatbot_message(
             yield f"event: {event_name}\ndata: {payload}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@router.get(
+    "/conversations/latest",
+    response_model=ChatbotConversationSummaryResponse,
+)
+async def get_latest_chatbot_conversation(
+    user_id: TrustedUserId,
+    service=Depends(get_chatbot_service),
+) -> dict[str, object]:
+    try:
+        return service.get_latest_conversation(user_id=user_id)
+    except ConversationExpiredError as error:
+        raise HTTPException(status_code=410, detail=str(error)) from error
 
 
 @router.get(

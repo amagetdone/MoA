@@ -43,6 +43,13 @@ class ChatbotConversationResponse(BaseModel):
     messages: list[ChatbotConversationMessage]
 
 
+class ChatbotConversationSummaryResponse(BaseModel):
+    conversation_id: str
+    created_at: str
+    last_activity_at: str
+    expires_at: str
+
+
 class ChatbotMessageResponse(BaseModel):
     conversation_id: str
     answer: str

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
@@ -112,6 +113,33 @@ class ConversationMemoryStore:
             ],
         }
 
+    def get_latest_conversation(
+        self,
+        *,
+        user_id: int,
+    ) -> dict[str, object]:
+        latest_record = self._find_latest_active_record(user_id=user_id)
+        if latest_record is None:
+            raise ConversationNotFoundError("conversation was not found")
+
+        return self._serialize_record_summary(latest_record)
+
+    def get_or_create_latest_conversation(
+        self,
+        *,
+        user_id: int,
+        conversation_id_factory: Callable[[], str],
+    ) -> dict[str, object]:
+        latest_record = self._find_latest_active_record(user_id=user_id)
+        if latest_record is not None:
+            return self._serialize_record_summary(latest_record)
+
+        record = self._get_or_create_record(
+            user_id=user_id,
+            conversation_id=conversation_id_factory(),
+        )
+        return self._serialize_record_summary(record)
+
     def _get_or_create_record(
         self,
         *,
@@ -149,6 +177,33 @@ class ConversationMemoryStore:
         self._raise_if_expired(key=key, record=record)
         return record
 
+    def _find_latest_active_record(
+        self,
+        *,
+        user_id: int,
+    ) -> _ConversationRecord | None:
+        validated_user_id = validate_user_id(user_id)
+        latest_record: _ConversationRecord | None = None
+        expired_keys: list[tuple[int, str]] = []
+        current_time = self._now()
+
+        for key, record in self._conversations.items():
+            if record.user_id != validated_user_id:
+                continue
+            if current_time > record.expires_at:
+                expired_keys.append(key)
+                continue
+            if (
+                latest_record is None
+                or record.last_activity_at > latest_record.last_activity_at
+            ):
+                latest_record = record
+
+        for key in expired_keys:
+            self._conversations.pop(key, None)
+
+        return latest_record
+
     def _raise_if_expired(
         self,
         *,
@@ -180,6 +235,15 @@ class ConversationMemoryStore:
         if not normalized_conversation_id:
             raise ValueError("conversation_id must not be blank")
         return (validate_user_id(user_id), normalized_conversation_id)
+
+    @staticmethod
+    def _serialize_record_summary(record: _ConversationRecord) -> dict[str, object]:
+        return {
+            "conversation_id": record.conversation_id,
+            "created_at": record.created_at.isoformat(),
+            "last_activity_at": record.last_activity_at.isoformat(),
+            "expires_at": record.expires_at.isoformat(),
+        }
 
     def _now(self) -> datetime:
         timestamp = self._now_factory()

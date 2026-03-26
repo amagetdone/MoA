@@ -52,7 +52,8 @@ Response:
 주의:
 
 - `answer`는 이제 마크다운 문자열이다.
-- `conversation_id`가 없으면 새로 생성된다.
+- `conversation_id`가 있으면 해당 대화에 이어서 처리된다.
+- `conversation_id`가 없으면 현재 사용자 기준 최신 활성 대화를 재사용하고, 없으면 새로 생성한다.
 - 만료된 대화는 `410 Gone`이 반환된다.
 
 ### 2. 스트리밍 응답
@@ -86,10 +87,38 @@ data: {"conversation_id":"conv-123"}
 주의:
 
 - `token` 이벤트를 이어 붙이면 최종 마크다운 응답이 된다.
-- `done` 이벤트의 `conversation_id`를 다음 턴에 재사용해야 한다.
+- `done` 이벤트의 `conversation_id`를 다음 턴에 재사용하면 가장 명시적이다.
+- `conversation_id` 없이 보내더라도 서버가 현재 사용자 기준 최신 활성 대화를 자동으로 찾아 이어 붙인다.
 - 만료된 대화는 스트림 시작 전에 `410 Gone`이 반환된다.
 
-### 3. 대화 조회
+### 3. 최신 대화 조회
+
+`GET /v1/chatbot/conversations/latest`
+
+Required header:
+
+```text
+X-User-Id: 123
+```
+
+Response:
+
+```json
+{
+  "conversation_id": "conv-123",
+  "created_at": "2026-03-26T09:00:00+09:00",
+  "last_activity_at": "2026-03-26T09:05:00+09:00",
+  "expires_at": "2026-03-29T09:05:00+09:00"
+}
+```
+
+주의:
+
+- 최신 활성 대화가 있으면 그 `conversation_id`를 반환한다.
+- 최신 활성 대화가 없으면 새 `conversation_id`를 발급해 빈 세션을 생성한 뒤 반환한다.
+- 프론트는 이 응답 뒤에 `GET /v1/chatbot/conversations/{conversation_id}`로 상세 메시지를 복원하면 된다.
+
+### 4. 대화 조회
 
 `GET /v1/chatbot/conversations/{conversation_id}`
 
@@ -155,6 +184,7 @@ Spring Boot는 아래 책임을 가진다.
 
 - `POST /api/chatbot/messages`
 - `POST /api/chatbot/messages/stream`
+- `GET /api/chatbot/conversations/latest`
 - `GET /api/chatbot/conversations/{conversationId}`
 
 권장 request/response 계약:
@@ -226,6 +256,7 @@ Spring Boot는 아래 책임을 가진다.
 
 Spring Boot는 아래 조회 endpoint를 그대로 relay한다.
 
+- `GET /api/chatbot/conversations/latest`
 - `GET /api/chatbot/conversations/{conversationId}`
 
 체크리스트:
@@ -241,7 +272,7 @@ Spring Boot는 아래 조회 endpoint를 그대로 relay한다.
 대표 상태 코드:
 
 - `200 OK`: 정상
-- `404 Not Found`: 대화 없음
+- `404 Not Found`: 특정 `conversation_id` 상세 조회 시 대화 없음
 - `410 Gone`: 대화 만료
 - `422 Unprocessable Entity`: 잘못된 요청
 - `503 Service Unavailable`: AI 서버 초기화 안 됨
@@ -273,6 +304,7 @@ Flutter는 FastAPI가 아니라 Spring Boot만 호출한다.
 
 - `POST /api/chatbot/messages`
 - `POST /api/chatbot/messages/stream`
+- `GET /api/chatbot/conversations/latest`
 - `GET /api/chatbot/conversations/{conversationId}`
 
 Flutter가 할 일:
@@ -292,8 +324,9 @@ Flutter가 하지 말아야 할 일:
 일반 질문 응답 흐름:
 
 1. 현재 `conversation_id`가 있으면 body에 포함
-2. 없으면 `message`만 전송
-3. 응답의 `conversation_id`를 로컬 상태에 저장
+2. 없으면 `message`만 전송해도 서버가 현재 사용자 기준 최신 활성 대화를 자동으로 찾아 이어 붙인다.
+3. 활성 대화가 아예 없으면 서버가 새 `conversation_id`를 생성한다.
+4. 응답의 `conversation_id`를 로컬 상태에 저장
 4. `answer`를 assistant 메시지로 렌더링
 
 권장 저장 상태:
@@ -357,23 +390,20 @@ assistant 응답은 마크다운 문자열이므로 렌더러가 필요하다.
 
 ### 6. 앱 재진입 시 대화 복원
 
-Flutter는 최소한 아래 둘 중 하나를 유지해야 한다.
-
-- 현재 `conversation_id`
-- 표시용 메시지 캐시
-
 권장 흐름:
 
-1. 앱 재진입 시 로컬에 마지막 `conversation_id`가 있으면
-2. Spring Boot `/api/chatbot/conversations/{conversationId}` 호출
-3. 성공 시 전체 transcript 재구성
-4. `410 Gone`이면 “대화가 만료되었어요. 새 대화를 시작해주세요.” 안내 후 새 세션 시작
+1. 앱 재진입 시 먼저 Spring Boot `/api/chatbot/conversations/latest` 호출
+2. 응답에서 현재 사용자 기준 활성 `conversation_id` 확보
+3. 이어서 Spring Boot `/api/chatbot/conversations/{conversationId}` 호출
+4. 성공 시 전체 transcript 재구성
+5. 상세 응답의 `messages`가 비어 있으면 아직 시작되지 않은 빈 세션으로 보고 빈 화면을 보여준다.
+6. `410 Gone`이면 “대화가 만료되었어요. 새 대화를 시작해주세요.” 안내 후 최신 대화 재조회 또는 새 세션 시작
 
 ### 7. Flutter 에러 처리 정책
 
 대표 상태 코드별 UX:
 
-- `404`: 대화 없음. 새 대화로 전환
+- `404`: 특정 `conversation_id` 복원 실패. 최신 대화 재조회 또는 새 대화로 전환
 - `410`: 대화 만료. 새 대화 시작 안내
 - `422`: 잘못된 요청. 사용자 입력 검증 확인
 - `503`: 챗봇 서버 준비 안 됨. 잠시 후 다시 시도 안내
@@ -400,7 +430,7 @@ Flutter는 최소한 아래 둘 중 하나를 유지해야 한다.
 ### 1단계: 백엔드
 
 - Spring Boot JSON relay 먼저 구현
-- Spring Boot conversation 조회 relay 구현
+- Spring Boot latest 조회 + conversation 조회 relay 구현
 - Spring Boot SSE raw proxy 구현
 - 운영 환경 proxy buffering 설정 확인
 
@@ -408,7 +438,7 @@ Flutter는 최소한 아래 둘 중 하나를 유지해야 한다.
 
 - 일반 응답 기반 채팅 UI 먼저 연결
 - `conversation_id` 상태 관리 추가
-- conversation 조회 기반 재진입 복원 추가
+- latest 조회 + conversation 조회 기반 재진입 복원 추가
 - SSE 처리 추가
 - 완료 후 markdown 렌더링 추가
 

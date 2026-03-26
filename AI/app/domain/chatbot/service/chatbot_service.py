@@ -73,7 +73,10 @@ class ChatbotService:
         conversation_id: str | None,
     ) -> dict[str, object]:
         validated_user_id = validate_user_id(user_id)
-        resolved_conversation_id = self._resolve_conversation_id(conversation_id)
+        resolved_conversation_id = self._resolve_conversation_id(
+            user_id=validated_user_id,
+            conversation_id=conversation_id,
+        )
         thread_id = build_thread_id(
             user_id=validated_user_id,
             conversation_id=resolved_conversation_id,
@@ -132,7 +135,10 @@ class ChatbotService:
         conversation_id: str | None,
     ) -> AsyncIterator[dict[str, object]]:
         validated_user_id = validate_user_id(user_id)
-        resolved_conversation_id = self._resolve_conversation_id(conversation_id)
+        resolved_conversation_id = self._resolve_conversation_id(
+            user_id=validated_user_id,
+            conversation_id=conversation_id,
+        )
         thread_id = build_thread_id(
             user_id=validated_user_id,
             conversation_id=resolved_conversation_id,
@@ -214,16 +220,37 @@ class ChatbotService:
             conversation_id=conversation_id,
         )
 
+    def get_latest_conversation(
+        self,
+        *,
+        user_id: int,
+    ) -> dict[str, object]:
+        validated_user_id = validate_user_id(user_id)
+        return self._conversation_store.get_or_create_latest_conversation(
+            user_id=validated_user_id,
+            conversation_id_factory=self._conversation_id_factory,
+        )
+
     def _get_graph(self, user_id: int) -> Any:
         if user_id not in self._graph_cache:
             self._graph_cache[user_id] = self._graph_factory(user_id)
         return self._graph_cache[user_id]
 
-    def _resolve_conversation_id(self, conversation_id: str | None) -> str:
+    def _resolve_conversation_id(
+        self,
+        *,
+        user_id: int,
+        conversation_id: str | None,
+    ) -> str:
         normalized_conversation_id = (conversation_id or "").strip()
         if normalized_conversation_id:
             return normalized_conversation_id
-        return self._conversation_id_factory()
+
+        latest_conversation = self._conversation_store.get_or_create_latest_conversation(
+            user_id=user_id,
+            conversation_id_factory=self._conversation_id_factory,
+        )
+        return str(latest_conversation["conversation_id"])
 
     @staticmethod
     def _extract_answer(result: dict[str, Any]) -> str:
