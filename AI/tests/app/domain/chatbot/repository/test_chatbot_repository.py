@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 
 import pytest
 
@@ -228,3 +228,177 @@ def test_get_goal_progress_overview_rejects_non_positive_limit(limit: int) -> No
             user_id=7,
             limit=limit,
         )
+
+
+def test_get_spending_summary_returns_standard_contract_and_metadata_warning() -> None:
+    runner = _FakeRunner(
+        responses=[
+            [
+                {
+                    "total_spent": 230000,
+                    "transaction_count": 3,
+                    "average_transaction_amount": 76666.67,
+                    "largest_transaction_amount": 120000,
+                    "largest_transaction_memo": "Team lunch",
+                    "category_count": 2,
+                }
+            ],
+            [],
+        ]
+    )
+    repository = ChatbotRepository(runner=runner)
+
+    result = repository.get_spending_summary(
+        user_id=7,
+        date_from=date(2026, 3, 1),
+        date_to=date(2026, 3, 26),
+    )
+
+    assert set(result) == {"as_of", "window", "summary", "evidence", "warnings"}
+    assert result["window"] == {
+        "date_from": "2026-03-01",
+        "date_to": "2026-03-26",
+    }
+    assert result["summary"]["total_spent"] == 230000
+    assert result["summary"]["transaction_count"] == 3
+    assert result["evidence"][0]["kind"] == "spending_summary"
+    assert result["evidence"][0]["total_spent"] == 230000
+    assert result["warnings"] == [
+        "No analysis metadata found for the requested user."
+    ]
+    assert runner.calls[0]["parameters"] == {
+        "user_id": 7,
+        "date_from": date(2026, 3, 1),
+        "date_to": date(2026, 3, 26),
+    }
+    assert "account_transaction_override" in runner.calls[0]["sql"]
+    assert "card_transaction_override" in runner.calls[0]["sql"]
+    assert "users_id = :user_id" in runner.calls[0]["sql"]
+    assert "transaction_analysis_metadata" in runner.calls[1]["sql"]
+
+
+def test_get_spending_by_category_returns_ranked_categories_and_comparison() -> None:
+    runner = _FakeRunner(
+        responses=[
+            [
+                {
+                    "category_id": 1,
+                    "category_name": "식비",
+                    "spent_amount": 150000,
+                    "transaction_count": 4,
+                },
+                {
+                    "category_id": 2,
+                    "category_name": "교통",
+                    "spent_amount": 80000,
+                    "transaction_count": 6,
+                },
+            ],
+            [
+                {
+                    "comparison_total_spent": 180000,
+                }
+            ],
+            [],
+        ]
+    )
+    repository = ChatbotRepository(runner=runner)
+
+    result = repository.get_spending_by_category(
+        user_id=7,
+        date_from=date(2026, 3, 1),
+        date_to=date(2026, 3, 26),
+        include_comparison=True,
+    )
+
+    assert result["summary"]["total_spent"] == 230000
+    assert result["summary"]["category_count"] == 2
+    assert result["summary"]["comparison_total_spent"] == 180000
+    assert result["evidence"][0]["category_name"] == "식비"
+    assert result["evidence"][1]["category_name"] == "교통"
+    assert result["warnings"] == [
+        "No analysis metadata found for the requested user."
+    ]
+    assert runner.calls[0]["parameters"] == {
+        "user_id": 7,
+        "date_from": date(2026, 3, 1),
+        "date_to": date(2026, 3, 26),
+    }
+    assert runner.calls[1]["parameters"] == {
+        "user_id": 7,
+        "date_from": date(2026, 2, 3),
+        "date_to": date(2026, 2, 28),
+    }
+    assert "category" in runner.calls[0]["sql"]
+    assert "transaction_analysis_metadata" in runner.calls[2]["sql"]
+
+
+def test_get_spending_by_category_omits_comparison_when_disabled() -> None:
+    runner = _FakeRunner(
+        responses=[
+            [
+                {
+                    "category_id": 1,
+                    "category_name": "식비",
+                    "spent_amount": 150000,
+                    "transaction_count": 4,
+                }
+            ],
+            [],
+        ]
+    )
+    repository = ChatbotRepository(runner=runner)
+
+    result = repository.get_spending_by_category(
+        user_id=7,
+        date_from=date(2026, 3, 1),
+        date_to=date(2026, 3, 26),
+        include_comparison=False,
+    )
+
+    assert result["summary"]["comparison_total_spent"] is None
+    assert len(runner.calls) == 2
+    assert runner.calls[1]["sql"].strip().lower().startswith("select")
+
+
+def test_get_recent_spending_anomalies_returns_recent_candidates_and_metadata_warning() -> None:
+    runner = _FakeRunner(
+        responses=[
+            [
+                {
+                    "transaction_id": 101,
+                    "category_name": "식비",
+                    "transaction_balance": 125000,
+                    "transaction_date_time": datetime(2026, 3, 25, 12, 0),
+                    "transaction_memo": "Team lunch",
+                    "final_label": "ANOMALY",
+                    "raw_label": "SPENDING",
+                    "confidence": 0.41,
+                    "threshold_used": 0.7,
+                    "analysis_included": True,
+                    "excluded_reason": None,
+                }
+            ],
+            [],
+        ]
+    )
+    repository = ChatbotRepository(runner=runner)
+
+    result = repository.get_recent_spending_anomalies(
+        user_id=7,
+        lookback_days=14,
+        limit=3,
+    )
+
+    assert result["summary"]["anomaly_count"] == 1
+    assert result["summary"]["lookback_days"] == 14
+    assert result["summary"]["limit"] == 3
+    assert result["evidence"][0]["kind"] == "spending_anomaly"
+    assert result["evidence"][0]["transaction_id"] == 101
+    assert result["warnings"] == [
+        "No analysis metadata found for the requested user."
+    ]
+    assert runner.calls[0]["parameters"]["user_id"] == 7
+    assert runner.calls[0]["parameters"]["limit"] == 3
+    assert "transaction_analysis_result" in runner.calls[0]["sql"]
+    assert "transaction_analysis_metadata" in runner.calls[1]["sql"]

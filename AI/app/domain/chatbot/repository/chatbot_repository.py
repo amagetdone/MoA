@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from app.core.database import ReadOnlyDatabase, validate_user_id
@@ -110,6 +110,56 @@ def _build_rollover_evidence(
             for row in rows
         ],
     }
+
+
+def _build_user_scoped_transactions_cte() -> str:
+    return """
+    WITH scoped_transactions AS (
+        SELECT DISTINCT
+            scoped_base.id,
+            scoped_base.category_id,
+            scoped_base.transaction_balance,
+            scoped_base.transaction_date_time,
+            scoped_base.transaction_memo
+        FROM (
+            SELECT
+                tovr.id,
+                tovr.category_id,
+                tovr.transaction_balance,
+                tovr.transaction_date_time,
+                tovr.transaction_memo
+            FROM transaction_override tovr
+            JOIN account_transaction_override ato
+              ON ato.id = tovr.id
+            JOIN account a
+              ON a.id = ato.account_id
+            WHERE a.users_id = :user_id
+              AND tovr.is_deleted = false
+
+            UNION ALL
+
+            SELECT
+                tovr.id,
+                tovr.category_id,
+                tovr.transaction_balance,
+                tovr.transaction_date_time,
+                tovr.transaction_memo
+            FROM transaction_override tovr
+            JOIN card_transaction_override cto
+              ON cto.id = tovr.id
+            JOIN card c
+              ON c.card_unique_no = cto.card_unique_no
+            JOIN account a
+              ON a.id = c.withdrawal_account_no
+            WHERE a.users_id = :user_id
+              AND tovr.is_deleted = false
+        ) scoped_base
+    )
+    """
+
+
+def _build_transaction_scope_warning() -> str:
+    return "No analysis metadata found for the requested user."
 
 
 @dataclass(slots=True)
@@ -333,5 +383,340 @@ class ChatbotRepository:
                 "plans": plan_summaries,
             },
             evidence=plan_summaries,
+            warnings=warnings,
+        )
+
+    def _load_latest_analysis_metadata(self, *, user_id: int) -> tuple[list[dict[str, Any]], list[str]]:
+        rows = self.runner.execute_select(
+            """
+            SELECT
+                id,
+                requested_months,
+                transaction_count,
+                analyzed_at,
+                latest_transaction_at,
+                window_start_at,
+                window_end_at
+            FROM transaction_analysis_metadata
+            WHERE users_id = :user_id
+              AND is_deleted = false
+            ORDER BY analyzed_at DESC, id DESC
+            LIMIT 1
+            """,
+            parameters={
+                "user_id": user_id,
+            },
+        )
+        warnings: list[str] = []
+        if not rows:
+            warnings.append(_build_transaction_scope_warning())
+        return rows, warnings
+
+    def get_spending_summary(
+        self,
+        *,
+        user_id: int,
+        date_from: date,
+        date_to: date,
+    ) -> dict[str, Any]:
+        validate_user_id(user_id)
+        if date_from > date_to:
+            raise ValueError("date_from must be on or before date_to")
+
+        rows = self.runner.execute_select(
+            f"""
+            {_build_user_scoped_transactions_cte()}
+            SELECT
+                COALESCE(SUM(ABS(COALESCE(tx.transaction_balance, 0))), 0) AS total_spent,
+                COUNT(*) AS transaction_count,
+                COALESCE(ROUND(AVG(ABS(COALESCE(tx.transaction_balance, 0)))::numeric, 2), 0) AS average_transaction_amount,
+                COALESCE(MAX(ABS(COALESCE(tx.transaction_balance, 0))), 0) AS largest_transaction_amount,
+                (
+                    SELECT tx2.transaction_memo
+                    FROM scoped_transactions tx2
+                    WHERE tx2.transaction_date_time >= :date_from
+                      AND tx2.transaction_date_time < (:date_to + INTERVAL '1 day')
+                    ORDER BY ABS(COALESCE(tx2.transaction_balance, 0)) DESC,
+                             tx2.transaction_date_time DESC,
+                             tx2.id DESC
+                    LIMIT 1
+                ) AS largest_transaction_memo,
+                COUNT(DISTINCT tx.category_id) AS category_count
+            FROM scoped_transactions tx
+            WHERE tx.transaction_date_time >= :date_from
+              AND tx.transaction_date_time < (:date_to + INTERVAL '1 day')
+            """,
+            parameters={
+                "user_id": user_id,
+                "date_from": date_from,
+                "date_to": date_to,
+            },
+        )
+        metadata_rows, warnings = self._load_latest_analysis_metadata(user_id=user_id)
+
+        as_of = datetime.now(timezone.utc).astimezone().isoformat()
+        summary_row = rows[0] if rows else {}
+        summary = {
+            "total_spent": summary_row.get("total_spent", 0),
+            "transaction_count": summary_row.get("transaction_count", 0),
+            "average_transaction_amount": summary_row.get("average_transaction_amount", 0),
+            "largest_transaction_amount": summary_row.get("largest_transaction_amount", 0),
+            "largest_transaction_memo": summary_row.get("largest_transaction_memo"),
+            "category_count": summary_row.get("category_count", 0),
+        }
+        if metadata_rows:
+            metadata_row = metadata_rows[0]
+            summary["analysis_window_start_at"] = _as_iso_datetime(
+                metadata_row.get("window_start_at")
+            )
+            summary["analysis_window_end_at"] = _as_iso_datetime(
+                metadata_row.get("window_end_at")
+            )
+            summary["analysis_requested_months"] = metadata_row.get("requested_months")
+
+        if not rows:
+            warnings.append("No spending transactions found for the requested window.")
+
+        evidence = [
+            {
+                "kind": "spending_summary",
+                "date_from": _as_iso_date(date_from),
+                "date_to": _as_iso_date(date_to),
+                "total_spent": summary["total_spent"],
+                "transaction_count": summary["transaction_count"],
+                "average_transaction_amount": summary["average_transaction_amount"],
+                "largest_transaction_amount": summary["largest_transaction_amount"],
+                "largest_transaction_memo": summary["largest_transaction_memo"],
+                "category_count": summary["category_count"],
+            }
+        ]
+        return _build_standard_contract(
+            as_of=as_of,
+            window={
+                "date_from": _as_iso_date(date_from),
+                "date_to": _as_iso_date(date_to),
+            },
+            summary=summary,
+            evidence=evidence,
+            warnings=warnings,
+        )
+
+    def get_spending_by_category(
+        self,
+        *,
+        user_id: int,
+        date_from: date,
+        date_to: date,
+        include_comparison: bool,
+    ) -> dict[str, Any]:
+        validate_user_id(user_id)
+        if date_from > date_to:
+            raise ValueError("date_from must be on or before date_to")
+
+        comparison_rows: list[dict[str, Any]] = []
+        if include_comparison:
+            window_days = (date_to - date_from).days + 1
+            comparison_date_from = date_from - timedelta(days=window_days)
+            comparison_date_to = date_from - timedelta(days=1)
+        else:
+            comparison_date_from = None
+            comparison_date_to = None
+
+        current_rows = self.runner.execute_select(
+            f"""
+            {_build_user_scoped_transactions_cte()}
+            SELECT
+                COALESCE(tx.category_id, 0) AS category_id,
+                COALESCE(cat.name, '미분류') AS category_name,
+                COUNT(*) AS transaction_count,
+                COALESCE(SUM(ABS(COALESCE(tx.transaction_balance, 0))), 0) AS spent_amount
+            FROM scoped_transactions tx
+            LEFT JOIN category cat
+              ON cat.id = tx.category_id
+            WHERE tx.transaction_date_time >= :date_from
+              AND tx.transaction_date_time < (:date_to + INTERVAL '1 day')
+            GROUP BY COALESCE(tx.category_id, 0), COALESCE(cat.name, '미분류')
+            ORDER BY spent_amount DESC, category_name ASC
+            """,
+            parameters={
+                "user_id": user_id,
+                "date_from": date_from,
+                "date_to": date_to,
+            },
+        )
+        comparison_total_spent = None
+        if include_comparison:
+            comparison_rows = self.runner.execute_select(
+                f"""
+                {_build_user_scoped_transactions_cte()}
+                SELECT
+                    COALESCE(SUM(ABS(COALESCE(tx.transaction_balance, 0))), 0) AS comparison_total_spent
+                FROM scoped_transactions tx
+                WHERE tx.transaction_date_time >= :date_from
+                  AND tx.transaction_date_time < (:date_to + INTERVAL '1 day')
+                """,
+                parameters={
+                    "user_id": user_id,
+                    "date_from": comparison_date_from,
+                    "date_to": comparison_date_to,
+                },
+            )
+            if comparison_rows:
+                comparison_total_spent = comparison_rows[0].get("comparison_total_spent")
+
+        metadata_rows, warnings = self._load_latest_analysis_metadata(user_id=user_id)
+        if not current_rows:
+            warnings.append("No spending transactions found for the requested window.")
+
+        total_spent = sum((row.get("spent_amount") or 0) for row in current_rows)
+        summary = {
+            "total_spent": total_spent,
+            "category_count": len(current_rows),
+            "top_category_name": current_rows[0].get("category_name") if current_rows else None,
+            "top_category_spent_amount": current_rows[0].get("spent_amount") if current_rows else None,
+            "comparison_total_spent": comparison_total_spent,
+            "comparison_delta_amount": (
+                total_spent - comparison_total_spent
+                if comparison_total_spent is not None
+                else None
+            ),
+        }
+        if metadata_rows:
+            metadata_row = metadata_rows[0]
+            summary["analysis_window_start_at"] = _as_iso_datetime(
+                metadata_row.get("window_start_at")
+            )
+            summary["analysis_window_end_at"] = _as_iso_datetime(
+                metadata_row.get("window_end_at")
+            )
+
+        evidence = [
+            {
+                "kind": "spending_category",
+                "category_id": row.get("category_id"),
+                "category_name": row.get("category_name"),
+                "spent_amount": row.get("spent_amount"),
+                "transaction_count": row.get("transaction_count"),
+            }
+            for row in current_rows
+        ]
+        return _build_standard_contract(
+            as_of=datetime.now(timezone.utc).astimezone().isoformat(),
+            window={
+                "date_from": _as_iso_date(date_from),
+                "date_to": _as_iso_date(date_to),
+            },
+            summary=summary,
+            evidence=evidence,
+            warnings=warnings,
+        )
+
+    def get_recent_spending_anomalies(
+        self,
+        *,
+        user_id: int,
+        lookback_days: int,
+        limit: int,
+    ) -> dict[str, Any]:
+        validate_user_id(user_id)
+        if lookback_days <= 0:
+            raise ValueError("lookback_days must be a positive integer")
+        if limit <= 0:
+            raise ValueError("limit must be a positive integer")
+
+        date_to = date.today()
+        date_from = date_to - timedelta(days=lookback_days - 1)
+
+        rows = self.runner.execute_select(
+            f"""
+            {_build_user_scoped_transactions_cte()}
+            SELECT
+                tx.id AS transaction_id,
+                tx.transaction_date_time,
+                tx.transaction_balance,
+                tx.transaction_memo,
+                COALESCE(cat.name, '미분류') AS category_name,
+                ar.final_label,
+                ar.raw_label,
+                ar.confidence,
+                ar.threshold_used,
+                ar.analysis_included,
+                ar.excluded_reason,
+                ar.expense_scope,
+                ar.fallback_applied
+            FROM scoped_transactions tx
+            LEFT JOIN category cat
+              ON cat.id = tx.category_id
+            LEFT JOIN transaction_analysis_result ar
+              ON ar.transaction_override_id = tx.id
+             AND ar.is_deleted = false
+            WHERE tx.transaction_date_time >= :date_from
+              AND tx.transaction_date_time < (:date_to + INTERVAL '1 day')
+              AND ar.analysis_included = true
+              AND (
+                  ar.final_label IN ('ANOMALY', 'UNUSUAL', 'SUSPICIOUS')
+                  OR ar.confidence IS NULL
+                  OR ar.threshold_used IS NULL
+                  OR ar.confidence < ar.threshold_used
+                  OR ar.fallback_applied = true
+              )
+            ORDER BY tx.transaction_date_time DESC, tx.id DESC
+            LIMIT :limit
+            """,
+            parameters={
+                "user_id": user_id,
+                "date_from": date_from,
+                "date_to": date_to,
+                "limit": limit,
+            },
+        )
+        metadata_rows, warnings = self._load_latest_analysis_metadata(user_id=user_id)
+        if not rows:
+            warnings.append("No recent spending anomalies found for the requested window.")
+
+        summary = {
+            "anomaly_count": len(rows),
+            "lookback_days": lookback_days,
+            "limit": limit,
+            "latest_anomaly_at": _as_iso_datetime(rows[0].get("transaction_date_time"))
+            if rows
+            else None,
+        }
+        if metadata_rows:
+            metadata_row = metadata_rows[0]
+            summary["analysis_window_start_at"] = _as_iso_datetime(
+                metadata_row.get("window_start_at")
+            )
+            summary["analysis_window_end_at"] = _as_iso_datetime(
+                metadata_row.get("window_end_at")
+            )
+
+        evidence = [
+            {
+                "kind": "spending_anomaly",
+                "transaction_id": row.get("transaction_id"),
+                "transaction_date_time": _as_iso_datetime(row.get("transaction_date_time")),
+                "transaction_balance": row.get("transaction_balance"),
+                "transaction_memo": row.get("transaction_memo"),
+                "category_name": row.get("category_name"),
+                "final_label": row.get("final_label"),
+                "raw_label": row.get("raw_label"),
+                "confidence": row.get("confidence"),
+                "threshold_used": row.get("threshold_used"),
+                "analysis_included": row.get("analysis_included"),
+                "excluded_reason": row.get("excluded_reason"),
+                "expense_scope": row.get("expense_scope"),
+                "fallback_applied": row.get("fallback_applied"),
+            }
+            for row in rows
+        ]
+        return _build_standard_contract(
+            as_of=datetime.now(timezone.utc).astimezone().isoformat(),
+            window={
+                "date_from": _as_iso_date(date_from),
+                "date_to": _as_iso_date(date_to),
+            },
+            summary=summary,
+            evidence=evidence,
             warnings=warnings,
         )
