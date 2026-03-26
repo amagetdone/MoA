@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
+import 'package:more_app/core/utils/tutorial_service.dart';
 import 'package:more_app/domain/entities/account.dart';
 import 'package:more_app/domain/entities/goal.dart';
 import 'package:more_app/domain/entities/spending.dart';
@@ -16,6 +17,7 @@ import 'package:more_app/presentation/pages/home/widgets/spending_card.dart';
 import 'package:more_app/presentation/pages/home/widgets/spending_rose_chart.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
+import 'package:showcaseview/showcaseview.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -25,6 +27,12 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
+  BuildContext? _showcaseContext;
+  final _keyGoals = GlobalKey();
+  final _keySavings = GlobalKey();
+  final _keyChart = GlobalKey();
+  final _keyFab = GlobalKey();
+
   late final PageController _homeSpendingPageController;
   int _homeSpendingPageIndex = 0;
   bool _isHomeSpendingLoading = true;
@@ -44,6 +52,20 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final shown = await TutorialService.isShown(TutorialService.home);
+      if (!shown && mounted) {
+        await TutorialService.markShown(TutorialService.home);
+        if (mounted && _showcaseContext != null) {
+          ShowCaseWidget.of(_showcaseContext!).startShowCase([
+            _keyGoals,
+            _keySavings,
+            _keyChart,
+            _keyFab,
+          ]);
+        }
+      }
+    });
     _homeSpendingPeriods = _buildHomeSpendingPeriods();
     _homeSpendingPageIndex = _homeSpendingPeriods.length - 1;
     _homeSpendingPageController = PageController(
@@ -147,15 +169,23 @@ class _HomePageState extends ConsumerState<HomePage> {
     final colors = AppColors.of(context);
     final state = ref.watch(homeViewModelProvider);
 
-    return Scaffold(
+    return ShowCaseWidget(
+      builder: (ctx) {
+        _showcaseContext = ctx;
+        return Scaffold(
       backgroundColor: colors.bgPrimary,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openAiChatSheet(context),
-        backgroundColor: AppColors.orange500,
-        foregroundColor: Colors.white,
-        elevation: 6,
-        icon: const Icon(Icons.chat_bubble_rounded),
-        label: const Text('AI 코치'),
+      floatingActionButton: Showcase(
+        key: _keyFab,
+        title: 'AI 코치',
+        description: '소비 패턴을 분석하고 절약 팁을 알려주는 AI 코치예요. 궁금한 점이 있으면 언제든지 물어보세요!',
+        child: FloatingActionButton.extended(
+          onPressed: () => _openAiChatSheet(context),
+          backgroundColor: AppColors.orange500,
+          foregroundColor: Colors.white,
+          elevation: 6,
+          icon: const Icon(Icons.chat_bubble_rounded),
+          label: const Text('AI 코치'),
+        ),
       ),
       body: Column(
         children: [
@@ -258,6 +288,8 @@ class _HomePageState extends ConsumerState<HomePage> {
           Expanded(child: _buildBody(context, ref, state)),
         ],
       ),
+      );
+    },
     );
   }
 
@@ -321,17 +353,26 @@ class _HomePageState extends ConsumerState<HomePage> {
       child: Column(
         children: [
           // 1) 목표
-          GoalsSectionCard(
-            goals: topGoals,
-            onViewAll: () => context.go(AppRoutes.goalTab),
-            onAddGoal: showGoalEmptyState
-                ? () => context.push(AppRoutes.goalCreate)
-                : null,
+          Showcase(
+            key: _keyGoals,
+            title: '목표 섹션',
+            description: '현재 진행 중인 저축 목표들을 한눈에 볼 수 있어요. 목표를 탭하면 상세 내용과 저축 현황을 확인할 수 있어요.',
+            child: GoalsSectionCard(
+              goals: topGoals,
+              onViewAll: () => context.go(AppRoutes.goalTab),
+              onAddGoal: showGoalEmptyState
+                  ? () => context.push(AppRoutes.goalCreate)
+                  : null,
+            ),
           ),
           SizedBox(height: 10.h),
 
           // 3) 저축 + 여유자금 (가로)
-          IntrinsicHeight(
+          Showcase(
+            key: _keySavings,
+            title: '저축·예산 카드',
+            description: '이번 주 저축 진행률과 남은 여유 예산을 보여줘요. 계획대로 잘 지키고 있는지 매일 확인해보세요!',
+            child: IntrinsicHeight(
             child: Row(
               children: [
                 Expanded(
@@ -354,10 +395,15 @@ class _HomePageState extends ConsumerState<HomePage> {
               ],
             ),
           ),
+          ),
           SizedBox(height: 10.h),
 
           // 이번 주 소비 rose 차트
-          Builder(builder: (context) {
+          Showcase(
+            key: _keyChart,
+            title: '소비 차트',
+            description: '주간 소비 내역을 카테고리별로 시각화해요. 좌우로 슬라이드하면 이전 주 소비도 확인할 수 있어요.',
+            child: Builder(builder: (context) {
             final colors = AppColors.of(context);
             if (_homeSpendingPeriods.isEmpty) {
               return const SizedBox.shrink();
@@ -515,6 +561,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             );
           }),
+          ),
 
           // 자산 카드
           AssetCard(
