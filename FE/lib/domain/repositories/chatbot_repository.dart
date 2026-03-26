@@ -1,6 +1,8 @@
 import 'package:more_app/domain/entities/chat_message.dart';
 
 abstract class ChatbotRepository {
+  Future<String?> fetchLatestConversationId();
+
   /// 일반 응답 (non-streaming)
   Future<({String conversationId, String answer})> sendMessage({
     required String message,

@@ -49,6 +49,7 @@ class _ChatbotPageState extends ConsumerState<ChatbotPage> {
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final state = ref.watch(chatbotViewModelProvider);
+    final viewModel = ref.read(chatbotViewModelProvider.notifier);
 
     ref.listen(chatbotViewModelProvider, (_, next) {
       if (next.messages.isNotEmpty) _scrollToBottom();
@@ -87,25 +88,34 @@ class _ChatbotPageState extends ConsumerState<ChatbotPage> {
           ],
         ),
         actions: [
-          if (state.messages.isNotEmpty)
+          if (state.messages.isNotEmpty || state.conversationId != null)
             IconButton(
               icon: Icon(Icons.refresh, size: 20.w, color: colors.textTertiary),
               tooltip: '새 대화 시작',
-              onPressed: () => ref.read(chatbotViewModelProvider.notifier).startNewConversation(),
+              onPressed: state.isLoading ? null : viewModel.startNewConversation,
             ),
         ],
       ),
       body: Column(
         children: [
           // 만료 배너
-          if (state.isExpired) _ExpiredBanner(
-            onNewChat: () => ref.read(chatbotViewModelProvider.notifier).startNewConversation(),
-          ),
+          if (state.isExpired && state.infoMessage != null)
+            _ExpiredBanner(
+              message: state.infoMessage!,
+              onNewChat: viewModel.startNewConversation,
+            ),
 
           // 메시지 리스트
           Expanded(
-            child: state.messages.isEmpty
-                ? _EmptyState(colors: colors)
+            child: !state.hasInitialized && state.isLoading
+                ? _InitialLoading(colors: colors)
+                : state.messages.isEmpty
+                ? _EmptyState(
+                    colors: colors,
+                    infoMessage: state.isExpired ? null : state.infoMessage,
+                    errorMessage: state.errorMessage,
+                    onRetry: viewModel.restoreLatestConversation,
+                  )
                 : ListView.builder(
                     controller: _scrollController,
                     padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
@@ -117,7 +127,7 @@ class _ChatbotPageState extends ConsumerState<ChatbotPage> {
           ),
 
           // 에러 메시지
-          if (state.errorMessage != null)
+          if (state.errorMessage != null && state.messages.isNotEmpty)
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
               child: Text(
@@ -142,7 +152,8 @@ class _ChatbotPageState extends ConsumerState<ChatbotPage> {
 
 // ── 만료 배너 ──────────────────────────────────────
 class _ExpiredBanner extends StatelessWidget {
-  const _ExpiredBanner({required this.onNewChat});
+  const _ExpiredBanner({required this.message, required this.onNewChat});
+  final String message;
   final VoidCallback onNewChat;
 
   @override
@@ -157,7 +168,7 @@ class _ExpiredBanner extends StatelessWidget {
           SizedBox(width: 8.w),
           Expanded(
             child: Text(
-              '대화가 만료되었어요. 새 대화를 시작해주세요.',
+              message,
               style: AppTextStyles.bodySm.copyWith(color: AppColors.orange500),
             ),
           ),
@@ -177,13 +188,55 @@ class _ExpiredBanner extends StatelessWidget {
   }
 }
 
-// ── 빈 상태 ──────────────────────────────────────
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.colors});
+class _InitialLoading extends StatelessWidget {
+  const _InitialLoading({required this.colors});
+
   final AppColorScheme colors;
 
   @override
   Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 28.w,
+            height: 28.w,
+            child: const CircularProgressIndicator(strokeWidth: 2.6),
+          ),
+          SizedBox(height: 14.h),
+          Text(
+            '최근 대화를 불러오는 중이에요',
+            style: AppTextStyles.bodySm.copyWith(color: colors.textTertiary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── 빈 상태 ──────────────────────────────────────
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({
+    required this.colors,
+    this.infoMessage,
+    this.errorMessage,
+    required this.onRetry,
+  });
+
+  final AppColorScheme colors;
+  final String? infoMessage;
+  final String? errorMessage;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = errorMessage != null
+        ? 'AI 코치를 불러오지 못했어요'
+        : (infoMessage ?? 'AI 코치에게 물어보세요');
+    final description = errorMessage ??
+        '예산, 소비 패턴, 목표 달성에 대해\n무엇이든 물어보세요.';
+
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -199,7 +252,7 @@ class _EmptyState extends StatelessWidget {
           ),
           SizedBox(height: 16.h),
           Text(
-            'AI 코치에게 물어보세요',
+            title,
             style: AppTextStyles.bodyLg.copyWith(
               fontWeight: FontWeight.w700,
               color: colors.textPrimary,
@@ -207,10 +260,18 @@ class _EmptyState extends StatelessWidget {
           ),
           SizedBox(height: 8.h),
           Text(
-            '예산, 소비 패턴, 목표 달성에 대해\n무엇이든 물어보세요.',
+            description,
             style: AppTextStyles.bodySm.copyWith(color: colors.textTertiary),
             textAlign: TextAlign.center,
           ),
+          if (errorMessage != null) ...[
+            SizedBox(height: 16.h),
+            OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('다시 불러오기'),
+            ),
+          ],
         ],
       ),
     );

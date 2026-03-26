@@ -9,6 +9,13 @@ class RealChatbotRemoteDataSource {
 
   final Dio _dio;
 
+  Future<Map<String, dynamic>> fetchLatestConversation() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      'v1/chatbot/conversations/latest',
+    );
+    return response.data ?? <String, dynamic>{};
+  }
+
   Future<({String conversationId, String answer})> sendMessage({
     required String message,
     String? conversationId,
@@ -17,7 +24,7 @@ class RealChatbotRemoteDataSource {
     if (conversationId != null) body['conversation_id'] = conversationId;
 
     final response = await _dio.post<Map<String, dynamic>>(
-      'api/chatbot/messages',
+      'v1/chatbot/messages',
       data: body,
     );
 
@@ -36,7 +43,7 @@ class RealChatbotRemoteDataSource {
     if (conversationId != null) body['conversation_id'] = conversationId;
 
     final response = await _dio.post<ResponseBody>(
-      'api/chatbot/messages/stream',
+      'v1/chatbot/messages/stream',
       data: body,
       options: Options(
         responseType: ResponseType.stream,
@@ -49,7 +56,7 @@ class RealChatbotRemoteDataSource {
     String buffer = '';
 
     await for (final chunk in stream) {
-      buffer += utf8.decode(chunk, allowMalformed: true);
+      buffer += utf8.decode(chunk, allowMalformed: true).replaceAll('\r\n', '\n');
 
       // SSE 프레임 단위 처리: 빈 줄 기준으로 분리
       while (buffer.contains('\n\n')) {
@@ -71,39 +78,65 @@ class RealChatbotRemoteDataSource {
 
   Future<Map<String, dynamic>> fetchConversation(String conversationId) async {
     final response = await _dio.get<Map<String, dynamic>>(
-      'api/chatbot/conversations/$conversationId',
+      'v1/chatbot/conversations/$conversationId',
     );
-    return response.data!;
+    return response.data ?? <String, dynamic>{};
   }
 
   ChatStreamEvent? _parseFrame(String frame) {
     String? eventType;
-    String? dataLine;
+    final dataLines = <String>[];
 
-    for (final line in frame.split('\n')) {
+    for (final rawLine in frame.split('\n')) {
+      final line = rawLine.trimRight();
       if (line.startsWith('event: ')) {
         eventType = line.substring(7).trim();
       } else if (line.startsWith('data: ')) {
-        dataLine = line.substring(6).trim();
+        dataLines.add(line.substring(6).trimLeft());
       }
     }
 
-    if (eventType == null || dataLine == null) return null;
+    if (eventType == null || dataLines.isEmpty) return null;
 
     try {
-      final json = jsonDecode(dataLine) as Map<String, dynamic>;
+      final rawPayload = jsonDecode(dataLines.join('\n'));
+      if (rawPayload is! Map) {
+        return null;
+      }
+
+      final payload = Map<String, dynamic>.from(rawPayload);
+      final data = payload['data'] is Map
+          ? Map<String, dynamic>.from(payload['data'] as Map)
+          : payload;
+
       switch (eventType) {
         case 'token':
-          return ChatStreamToken(json['text'] as String? ?? '');
+          return ChatStreamToken(
+            _readString(data, const ['text', 'token', 'content']) ?? '',
+          );
         case 'done':
-          return ChatStreamDone(json['conversation_id'] as String? ?? '');
+          return ChatStreamDone(
+            _readString(data, const ['conversation_id', 'conversationId', 'id']) ?? '',
+          );
         case 'status':
-          return ChatStreamStatus(json['message'] as String? ?? '');
+          return ChatStreamStatus(
+            _readString(data, const ['message', 'status', 'text']) ?? '',
+          );
         default:
           return null;
       }
     } catch (_) {
       return null;
     }
+  }
+
+  String? _readString(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key];
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+    return null;
   }
 }
