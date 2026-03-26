@@ -11,6 +11,7 @@ import java.util.Optional;
 
 import com.ssafy.amagetdone.domain.member.api.dto.ProfileCompletionDto;
 import com.ssafy.amagetdone.domain.member.application.usecase.CompleteMemberProfileUseCase;
+import com.ssafy.amagetdone.domain.member.application.usecase.EnsureFinMemberLinkedUseCase;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
@@ -31,14 +32,21 @@ class MemberProfileServiceTest {
 	@Mock
 	private UserRepository userRepository;
 
+	@Mock
+	private EnsureFinMemberLinkedUseCase ensureFinMemberLinkedUseCase;
+
 	@Test
 	void completeProfileActivatesPendingMember() {
 		ListAppender<ILoggingEvent> appender = attachAppender();
-		CompleteMemberProfileUseCase completeMemberProfileUseCase = new CompleteMemberProfileUseCase(userRepository);
+		CompleteMemberProfileUseCase completeMemberProfileUseCase = new CompleteMemberProfileUseCase(
+			userRepository,
+			ensureFinMemberLinkedUseCase
+		);
 		MemberProfileService memberProfileService = new MemberProfileService(completeMemberProfileUseCase);
 		User user = User.createPendingSocialUser();
 		setUserId(user, 1);
 		given(userRepository.findById(1)).willReturn(Optional.of(user));
+		given(ensureFinMemberLinkedUseCase.execute(1, "moa@example.com")).willReturn("ssafy-user-key");
 
 		ProfileCompletionDto.Response response = memberProfileService.completeProfile(
 			1,
@@ -51,6 +59,7 @@ class MemberProfileServiceTest {
 		);
 
 		assertEquals("ACTIVE", response.status());
+		assertEquals("ssafy-user-key", user.getUserKey());
 		assertTrue(containsLog(appender, "event=MEMBER_SIGNUP_COMPLETE_SUCCESS"));
 	}
 
@@ -72,7 +81,10 @@ class MemberProfileServiceTest {
 
 	@Test
 	void completeProfileThrowsNotFoundWhenMemberDoesNotExist() {
-		CompleteMemberProfileUseCase completeMemberProfileUseCase = new CompleteMemberProfileUseCase(userRepository);
+		CompleteMemberProfileUseCase completeMemberProfileUseCase = new CompleteMemberProfileUseCase(
+			userRepository,
+			ensureFinMemberLinkedUseCase
+		);
 		MemberProfileService memberProfileService = new MemberProfileService(completeMemberProfileUseCase);
 		given(userRepository.findById(99)).willReturn(Optional.empty());
 
@@ -92,30 +104,35 @@ class MemberProfileServiceTest {
 	}
 
 	@Test
-	void completeProfileStoresBasicFieldsBeforeActivation() {
+	void completeProfileKeepsMemberTempWhenFinancialLinkFails() {
 		ListAppender<ILoggingEvent> appender = attachAppender();
-		CompleteMemberProfileUseCase completeMemberProfileUseCase = new CompleteMemberProfileUseCase(userRepository);
+		CompleteMemberProfileUseCase completeMemberProfileUseCase = new CompleteMemberProfileUseCase(
+			userRepository,
+			ensureFinMemberLinkedUseCase
+		);
 		MemberProfileService memberProfileService = new MemberProfileService(completeMemberProfileUseCase);
 		User user = User.createPendingSocialUser();
 		setUserId(user, 7);
 		given(userRepository.findById(7)).willReturn(Optional.of(user));
+		given(ensureFinMemberLinkedUseCase.execute(7, "moa@example.com"))
+			.willThrow(new MemberException(MemberErrorCode.FINANCIAL_MEMBER_LINK_FAILED));
 
-		ProfileCompletionDto.Response response = memberProfileService.completeProfile(
-			7,
-			new ProfileCompletionDto.Request(
-				"moa",
-				"moa@example.com",
-				LocalDate.of(1997, 3, 1),
-				true
+		MemberException exception = assertThrows(
+			MemberException.class,
+			() -> memberProfileService.completeProfile(
+				7,
+				new ProfileCompletionDto.Request(
+					"moa",
+					"moa@example.com",
+					LocalDate.of(1997, 3, 1),
+					true
+				)
 			)
 		);
 
-		assertEquals("ACTIVE", response.status());
-		assertEquals("moa", user.getNickname());
-		assertEquals("moa@example.com", user.getEmail());
-		assertEquals(LocalDate.of(1997, 3, 1), user.getBirthDate());
-		assertEquals(Boolean.TRUE, user.getHasFixedIncome());
-		assertTrue(containsLog(appender, "event=MEMBER_SIGNUP_COMPLETE_SUCCESS"));
+		assertEquals(MemberErrorCode.FINANCIAL_MEMBER_LINK_FAILED, exception.getErrorCode());
+		assertEquals("TEMP", user.getStatus().name());
+		assertTrue(containsLog(appender, "event=MEMBER_SIGNUP_COMPLETE_FAILURE"));
 	}
 
 	private void setUserId(User user, int id) {
