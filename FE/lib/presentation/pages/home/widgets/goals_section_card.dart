@@ -124,7 +124,7 @@ class _GoalsSectionCardState extends State<GoalsSectionCard> {
                   _GoalEmptyBody(onTap: widget.onAddGoal)
                 else
                   SizedBox(
-                    height: 122.h,
+                    height: 128.h,
                     child: PageView.builder(
                       itemCount: pageCount,
                       onPageChanged: (i) => setState(() => _currentPage = i),
@@ -265,19 +265,22 @@ class _GoalItem extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Column(
         children: [
-          // Goal info
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              GoalVideoThumb(
-                goalId: goal.id,
-                assetPath: goal.isAiPending || goal.isAiFailed
-                    ? null
-                    : goal.sketchVideoAssetPath,
-                iconName: goal.iconName,
-                progressRate: overallProgress,
-                size: 48.w,
-                borderRadius: 14.r,
-                forceLoading: goal.isAiPending,
+              Padding(
+                padding: EdgeInsets.only(top: 2.h),
+                child: GoalVideoThumb(
+                  goalId: goal.id,
+                  assetPath: goal.isAiPending || goal.isAiFailed
+                      ? null
+                      : goal.sketchVideoAssetPath,
+                  iconName: goal.iconName,
+                  progressRate: overallProgress,
+                  size: 52.w,
+                  borderRadius: 14.r,
+                  forceLoading: goal.isAiPending,
+                ),
               ),
               SizedBox(width: 14.w),
               Expanded(
@@ -323,42 +326,41 @@ class _GoalItem extends StatelessWidget {
                         ),
                       ),
                     ],
+                    SizedBox(height: 8.h),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 12.h,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: _GoalProgressBar(
+                                progress: overallProgress,
+                                markerProgress: weeklyTargetMarkerProgress,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 10.w),
+                        SizedBox(
+                          width: 36.w,
+                          height: 12.h,
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              '$percent%',
+                              style: AppTextStyles.bodySm.copyWith(
+                                color: AppColors.orange500,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12.sp,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 8.h),
-
-          // Progress bar + percent
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 12.h,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: _GoalProgressBar(
-                      progress: overallProgress,
-                      markerProgress: weeklyTargetMarkerProgress,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: 10.w),
-              SizedBox(
-                height: 12.h,
-                child: Align(
-                  alignment: Alignment.center,
-                  child: Text(
-                    '$percent%',
-                    style: AppTextStyles.bodySm.copyWith(
-                      color: AppColors.orange500,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12.sp,
-                    ),
-                  ),
                 ),
               ),
             ],
