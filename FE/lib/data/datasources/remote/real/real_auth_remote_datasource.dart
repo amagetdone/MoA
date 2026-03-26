@@ -14,9 +14,10 @@ class RealAuthRemoteDataSource implements AuthRemoteDataSource {
     required String provider,
     required String socialToken,
   }) async {
-    // Google: { "idToken": "..." }, Kakao: { "accessToken": "..." }
+    // Web Google sign-in may only expose an access token, so send both
+    // fields and let the backend validate whichever token type is usable.
     final body = provider == 'google'
-        ? {'idToken': socialToken}
+        ? {'idToken': socialToken, 'accessToken': socialToken}
         : {'accessToken': socialToken};
 
     final response = await _dio.post(
