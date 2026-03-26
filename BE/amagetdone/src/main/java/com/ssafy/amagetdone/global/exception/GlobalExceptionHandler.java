@@ -23,6 +23,8 @@ import org.springframework.web.server.ResponseStatusException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
 	@ExceptionHandler(MemberException.class)
 	public ResponseEntity<ErrorResponse> handleMemberException(MemberException exception) {
 		return ResponseEntity.status(exception.getErrorCode().httpStatus())
@@ -101,6 +103,7 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ErrorResponse> handleException(Exception exception) {
+		log.error("Unhandled exception", exception);
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 			.body(ErrorResponse.of("Internal server error", "INTERNAL_SERVER_ERROR"));
 	}
