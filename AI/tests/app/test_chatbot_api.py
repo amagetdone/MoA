@@ -110,6 +110,23 @@ def test_chatbot_message_endpoint_requires_user_id_header() -> None:
     assert response.status_code == 422
 
 
+def test_chatbot_message_endpoint_rejects_non_positive_user_id_header() -> None:
+    app = create_app(
+        classifier=object(),
+        image_generation_service=object(),
+        chatbot_service=_FakeChatbotService(),
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/v1/chatbot/messages",
+            headers={"X-User-Id": "0"},
+            json={"message": "Is my budget okay this week?"},
+        )
+
+    assert response.status_code == 422
+
+
 def test_chatbot_message_endpoint_rejects_blank_message() -> None:
     app = create_app(
         classifier=object(),
@@ -254,3 +271,20 @@ def test_chatbot_stream_endpoint_returns_sse_response() -> None:
             "conversation_id": "conv-1",
         }
     ]
+
+
+def test_chatbot_stream_endpoint_rejects_non_positive_user_id_header() -> None:
+    app = create_app(
+        classifier=object(),
+        image_generation_service=object(),
+        chatbot_service=_FakeStreamingChatbotService(),
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/v1/chatbot/messages/stream",
+            headers={"X-User-Id": "-1"},
+            json={"message": "Is my budget okay this week?"},
+        )
+
+    assert response.status_code == 422

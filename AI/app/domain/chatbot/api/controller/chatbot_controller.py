@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import AsyncIterator
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header
 from fastapi.responses import StreamingResponse
@@ -13,12 +14,13 @@ from app.domain.chatbot.api.dto.detail_dto import (
 )
 
 router = APIRouter(prefix="/v1/chatbot", tags=["chatbot"])
+TrustedUserId = Annotated[int, Header(alias="X-User-Id", ge=1)]
 
 
 @router.post("/messages", response_model=ChatbotMessageResponse)
 async def create_chatbot_message(
     request: ChatbotMessageRequest,
-    user_id: int = Header(alias="X-User-Id"),
+    user_id: TrustedUserId,
     service=Depends(get_chatbot_service),
 ) -> dict[str, object]:
     return await service.reply(
@@ -31,7 +33,7 @@ async def create_chatbot_message(
 @router.post("/messages/stream")
 async def stream_chatbot_message(
     request: ChatbotMessageRequest,
-    user_id: int = Header(alias="X-User-Id"),
+    user_id: TrustedUserId,
     service=Depends(get_chatbot_service),
 ) -> StreamingResponse:
     async def event_stream() -> AsyncIterator[str]:

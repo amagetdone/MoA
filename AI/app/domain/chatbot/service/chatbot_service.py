@@ -9,7 +9,7 @@ from uuid import uuid4
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
 from app.core.config import Settings
-from app.core.database import ReadOnlyDatabase, build_thread_id
+from app.core.database import ReadOnlyDatabase, build_thread_id, validate_user_id
 from app.core.logging import LangfuseTraceLogger
 from app.domain.chatbot.agents.graph import ChatbotToolBundle, build_chatbot_graph
 from app.domain.chatbot.agents.tools.finance_tools import (
@@ -24,6 +24,9 @@ from app.domain.chatbot.repository.chatbot_repository import ChatbotRepository
 
 class ChatbotConfigurationError(RuntimeError):
     """Raised when chatbot runtime configuration is missing."""
+
+
+SUPERVISOR_NODE_NAME = "supervisor"
 
 
 @dataclass(slots=True)
@@ -62,12 +65,13 @@ class ChatbotService:
         message: str,
         conversation_id: str | None,
     ) -> dict[str, object]:
+        validated_user_id = validate_user_id(user_id)
         resolved_conversation_id = self._resolve_conversation_id(conversation_id)
         thread_id = build_thread_id(
-            user_id=user_id,
+            user_id=validated_user_id,
             conversation_id=resolved_conversation_id,
         )
-        graph = self._get_graph(user_id)
+        graph = self._get_graph(validated_user_id)
 
         with self._tracer.start_as_current_span(
             name="chatbot.reply",
@@ -109,12 +113,13 @@ class ChatbotService:
         message: str,
         conversation_id: str | None,
     ) -> AsyncIterator[dict[str, object]]:
+        validated_user_id = validate_user_id(user_id)
         resolved_conversation_id = self._resolve_conversation_id(conversation_id)
         thread_id = build_thread_id(
-            user_id=user_id,
+            user_id=validated_user_id,
             conversation_id=resolved_conversation_id,
         )
-        graph = self._get_graph(user_id)
+        graph = self._get_graph(validated_user_id)
 
         with self._tracer.start_as_current_span(
             name="chatbot.stream_reply",
@@ -182,8 +187,10 @@ class ChatbotService:
 
         messages = result.get("messages") or []
         for message in reversed(messages):
+            if not ChatbotService._is_user_facing_message(message):
+                continue
             text = ChatbotService._message_content(message)
-            if text:
+            if text.strip():
                 return text
         return ""
 
@@ -192,8 +199,36 @@ class ChatbotService:
         if isinstance(chunk, tuple):
             if not chunk:
                 return ""
-            return ChatbotService._message_content(chunk[0])
+            message = chunk[0]
+            metadata = chunk[1] if len(chunk) > 1 and isinstance(chunk[1], dict) else {}
+            if not ChatbotService._is_user_facing_stream_chunk(
+                message=message,
+                metadata=metadata,
+            ):
+                return ""
+            return ChatbotService._message_content(message)
+
+        if not ChatbotService._is_user_facing_message(chunk):
+            return ""
         return ChatbotService._message_content(chunk)
+
+    @staticmethod
+    def _is_user_facing_stream_chunk(
+        *,
+        message: Any,
+        metadata: dict[str, Any],
+    ) -> bool:
+        node_name = str(metadata.get("langgraph_node") or "").strip()
+        if node_name and node_name != SUPERVISOR_NODE_NAME:
+            return False
+        return ChatbotService._is_user_facing_message(message)
+
+    @staticmethod
+    def _is_user_facing_message(message: Any) -> bool:
+        return (
+            ChatbotService._message_name(message) == SUPERVISOR_NODE_NAME
+            and not ChatbotService._message_has_tool_calls(message)
+        )
 
     @staticmethod
     def _message_content(message: Any) -> str:
@@ -211,6 +246,27 @@ class ChatbotService:
         if isinstance(content, str):
             return content
         return str(content)
+
+    @staticmethod
+    def _message_name(message: Any) -> str | None:
+        if isinstance(message, dict):
+            name = message.get("name")
+        else:
+            name = getattr(message, "name", None)
+
+        if isinstance(name, str):
+            normalized_name = name.strip()
+            if normalized_name:
+                return normalized_name
+        return None
+
+    @staticmethod
+    def _message_has_tool_calls(message: Any) -> bool:
+        if isinstance(message, dict):
+            tool_calls = message.get("tool_calls")
+        else:
+            tool_calls = getattr(message, "tool_calls", None)
+        return bool(tool_calls)
 
 
 def build_chatbot_service(

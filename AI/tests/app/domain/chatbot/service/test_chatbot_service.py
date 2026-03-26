@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import date
 from uuid import UUID
 
 import anyio
+import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
 from app.core.config import Settings
@@ -40,21 +40,60 @@ class _FakeTracer:
 
 
 class _FakeGraph:
-    def __init__(self, *, reply_answer: str, stream_chunks: list[tuple[str, object]]) -> None:
-        self.reply_answer = reply_answer
-        self.stream_chunks = stream_chunks
+    def __init__(
+        self,
+        *,
+        reply_messages: list[object] | None = None,
+        reply_final_answer: str | None = None,
+        stream_chunks: list[tuple[str, object]] | None = None,
+    ) -> None:
+        self.reply_messages = reply_messages or [
+            HumanMessage(content="How is my budget?"),
+            AIMessage(content="Weekly budget is healthy.", name="supervisor"),
+        ]
+        self.reply_final_answer = reply_final_answer
+        self.stream_chunks = stream_chunks or [
+            (
+                "messages",
+                (
+                    AIMessage(content="Internal specialist note", name="spending_specialist"),
+                    {"langgraph_node": "spending_specialist"},
+                ),
+            ),
+            (
+                "messages",
+                (
+                    AIMessage(content="Budget", name="supervisor"),
+                    {"langgraph_node": "supervisor"},
+                ),
+            ),
+            (
+                "messages",
+                (
+                    AIMessage(content=" is healthy.", name="supervisor"),
+                    {"langgraph_node": "supervisor"},
+                ),
+            ),
+        ]
         self.reply_calls: list[dict[str, object]] = []
         self.stream_calls: list[dict[str, object]] = []
 
-    async def ainvoke(self, input: dict[str, object], config: dict[str, object] | None = None):
+    async def ainvoke(
+        self,
+        input: dict[str, object],
+        config: dict[str, object] | None = None,
+    ):
         self.reply_calls.append({"input": input, "config": config})
         return {
-            "messages": [
-                HumanMessage(content=str(input["messages"][0].content)),
-                AIMessage(content=self.reply_answer),
-            ],
+            "messages": self.reply_messages,
             "warnings": ["watch budget"],
-            "tool_summaries": [{"tool_name": "get_weekly_budget_status"}],
+            "tool_summaries": [
+                {
+                    "tool_name": "get_weekly_budget_status",
+                    "as_of": "2026-03-26",
+                }
+            ],
+            "final_answer": self.reply_final_answer,
         }
 
     async def astream(
@@ -79,26 +118,7 @@ class _FakeGraphFactory:
         self.calls.append(user_id)
         graph = self.graphs.get(user_id)
         if graph is None:
-            graph = _FakeGraph(
-                reply_answer="Weekly budget is healthy.",
-                stream_chunks=[
-                    ("updates", {"supervisor": {"messages": []}}),
-                    (
-                        "messages",
-                        (
-                            AIMessage(content="Routing"),
-                            {"langgraph_node": "supervisor"},
-                        ),
-                    ),
-                    (
-                        "messages",
-                        (
-                            AIMessage(content=" answer"),
-                            {"langgraph_node": "supervisor"},
-                        ),
-                    ),
-                ],
-            )
+            graph = _FakeGraph()
             self.graphs[user_id] = graph
         return graph
 
@@ -156,7 +176,12 @@ def test_reply_uses_user_scoped_thread_id_and_caches_graph_per_user() -> None:
     assert third["conversation_id"] == "conv-3"
     assert first["answer"] == "Weekly budget is healthy."
     assert first["warnings"] == ["watch budget"]
-    assert first["tool_summaries"] == [{"tool_name": "get_weekly_budget_status"}]
+    assert first["tool_summaries"] == [
+        {
+            "tool_name": "get_weekly_budget_status",
+            "as_of": "2026-03-26",
+        }
+    ]
     assert tracer.calls[0]["name"] == "chatbot.reply"
 
 
@@ -188,7 +213,52 @@ def test_reply_generates_conversation_id_when_missing() -> None:
     }
 
 
-def test_stream_reply_emits_status_tokens_and_done() -> None:
+def test_reply_ignores_non_supervisor_messages_when_final_answer_missing() -> None:
+    graph = _FakeGraph(
+        reply_messages=[
+            HumanMessage(content="How is my budget?"),
+            AIMessage(content="Weekly budget is healthy.", name="supervisor"),
+            AIMessage(content="Internal specialist note", name="spending_specialist"),
+        ]
+    )
+    tracer = _FakeTracer()
+    service = ChatbotService(
+        settings=_build_settings(),
+        graph_factory=lambda _user_id: graph,
+        tracer=tracer,
+    )
+
+    async def run() -> dict[str, object]:
+        return await service.reply(
+            user_id=7,
+            message="How is my budget?",
+            conversation_id="conv-1",
+        )
+
+    result = anyio.run(run)
+
+    assert result["answer"] == "Weekly budget is healthy."
+
+
+def test_reply_rejects_non_positive_user_id() -> None:
+    service = ChatbotService(
+        settings=_build_settings(),
+        graph_factory=_FakeGraphFactory(),
+        tracer=_FakeTracer(),
+    )
+
+    async def run() -> None:
+        await service.reply(
+            user_id=0,
+            message="How is my budget?",
+            conversation_id="conv-1",
+        )
+
+    with pytest.raises(ValueError, match="positive integer"):
+        anyio.run(run)
+
+
+def test_stream_reply_emits_only_supervisor_tokens_and_done() -> None:
     factory = _FakeGraphFactory()
     tracer = _FakeTracer()
     service = ChatbotService(
@@ -210,12 +280,13 @@ def test_stream_reply_emits_status_tokens_and_done() -> None:
     events = anyio.run(run)
 
     assert events[0] == {"event": "status", "data": {"message": "routing"}}
-    assert events[1] == {"event": "token", "data": {"text": "Routing"}}
-    assert events[2] == {"event": "token", "data": {"text": " answer"}}
+    assert events[1] == {"event": "token", "data": {"text": "Budget"}}
+    assert events[2] == {"event": "token", "data": {"text": " is healthy."}}
     assert events[-1] == {
         "event": "done",
         "data": {"conversation_id": "conv-1"},
     }
+    assert len(events) == 4
     assert factory.graphs[7].stream_calls[0]["config"] == {
         "configurable": {"thread_id": "moa:7:conv-1"}
     }
