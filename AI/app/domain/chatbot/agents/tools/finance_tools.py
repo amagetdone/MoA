@@ -1,12 +1,22 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any, Callable
 
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.domain.chatbot.repository.chatbot_repository import ChatbotRepository
+
+
+DEFAULT_READ_ONLY_PERIOD = "last_7_days"
+SUPPORTED_READ_ONLY_PERIODS = (
+    "this_week",
+    "last_7_days",
+    "this_month",
+    "today",
+    "yesterday",
+)
 
 
 def _coerce_date(value: Any) -> date:
@@ -22,7 +32,10 @@ def _coerce_date(value: Any) -> date:
 class _BudgetToolInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    base_date: date = Field(description="Base date for the weekly budget lookup.")
+    base_date: date | None = Field(
+        default=None,
+        description="Optional base date for the weekly budget lookup. Defaults to today.",
+    )
 
 
 class _GoalToolInput(BaseModel):
@@ -42,15 +55,41 @@ class _GoalToolInput(BaseModel):
 class _SpendingSummaryToolInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    date_from: date = Field(description="Start date for the spending window.")
-    date_to: date = Field(description="End date for the spending window.")
+    period: str | None = Field(
+        default=None,
+        description=(
+            "Optional named safe read-only period. Supported values: "
+            "this_week, last_7_days, this_month, today, yesterday."
+        ),
+    )
+    date_from: date | None = Field(
+        default=None,
+        description="Optional start date for the spending window.",
+    )
+    date_to: date | None = Field(
+        default=None,
+        description="Optional end date for the spending window.",
+    )
 
 
 class _SpendingByCategoryToolInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    date_from: date = Field(description="Start date for the category breakdown window.")
-    date_to: date = Field(description="End date for the category breakdown window.")
+    period: str | None = Field(
+        default=None,
+        description=(
+            "Optional named safe read-only period. Supported values: "
+            "this_week, last_7_days, this_month, today, yesterday."
+        ),
+    )
+    date_from: date | None = Field(
+        default=None,
+        description="Optional start date for the category breakdown window.",
+    )
+    date_to: date | None = Field(
+        default=None,
+        description="Optional end date for the category breakdown window.",
+    )
     include_comparison: bool = Field(
         default=False,
         description="Whether to compare the current window with the preceding window.",
@@ -76,11 +115,15 @@ def _build_budget_runner(
     *,
     repository: ChatbotRepository,
     user_id: int,
+    today_factory: Callable[[], date],
 ) -> Callable[..., dict[str, Any]]:
-    def _run(*, base_date: date) -> dict[str, Any]:
+    def _run(*, base_date: date | None = None) -> dict[str, Any]:
         return repository.get_weekly_budget_status(
             user_id=user_id,
-            base_date=_coerce_date(base_date),
+            base_date=_resolve_budget_base_date(
+                base_date=base_date,
+                today_factory=today_factory,
+            ),
         )
 
     return _run
@@ -105,12 +148,24 @@ def _build_spending_summary_runner(
     *,
     repository: ChatbotRepository,
     user_id: int,
+    today_factory: Callable[[], date],
 ) -> Callable[..., dict[str, Any]]:
-    def _run(*, date_from: date, date_to: date) -> dict[str, Any]:
+    def _run(
+        *,
+        period: str | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
+    ) -> dict[str, Any]:
+        resolved_date_from, resolved_date_to = _resolve_read_only_window(
+            period=period,
+            date_from=date_from,
+            date_to=date_to,
+            today_factory=today_factory,
+        )
         return repository.get_spending_summary(
             user_id=user_id,
-            date_from=_coerce_date(date_from),
-            date_to=_coerce_date(date_to),
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
         )
 
     return _run
@@ -120,17 +175,25 @@ def _build_spending_by_category_runner(
     *,
     repository: ChatbotRepository,
     user_id: int,
+    today_factory: Callable[[], date],
 ) -> Callable[..., dict[str, Any]]:
     def _run(
         *,
-        date_from: date,
-        date_to: date,
+        period: str | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
         include_comparison: bool = False,
     ) -> dict[str, Any]:
+        resolved_date_from, resolved_date_to = _resolve_read_only_window(
+            period=period,
+            date_from=date_from,
+            date_to=date_to,
+            today_factory=today_factory,
+        )
         return repository.get_spending_by_category(
             user_id=user_id,
-            date_from=_coerce_date(date_from),
-            date_to=_coerce_date(date_to),
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
             include_comparison=include_comparison,
         )
 
@@ -152,14 +215,84 @@ def _build_recent_spending_anomalies_runner(
     return _run
 
 
-def build_budget_tool(*, repository: ChatbotRepository, user_id: int) -> StructuredTool:
+def _resolve_budget_base_date(
+    *,
+    base_date: date | None,
+    today_factory: Callable[[], date],
+) -> date:
+    if base_date is None:
+        return today_factory()
+    return _coerce_date(base_date)
+
+
+def _normalize_period(period: str | None) -> str | None:
+    if period is None:
+        return None
+
+    normalized = period.strip().casefold().replace("-", "_").replace(" ", "_")
+    if not normalized:
+        return None
+    return normalized
+
+
+def _resolve_period_window(
+    *,
+    period: str,
+    today: date,
+) -> tuple[date, date]:
+    if period == "this_week":
+        return today - timedelta(days=today.weekday()), today
+    if period == "last_7_days":
+        return today - timedelta(days=6), today
+    if period == "this_month":
+        return today.replace(day=1), today
+    if period == "today":
+        return today, today
+    if period == "yesterday":
+        yesterday = today - timedelta(days=1)
+        return yesterday, yesterday
+    raise ValueError(
+        "Unsupported period. Use one of: "
+        + ", ".join(SUPPORTED_READ_ONLY_PERIODS)
+    )
+
+
+def _resolve_read_only_window(
+    *,
+    period: str | None,
+    date_from: date | None,
+    date_to: date | None,
+    today_factory: Callable[[], date],
+) -> tuple[date, date]:
+    if date_from is not None and date_to is not None:
+        return _coerce_date(date_from), _coerce_date(date_to)
+
+    if date_from is not None or date_to is not None:
+        raise ValueError("date_from and date_to must be provided together")
+
+    today = today_factory()
+    normalized_period = _normalize_period(period) or DEFAULT_READ_ONLY_PERIOD
+    return _resolve_period_window(period=normalized_period, today=today)
+
+
+def build_budget_tool(
+    *,
+    repository: ChatbotRepository,
+    user_id: int,
+    today_factory: Callable[[], date] | None = None,
+) -> StructuredTool:
     return StructuredTool(
         name="get_weekly_budget_status",
         description=(
-            "Get the authenticated user's weekly budget snapshot for a given base date."
+            "Get the authenticated user's weekly budget snapshot for a given base date. "
+            "If base_date is omitted, use today."
         ),
         args_schema=_BudgetToolInput,
-        func=_build_budget_runner(repository=repository, user_id=user_id),
+        func=_build_budget_runner(
+            repository=repository,
+            user_id=user_id,
+            today_factory=today_factory or date.today,
+        ),
     )
 
 
@@ -176,12 +309,22 @@ def build_spending_summary_tool(
     *,
     repository: ChatbotRepository,
     user_id: int,
+    today_factory: Callable[[], date] | None = None,
 ) -> StructuredTool:
     return StructuredTool(
         name="get_spending_summary",
-        description="Get the authenticated user's spending summary for a date range.",
+        description=(
+            "Get the authenticated user's spending summary for a date range. "
+            "You may provide date_from and date_to together, or provide period as "
+            "this_week, last_7_days, this_month, today, or yesterday. "
+            "If no range is provided, default to last_7_days."
+        ),
         args_schema=_SpendingSummaryToolInput,
-        func=_build_spending_summary_runner(repository=repository, user_id=user_id),
+        func=_build_spending_summary_runner(
+            repository=repository,
+            user_id=user_id,
+            today_factory=today_factory or date.today,
+        ),
     )
 
 
@@ -189,12 +332,22 @@ def build_spending_by_category_tool(
     *,
     repository: ChatbotRepository,
     user_id: int,
+    today_factory: Callable[[], date] | None = None,
 ) -> StructuredTool:
     return StructuredTool(
         name="get_spending_by_category",
-        description="Get the authenticated user's spending breakdown by category.",
+        description=(
+            "Get the authenticated user's spending breakdown by category. "
+            "You may provide date_from and date_to together, or provide period as "
+            "this_week, last_7_days, this_month, today, or yesterday. "
+            "If no range is provided, default to last_7_days."
+        ),
         args_schema=_SpendingByCategoryToolInput,
-        func=_build_spending_by_category_runner(repository=repository, user_id=user_id),
+        func=_build_spending_by_category_runner(
+            repository=repository,
+            user_id=user_id,
+            today_factory=today_factory or date.today,
+        ),
     )
 
 

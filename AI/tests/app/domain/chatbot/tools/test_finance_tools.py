@@ -126,6 +126,26 @@ def test_build_budget_tool_binds_trusted_user_id() -> None:
     ]
 
 
+def test_build_budget_tool_defaults_base_date_to_today() -> None:
+    repository = _FakeRepository()
+    tool = build_budget_tool(
+        repository=repository,
+        user_id=7,
+        today_factory=lambda: date(2026, 3, 27),
+    )
+
+    result = tool.invoke({})
+
+    assert result["summary"]["final_free_amount"] == 1
+    assert repository.calls == [
+        {
+            "method": "get_weekly_budget_status",
+            "user_id": 7,
+            "base_date": date(2026, 3, 27),
+        }
+    ]
+
+
 def test_build_budget_tool_rejects_caller_supplied_user_id() -> None:
     repository = _FakeRepository()
     tool = build_budget_tool(repository=repository, user_id=7)
@@ -187,6 +207,48 @@ def test_build_spending_summary_tool_binds_trusted_user_id() -> None:
     ]
 
 
+def test_build_spending_summary_tool_defaults_to_recent_7_days() -> None:
+    repository = _FakeRepository()
+    tool = build_spending_summary_tool(
+        repository=repository,
+        user_id=7,
+        today_factory=lambda: date(2026, 3, 27),
+    )
+
+    result = tool.invoke({})
+
+    assert result["summary"]["total_spent"] == 230000
+    assert repository.calls == [
+        {
+            "method": "get_spending_summary",
+            "user_id": 7,
+            "date_from": date(2026, 3, 21),
+            "date_to": date(2026, 3, 27),
+        }
+    ]
+
+
+def test_build_spending_summary_tool_resolves_named_this_week_period() -> None:
+    repository = _FakeRepository()
+    tool = build_spending_summary_tool(
+        repository=repository,
+        user_id=7,
+        today_factory=lambda: date(2026, 3, 27),
+    )
+
+    result = tool.invoke({"period": "this_week"})
+
+    assert result["summary"]["total_spent"] == 230000
+    assert repository.calls == [
+        {
+            "method": "get_spending_summary",
+            "user_id": 7,
+            "date_from": date(2026, 3, 23),
+            "date_to": date(2026, 3, 27),
+        }
+    ]
+
+
 def test_build_spending_summary_tool_rejects_caller_supplied_user_id() -> None:
     repository = _FakeRepository()
     tool = build_spending_summary_tool(repository=repository, user_id=7)
@@ -223,6 +285,33 @@ def test_build_spending_by_category_tool_binds_trusted_user_id() -> None:
             "user_id": 7,
             "date_from": date(2026, 3, 1),
             "date_to": date(2026, 3, 26),
+            "include_comparison": True,
+        }
+    ]
+
+
+def test_build_spending_by_category_tool_resolves_named_this_week_period() -> None:
+    repository = _FakeRepository()
+    tool = build_spending_by_category_tool(
+        repository=repository,
+        user_id=7,
+        today_factory=lambda: date(2026, 3, 27),
+    )
+
+    result = tool.invoke(
+        {
+            "period": "this_week",
+            "include_comparison": True,
+        }
+    )
+
+    assert result["summary"]["total_spent"] == 230000
+    assert repository.calls == [
+        {
+            "method": "get_spending_by_category",
+            "user_id": 7,
+            "date_from": date(2026, 3, 23),
+            "date_to": date(2026, 3, 27),
             "include_comparison": True,
         }
     ]

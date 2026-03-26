@@ -277,6 +277,35 @@ def test_get_spending_summary_returns_standard_contract_and_metadata_warning() -
     assert "transaction_analysis_metadata" in runner.calls[1]["sql"]
 
 
+def test_get_spending_summary_uses_only_analyzed_spending_transactions() -> None:
+    runner = _FakeRunner(
+        responses=[
+            [
+                {
+                    "total_spent": 230000,
+                    "transaction_count": 3,
+                    "average_transaction_amount": 76666.67,
+                    "largest_transaction_amount": 120000,
+                    "largest_transaction_memo": "Team lunch",
+                    "category_count": 2,
+                }
+            ],
+            [],
+        ]
+    )
+    repository = ChatbotRepository(runner=runner)
+
+    repository.get_spending_summary(
+        user_id=7,
+        date_from=date(2026, 3, 1),
+        date_to=date(2026, 3, 26),
+    )
+
+    assert "transaction_analysis_result" in runner.calls[0]["sql"]
+    assert "analysis_included = true" in runner.calls[0]["sql"]
+    assert "expense_scope IS NOT NULL" in runner.calls[0]["sql"]
+
+
 def test_get_spending_by_category_returns_ranked_categories_and_comparison() -> None:
     runner = _FakeRunner(
         responses=[
@@ -331,6 +360,35 @@ def test_get_spending_by_category_returns_ranked_categories_and_comparison() -> 
     }
     assert "category" in runner.calls[0]["sql"]
     assert "transaction_analysis_metadata" in runner.calls[2]["sql"]
+
+
+def test_get_spending_by_category_uses_analysis_result_category() -> None:
+    runner = _FakeRunner(
+        responses=[
+            [
+                {
+                    "category_id": 1,
+                    "category_name": "식비",
+                    "spent_amount": 150000,
+                    "transaction_count": 4,
+                }
+            ],
+            [],
+        ]
+    )
+    repository = ChatbotRepository(runner=runner)
+
+    repository.get_spending_by_category(
+        user_id=7,
+        date_from=date(2026, 3, 1),
+        date_to=date(2026, 3, 26),
+        include_comparison=False,
+    )
+
+    assert "transaction_analysis_result" in runner.calls[0]["sql"]
+    assert "analysis_included = true" in runner.calls[0]["sql"]
+    assert "expense_scope IS NOT NULL" in runner.calls[0]["sql"]
+    assert "cat.id = ar.category_id" in runner.calls[0]["sql"]
 
 
 def test_get_spending_by_category_omits_comparison_when_disabled() -> None:

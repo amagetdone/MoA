@@ -434,17 +434,27 @@ class ChatbotRepository:
                 (
                     SELECT tx2.transaction_memo
                     FROM scoped_transactions tx2
+                    JOIN transaction_analysis_result ar2
+                      ON ar2.transaction_override_id = tx2.id
+                     AND ar2.is_deleted = false
                     WHERE tx2.transaction_date_time >= :date_from
                       AND tx2.transaction_date_time < (:date_to + INTERVAL '1 day')
+                      AND ar2.analysis_included = true
+                      AND ar2.expense_scope IS NOT NULL
                     ORDER BY ABS(COALESCE(tx2.transaction_balance, 0)) DESC,
                              tx2.transaction_date_time DESC,
                              tx2.id DESC
                     LIMIT 1
                 ) AS largest_transaction_memo,
-                COUNT(DISTINCT tx.category_id) AS category_count
+                COUNT(DISTINCT ar.category_id) AS category_count
             FROM scoped_transactions tx
+            JOIN transaction_analysis_result ar
+              ON ar.transaction_override_id = tx.id
+             AND ar.is_deleted = false
             WHERE tx.transaction_date_time >= :date_from
               AND tx.transaction_date_time < (:date_to + INTERVAL '1 day')
+              AND ar.analysis_included = true
+              AND ar.expense_scope IS NOT NULL
             """,
             parameters={
                 "user_id": user_id,
@@ -526,16 +536,21 @@ class ChatbotRepository:
             f"""
             {_build_user_scoped_transactions_cte()}
             SELECT
-                COALESCE(tx.category_id, 0) AS category_id,
+                COALESCE(ar.category_id, 0) AS category_id,
                 COALESCE(cat.name, '미분류') AS category_name,
                 COUNT(*) AS transaction_count,
                 COALESCE(SUM(ABS(COALESCE(tx.transaction_balance, 0))), 0) AS spent_amount
             FROM scoped_transactions tx
+            JOIN transaction_analysis_result ar
+              ON ar.transaction_override_id = tx.id
+             AND ar.is_deleted = false
             LEFT JOIN category cat
-              ON cat.id = tx.category_id
+              ON cat.id = ar.category_id
             WHERE tx.transaction_date_time >= :date_from
               AND tx.transaction_date_time < (:date_to + INTERVAL '1 day')
-            GROUP BY COALESCE(tx.category_id, 0), COALESCE(cat.name, '미분류')
+              AND ar.analysis_included = true
+              AND ar.expense_scope IS NOT NULL
+            GROUP BY COALESCE(ar.category_id, 0), COALESCE(cat.name, '미분류')
             ORDER BY spent_amount DESC, category_name ASC
             """,
             parameters={
@@ -552,8 +567,13 @@ class ChatbotRepository:
                 SELECT
                     COALESCE(SUM(ABS(COALESCE(tx.transaction_balance, 0))), 0) AS comparison_total_spent
                 FROM scoped_transactions tx
+                JOIN transaction_analysis_result ar
+                  ON ar.transaction_override_id = tx.id
+                 AND ar.is_deleted = false
                 WHERE tx.transaction_date_time >= :date_from
                   AND tx.transaction_date_time < (:date_to + INTERVAL '1 day')
+                  AND ar.analysis_included = true
+                  AND ar.expense_scope IS NOT NULL
                 """,
                 parameters={
                     "user_id": user_id,
