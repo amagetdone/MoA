@@ -60,9 +60,7 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 });
 
 final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>((ref) {
-  return RealAuthRemoteDataSource(
-    dio: ref.read(apiClientProvider).dio,
-  );
+  return RealAuthRemoteDataSource(dio: ref.read(apiClientProvider).dio);
 });
 
 final authLocalDataSourceProvider = Provider<AuthLocalDataSource>((ref) {
@@ -75,38 +73,43 @@ final socialAuthDataSourceProvider = Provider<SocialAuthDataSource>((ref) {
 
 final pushNotificationRemoteDataSourceProvider =
     Provider<PushNotificationRemoteDataSource>((ref) {
-  return RealPushNotificationRemoteDataSource(
-    dio: ref.read(apiClientProvider).dio,
-  );
-});
+      return RealPushNotificationRemoteDataSource(
+        dio: ref.read(apiClientProvider).dio,
+      );
+    });
 
 final pushNotificationSyncServiceProvider =
     Provider<PushNotificationSyncService>((ref) {
-  final service = PushNotificationSyncService(
-    remoteDataSource: ref.read(pushNotificationRemoteDataSourceProvider),
-    authLocalDataSource: ref.read(authLocalDataSourceProvider),
-    appLocalDataSource: ref.read(appLocalDataSourceProvider),
-    notificationInboxRepository: ref.read(notificationInboxRepositoryProvider),
-  );
-  ref.onDispose(service.dispose);
-  return service;
-});
+      final service = PushNotificationSyncService(
+        remoteDataSource: ref.read(pushNotificationRemoteDataSourceProvider),
+        authLocalDataSource: ref.read(authLocalDataSourceProvider),
+        appLocalDataSource: ref.read(appLocalDataSourceProvider),
+        notificationInboxRepository: ref.read(
+          notificationInboxRepositoryProvider,
+        ),
+      );
+      ref.onDispose(service.dispose);
+      return service;
+    });
 
 final notificationInboxRepositoryProvider =
     Provider<NotificationInboxRepository>((ref) {
-  final repository = NotificationInboxRepositoryImpl();
-  return repository;
-});
+      final repository = NotificationInboxRepositoryImpl();
+      return repository;
+    });
 
-final notificationInboxProvider =
-    StreamProvider<List<AppNotificationItem>>((ref) async* {
+final notificationInboxProvider = StreamProvider<List<AppNotificationItem>>((
+  ref,
+) async* {
   final repository = ref.read(notificationInboxRepositoryProvider);
   await repository.initialize();
   yield* repository.watchNotifications();
 });
 
 final unreadNotificationCountProvider = Provider<int>((ref) {
-  return ref.watch(notificationInboxProvider).maybeWhen(
+  return ref
+      .watch(notificationInboxProvider)
+      .maybeWhen(
         data: (items) => items.where((item) => !item.isRead).length,
         orElse: () => 0,
       );
@@ -124,15 +127,17 @@ final biometricAuthServiceProvider = Provider<BiometricAuthService>((ref) {
   return BiometricAuthService();
 });
 
-final biometricAvailabilityProvider = FutureProvider<bool>((ref) {
-  return ref.read(biometricAuthServiceProvider).isBiometricAvailable();
+final appLockAvailabilityProvider = FutureProvider<bool>((ref) {
+  return ref.read(biometricAuthServiceProvider).isDeviceAuthAvailable();
+});
+
+final appLockPinConfiguredProvider = FutureProvider<bool>((ref) {
+  return ref.read(biometricAuthServiceProvider).hasAppPin();
 });
 
 final biometricPreferenceProvider =
     StateNotifierProvider<BiometricPreferenceViewModel, bool>((ref) {
-      return BiometricPreferenceViewModel(
-        ref.read(appLocalDataSourceProvider),
-      );
+      return BiometricPreferenceViewModel(ref.read(appLocalDataSourceProvider));
     });
 
 final seedDataStoreProvider = Provider<SeedDataStore>((ref) {
@@ -140,16 +145,13 @@ final seedDataStoreProvider = Provider<SeedDataStore>((ref) {
 });
 
 final homeRemoteDataSourceProvider = Provider<HomeRemoteDataSource>((ref) {
-  return RealHomeRemoteDataSource(
-    dio: ref.read(apiClientProvider).dio,
-  );
+  return RealHomeRemoteDataSource(dio: ref.read(apiClientProvider).dio);
 });
 
-final accountRemoteDataSourceProvider =
-    Provider<AccountRemoteDataSource>((ref) {
-  return RealAccountRemoteDataSource(
-    dio: ref.read(apiClientProvider).dio,
-  );
+final accountRemoteDataSourceProvider = Provider<AccountRemoteDataSource>((
+  ref,
+) {
+  return RealAccountRemoteDataSource(dio: ref.read(apiClientProvider).dio);
 });
 
 final goalRemoteDataSourceProvider = Provider<GoalRemoteDataSource>((ref) {
@@ -162,11 +164,10 @@ final goalRemoteDataSourceProvider = Provider<GoalRemoteDataSource>((ref) {
   return RealGoalRemoteDataSource(dio: ref.read(apiClientProvider).dio);
 });
 
-final spendingRemoteDataSourceProvider =
-    Provider<SpendingRemoteDataSource>((ref) {
-  return RealSpendingRemoteDataSource(
-    dio: ref.read(apiClientProvider).dio,
-  );
+final spendingRemoteDataSourceProvider = Provider<SpendingRemoteDataSource>((
+  ref,
+) {
+  return RealSpendingRemoteDataSource(dio: ref.read(apiClientProvider).dio);
 });
 
 final budgetRemoteDataSourceProvider = Provider<BudgetRemoteDataSource>((ref) {
@@ -180,9 +181,7 @@ final budgetRepositoryProvider = Provider<BudgetRepository>((ref) {
 });
 
 final menuRemoteDataSourceProvider = Provider<MenuRemoteDataSource>((ref) {
-  return RealMenuRemoteDataSource(
-    dio: ref.read(apiClientProvider).dio,
-  );
+  return RealMenuRemoteDataSource(dio: ref.read(apiClientProvider).dio);
 });
 
 final goalRepositoryProvider = Provider<GoalRepository>((ref) {

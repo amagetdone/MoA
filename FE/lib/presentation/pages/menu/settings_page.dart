@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -23,18 +24,61 @@ class SettingsPage extends ConsumerStatefulWidget {
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _isUpdatingBiometric = false;
 
+  Future<String?> _showAppPinDialog({required bool isReset}) {
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => _AppPinSetupDialog(isReset: isReset),
+    );
+  }
+
+  Future<void> _showMessage(String message) async {
+    if (!mounted) {
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _handleAppPinReset() async {
+    if (_isUpdatingBiometric) {
+      return;
+    }
+
+    final pin = await _showAppPinDialog(isReset: true);
+    if (!mounted || pin == null) {
+      return;
+    }
+
+    setState(() => _isUpdatingBiometric = true);
+    try {
+      await ref.read(biometricAuthServiceProvider).saveAppPin(pin);
+      ref.invalidate(appLockPinConfiguredProvider);
+      await _showMessage('앱 PIN을 다시 설정했어요.');
+    } finally {
+      if (mounted) {
+        setState(() => _isUpdatingBiometric = false);
+      }
+    }
+  }
+
   Future<void> _handleBiometricToggle(bool enabled) async {
     if (_isUpdatingBiometric) {
       return;
     }
 
-    final messenger = ScaffoldMessenger.of(context);
+    final service = ref.read(biometricAuthServiceProvider);
 
     if (!enabled) {
       setState(() => _isUpdatingBiometric = true);
       try {
+        await service.clearAppPin();
         await ref.read(menuViewModelProvider.notifier).toggleBiometric(false);
         await ref.read(biometricPreferenceProvider.notifier).setEnabled(false);
+        ref.invalidate(appLockPinConfiguredProvider);
       } finally {
         if (mounted) {
           setState(() => _isUpdatingBiometric = false);
@@ -43,42 +87,33 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       return;
     }
 
-    final isAvailable = await ref.read(biometricAuthServiceProvider).isBiometricAvailable();
+    final pin = await _showAppPinDialog(isReset: false);
     if (!mounted) {
       return;
     }
 
-    if (!isAvailable) {
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text('이 기기에서는 지문 인증을 사용할 수 없습니다.')),
-        );
-      return;
-    }
-
-    setState(() => _isUpdatingBiometric = true);
-    final authenticated = await ref.read(biometricAuthServiceProvider).authenticate(
-      reason: '지문 인증으로 앱 잠금을 활성화해주세요.',
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    if (!authenticated) {
-      setState(() => _isUpdatingBiometric = false);
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text('지문 인증이 완료되지 않아 앱 잠금을 켜지 않았습니다.')),
-        );
+    if (pin == null) {
+      await _showMessage('앱 PIN 설정이 취소되어 앱 잠금을 켜지 않았습니다.');
       return;
     }
 
     try {
+      setState(() => _isUpdatingBiometric = true);
+      await service.saveAppPin(pin);
       await ref.read(menuViewModelProvider.notifier).toggleBiometric(true);
       await ref.read(biometricPreferenceProvider.notifier).setEnabled(true);
+      ref.invalidate(appLockPinConfiguredProvider);
+
+      final deviceAuthAvailable = await service.isDeviceAuthAvailable();
+      if (!mounted) {
+        return;
+      }
+
+      await _showMessage(
+        deviceAuthAvailable
+            ? '앱 잠금이 켜졌어요. 앱 PIN이나 생체인증으로 잠금을 해제할 수 있습니다.'
+            : '앱 잠금이 켜졌어요. 자동로그인 후 앱 PIN을 입력해야 합니다.',
+      );
     } finally {
       if (mounted) {
         setState(() => _isUpdatingBiometric = false);
@@ -93,10 +128,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final isDark = themeMode == ThemeMode.dark;
     final menuState = ref.watch(menuViewModelProvider);
     final biometricEnabled = ref.watch(biometricPreferenceProvider);
-    final biometricAvailability = ref.watch(biometricAvailabilityProvider);
+    final appLockAvailability = ref.watch(appLockAvailabilityProvider);
+    final appLockPinConfigured = ref.watch(appLockPinConfiguredProvider);
     final showBiometric =
         !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-    final biometricAvailable = biometricAvailability.maybeWhen(
+    final deviceAuthAvailable = appLockAvailability.maybeWhen(
+      data: (value) => value,
+      orElse: () => false,
+    );
+    final appPinConfigured = appLockPinConfigured.maybeWhen(
       data: (value) => value,
       orElse: () => false,
     );
@@ -110,9 +150,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(content: Text(next)),
-          );
+          ..showSnackBar(SnackBar(content: Text(next)));
       },
     );
 
@@ -138,7 +176,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       border: Border.all(color: colors.borderDefault),
                     ),
                     child: Icon(
-                      isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+                      isDark
+                          ? Icons.dark_mode_outlined
+                          : Icons.light_mode_outlined,
                       size: 20.w,
                       color: colors.gray500,
                     ),
@@ -231,7 +271,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         border: Border.all(color: colors.borderDefault),
                       ),
                       child: Icon(
-                        Icons.fingerprint,
+                        Icons.lock_outline,
                         size: 20.w,
                         color: colors.gray500,
                       ),
@@ -250,20 +290,38 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           ),
                           SizedBox(height: 2.h),
                           Text(
-                            biometricAvailable
-                                ? '앱을 다시 열 때 지문 인증으로 잠금을 해제해요'
-                                : '이 기기에서는 지문 인증을 사용할 수 없어요',
+                            biometricEnabled && appPinConfigured
+                                ? deviceAuthAvailable
+                                      ? '자동로그인 후 앱 PIN이나 생체인증으로 잠금을 해제해요'
+                                      : '자동로그인 후 6자리 앱 PIN으로 잠금을 해제해요'
+                                : '6자리 앱 PIN을 설정하면 자동로그인 뒤 한 번 더 확인해요',
                             style: AppTextStyles.caption.copyWith(
                               color: colors.textTertiary,
                               fontSize: 11.sp,
                             ),
                           ),
+                          if (biometricEnabled && appPinConfigured) ...[
+                            SizedBox(height: 6.h),
+                            InkWell(
+                              onTap: _isUpdatingBiometric
+                                  ? null
+                                  : _handleAppPinReset,
+                              child: Text(
+                                '앱 PIN 다시 설정',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.orange500,
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
                     Switch(
-                      value: biometricAvailable && biometricEnabled,
-                      onChanged: biometricAvailable && !_isUpdatingBiometric
+                      value: biometricEnabled,
+                      onChanged: !_isUpdatingBiometric
                           ? _handleBiometricToggle
                           : null,
                       activeThumbColor: AppColors.orange500,
@@ -303,7 +361,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       context: context,
       barrierColor: colors.cardShadow,
       builder: (dialogContext) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.r),
+        ),
         backgroundColor: colors.bgSurface,
         child: Padding(
           padding: EdgeInsets.fromLTRB(24.w, 28.h, 24.w, 20.h),
@@ -317,7 +377,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   color: AppColors.orange500.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.logout, size: 24.w, color: AppColors.orange500),
+                child: Icon(
+                  Icons.logout,
+                  size: 24.w,
+                  color: AppColors.orange500,
+                ),
               ),
               SizedBox(height: 16.h),
               Text(
@@ -346,7 +410,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         onPressed: () => Navigator.of(dialogContext).pop(),
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(color: colors.borderDefault),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
                         ),
                         child: Text(
                           '취소',
@@ -370,7 +436,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         },
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.orange500,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
                         ),
                         child: Text(
                           '로그아웃',
@@ -397,7 +465,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       context: context,
       barrierColor: colors.cardShadow,
       builder: (dialogContext) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.r),
+        ),
         backgroundColor: colors.bgSurface,
         child: Padding(
           padding: EdgeInsets.fromLTRB(24.w, 28.h, 24.w, 20.h),
@@ -411,7 +481,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   color: AppColors.red500.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.person_remove_outlined, size: 24.w, color: AppColors.red500),
+                child: Icon(
+                  Icons.person_remove_outlined,
+                  size: 24.w,
+                  color: AppColors.red500,
+                ),
               ),
               SizedBox(height: 16.h),
               Text(
@@ -441,7 +515,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         onPressed: () => Navigator.of(dialogContext).pop(),
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(color: colors.borderDefault),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
                         ),
                         child: Text(
                           '취소',
@@ -464,7 +540,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         },
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.red500,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
                         ),
                         child: Text(
                           '탈퇴',
@@ -482,6 +560,132 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _AppPinSetupDialog extends StatefulWidget {
+  const _AppPinSetupDialog({required this.isReset});
+
+  final bool isReset;
+
+  @override
+  State<_AppPinSetupDialog> createState() => _AppPinSetupDialogState();
+}
+
+class _AppPinSetupDialogState extends State<_AppPinSetupDialog> {
+  final _pinController = TextEditingController();
+  final _confirmPinController = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _pinController.dispose();
+    _confirmPinController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final pin = _pinController.text.trim();
+    final confirmPin = _confirmPinController.text.trim();
+
+    if (pin.length != 6 || confirmPin.length != 6) {
+      setState(() {
+        _error = '앱 PIN은 6자리 숫자로 입력해주세요.';
+      });
+      return;
+    }
+
+    if (pin != confirmPin) {
+      setState(() {
+        _error = '입력한 PIN이 서로 다릅니다.';
+      });
+      return;
+    }
+
+    Navigator.of(context).pop(pin);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
+    return AlertDialog(
+      insetPadding: EdgeInsets.symmetric(horizontal: 28.w),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+      titlePadding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 8.h),
+      contentPadding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 20.h),
+      actionsPadding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 20.h),
+      title: Text(
+        widget.isReset ? '앱 PIN 다시 설정' : '앱 PIN 설정',
+        style: AppTextStyles.headingMd.copyWith(
+          color: colors.textPrimary,
+          fontSize: 18.sp,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '자동로그인 후 앱을 열 때 사용할 6자리 숫자 PIN을 설정해주세요.',
+            style: AppTextStyles.bodyMd.copyWith(
+              color: colors.textSecondary,
+              height: 1.5,
+            ),
+          ),
+          SizedBox(height: 16.h),
+          TextField(
+            controller: _pinController,
+            obscureText: true,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: const InputDecoration(
+              labelText: '앱 PIN',
+              counterText: '',
+            ),
+          ),
+          SizedBox(height: 8.h),
+          TextField(
+            controller: _confirmPinController,
+            obscureText: true,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: const InputDecoration(
+              labelText: '앱 PIN 확인',
+              counterText: '',
+            ),
+          ),
+          if (_error != null) ...[
+            SizedBox(height: 8.h),
+            Text(
+              _error!,
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.red500,
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.orange500,
+            foregroundColor: colors.white,
+          ),
+          child: const Text('저장'),
+        ),
+      ],
     );
   }
 }
@@ -538,11 +742,7 @@ class _SettingsCard extends StatelessWidget {
               ),
             ),
           SizedBox(width: 4.w),
-          Icon(
-            Icons.chevron_right,
-            size: 18.w,
-            color: colors.textTertiary,
-          ),
+          Icon(Icons.chevron_right, size: 18.w, color: colors.textTertiary),
         ],
       ),
     );

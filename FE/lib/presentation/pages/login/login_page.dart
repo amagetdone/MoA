@@ -23,6 +23,8 @@ class LoginPage extends ConsumerStatefulWidget {
 
 class _LoginPageState extends ConsumerState<LoginPage>
     with WidgetsBindingObserver {
+  static const _webLoginRecoveryTimeout = Duration(seconds: 3);
+
   Timer? _interruptedLoginTimer;
   bool _backgroundedDuringLogin = false;
   WebWindowFocusListener? _webWindowFocusListener;
@@ -148,7 +150,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
   void _scheduleInterruptedLoginReset() {
     _interruptedLoginTimer?.cancel();
-    _interruptedLoginTimer = Timer(const Duration(milliseconds: 600), () {
+    // Web social login returns focus to the page before the provider token and
+    // backend login finish. A short timeout can incorrectly discard a successful
+    // login, so keep this recovery window deliberately loose.
+    _interruptedLoginTimer = Timer(_webLoginRecoveryTimeout, () {
       if (!mounted) {
         return;
       }
@@ -225,9 +230,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
       }
 
       if (next is AuthAuthenticated) {
-        context.go(
-          resolvePostAuthRoute(next.authResult, isTest: next.isTest),
-        );
+        context.go(resolvePostAuthRoute(next.authResult, isTest: next.isTest));
       }
     });
 
@@ -257,13 +260,11 @@ class _LoginPageState extends ConsumerState<LoginPage>
               ),
               const Spacer(flex: 4),
               _SocialLoginButton(
-                onPressed:
-                    isLoading
-                        ? null
-                        : () =>
-                            ref
-                                .read(authViewModelProvider.notifier)
-                                .loginWithKakao(),
+                onPressed: isLoading
+                    ? null
+                    : () => ref
+                          .read(authViewModelProvider.notifier)
+                          .loginWithKakao(),
                 backgroundColor: const Color(0xFFFEE500),
                 textColor: colors.textPrimary,
                 text: '카카오로 시작하기',
@@ -271,13 +272,11 @@ class _LoginPageState extends ConsumerState<LoginPage>
               ),
               SizedBox(height: 12.h),
               _SocialLoginButton(
-                onPressed:
-                    isLoading
-                        ? null
-                        : () =>
-                            ref
-                                .read(authViewModelProvider.notifier)
-                                .loginWithGoogle(),
+                onPressed: isLoading
+                    ? null
+                    : () => ref
+                          .read(authViewModelProvider.notifier)
+                          .loginWithGoogle(),
                 backgroundColor: colors.bgSurface,
                 textColor: colors.textPrimary,
                 text: '구글로 시작하기',
@@ -303,7 +302,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
                           ),
                         );
                         if (id != null) {
-                          ref.read(authViewModelProvider.notifier).loginWithTest(id: id);
+                          ref
+                              .read(authViewModelProvider.notifier)
+                              .loginWithTest(id: id);
                         }
                       },
                 child: Text(
@@ -349,9 +350,7 @@ class _SocialLoginButton extends StatelessWidget {
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
           backgroundColor: backgroundColor,
-          side: BorderSide(
-            color: borderColor ?? backgroundColor,
-          ),
+          side: BorderSide(color: borderColor ?? backgroundColor),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.r),
           ),

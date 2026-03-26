@@ -23,6 +23,7 @@ dependencies:
   # 로컬 저장소
   shared_preferences: ^2.3.4
   flutter_secure_storage: ^9.2.4
+  crypto: ^3.0.6
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   path_provider: ^2.1.5
