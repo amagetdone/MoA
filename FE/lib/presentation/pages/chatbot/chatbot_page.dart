@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -526,35 +528,106 @@ class _StreamingContent extends StatefulWidget {
 
 class _StreamingContentState extends State<_StreamingContent>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _cursorController;
+  late final AnimationController _typingController;
 
   @override
   void initState() {
     super.initState();
-    _cursorController = AnimationController(
+    _typingController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
-    )..repeat(reverse: true);
+      duration: const Duration(milliseconds: 1100),
+    )..repeat();
   }
 
   @override
   void dispose() {
-    _cursorController.dispose();
+    _typingController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _cursorController,
+      animation: _typingController,
       builder: (context, _) {
-        return Text(
-          '${widget.content}${_cursorController.value > 0.5 ? '▌' : ''}',
-          style: AppTextStyles.bodySm.copyWith(
-            color: widget.colors.textPrimary,
-          ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (widget.content.isNotEmpty)
+              Text(
+                widget.content,
+                style: AppTextStyles.bodySm.copyWith(
+                  color: widget.colors.textPrimary,
+                  height: 1.5,
+                ),
+              ),
+            SizedBox(height: widget.content.isEmpty ? 0 : 8.h),
+            _TypingDotsIndicator(
+              progress: _typingController.value,
+              colors: widget.colors,
+            ),
+          ],
         );
       },
+    );
+  }
+}
+
+class _TypingDotsIndicator extends StatelessWidget {
+  const _TypingDotsIndicator({
+    required this.progress,
+    required this.colors,
+  });
+
+  final double progress;
+  final AppColorScheme colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 12.h,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(3, (index) {
+          final phase = ((progress + index * 0.18) % 1.0) * 2 * math.pi;
+          final normalized = (math.sin(phase - math.pi / 2) + 1) / 2;
+          final scale = 0.82 + (normalized * 0.38);
+          final opacity = 0.32 + (normalized * 0.68);
+
+          return Padding(
+            padding: EdgeInsets.only(right: index == 2 ? 0 : 5.w),
+            child: Opacity(
+              opacity: opacity,
+              child: Transform.scale(
+                scale: scale,
+                child: Container(
+                  width: 7.w,
+                  height: 7.w,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.orange300,
+                        AppColors.orange500,
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.orange500.withValues(alpha: 0.18),
+                        blurRadius: 6,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
     );
   }
 }
