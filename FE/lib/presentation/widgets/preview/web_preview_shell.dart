@@ -42,7 +42,7 @@ class WebPreviewShell extends StatefulWidget {
           normalized != 'off';
     }
 
-    return false;
+    return uri.host == 'j14d101.p.ssafy.io';
   }
 
   @override
