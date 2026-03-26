@@ -23,6 +23,7 @@ import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.account.model.repository.CardRepository;
 import com.ssafy.amagetdone.domain.account.model.repository.CategoryRepository;
 import com.ssafy.amagetdone.domain.account.model.repository.MerchantRepository;
+import com.ssafy.amagetdone.domain.member.model.repository.UserRepository;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.vo.UserStatus;
 import com.ssafy.amagetdone.domain.notification.application.event.TransactionSyncedEvent;
@@ -51,6 +52,9 @@ class TransactionSyncServiceTest {
 
 	@Mock
 	private AccountRepository accountRepository;
+
+	@Mock
+	private UserRepository userRepository;
 
 	@Mock
 	private CardRepository cardRepository;
@@ -94,6 +98,7 @@ class TransactionSyncServiceTest {
 		);
 
 		given(accountRepository.findAllLinkedAccountsByUserId(1)).willReturn(List.of(account));
+		given(userRepository.findByIdForUpdate(1)).willReturn(Optional.of(user));
 		given(cardRepository.findAllByWithdrawalAccount_User_IdAndWithdrawalAccount_VerifiedTrueAndWithdrawalAccount_ActiveTrue(1))
 			.willReturn(List.of());
 		given(dateRangeFactory.resolve(6, null, false)).willReturn(window);
@@ -127,6 +132,7 @@ class TransactionSyncServiceTest {
 		verify(accountTransactionOverrideRepository).saveAll(saveCaptor.capture());
 		assertEquals(1, saveCaptor.getValue().size());
 		AccountTransactionOverride saved = saveCaptor.getValue().get(0);
+		assertEquals(null, saved.getId());
 		assertEquals(account, saved.getAccount());
 		assertEquals(defaultCategory, saved.getCategory());
 		assertEquals(1001L, saved.getTransactionUniqueNo());
@@ -139,6 +145,21 @@ class TransactionSyncServiceTest {
 				&& "1001".equals(syncedEvent.transactionId())
 				&& syncedEvent.amount().equals(15000L)
 		));
+	}
+
+	@Test
+	void syncAcquiresUserLockBeforeReadingTransactions() {
+		TransactionSyncService service = newService();
+		User user = user(1, "user-key-1");
+
+		given(userRepository.findByIdForUpdate(1)).willReturn(Optional.of(user));
+		given(accountRepository.findAllLinkedAccountsByUserId(1)).willReturn(List.of());
+		given(cardRepository.findAllByWithdrawalAccount_User_IdAndWithdrawalAccount_VerifiedTrueAndWithdrawalAccount_ActiveTrue(1))
+			.willReturn(List.of());
+
+		service.syncLatest(1, 3, false);
+
+		verify(userRepository).findByIdForUpdate(1);
 	}
 
 	@Test
@@ -602,6 +623,7 @@ class TransactionSyncServiceTest {
 
 	private TransactionSyncService newService() {
 		return new TransactionSyncService(
+			userRepository,
 			accountRepository,
 			cardRepository,
 			categoryRepository,

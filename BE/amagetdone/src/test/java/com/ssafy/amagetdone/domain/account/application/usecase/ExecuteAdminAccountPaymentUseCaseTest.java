@@ -97,6 +97,7 @@ class ExecuteAdminAccountPaymentUseCaseTest {
 
 		ArgumentCaptor<AccountTransactionOverride> captor = ArgumentCaptor.forClass(AccountTransactionOverride.class);
 		verify(accountTransactionOverrideRepository).save(captor.capture());
+		assertThat(captor.getValue().getId()).isNull();
 		assertThat(captor.getValue().getAccount()).isEqualTo(account);
 		assertThat(captor.getValue().getTransactionUniqueNo()).isEqualTo(91L);
 		assertThat(captor.getValue().getTransactionBalance()).isEqualTo(10000L);

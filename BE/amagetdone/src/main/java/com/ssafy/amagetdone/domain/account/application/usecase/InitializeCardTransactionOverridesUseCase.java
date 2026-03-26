@@ -2,7 +2,6 @@ package com.ssafy.amagetdone.domain.account.application.usecase;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -36,16 +35,13 @@ public class InitializeCardTransactionOverridesUseCase {
 	private final TransactionAnalysisResultRepository transactionAnalysisResultRepository;
 	private final CardRealTransactionScenario cardRealTransactionScenario;
 	private final TransactionCategoryAssignmentService transactionCategoryAssignmentService;
-	private final CardTransactionOverrideBulkSavePort cardTransactionOverrideBulkSavePort;
-
 	public InitializeCardTransactionOverridesUseCase(
 		CardRepository cardRepository,
 		MerchantRepository merchantRepository,
 		CardTransactionOverrideRepository cardTransactionOverrideRepository,
 		TransactionAnalysisResultRepository transactionAnalysisResultRepository,
 		CardRealTransactionScenario cardRealTransactionScenario,
-		TransactionCategoryAssignmentService transactionCategoryAssignmentService,
-		CardTransactionOverrideBulkSavePort cardTransactionOverrideBulkSavePort
+		TransactionCategoryAssignmentService transactionCategoryAssignmentService
 	) {
 		this.cardRepository = cardRepository;
 		this.merchantRepository = merchantRepository;
@@ -53,7 +49,6 @@ public class InitializeCardTransactionOverridesUseCase {
 		this.transactionAnalysisResultRepository = transactionAnalysisResultRepository;
 		this.cardRealTransactionScenario = cardRealTransactionScenario;
 		this.transactionCategoryAssignmentService = transactionCategoryAssignmentService;
-		this.cardTransactionOverrideBulkSavePort = cardTransactionOverrideBulkSavePort;
 	}
 
 	@Transactional
@@ -76,7 +71,6 @@ public class InitializeCardTransactionOverridesUseCase {
 		cardTransactionOverrideRepository.deleteByCard_CardUniqueNo(card.getCardUniqueNo());
 		List<CardTransactionOverride> transactions = seeds.stream()
 			.map(seed -> CardTransactionOverride.builder()
-				.id(toEntityId("CARD_INIT", card.getCardUniqueNo(), seed.transactionUniqueNo()))
 				.category(resolveCategory(assignedCategories, seed.merchantName()))
 				.transactionDateTime(seed.transactionDateTime())
 				.transactionBalance(seed.transactionBalance())
@@ -90,7 +84,7 @@ public class InitializeCardTransactionOverridesUseCase {
 				.build())
 			.map(CardTransactionOverride.class::cast)
 			.toList();
-		cardTransactionOverrideBulkSavePort.saveAll(transactions);
+		cardTransactionOverrideRepository.saveAll(transactions);
 
 		return new AccountAdminDto.TransactionInitResponse(
 			"card",
@@ -136,10 +130,6 @@ public class InitializeCardTransactionOverridesUseCase {
 		if (!existingTransactionIds.isEmpty()) {
 			transactionAnalysisResultRepository.deleteByTransaction_IdIn(existingTransactionIds);
 		}
-	}
-
-	private int toEntityId(String prefix, Long targetId, Long transactionUniqueNo) {
-		return Math.floorMod(Objects.hash(prefix, targetId, transactionUniqueNo), Integer.MAX_VALUE - 1) + 1;
 	}
 
 	private Category resolveCategory(Map<String, Category> assignedCategories, String sourceText) {
