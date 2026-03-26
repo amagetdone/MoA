@@ -64,15 +64,17 @@ class RealChatbotRemoteDataSource {
         final frame = buffer.substring(0, frameEnd);
         buffer = buffer.substring(frameEnd + 2);
 
-        final event = _parseFrame(frame);
-        if (event != null) yield event;
+        for (final event in _parseFrameEvents(frame)) {
+          yield event;
+        }
       }
     }
 
     // 버퍼 잔여 처리
     if (buffer.trim().isNotEmpty) {
-      final event = _parseFrame(buffer.trim());
-      if (event != null) yield event;
+      for (final event in _parseFrameEvents(buffer.trim())) {
+        yield event;
+      }
     }
   }
 
@@ -83,7 +85,7 @@ class RealChatbotRemoteDataSource {
     return response.data ?? <String, dynamic>{};
   }
 
-  ChatStreamEvent? _parseFrame(String frame) {
+  List<ChatStreamEvent> _parseFrameEvents(String frame) {
     String? eventType;
     final dataLines = <String>[];
 
@@ -96,37 +98,62 @@ class RealChatbotRemoteDataSource {
       }
     }
 
-    if (eventType == null || dataLines.isEmpty) return null;
+    if (dataLines.isEmpty) {
+      return const [];
+    }
+
+    final joinedData = dataLines.join('\n');
 
     try {
-      final rawPayload = jsonDecode(dataLines.join('\n'));
+      final rawPayload = jsonDecode(joinedData);
       if (rawPayload is! Map) {
-        return null;
+        return const [];
       }
 
       final payload = Map<String, dynamic>.from(rawPayload);
+      final nativeBuffer = payload['nativeBuffer'];
+      if (nativeBuffer is String && nativeBuffer.isNotEmpty) {
+        final decoded = utf8.decode(base64Decode(nativeBuffer), allowMalformed: true);
+        final nestedEvents = <ChatStreamEvent>[];
+        for (final nestedFrame in decoded.split('\n\n')) {
+          final trimmed = nestedFrame.trim();
+          if (trimmed.isEmpty) {
+            continue;
+          }
+          nestedEvents.addAll(_parseFrameEvents(trimmed));
+        }
+        return nestedEvents;
+      }
+
+      eventType ??= _readString(payload, const ['event', 'type']);
       final data = payload['data'] is Map
           ? Map<String, dynamic>.from(payload['data'] as Map)
           : payload;
 
       switch (eventType) {
         case 'token':
-          return ChatStreamToken(
-            _readString(data, const ['text', 'token', 'content']) ?? '',
-          );
+          return [
+            ChatStreamToken(
+              _readString(data, const ['text', 'token', 'content']) ?? '',
+            ),
+          ];
         case 'done':
-          return ChatStreamDone(
-            _readString(data, const ['conversation_id', 'conversationId', 'id']) ?? '',
-          );
+          return [
+            ChatStreamDone(
+              _readString(data, const ['conversation_id', 'conversationId', 'id']) ?? '',
+            ),
+          ];
         case 'status':
-          return ChatStreamStatus(
-            _readString(data, const ['message', 'status', 'text']) ?? '',
-          );
+          return [
+            ChatStreamStatus(
+              _readString(data, const ['message', 'status', 'text']) ?? '',
+            ),
+          ];
         default:
-          return null;
+          return const [];
       }
     } catch (_) {
-      return null;
+      return const [];
     }
   }
 
