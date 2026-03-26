@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import json
+from collections.abc import AsyncIterator
+
 from fastapi import APIRouter, Depends, Header
+from fastapi.responses import StreamingResponse
 
 from app.api.dependencies import get_chatbot_service
 from app.domain.chatbot.api.dto.detail_dto import (
@@ -22,3 +26,22 @@ async def create_chatbot_message(
         message=request.message,
         conversation_id=request.conversation_id,
     )
+
+
+@router.post("/messages/stream")
+async def stream_chatbot_message(
+    request: ChatbotMessageRequest,
+    user_id: int = Header(alias="X-User-Id"),
+    service=Depends(get_chatbot_service),
+) -> StreamingResponse:
+    async def event_stream() -> AsyncIterator[str]:
+        async for event in service.stream_reply(
+            user_id=user_id,
+            message=request.message,
+            conversation_id=request.conversation_id,
+        ):
+            event_name = str(event["event"])
+            payload = json.dumps(event["data"], ensure_ascii=False)
+            yield f"event: {event_name}\ndata: {payload}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")

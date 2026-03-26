@@ -31,6 +31,34 @@ class _FakeChatbotService:
         }
 
 
+class _FakeStreamingChatbotService(_FakeChatbotService):
+    def __init__(self) -> None:
+        super().__init__()
+        self.stream_calls: list[dict[str, object]] = []
+
+    async def stream_reply(
+        self,
+        *,
+        user_id: int,
+        message: str,
+        conversation_id: str | None,
+    ):
+        self.stream_calls.append(
+            {
+                "user_id": user_id,
+                "message": message,
+                "conversation_id": conversation_id,
+            }
+        )
+        yield {"event": "status", "data": {"message": "routing"}}
+        yield {"event": "token", "data": {"text": "이번 주 "}}
+        yield {"event": "token", "data": {"text": "예산은 안정적이에요."}}
+        yield {
+            "event": "done",
+            "data": {"conversation_id": conversation_id or "generated-id"},
+        }
+
+
 def test_chatbot_message_endpoint_returns_json_response() -> None:
     service = _FakeChatbotService()
     app = create_app(
@@ -183,3 +211,38 @@ def test_chatbot_service_close_is_called_when_app_shuts_down() -> None:
         pass
 
     assert service.close_calls == 1
+
+
+def test_chatbot_stream_endpoint_returns_sse_response() -> None:
+    service = _FakeStreamingChatbotService()
+    app = create_app(
+        classifier=object(),
+        image_generation_service=object(),
+        chatbot_service=service,
+    )
+
+    with TestClient(app) as client:
+        with client.stream(
+            "POST",
+            "/v1/chatbot/messages/stream",
+            headers={"X-User-Id": "7"},
+            json={
+                "message": "Is my budget okay this week?",
+                "conversation_id": "conv-1",
+            },
+        ) as response:
+            body = b"".join(response.iter_bytes()).decode("utf-8")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    assert "event: status" in body
+    assert "event: token" in body
+    assert "event: done" in body
+    assert '"conversation_id": "conv-1"' in body
+    assert service.stream_calls == [
+        {
+            "user_id": 7,
+            "message": "Is my budget okay this week?",
+            "conversation_id": "conv-1",
+        }
+    ]
