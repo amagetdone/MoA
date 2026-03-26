@@ -63,7 +63,8 @@ def test_build_chat_model_attaches_langfuse_callbacks_when_configured(
     assert captured["model"] == "gpt-4.1-mini"
     assert captured["api_key"] == "relay-key"
     assert captured["base_url"] == "https://example.com/v1"
-    assert captured["streaming"] is True
+    assert captured["streaming"] is False
+    assert captured["streaming"] is False
     assert captured["disable_streaming"] == "tool_calling"
     assert "callbacks" in captured
     assert len(captured["callbacks"]) == 1
