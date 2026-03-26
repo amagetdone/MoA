@@ -21,8 +21,15 @@ class GoalRepositoryImpl implements GoalRepository {
   Future<List<Goal>> fetchGoals() async {
     try {
       final goals = await _remoteDataSource.fetchGoals();
-      await _localDataSource.replaceGoals(goals);
-      return goals;
+      final existingGoals = await _localDataSource.getGoals();
+      final existingGoalById = {
+        for (final goal in existingGoals) goal.id: goal,
+      };
+      final mergedGoals = goals
+          .map((goal) => _mergeGoal(existingGoalById[goal.id], goal))
+          .toList();
+      await _localDataSource.replaceGoals(mergedGoals);
+      return mergedGoals;
     } catch (_) {
       return _localDataSource.getGoals();
     }

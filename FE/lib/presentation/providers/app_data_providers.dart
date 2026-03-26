@@ -199,6 +199,7 @@ final goalRepositoryProvider = Provider<GoalRepository>((ref) {
 final homeRepositoryProvider = Provider<HomeRepository>((ref) {
   return HomeRepositoryImpl(
     remoteDataSource: ref.read(homeRemoteDataSourceProvider),
+    goalRemoteDataSource: ref.read(goalRemoteDataSourceProvider),
     localDataSource: ref.read(appLocalDataSourceProvider),
   );
 });
