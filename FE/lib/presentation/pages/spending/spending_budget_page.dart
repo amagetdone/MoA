@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
+import 'package:more_app/core/utils/tutorial_service.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/spending_budget_viewmodel.dart';
 import 'package:more_app/domain/entities/budget.dart';
@@ -13,6 +14,7 @@ import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 import 'package:more_app/presentation/widgets/common/more_progress_bar.dart';
+import 'package:showcaseview/showcaseview.dart';
 
 class SpendingBudgetPage extends ConsumerStatefulWidget {
   const SpendingBudgetPage({super.key});
@@ -24,6 +26,33 @@ class SpendingBudgetPage extends ConsumerStatefulWidget {
 class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
   bool _isFixedExpanded = false;
   bool _isVariableExpanded = false;
+
+  BuildContext? _showcaseContext;
+  final _keyIncome = GlobalKey();
+  final _keySavings = GlobalKey();
+  final _keyFixed = GlobalKey();
+  final _keyVariable = GlobalKey();
+  final _keyFreedom = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final shown = await TutorialService.isShown(TutorialService.spendingBudget);
+      if (!shown && mounted) {
+        await TutorialService.markShown(TutorialService.spendingBudget);
+        if (mounted && _showcaseContext != null) {
+          ShowCaseWidget.of(_showcaseContext!).startShowCase([
+            _keyIncome,
+            _keySavings,
+            _keyFixed,
+            _keyVariable,
+            _keyFreedom,
+          ]);
+        }
+      }
+    });
+  }
 
   Future<void> _showEditBudgetDialog(int currentIncome) async {
     final newValue = await showDialog<int>(
@@ -51,7 +80,10 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
     final setup = state.setup;
     final extraFunds = setup.remainingFreeAmount;
 
-    return Scaffold(
+    return ShowCaseWidget(
+      builder: (ctx) {
+        _showcaseContext = ctx;
+        return Scaffold(
       backgroundColor: colors.bgPrimary,
       appBar: const MoreAppBar(title: '', showBack: true, showNotification: false),
       body: state.isLoading
@@ -79,7 +111,11 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                     ),
                     SizedBox(height: 24.h),
 
-                    MoreCard(
+                    Showcase(
+                      key: _keyIncome,
+                      title: '월 수입',
+                      description: '월에 정기적으로 들어오는 금액을 입력해줘요. 월 수입이 변경되면 연필 버튼을 눌러 수정해주세요.',
+                      child: MoreCard(
                       padding: EdgeInsets.all(24.w),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -136,22 +172,32 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           ),
                           SizedBox(height: 24.h),
 
-                          _BudgetSectionHeader(
-                            label: '저축액',
-                            description: '목표를 위해 저축하는 금액',
-                            amount: setup.savingsAmount,
-                            color: const Color(0xFF81C784),
+                          Showcase(
+                            key: _keySavings,
+                            title: '저축액',
+                            description: '목표 설정했던 금액을 목표 기간에 따라 배분해 주별 저축되는 금액을 알려줘요.',
+                            child: _BudgetSectionHeader(
+                              label: '저축액',
+                              description: '목표를 위해 저축하는 금액',
+                              amount: setup.savingsAmount,
+                              color: const Color(0xFF81C784),
+                            ),
                           ),
                           SizedBox(height: 40.h),
 
-                          _BudgetSectionHeader(
-                            label: '고정지출',
-                            description: '매주 고정으로 나가는 비용',
-                            amount: setup.fixedExpenseAmount,
-                            color: AppColors.orange500,
-                            isExpandable: true,
-                            isExpanded: _isFixedExpanded,
-                            onToggle: () => setState(() => _isFixedExpanded = !_isFixedExpanded),
+                          Showcase(
+                            key: _keyFixed,
+                            title: '고정지출',
+                            description: '구독비 등 고정적으로 지출되는 것에 대한 금액을 주별로 배분해줘요.',
+                            child: _BudgetSectionHeader(
+                              label: '고정지출',
+                              description: '매주 고정으로 나가는 비용',
+                              amount: setup.fixedExpenseAmount,
+                              color: AppColors.orange500,
+                              isExpandable: true,
+                              isExpanded: _isFixedExpanded,
+                              onToggle: () => setState(() => _isFixedExpanded = !_isFixedExpanded),
+                            ),
                           ),
                           if (_isFixedExpanded && setup.fixedEssentials.isNotEmpty) ...[
                             SizedBox(height: 16.h),
@@ -162,14 +208,19 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           ],
                           SizedBox(height: 40.h),
 
-                          _BudgetSectionHeader(
-                            label: '변동지출',
-                            description: '매주 변동되는 비용 (병원비 등)',
-                            amount: setup.variableExpenseAmount,
-                            color: const Color(0xFF333333),
-                            isExpandable: true,
-                            isExpanded: _isVariableExpanded,
-                            onToggle: () => setState(() => _isVariableExpanded = !_isVariableExpanded),
+                          Showcase(
+                            key: _keyVariable,
+                            title: '변동지출',
+                            description: '교통비, 식비 등 변동적으로 지출되는 것에 대한 금액을 주별로 배분해줘요.',
+                            child: _BudgetSectionHeader(
+                              label: '변동지출',
+                              description: '매주 변동되는 비용 (병원비 등)',
+                              amount: setup.variableExpenseAmount,
+                              color: const Color(0xFF333333),
+                              isExpandable: true,
+                              isExpanded: _isVariableExpanded,
+                              onToggle: () => setState(() => _isVariableExpanded = !_isVariableExpanded),
+                            ),
                           ),
                           if (_isVariableExpanded && setup.variableEssentials.isNotEmpty) ...[
                             SizedBox(height: 16.h),
@@ -183,7 +234,11 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           Divider(color: colors.textPrimary, thickness: 1.5),
                           SizedBox(height: 32.h),
 
-                          Row(
+                          Showcase(
+                            key: _keyFreedom,
+                            title: '주간 여유 자금',
+                            description: '월 수입에서 저축액, 고정지출, 변동지출을 모두 빼고, 주에 자유롭게 사용 가능한 금액이에요.',
+                            child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
@@ -207,6 +262,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                               ),
                             ],
                           ),
+                          ),
                           SizedBox(height: 8.h),
                           Text(
                             '고정/변동/저축비를 제외한 자유롭게 사용 가능한 금액',
@@ -217,6 +273,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           ),
                         ],
                       ),
+                    ),
                     ),
                     SizedBox(height: 40.h),
                   ],
@@ -235,6 +292,8 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
           ),
         ],
       ),
+      );
+    },
     );
   }
 }

@@ -4,10 +4,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
+import 'package:more_app/core/utils/tutorial_service.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/viewmodels/goal_viewmodel.dart';
 import 'package:more_app/presentation/pages/goal/widgets/goal_card.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
+import 'package:showcaseview/showcaseview.dart';
 
 class GoalListPage extends ConsumerStatefulWidget {
   const GoalListPage({super.key});
@@ -17,11 +19,29 @@ class GoalListPage extends ConsumerStatefulWidget {
 }
 
 class _GoalListPageState extends ConsumerState<GoalListPage> {
+  BuildContext? _showcaseContext;
+  final _keyFilterChips = GlobalKey();
+  final _keyPriority = GlobalKey();
+  final _keyFab = GlobalKey();
+
   @override
   void initState() {
     super.initState();
     Future.microtask(() {
       ref.read(goalViewModelProvider.notifier).loadGoals();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final shown = await TutorialService.isShown(TutorialService.goalList);
+      if (!shown && mounted) {
+        await TutorialService.markShown(TutorialService.goalList);
+        if (mounted && _showcaseContext != null) {
+          ShowCaseWidget.of(_showcaseContext!).startShowCase([
+            _keyFilterChips,
+            _keyPriority,
+            _keyFab,
+          ]);
+        }
+      }
     });
   }
 
@@ -33,7 +53,10 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
     final filteredGoals = goalState.filteredGoals;
     final totalCount = goalState.goals.length;
 
-    return Scaffold(
+    return ShowCaseWidget(
+      builder: (ctx) {
+        _showcaseContext = ctx;
+        return Scaffold(
       backgroundColor: colors.bgPrimary,
       appBar: const MoreAppBar(
         showBack: false,
@@ -80,25 +103,40 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
                         padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 0),
                         child: Row(
                           children: [
-                            _FilterChip(
-                              label: '진행중인 목표',
-                              selected: !goalState.showAchieved,
-                              onTap: () => viewModel.toggleFilter(false),
-                            ),
-                            SizedBox(width: 8.w),
-                            _FilterChip(
-                              label: '달성한 목표',
-                              selected: goalState.showAchieved,
-                              onTap: () => viewModel.toggleFilter(true),
+                            Showcase(
+                              key: _keyFilterChips,
+                              title: '목표 필터',
+                              description: '진행 중인 목표와 달성한 목표를 구분해서 볼 수 있어요. 원하는 탭을 눌러 목표를 관리해보세요.',
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _FilterChip(
+                                    label: '진행중인 목표',
+                                    selected: !goalState.showAchieved,
+                                    onTap: () => viewModel.toggleFilter(false),
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  _FilterChip(
+                                    label: '달성한 목표',
+                                    selected: goalState.showAchieved,
+                                    onTap: () => viewModel.toggleFilter(true),
+                                  ),
+                                ],
+                              ),
                             ),
                             const Spacer(),
-                            GestureDetector(
-                              onTap: () => context.push(AppRoutes.goalPriority),
-                              child: Text(
-                                '목표 우선순위 설정 >',
-                                style: AppTextStyles.bodySm.copyWith(
-                                  color: colors.textTertiary,
-                                  fontWeight: FontWeight.w500,
+                            Showcase(
+                              key: _keyPriority,
+                              title: '우선순위 설정',
+                              description: '목표의 저축 우선순위를 직접 정할 수 있어요. 중요한 목표부터 저축되도록 순서를 설정해보세요.',
+                              child: GestureDetector(
+                                onTap: () => context.push(AppRoutes.goalPriority),
+                                child: Text(
+                                  '목표 우선순위 설정 >',
+                                  style: AppTextStyles.bodySm.copyWith(
+                                    color: colors.textTertiary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
                             ),
@@ -128,12 +166,19 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
                       ),
                     ],
                   ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.orange500,
-        foregroundColor: Colors.white,
-        onPressed: () => context.push(AppRoutes.goalCreate),
-        child: const Icon(Icons.add),
+      floatingActionButton: Showcase(
+        key: _keyFab,
+        title: '목표 추가',
+        description: '새로운 목표를 추가할 수 있어요. 여행, 가전제품 등 원하는 것을 목표로 등록하고 저축을 시작해보세요!',
+        child: FloatingActionButton(
+          backgroundColor: AppColors.orange500,
+          foregroundColor: Colors.white,
+          onPressed: () => context.push(AppRoutes.goalCreate),
+          child: const Icon(Icons.add),
+        ),
       ),
+      );
+    },
     );
   }
 
