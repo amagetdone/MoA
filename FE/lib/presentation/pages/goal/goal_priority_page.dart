@@ -40,9 +40,7 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
             child: Text(
               '드래그하여 우선순위를 변경하세요',
-              style: AppTextStyles.bodySm.copyWith(
-                color: colors.textTertiary,
-              ),
+              style: AppTextStyles.bodySm.copyWith(color: colors.textTertiary),
             ),
           ),
           Expanded(
@@ -58,6 +56,7 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
                     ),
                   )
                 : ReorderableListView.builder(
+                    buildDefaultDragHandles: false,
                     padding: EdgeInsets.symmetric(horizontal: 16.w),
                     itemCount: displayGoals.length,
                     onReorder: (oldIndex, newIndex) {
@@ -93,14 +92,18 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
                                 width: 28.w,
                                 height: 28.w,
                                 decoration: BoxDecoration(
-                                  color: index == 0 ? AppColors.orange500 : colors.gray100,
+                                  color: index == 0
+                                      ? AppColors.orange500
+                                      : colors.gray100,
                                   borderRadius: BorderRadius.circular(8.r),
                                 ),
                                 child: Center(
                                   child: Text(
                                     '${index + 1}',
                                     style: AppTextStyles.bodySm.copyWith(
-                                      color: index == 0 ? Colors.white : colors.textPrimary,
+                                      color: index == 0
+                                          ? Colors.white
+                                          : colors.textPrimary,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),

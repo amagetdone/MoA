@@ -31,11 +31,18 @@ class _MenuPageState extends ConsumerState<MenuPage> {
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final state = ref.watch(menuViewModelProvider);
+    final profileImageUrl = state.profileImageUrl?.trim();
+    final hasProfileImage =
+        profileImageUrl != null && profileImageUrl.isNotEmpty;
 
     if (state.isLoading) {
       return Scaffold(
         backgroundColor: colors.bgPrimary,
-        appBar: const MoreAppBar(showBack: false, showLogo: true, showNotification: true),
+        appBar: const MoreAppBar(
+          showBack: false,
+          showLogo: true,
+          showNotification: true,
+        ),
         body: const SizedBox.shrink(),
       );
     }
@@ -43,7 +50,11 @@ class _MenuPageState extends ConsumerState<MenuPage> {
     if (state.errorMessage != null && !state.hasLoadedSummary) {
       return Scaffold(
         backgroundColor: colors.bgPrimary,
-        appBar: const MoreAppBar(showBack: false, showLogo: true, showNotification: true),
+        appBar: const MoreAppBar(
+          showBack: false,
+          showLogo: true,
+          showNotification: true,
+        ),
         body: Center(
           child: Text(
             '메뉴 정보를 불러오지 못했습니다.\n${state.errorMessage!}',
@@ -55,7 +66,11 @@ class _MenuPageState extends ConsumerState<MenuPage> {
 
     return Scaffold(
       backgroundColor: colors.bgPrimary,
-      appBar: const MoreAppBar(showBack: false, showLogo: true, showNotification: true),
+      appBar: const MoreAppBar(
+        showBack: false,
+        showLogo: true,
+        showNotification: true,
+      ),
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
         child: Column(
@@ -65,19 +80,8 @@ class _MenuPageState extends ConsumerState<MenuPage> {
             MoreCard(
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 24.r,
-                    backgroundColor: colors.gray100,
-                    backgroundImage: state.profileImageUrl != null
-                        ? NetworkImage(state.profileImageUrl!)
-                        : null,
-                    child: state.profileImageUrl == null
-                        ? Icon(
-                            Icons.person_outline,
-                            size: 28.w,
-                            color: colors.gray500,
-                          )
-                        : null,
+                  _ProfileAvatar(
+                    imageUrl: hasProfileImage ? profileImageUrl : null,
                   ),
                   SizedBox(width: 14.w),
                   Expanded(
@@ -88,8 +92,8 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                           extra: <String, String>{
                             'nickname': state.userName,
                             'email': state.userEmail,
-                            if (state.profileImageUrl != null)
-                              'profileImageUrl': state.profileImageUrl!,
+                            if (hasProfileImage)
+                              'profileImageUrl': profileImageUrl,
                           },
                         );
                         ref.read(menuViewModelProvider.notifier).loadData();
@@ -147,7 +151,9 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                   backgroundColor: const Color(0xFFFFF8E1),
                   borderColor: const Color(0xFFFFECB3),
                   onTap: () {
-                    ref.read(goalViewModelProvider.notifier).toggleFilter(false);
+                    ref
+                        .read(goalViewModelProvider.notifier)
+                        .toggleFilter(false);
                     context.go(AppRoutes.goalTab);
                   },
                 ),
@@ -230,6 +236,52 @@ class _MenuPageState extends ConsumerState<MenuPage> {
   }
 }
 
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({required this.imageUrl});
+
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
+    Widget fallback() =>
+        Icon(Icons.person_outline, size: 28.w, color: colors.gray500);
+
+    return Container(
+      width: 48.w,
+      height: 48.w,
+      decoration: BoxDecoration(color: colors.gray100, shape: BoxShape.circle),
+      clipBehavior: Clip.antiAlias,
+      child: imageUrl == null
+          ? Center(child: fallback())
+          : Image.network(
+              imageUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Center(child: fallback());
+              },
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) {
+                  return child;
+                }
+
+                return Center(
+                  child: SizedBox(
+                    width: 18.w,
+                    height: 18.w,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: colors.gray500,
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+
 class _StatBox extends StatelessWidget {
   final String label;
   final String value;
@@ -252,35 +304,35 @@ class _StatBox extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-        padding: EdgeInsets.symmetric(vertical: 14.h, horizontal: 10.w),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: borderColor),
-        ),
-        child: Column(
-          children: [
-            Text(
-              label,
-              style: AppTextStyles.caption.copyWith(
-                color: colors.textTertiary,
-                fontSize: 12.5.sp,
+          padding: EdgeInsets.symmetric(vertical: 14.h, horizontal: 10.w),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: borderColor),
+          ),
+          child: Column(
+            children: [
+              Text(
+                label,
+                style: AppTextStyles.caption.copyWith(
+                  color: colors.textTertiary,
+                  fontSize: 12.5.sp,
+                ),
               ),
-            ),
-            SizedBox(height: 4.h),
-            Text(
-              value,
-              style: AppTextStyles.bodyMd.copyWith(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w600,
-                fontSize: 14.sp,
+              SizedBox(height: 4.h),
+              Text(
+                value,
+                style: AppTextStyles.bodyMd.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14.sp,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -337,11 +389,7 @@ class _MenuListItem extends StatelessWidget {
               ),
             ),
             SizedBox(width: 4.w),
-            Icon(
-              Icons.chevron_right,
-              size: 18.w,
-              color: colors.textTertiary,
-            ),
+            Icon(Icons.chevron_right, size: 18.w, color: colors.textTertiary),
           ],
         ),
       ),
