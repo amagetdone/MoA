@@ -2,7 +2,16 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.core.config import build_postgresql_dsn
 from sqlalchemy import create_engine, text
+
+
+def jdbc_to_sqlalchemy_dsn(*, jdbc_url: str, username: str, password: str) -> str:
+    return build_postgresql_dsn(
+        jdbc_url=jdbc_url,
+        username=username,
+        password=password,
+    )
 
 
 def validate_user_id(user_id: int) -> int:

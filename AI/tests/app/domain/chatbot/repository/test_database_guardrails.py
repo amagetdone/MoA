@@ -2,6 +2,7 @@ from app.core.database import (
     ReadOnlyDatabase,
     assert_select_only_sql,
     build_thread_id,
+    jdbc_to_sqlalchemy_dsn,
     validate_user_id,
 )
 
@@ -81,6 +82,17 @@ def test_assert_select_only_sql_rejects_non_select_statements() -> None:
         assert "SELECT" in str(exc)
     else:
         raise AssertionError("non-select SQL must be rejected")
+
+
+def test_jdbc_to_sqlalchemy_dsn_converts_jdbc_url_to_psycopg_dsn() -> None:
+    assert (
+        jdbc_to_sqlalchemy_dsn(
+            jdbc_url="jdbc:postgresql://postgres:5432/amagetdone",
+            username="d101",
+            password="p@ss:word/1#x",
+        )
+        == "postgresql+psycopg://d101:p%40ss%3Aword%2F1%23x@postgres:5432/amagetdone"
+    )
 
 
 def test_read_only_database_executes_select_in_read_only_transaction() -> None:
