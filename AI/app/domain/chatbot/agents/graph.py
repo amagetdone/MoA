@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Sequence
+from typing import Callable, Sequence
 
 from langchain.agents import create_agent
 from langchain_core.language_models import BaseChatModel
@@ -11,17 +11,12 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph_supervisor import create_supervisor
 
 from app.core.config import Settings
-from app.core.logging import LangfuseTraceLogger
+from app.core.llm import build_chat_model
 from app.domain.chatbot.agents.prompts.chatbot_prompts import (
     build_specialist_prompt,
     build_supervisor_prompt,
 )
 from app.domain.chatbot.agents.states.state import ChatbotGraphState
-try:
-    from langfuse.langchain import CallbackHandler as LangfuseCallbackHandler
-except ImportError:  # pragma: no cover - dependency is expected but optional at runtime.
-    LangfuseCallbackHandler = None
-from langchain_openai import ChatOpenAI
 
 
 @dataclass(slots=True)
@@ -34,27 +29,6 @@ class ChatbotToolBundle:
     @classmethod
     def empty(cls) -> "ChatbotToolBundle":
         return cls()
-
-
-def build_chat_model(
-    *,
-    settings: Settings | None = None,
-    tracer: LangfuseTraceLogger | None = None,
-) -> ChatOpenAI:
-    settings = settings or Settings()
-    tracer = tracer or LangfuseTraceLogger.from_settings(settings)
-    callbacks = _build_chat_model_callbacks(settings=settings, tracer=tracer)
-
-    kwargs: dict[str, Any] = {
-        "model": settings.chat_model,
-        "api_key": settings.ai_api_key,
-        "base_url": settings.openai_base_url,
-        "streaming": True,
-    }
-    if callbacks:
-        kwargs["callbacks"] = callbacks
-
-    return ChatOpenAI(**kwargs)
 
 
 def build_chatbot_graph(
@@ -118,23 +92,3 @@ def _build_specialist_agent(
         state_schema=ChatbotGraphState,
         name=name,
     )
-
-
-def _build_chat_model_callbacks(
-    *,
-    settings: Settings,
-    tracer: LangfuseTraceLogger | None,
-) -> list[Any]:
-    if LangfuseCallbackHandler is None:
-        return []
-    if not settings.langfuse_tracing_enabled:
-        return []
-
-    public_key = settings.langfuse_public_key or ""
-    if not public_key.strip():
-        return []
-
-    if tracer is None or not tracer.enabled:
-        return []
-
-    return [LangfuseCallbackHandler(public_key=public_key)]

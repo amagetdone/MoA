@@ -8,6 +8,7 @@ import pytest
 from app.core.config import Settings
 from app.domain.image_generation.service.image_generation_service import (
     ImageGenerationService,
+    ImageGenerationConfigurationError,
     UpstreamImageGenerationError,
 )
 
@@ -86,6 +87,11 @@ class _FakeHttpClient:
         return self.post_response
 
 
+class _CapturingAsyncClient:
+    def __init__(self, **kwargs) -> None:
+        self.kwargs = kwargs
+
+
 def _run_async(awaitable, /):
     async def runner():
         return await awaitable
@@ -161,7 +167,7 @@ def test_service_downloads_reference_image_and_extracts_generated_inline_data() 
     settings = Settings(
         _env_file=None,
         AI_API_KEY="relay-key",
-        OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
+        GOOGLE_AI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
     )
     http_client = _FakeHttpClient(
         get_response=_FakeResponse(
@@ -258,7 +264,7 @@ def test_service_accepts_camel_case_inline_data_from_upstream() -> None:
     settings = Settings(
         _env_file=None,
         AI_API_KEY="relay-key",
-        OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
+        GOOGLE_AI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
     )
     service = ImageGenerationService(
         settings=settings,
@@ -306,7 +312,7 @@ def test_service_raises_when_reference_url_does_not_return_image_content_type() 
     settings = Settings(
         _env_file=None,
         AI_API_KEY="relay-key",
-        OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
+        GOOGLE_AI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
     )
     http_client = _FakeHttpClient(
         get_response=_FakeResponse(
@@ -338,7 +344,7 @@ def test_service_raises_when_generated_inline_data_is_missing() -> None:
     settings = Settings(
         _env_file=None,
         AI_API_KEY="relay-key",
-        OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
+        GOOGLE_AI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
     )
     service = ImageGenerationService(
         settings=settings,
@@ -371,7 +377,7 @@ def test_service_reports_available_upstream_part_types_for_schema_debugging() ->
     settings = Settings(
         _env_file=None,
         AI_API_KEY="relay-key",
-        OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
+        GOOGLE_AI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
     )
     tracer = _CapturingTracer()
     service = ImageGenerationService(
@@ -413,3 +419,51 @@ def test_service_reports_available_upstream_part_types_for_schema_debugging() ->
         for event in tracer.events
         if event.get("event") == "update"
     )
+
+
+def test_service_builds_http_client_with_google_ai_base_url(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_async_client(**kwargs):
+        captured.update(kwargs)
+        return _CapturingAsyncClient(**kwargs)
+
+    monkeypatch.setattr(
+        "app.domain.image_generation.service.image_generation_service.httpx.AsyncClient",
+        fake_async_client,
+    )
+
+    settings = Settings(
+        _env_file=None,
+        AI_API_KEY="relay-key",
+        OPENAI_BASE_URL="https://chat.example.com/v1",
+        GOOGLE_AI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
+    )
+    service = ImageGenerationService(
+        settings=settings,
+        tracer=_CapturingTracer(),
+    )
+
+    client = service._get_http_client()
+
+    assert isinstance(client, _CapturingAsyncClient)
+    assert captured["base_url"] == settings.google_ai_base_url
+    assert captured["follow_redirects"] is True
+
+
+def test_service_requires_google_ai_base_url_for_http_client() -> None:
+    settings = Settings(
+        _env_file=None,
+        AI_API_KEY="relay-key",
+        OPENAI_BASE_URL="https://chat.example.com/v1",
+        GOOGLE_AI_BASE_URL="",
+    )
+    service = ImageGenerationService(
+        settings=settings,
+        tracer=_CapturingTracer(),
+    )
+
+    with pytest.raises(ImageGenerationConfigurationError) as exc_info:
+        service._get_http_client()
+
+    assert "GOOGLE_AI_BASE_URL" in str(exc_info.value)

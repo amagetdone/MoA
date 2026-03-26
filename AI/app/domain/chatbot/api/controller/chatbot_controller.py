@@ -4,13 +4,18 @@ import json
 from collections.abc import AsyncIterator
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import StreamingResponse
 
 from app.api.dependencies import get_chatbot_service
 from app.domain.chatbot.api.dto.detail_dto import (
+    ChatbotConversationResponse,
     ChatbotMessageRequest,
     ChatbotMessageResponse,
+)
+from app.domain.chatbot.repository.conversation_memory_store import (
+    ConversationExpiredError,
+    ConversationNotFoundError,
 )
 
 router = APIRouter(prefix="/v1/chatbot", tags=["chatbot"])
@@ -36,14 +41,39 @@ async def stream_chatbot_message(
     user_id: TrustedUserId,
     service=Depends(get_chatbot_service),
 ) -> StreamingResponse:
-    async def event_stream() -> AsyncIterator[str]:
-        async for event in service.stream_reply(
+    try:
+        stream = await service.stream_reply(
             user_id=user_id,
             message=request.message,
             conversation_id=request.conversation_id,
-        ):
+        )
+    except ConversationExpiredError as error:
+        raise HTTPException(status_code=410, detail=str(error)) from error
+
+    async def event_stream() -> AsyncIterator[str]:
+        async for event in stream:
             event_name = str(event["event"])
             payload = json.dumps(event["data"], ensure_ascii=False)
             yield f"event: {event_name}\ndata: {payload}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@router.get(
+    "/conversations/{conversation_id}",
+    response_model=ChatbotConversationResponse,
+)
+async def get_chatbot_conversation(
+    conversation_id: str,
+    user_id: TrustedUserId,
+    service=Depends(get_chatbot_service),
+) -> dict[str, object]:
+    try:
+        return service.get_conversation_history(
+            user_id=user_id,
+            conversation_id=conversation_id,
+        )
+    except ConversationNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ConversationExpiredError as error:
+        raise HTTPException(status_code=410, detail=str(error)) from error

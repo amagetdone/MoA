@@ -2,12 +2,31 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from app.domain.chatbot.repository.conversation_memory_store import (
+    ConversationExpiredError,
+    ConversationNotFoundError,
+)
 from app.main import create_app
 
 
 class _FakeChatbotService:
     def __init__(self) -> None:
         self.reply_calls: list[dict[str, object]] = []
+        self.conversation_calls: list[dict[str, object]] = []
+        self.history_error: str | None = None
+        self.conversation_result = {
+            "conversation_id": "conv-1",
+            "created_at": "2026-03-26T09:00:00+00:00",
+            "last_activity_at": "2026-03-26T09:01:00+00:00",
+            "expires_at": "2026-03-29T09:01:00+00:00",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "hello",
+                    "created_at": "2026-03-26T09:00:00+00:00",
+                }
+            ],
+        }
 
     async def reply(
         self,
@@ -30,11 +49,30 @@ class _FakeChatbotService:
             "tool_summaries": [],
         }
 
+    def get_conversation_history(
+        self,
+        *,
+        user_id: int,
+        conversation_id: str,
+    ) -> dict[str, object]:
+        self.conversation_calls.append(
+            {
+                "user_id": user_id,
+                "conversation_id": conversation_id,
+            }
+        )
+        if self.history_error == "not_found":
+            raise ConversationNotFoundError("missing")
+        if self.history_error == "expired":
+            raise ConversationExpiredError("expired")
+        return self.conversation_result
+
 
 class _FakeStreamingChatbotService(_FakeChatbotService):
     def __init__(self) -> None:
         super().__init__()
         self.stream_calls: list[dict[str, object]] = []
+        self.stream_error: str | None = None
 
     async def stream_reply(
         self,
@@ -43,6 +81,9 @@ class _FakeStreamingChatbotService(_FakeChatbotService):
         message: str,
         conversation_id: str | None,
     ):
+        if self.stream_error == "expired":
+            raise ConversationExpiredError("expired")
+
         self.stream_calls.append(
             {
                 "user_id": user_id,
@@ -50,13 +91,17 @@ class _FakeStreamingChatbotService(_FakeChatbotService):
                 "conversation_id": conversation_id,
             }
         )
-        yield {"event": "status", "data": {"message": "routing"}}
-        yield {"event": "token", "data": {"text": "Budget"}}
-        yield {"event": "token", "data": {"text": " is on track."}}
-        yield {
-            "event": "done",
-            "data": {"conversation_id": conversation_id or "generated-id"},
-        }
+
+        async def _events():
+            yield {"event": "status", "data": {"message": "routing"}}
+            yield {"event": "token", "data": {"text": "Budget"}}
+            yield {"event": "token", "data": {"text": " is on track."}}
+            yield {
+                "event": "done",
+                "data": {"conversation_id": conversation_id or "generated-id"},
+            }
+
+        return _events()
 
 
 def test_chatbot_message_endpoint_returns_json_response() -> None:
@@ -288,3 +333,82 @@ def test_chatbot_stream_endpoint_rejects_non_positive_user_id_header() -> None:
         )
 
     assert response.status_code == 422
+
+
+def test_chatbot_conversation_history_endpoint_returns_conversation() -> None:
+    service = _FakeChatbotService()
+    app = create_app(
+        classifier=object(),
+        image_generation_service=object(),
+        chatbot_service=service,
+    )
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/v1/chatbot/conversations/conv-1",
+            headers={"X-User-Id": "7"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["conversation_id"] == "conv-1"
+    assert service.conversation_calls == [
+        {
+            "user_id": 7,
+            "conversation_id": "conv-1",
+        }
+    ]
+
+
+def test_chatbot_conversation_history_endpoint_returns_404() -> None:
+    service = _FakeChatbotService()
+    service.history_error = "not_found"
+    app = create_app(
+        classifier=object(),
+        image_generation_service=object(),
+        chatbot_service=service,
+    )
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/v1/chatbot/conversations/missing",
+            headers={"X-User-Id": "7"},
+        )
+
+    assert response.status_code == 404
+
+
+def test_chatbot_conversation_history_endpoint_returns_410() -> None:
+    service = _FakeChatbotService()
+    service.history_error = "expired"
+    app = create_app(
+        classifier=object(),
+        image_generation_service=object(),
+        chatbot_service=service,
+    )
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/v1/chatbot/conversations/expired",
+            headers={"X-User-Id": "7"},
+        )
+
+    assert response.status_code == 410
+
+
+def test_chatbot_stream_endpoint_returns_410_for_expired_conversation() -> None:
+    service = _FakeStreamingChatbotService()
+    service.stream_error = "expired"
+    app = create_app(
+        classifier=object(),
+        image_generation_service=object(),
+        chatbot_service=service,
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/v1/chatbot/messages/stream",
+            headers={"X-User-Id": "7"},
+            json={"message": "hello", "conversation_id": "conv-1"},
+        )
+
+    assert response.status_code == 410

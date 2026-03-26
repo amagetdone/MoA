@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable, Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -18,6 +18,9 @@ from app.domain.chatbot.agents.tools.finance_tools import (
     build_recent_spending_anomalies_tool,
     build_spending_by_category_tool,
     build_spending_summary_tool,
+)
+from app.domain.chatbot.repository.conversation_memory_store import (
+    ConversationMemoryStore,
 )
 from app.domain.chatbot.repository.chatbot_repository import ChatbotRepository
 
@@ -45,12 +48,16 @@ class ChatbotService:
         graph_factory: Callable[[int], Any] | None = None,
         tracer: LangfuseTraceLogger | None = None,
         conversation_id_factory: Callable[[], str] | None = None,
+        conversation_store: ConversationMemoryStore | None = None,
         closeables: Sequence[Any] | None = None,
     ) -> None:
         self._settings = settings
         self._tracer = tracer or LangfuseTraceLogger.from_settings(settings)
         self._conversation_id_factory = (
             conversation_id_factory or (lambda: str(uuid4()))
+        )
+        self._conversation_store = conversation_store or ConversationMemoryStore(
+            ttl=timedelta(days=3),
         )
         self._graph_factory = graph_factory or _build_default_graph_factory(
             settings=settings,
@@ -72,6 +79,11 @@ class ChatbotService:
             conversation_id=resolved_conversation_id,
         )
         graph = self._get_graph(validated_user_id)
+        self._conversation_store.append_user_message(
+            user_id=validated_user_id,
+            conversation_id=resolved_conversation_id,
+            content=message,
+        )
 
         with self._tracer.start_as_current_span(
             name="chatbot.reply",
@@ -91,6 +103,12 @@ class ChatbotService:
             answer = self._extract_answer(result)
             warnings = list(result.get("warnings") or [])
             tool_summaries = list(result.get("tool_summaries") or [])
+            if answer.strip():
+                self._conversation_store.append_assistant_message(
+                    user_id=validated_user_id,
+                    conversation_id=resolved_conversation_id,
+                    content=answer,
+                )
             response = {
                 "conversation_id": resolved_conversation_id,
                 "answer": answer,
@@ -120,53 +138,81 @@ class ChatbotService:
             conversation_id=resolved_conversation_id,
         )
         graph = self._get_graph(validated_user_id)
+        self._conversation_store.append_user_message(
+            user_id=validated_user_id,
+            conversation_id=resolved_conversation_id,
+            content=message,
+        )
 
-        with self._tracer.start_as_current_span(
-            name="chatbot.stream_reply",
-            input={
-                "user_id": user_id,
-                "message": message,
-                "conversation_id": conversation_id,
-            },
-            metadata={
-                "thread_id": thread_id,
-            },
-        ) as span:
-            yielded_text: list[str] = []
-            yield {"event": "status", "data": {"message": "routing"}}
-
-            async for mode, chunk in graph.astream(
-                {"messages": [HumanMessage(content=message)]},
-                config={"configurable": {"thread_id": thread_id}},
-                stream_mode=["updates", "messages"],
-            ):
-                if mode == "updates":
-                    continue
-
-                text = self._extract_stream_text(chunk)
-                if not text:
-                    continue
-
-                yielded_text.append(text)
-                yield {"event": "token", "data": {"text": text}}
-
-            span.update(
-                output={
-                    "conversation_id": resolved_conversation_id,
-                    "answer": "".join(yielded_text),
+        async def _event_stream() -> AsyncIterator[dict[str, object]]:
+            with self._tracer.start_as_current_span(
+                name="chatbot.stream_reply",
+                input={
+                    "user_id": user_id,
+                    "message": message,
+                    "conversation_id": conversation_id,
                 },
                 metadata={
-                    "token_count": len(yielded_text),
+                    "thread_id": thread_id,
                 },
-            )
-            yield {
-                "event": "done",
-                "data": {"conversation_id": resolved_conversation_id},
-            }
+            ) as span:
+                yielded_text: list[str] = []
+                yield {"event": "status", "data": {"message": "routing"}}
+
+                async for mode, chunk in graph.astream(
+                    {"messages": [HumanMessage(content=message)]},
+                    config={"configurable": {"thread_id": thread_id}},
+                    stream_mode=["updates", "messages"],
+                ):
+                    if mode == "updates":
+                        continue
+
+                    text = self._extract_stream_text(chunk)
+                    if not text:
+                        continue
+
+                    yielded_text.append(text)
+                    yield {"event": "token", "data": {"text": text}}
+
+                answer = "".join(yielded_text)
+                if answer.strip():
+                    self._conversation_store.append_assistant_message(
+                        user_id=validated_user_id,
+                        conversation_id=resolved_conversation_id,
+                        content=answer,
+                    )
+
+                span.update(
+                    output={
+                        "conversation_id": resolved_conversation_id,
+                        "answer": answer,
+                    },
+                    metadata={
+                        "token_count": len(yielded_text),
+                    },
+                )
+                yield {
+                    "event": "done",
+                    "data": {"conversation_id": resolved_conversation_id},
+                }
+
+        return _event_stream()
 
     async def aclose(self) -> None:
         for resource in self._closeables:
             await _close_resource(resource)
+
+    def get_conversation_history(
+        self,
+        *,
+        user_id: int,
+        conversation_id: str,
+    ) -> dict[str, object]:
+        validated_user_id = validate_user_id(user_id)
+        return self._conversation_store.get_conversation(
+            user_id=validated_user_id,
+            conversation_id=conversation_id,
+        )
 
     def _get_graph(self, user_id: int) -> Any:
         if user_id not in self._graph_cache:

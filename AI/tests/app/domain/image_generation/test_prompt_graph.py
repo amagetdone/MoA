@@ -35,7 +35,7 @@ def test_image_generation_graph_builds_prompt_and_delegates_generation() -> None
     settings = Settings(
         _env_file=None,
         AI_API_KEY="relay-key",
-        OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
+        GOOGLE_AI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
     )
     upstream_calls: list[dict[str, str]] = []
 

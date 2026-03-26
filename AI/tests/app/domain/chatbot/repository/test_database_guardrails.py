@@ -1,3 +1,5 @@
+import pytest
+
 from app.core.database import (
     ReadOnlyDatabase,
     assert_select_only_sql,
@@ -82,6 +84,45 @@ def test_assert_select_only_sql_rejects_non_select_statements() -> None:
         assert "SELECT" in str(exc)
     else:
         raise AssertionError("non-select SQL must be rejected")
+
+
+def test_assert_select_only_sql_allows_read_only_cte_queries() -> None:
+    sql = """
+    WITH scoped_transactions AS (
+        SELECT 1 AS id
+    )
+    SELECT id
+    FROM scoped_transactions
+    """
+
+    assert assert_select_only_sql(sql) == sql.strip()
+
+
+def test_assert_select_only_sql_rejects_write_keywords_inside_cte() -> None:
+    sql = """
+    WITH deleted_rows AS (
+        DELETE FROM plan
+        RETURNING id
+    )
+    SELECT id
+    FROM deleted_rows
+    """
+
+    with pytest.raises(ValueError, match="read-only"):
+        assert_select_only_sql(sql)
+
+
+def test_assert_select_only_sql_allows_leading_sql_comments() -> None:
+    sql = """
+    -- scoped read query
+    WITH scoped_transactions AS (
+        SELECT 1 AS id
+    )
+    SELECT id
+    FROM scoped_transactions
+    """
+
+    assert assert_select_only_sql(sql) == sql.strip()
 
 
 def test_jdbc_to_sqlalchemy_dsn_converts_jdbc_url_to_psycopg_dsn() -> None:

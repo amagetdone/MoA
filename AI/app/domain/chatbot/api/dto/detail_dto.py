@@ -29,6 +29,20 @@ class ChatbotToolSummary(BaseModel):
     as_of: str
 
 
+class ChatbotConversationMessage(BaseModel):
+    role: str
+    content: str
+    created_at: str
+
+
+class ChatbotConversationResponse(BaseModel):
+    conversation_id: str
+    created_at: str
+    last_activity_at: str
+    expires_at: str
+    messages: list[ChatbotConversationMessage]
+
+
 class ChatbotMessageResponse(BaseModel):
     conversation_id: str
     answer: str

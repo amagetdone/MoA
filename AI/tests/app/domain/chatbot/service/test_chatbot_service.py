@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import anyio
@@ -7,6 +8,11 @@ import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
 from app.core.config import Settings
+from app.domain.chatbot.repository.conversation_memory_store import (
+    ConversationExpiredError,
+    ConversationMemoryStore,
+    ConversationNotFoundError,
+)
 from app.domain.chatbot.service.chatbot_service import ChatbotService
 
 
@@ -269,11 +275,12 @@ def test_stream_reply_emits_only_supervisor_tokens_and_done() -> None:
 
     async def run() -> list[dict[str, object]]:
         events: list[dict[str, object]] = []
-        async for event in service.stream_reply(
+        stream = await service.stream_reply(
             user_id=7,
             message="How is my budget?",
             conversation_id="conv-1",
-        ):
+        )
+        async for event in stream:
             events.append(event)
         return events
 
@@ -291,3 +298,103 @@ def test_stream_reply_emits_only_supervisor_tokens_and_done() -> None:
         "configurable": {"thread_id": "moa:7:conv-1"}
     }
     assert tracer.calls[-1]["name"] == "chatbot.stream_reply"
+
+
+def test_reply_records_user_and_assistant_messages() -> None:
+    store = ConversationMemoryStore(
+        ttl=timedelta(days=3),
+        now_factory=lambda: datetime(2026, 3, 26, 9, 0, tzinfo=UTC),
+    )
+    service = ChatbotService(
+        settings=_build_settings(),
+        graph_factory=lambda _user_id: _FakeGraph(reply_final_answer="answer"),
+        tracer=_FakeTracer(),
+        conversation_store=store,
+    )
+
+    async def run() -> None:
+        await service.reply(
+            user_id=7,
+            message="hello",
+            conversation_id="conv-1",
+        )
+
+    anyio.run(run)
+    conversation = service.get_conversation_history(user_id=7, conversation_id="conv-1")
+
+    assert [message["role"] for message in conversation["messages"]] == [
+        "user",
+        "assistant",
+    ]
+    assert [message["content"] for message in conversation["messages"]] == [
+        "hello",
+        "answer",
+    ]
+
+
+def test_stream_reply_records_final_assistant_message_only() -> None:
+    store = ConversationMemoryStore(
+        ttl=timedelta(days=3),
+        now_factory=lambda: datetime(2026, 3, 26, 9, 0, tzinfo=UTC),
+    )
+    service = ChatbotService(
+        settings=_build_settings(),
+        graph_factory=lambda _user_id: _FakeGraph(),
+        tracer=_FakeTracer(),
+        conversation_store=store,
+    )
+
+    async def run() -> None:
+        stream = await service.stream_reply(
+            user_id=7,
+            message="hello",
+            conversation_id="conv-1",
+        )
+        async for _ in stream:
+            pass
+
+    anyio.run(run)
+    conversation = service.get_conversation_history(user_id=7, conversation_id="conv-1")
+
+    assert [message["content"] for message in conversation["messages"]] == [
+        "hello",
+        "Budget is healthy.",
+    ]
+
+
+def test_reply_rejects_expired_conversation_id() -> None:
+    current = {"now": datetime(2026, 3, 26, 9, 0, tzinfo=UTC)}
+    store = ConversationMemoryStore(
+        ttl=timedelta(days=3),
+        now_factory=lambda: current["now"],
+    )
+    store.append_user_message(user_id=7, conversation_id="conv-1", content="old")
+    current["now"] = datetime(2026, 3, 29, 9, 0, 1, tzinfo=UTC)
+
+    service = ChatbotService(
+        settings=_build_settings(),
+        graph_factory=lambda _user_id: _FakeGraph(),
+        tracer=_FakeTracer(),
+        conversation_store=store,
+    )
+
+    async def run() -> None:
+        await service.reply(user_id=7, message="new", conversation_id="conv-1")
+
+    with pytest.raises(ConversationExpiredError):
+        anyio.run(run)
+
+
+def test_get_conversation_history_raises_for_unknown_id() -> None:
+    service = ChatbotService(
+        settings=_build_settings(),
+        graph_factory=_FakeGraphFactory(),
+        tracer=_FakeTracer(),
+        conversation_store=ConversationMemoryStore(
+            ttl=timedelta(days=3),
+            now_factory=lambda: datetime(2026, 3, 26, 9, 0, tzinfo=UTC),
+        ),
+    )
+
+    with pytest.raises(ConversationNotFoundError):
+        service.get_conversation_history(user_id=7, conversation_id="missing")

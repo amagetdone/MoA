@@ -4,11 +4,12 @@ import csv
 import secrets
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Callable, Collection, Iterable, Sequence
 
 import httpx
 
 CREATE_MERCHANT_URL = "https://finopenapi.ssafy.io/ssafy/api/v1/edu/creditCard/createMerchant"
+INQUIRE_MERCHANT_LIST_URL = "https://finopenapi.ssafy.io/ssafy/api/v1/edu/creditCard/inquireMerchantList"
 DEFAULT_CATEGORY_ID = "CG-9ca85f66311a23d"
 SUCCESS_FIELDS = ("merchantId", "merchantName")
 FAILURE_FIELDS = ("merchantName", "responseCode", "responseMessage", "errorType")
@@ -53,7 +54,12 @@ def load_merchant_names(
     return merchant_names
 
 
-def build_create_merchant_header(
+def normalize_merchant_name(merchant_name: str) -> str:
+    return merchant_name.strip()
+
+
+def build_api_header(
+    api_name: str,
     api_key: str,
     institution_code: str = "00100",
     fintech_app_no: str = "001",
@@ -65,15 +71,30 @@ def build_create_merchant_header(
     unique_no = f"{current.strftime('%Y%m%d%H%M%S')}{secrets.randbelow(1_000_000):06d}"
 
     return {
-        "apiName": "createMerchant",
+        "apiName": api_name,
         "transmissionDate": transmission_date,
         "transmissionTime": transmission_time,
         "institutionCode": institution_code,
         "fintechAppNo": fintech_app_no,
-        "apiServiceCode": "createMerchant",
+        "apiServiceCode": api_name,
         "institutionTransactionUniqueNo": unique_no,
         "apiKey": api_key,
     }
+
+
+def build_create_merchant_header(
+    api_key: str,
+    institution_code: str = "00100",
+    fintech_app_no: str = "001",
+    now: datetime | None = None,
+) -> dict[str, str]:
+    return build_api_header(
+        api_name="createMerchant",
+        api_key=api_key,
+        institution_code=institution_code,
+        fintech_app_no=fintech_app_no,
+        now=now,
+    )
 
 
 def build_create_merchant_payload(
@@ -94,12 +115,108 @@ def build_create_merchant_payload(
     }
 
 
+def build_inquire_merchant_list_payload(
+    api_key: str,
+    institution_code: str = "00100",
+    fintech_app_no: str = "001",
+) -> dict[str, object]:
+    return {
+        "Header": build_api_header(
+            api_name="inquireMerchantList",
+            api_key=api_key,
+            institution_code=institution_code,
+            fintech_app_no=fintech_app_no,
+        )
+    }
+
+
+def fetch_registered_merchant_names(
+    api_key: str,
+    client: httpx.Client | None = None,
+    *,
+    base_url: str = INQUIRE_MERCHANT_LIST_URL,
+    institution_code: str = "00100",
+    fintech_app_no: str = "001",
+    timeout: float = 30.0,
+) -> set[str]:
+    owns_client = client is None
+    http_client = client or httpx.Client()
+
+    try:
+        response = http_client.post(
+            base_url,
+            json=build_inquire_merchant_list_payload(
+                api_key=api_key,
+                institution_code=institution_code,
+                fintech_app_no=fintech_app_no,
+            ),
+            timeout=timeout,
+        )
+        response.raise_for_status()
+        response_json = response.json()
+    except httpx.HTTPError as exc:
+        raise RuntimeError("Failed to fetch registered merchant names from SSAFY API.") from exc
+    except ValueError as exc:
+        raise RuntimeError("Failed to decode registered merchant list response.") from exc
+    finally:
+        if owns_client:
+            http_client.close()
+
+    header = response_json.get("Header", {})
+    response_code = str(header.get("responseCode", ""))
+    response_message = str(header.get("responseMessage", ""))
+    if response_code != "H0000":
+        raise RuntimeError(
+            f"Failed to fetch registered merchant names: {response_code} {response_message}".strip()
+        )
+
+    merchant_names: set[str] = set()
+    for record in response_json.get("REC", []):
+        merchant_name = normalize_merchant_name(str(record.get("merchantName", "")))
+        if merchant_name:
+            merchant_names.add(merchant_name)
+
+    return merchant_names
+
+
+def exclude_existing_merchant_names(
+    merchant_names: Sequence[str],
+    existing_merchant_names: Collection[str],
+) -> tuple[list[str], list[str]]:
+    normalized_existing_names = {
+        normalize_merchant_name(merchant_name)
+        for merchant_name in existing_merchant_names
+        if normalize_merchant_name(merchant_name)
+    }
+    seen_pending_names: set[str] = set()
+    pending_names: list[str] = []
+    skipped_names: list[str] = []
+    seen_skipped_names: set[str] = set()
+
+    for merchant_name in merchant_names:
+        normalized_name = normalize_merchant_name(merchant_name)
+        if not normalized_name:
+            continue
+        if normalized_name in normalized_existing_names:
+            if normalized_name not in seen_skipped_names:
+                skipped_names.append(normalized_name)
+                seen_skipped_names.add(normalized_name)
+            continue
+        if normalized_name in seen_pending_names:
+            continue
+
+        pending_names.append(normalized_name)
+        seen_pending_names.add(normalized_name)
+
+    return pending_names, skipped_names
+
+
 def select_matching_record(records: Iterable[dict[str, object]], merchant_name: str) -> dict[str, object]:
     record_list = list(records)
     matches = [
         record
         for record in record_list
-        if str(record.get("merchantName", "")).strip() == merchant_name
+        if normalize_merchant_name(str(record.get("merchantName", ""))) == merchant_name
     ]
     if matches:
         return matches[-1]
@@ -118,16 +235,19 @@ def register_merchants(
     institution_code: str = "00100",
     fintech_app_no: str = "001",
     timeout: float = 30.0,
+    progress_callback: Callable[[int, int, str], None] | None = None,
 ) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
     success_rows: list[dict[str, str]] = []
     failure_rows: list[dict[str, str]] = []
     owns_client = client is None
     http_client = client or httpx.Client()
+    total_merchants = len(merchant_names)
 
     try:
-        for merchant_name in merchant_names:
+        for completed_count, merchant_name in enumerate(merchant_names, start=1):
+            normalized_name = normalize_merchant_name(merchant_name)
             payload = build_create_merchant_payload(
-                merchant_name=merchant_name,
+                merchant_name=normalized_name,
                 api_key=api_key,
                 category_id=category_id,
                 institution_code=institution_code,
@@ -140,7 +260,7 @@ def register_merchants(
             except httpx.HTTPError as exc:
                 failure_rows.append(
                     {
-                        "merchantName": merchant_name,
+                        "merchantName": normalized_name,
                         "responseCode": str(getattr(getattr(exc, "response", None), "status_code", "")),
                         "responseMessage": str(exc),
                         "errorType": "http_error",
@@ -150,7 +270,7 @@ def register_merchants(
             except ValueError as exc:
                 failure_rows.append(
                     {
-                        "merchantName": merchant_name,
+                        "merchantName": normalized_name,
                         "responseCode": "",
                         "responseMessage": str(exc),
                         "errorType": "json_error",
@@ -164,7 +284,7 @@ def register_merchants(
             if response_code != "H0000":
                 failure_rows.append(
                     {
-                        "merchantName": merchant_name,
+                        "merchantName": normalized_name,
                         "responseCode": response_code,
                         "responseMessage": response_message,
                         "errorType": "api_error",
@@ -174,22 +294,25 @@ def register_merchants(
 
             records = response_json.get("REC", [])
             try:
-                record = select_matching_record(records, merchant_name)
+                record = select_matching_record(records, normalized_name)
                 success_rows.append(
                     {
                         "merchantId": str(record["merchantId"]),
-                        "merchantName": str(record["merchantName"]).strip(),
+                        "merchantName": normalize_merchant_name(str(record["merchantName"])),
                     }
                 )
             except (KeyError, TypeError, ValueError) as exc:
                 failure_rows.append(
                     {
-                        "merchantName": merchant_name,
+                        "merchantName": normalized_name,
                         "responseCode": response_code,
                         "responseMessage": str(exc),
                         "errorType": "response_error",
                     }
                 )
+            finally:
+                if progress_callback is not None:
+                    progress_callback(completed_count, total_merchants, normalized_name)
     finally:
         if owns_client:
             http_client.close()
@@ -217,4 +340,3 @@ def _write_rows(
         writer.writeheader()
         for row in rows:
             writer.writerow({field: row.get(field, "") for field in fieldnames})
-

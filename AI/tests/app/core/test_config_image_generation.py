@@ -5,12 +5,12 @@ def test_settings_load_image_generation_values_from_env() -> None:
     settings = Settings(
         _env_file=None,
         AI_API_KEY="relay-key",
-        OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
+        GOOGLE_AI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
     )
 
     assert settings.ai_api_key == "relay-key"
     assert (
-        settings.openai_base_url
+        settings.google_ai_base_url
         == "https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta"
     )
     assert settings.image_generation_model == "gemini-2.5-flash-image"
@@ -20,7 +20,7 @@ def test_settings_normalize_blank_optional_langfuse_values() -> None:
     settings = Settings(
         _env_file=None,
         AI_API_KEY="relay-key",
-        OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
+        GOOGLE_AI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
         LANGFUSE_PUBLIC_KEY="",
         LANGFUSE_SECRET_KEY="   ",
         LANGFUSE_BASE_URL="",
@@ -35,7 +35,7 @@ def test_settings_allow_disabling_langfuse_tracing() -> None:
     settings = Settings(
         _env_file=None,
         AI_API_KEY="relay-key",
-        OPENAI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
+        GOOGLE_AI_BASE_URL="https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta",
         LANGFUSE_TRACING_ENABLED=False,
     )
 

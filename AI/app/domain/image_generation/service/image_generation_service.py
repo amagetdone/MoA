@@ -185,13 +185,13 @@ class ImageGenerationService:
         if self._http_client is not None:
             return self._http_client
 
-        if not self._settings.ai_api_key or not self._settings.openai_base_url:
+        if not self._settings.ai_api_key or not self._settings.google_ai_base_url:
             raise ImageGenerationConfigurationError(
-                "AI_API_KEY and OPENAI_BASE_URL must be configured for image generation"
+                "AI_API_KEY and GOOGLE_AI_BASE_URL must be configured for image generation"
             )
 
         self._http_client = httpx.AsyncClient(
-            base_url=self._settings.openai_base_url,
+            base_url=self._settings.google_ai_base_url,
             follow_redirects=True,
         )
         return self._http_client

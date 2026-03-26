@@ -1,9 +1,21 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from app.core.config import build_postgresql_dsn
 from sqlalchemy import create_engine, text
+
+
+_SQL_BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
+_SQL_LINE_COMMENT_RE = re.compile(r"--[^\n]*")
+_SQL_SINGLE_QUOTED_STRING_RE = re.compile(r"'(?:''|[^'])*'")
+_SQL_WRITE_KEYWORD_RE = re.compile(
+    r"\b("
+    r"insert|update|delete|merge|drop|alter|create|truncate|grant|revoke|"
+    r"comment|copy|vacuum|analyze|refresh|call|do"
+    r")\b",
+)
 
 
 def jdbc_to_sqlalchemy_dsn(*, jdbc_url: str, username: str, password: str) -> str:
@@ -33,12 +45,24 @@ def assert_select_only_sql(sql: str) -> str:
     if not normalized_sql:
         raise ValueError("SQL statement must not be blank")
 
-    lowered_sql = normalized_sql.casefold()
-    if not lowered_sql.startswith("select"):
-        raise ValueError("Only SELECT statements are allowed")
+    normalized_for_validation = _normalize_sql_for_validation(normalized_sql)
+    lowered_sql = normalized_for_validation.casefold()
+    if not (
+        lowered_sql.startswith("select") or lowered_sql.startswith("with")
+    ):
+        raise ValueError("Only SELECT or read-only WITH queries are allowed")
+    if _SQL_WRITE_KEYWORD_RE.search(lowered_sql):
+        raise ValueError("Only read-only SQL queries are allowed")
     if ";" in normalized_sql:
         raise ValueError("Multiple SQL statements are not allowed")
     return normalized_sql
+
+
+def _normalize_sql_for_validation(sql: str) -> str:
+    without_block_comments = _SQL_BLOCK_COMMENT_RE.sub(" ", sql)
+    without_line_comments = _SQL_LINE_COMMENT_RE.sub(" ", without_block_comments)
+    without_strings = _SQL_SINGLE_QUOTED_STRING_RE.sub("''", without_line_comments)
+    return without_strings.strip()
 
 
 class ReadOnlyDatabase:
