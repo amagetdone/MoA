@@ -23,8 +23,6 @@ import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
 
-import jakarta.persistence.EntityManager;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,9 +46,6 @@ class BudgetAdjustmentCommandServiceTest {
 	@Mock
 	private PlanRepository planRepository;
 
-	@Mock
-	private EntityManager entityManager;
-
 	private BudgetAdjustmentCommandService service;
 
 	@BeforeEach
@@ -59,8 +54,7 @@ class BudgetAdjustmentCommandServiceTest {
 			budgetWeekRepository,
 			planWeekAllocationRepository,
 			budgetAdjustmentRepository,
-			planRepository,
-			entityManager
+			planRepository
 		);
 	}
 
@@ -77,9 +71,11 @@ class BudgetAdjustmentCommandServiceTest {
 			"자유비를 목표 저축으로 이동"
 		);
 
-		given(entityManager.getReference(User.class, 1)).willReturn(user);
-		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(user,
-			LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 2)))
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			1,
+			LocalDate.of(2026, 3, 2),
+			LocalDate.of(2026, 3, 2)
+		))
 			.willReturn(Optional.of(budgetWeek));
 		given(planWeekAllocationRepository.findByBudgetWeek(budgetWeek)).willReturn(List.of(allocation));
 		given(budgetAdjustmentRepository.save(any(BudgetAdjustment.class))).willAnswer(invocation -> invocation.getArgument(0));
@@ -113,9 +109,11 @@ class BudgetAdjustmentCommandServiceTest {
 			"자유비를 목표 저축으로 이동"
 		);
 
-		given(entityManager.getReference(User.class, 1)).willReturn(user);
-		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(user,
-			LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 2)))
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			1,
+			LocalDate.of(2026, 3, 2),
+			LocalDate.of(2026, 3, 2)
+		))
 			.willReturn(Optional.of(budgetWeek));
 		given(planWeekAllocationRepository.findByBudgetWeek(budgetWeek)).willReturn(List.of(allocation));
 
@@ -140,9 +138,11 @@ class BudgetAdjustmentCommandServiceTest {
 			"free budget to plan"
 		);
 
-		given(entityManager.getReference(User.class, 1)).willReturn(user);
-		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(user,
-			LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 2)))
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			1,
+			LocalDate.of(2026, 3, 2),
+			LocalDate.of(2026, 3, 2)
+		))
 			.willReturn(Optional.of(budgetWeek));
 		given(planWeekAllocationRepository.findByBudgetWeek(budgetWeek)).willReturn(List.of(allocation));
 		given(budgetAdjustmentRepository.save(any(BudgetAdjustment.class))).willAnswer(invocation -> invocation.getArgument(0));

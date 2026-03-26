@@ -21,8 +21,6 @@ import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
 
-import jakarta.persistence.EntityManager;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,9 +46,6 @@ class BudgetHomeQueryServiceTest {
 	@Mock
 	private InquireAccountBalanceUseCase inquireAccountBalanceUseCase;
 
-	@Mock
-	private EntityManager entityManager;
-
 	private BudgetHomeQueryService service;
 
 	@BeforeEach
@@ -60,8 +55,7 @@ class BudgetHomeQueryServiceTest {
 			planRepository,
 			planWeekAllocationRepository,
 			listAccountsUseCase,
-			inquireAccountBalanceUseCase,
-			entityManager
+			inquireAccountBalanceUseCase
 		);
 	}
 
@@ -79,8 +73,11 @@ class BudgetHomeQueryServiceTest {
 		Account firstAccount = linkedAccount(user, "111-111-111111", "Shinhan");
 		Account secondAccount = linkedAccount(user, "222-222-222222", "KB");
 
-		given(entityManager.getReference(User.class, 1)).willReturn(user);
-		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(user, today, today))
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			1,
+			today,
+			today
+		))
 			.willReturn(Optional.of(currentWeek));
 		given(planRepository.findAll()).willReturn(List.of(weddingFund, travelFund));
 		given(planWeekAllocationRepository.findByBudgetWeek(currentWeek)).willReturn(allocations);
@@ -111,8 +108,11 @@ class BudgetHomeQueryServiceTest {
 		Account verifiedAccount = linkedAccount(user, "111-111-111111", "Shinhan");
 		Account unverifiedAccount = unverifiedActiveAccount(user, "222-222-222222", "KB");
 
-		given(entityManager.getReference(User.class, 1)).willReturn(user);
-		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(user, today, today))
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			1,
+			today,
+			today
+		))
 			.willReturn(Optional.of(currentWeek));
 		given(planRepository.findAll()).willReturn(List.of());
 		given(planWeekAllocationRepository.findByBudgetWeek(currentWeek)).willReturn(List.of());
@@ -133,8 +133,11 @@ class BudgetHomeQueryServiceTest {
 		User user = user(1);
 		BudgetWeek currentWeek = budgetWeek(user, today, today.plusDays(6), 70_000L, 10_000L);
 
-		given(entityManager.getReference(User.class, 1)).willReturn(user);
-		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(user, today, today))
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			1,
+			today,
+			today
+		))
 			.willReturn(Optional.of(currentWeek));
 		given(planRepository.findAll()).willReturn(List.of());
 		given(planWeekAllocationRepository.findByBudgetWeek(currentWeek)).willReturn(List.of());

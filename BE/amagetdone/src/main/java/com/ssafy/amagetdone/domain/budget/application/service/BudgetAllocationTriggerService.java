@@ -11,6 +11,7 @@ import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseMonth;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetMonthRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseMonthRepository;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
+import com.ssafy.amagetdone.domain.member.model.repository.UserRepository;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
@@ -30,6 +31,7 @@ public class BudgetAllocationTriggerService {
 	private final BudgetMonthRepository budgetMonthRepository;
 	private final EssentialExpenseMonthRepository essentialExpenseMonthRepository;
 	private final PlanRepository planRepository;
+	private final UserRepository userRepository;
 	private final Clock clock;
 
 	public void trigger(Integer userId) {
@@ -45,12 +47,14 @@ public class BudgetAllocationTriggerService {
 		if (userId == null || serviceStartDate == null || allocationEndDate == null || allocationEndDate.isBefore(serviceStartDate)) {
 			return new BudgetAllocationService.AllocationResult(List.of(), List.of(), List.of(), List.of(), List.of());
 		}
+		userRepository.findByIdForUpdate(userId)
+			.orElseThrow(() -> new IllegalArgumentException("User not found"));
 
 		LocalDate baseMonth = serviceStartDate.withDayOfMonth(1);
 		refreshEssentialExpenseMonthFromAnalysisUseCase.execute(userId, baseMonth);
 
 		User userReference = userReference(userId);
-		long monthlyIncome = budgetMonthRepository.findByUser_IdAndBaseDate(userId, baseMonth)
+		long monthlyIncome = budgetMonthRepository.findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, baseMonth)
 			.map(BudgetMonth::getTotalIncomeAmount)
 			.orElse(0L);
 

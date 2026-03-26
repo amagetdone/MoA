@@ -15,12 +15,9 @@ import com.ssafy.amagetdone.domain.budget.model.repository.BudgetAdjustmentRepos
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetAdjustmentType;
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetWeekStatus;
-import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
-
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
@@ -38,15 +35,17 @@ public class BudgetAdjustmentCommandService {
 	private final PlanWeekAllocationRepository planWeekAllocationRepository;
 	private final BudgetAdjustmentRepository budgetAdjustmentRepository;
 	private final PlanRepository planRepository;
-	private final EntityManager entityManager;
 
 	public BudgetAdjustmentDto.Response saveAdjustment(Integer userId, String yearWeek, BudgetAdjustmentDto.Request request) {
 		validateRequest(request);
 
 		LocalDate weekStartDate = parseWeekStartDate(yearWeek);
-		User userReference = entityManager.getReference(User.class, userId);
 		BudgetWeek budgetWeek = budgetWeekRepository
-			.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(userReference, weekStartDate, weekStartDate)
+			.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+				userId,
+				weekStartDate,
+				weekStartDate
+			)
 			.orElseThrow(() -> new IllegalArgumentException("Budget week not found"));
 
 		if (budgetWeek.getStatus() == BudgetWeekStatus.CLOSED) {

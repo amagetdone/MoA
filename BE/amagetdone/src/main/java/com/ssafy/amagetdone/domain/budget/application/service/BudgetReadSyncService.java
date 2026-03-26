@@ -9,7 +9,6 @@ import com.ssafy.amagetdone.domain.budget.application.usecase.TriggerBudgetAlloc
 import com.ssafy.amagetdone.domain.budget.application.usecase.ApplyDailyGoalSavingAccrualUseCase;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
-import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
@@ -59,9 +58,8 @@ public class BudgetReadSyncService {
 	}
 
 	private void ensureCurrentWeekAllocation(Integer userId, LocalDate today) {
-		User userReference = userReference(userId);
 		BudgetWeek currentWeek = budgetWeekRepository
-			.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(userReference, today, today)
+			.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(userId, today, today)
 			.orElse(null);
 		if (currentWeek == null) {
 			triggerBudgetAllocationUseCase.execute(userId);
@@ -86,11 +84,5 @@ public class BudgetReadSyncService {
 	private boolean hasNewTransactions(TransactionSyncService.SyncResult syncResult) {
 		return syncResult != null
 			&& (syncResult.insertedAccountCount() > 0 || syncResult.insertedCardCount() > 0);
-	}
-
-	private User userReference(Integer userId) {
-		User user = User.createPendingSocialUser();
-		user.setId(userId);
-		return user;
 	}
 }

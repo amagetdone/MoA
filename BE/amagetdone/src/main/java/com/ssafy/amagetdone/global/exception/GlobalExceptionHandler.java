@@ -5,6 +5,7 @@ import java.util.Map;
 
 import com.ssafy.amagetdone.domain.account.exception.AccountException;
 import com.ssafy.amagetdone.domain.accountverification.exception.AccountVerificationException;
+import com.ssafy.amagetdone.domain.chatbot.exception.ChatbotRelayException;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
 import com.ssafy.amagetdone.domain.plan.exception.PlanException;
 import com.ssafy.amagetdone.global.response.ErrorResponse;
@@ -49,6 +50,12 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(TransactionException.class)
 	public ResponseEntity<ErrorResponse> handleTransactionException(TransactionException exception) {
+		return ResponseEntity.status(exception.getErrorCode().httpStatus())
+			.body(ErrorResponse.from(exception.getErrorCode()));
+	}
+
+	@ExceptionHandler(ChatbotRelayException.class)
+	public ResponseEntity<ErrorResponse> handleChatbotRelayException(ChatbotRelayException exception) {
 		return ResponseEntity.status(exception.getErrorCode().httpStatus())
 			.body(ErrorResponse.from(exception.getErrorCode()));
 	}

@@ -2,6 +2,7 @@ package com.ssafy.amagetdone.domain.budget.application.usecase;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -94,7 +95,11 @@ class SyncBudgetStateOnReadUseCaseTest {
 		Integer userId = 1;
 		LocalDate today = LocalDate.of(2026, 3, 22);
 
-		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(any(User.class), any(), any()))
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			eq(userId),
+			any(),
+			any()
+		))
 			.willReturn(Optional.empty());
 		given(syncLatestTransactionsUseCase.execute(userId, 3, false))
 			.willReturn(new TransactionSyncService.SyncResult(0, 0));
@@ -114,7 +119,11 @@ class SyncBudgetStateOnReadUseCaseTest {
 		BudgetWeek currentWeek = budgetWeek(userId, 3, LocalDate.of(2026, 3, 16), LocalDate.of(2026, 3, 22));
 		Plan activePlan = activePlan(userId, 100);
 
-		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(any(User.class), any(), any()))
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			eq(userId),
+			any(),
+			any()
+		))
 			.willReturn(Optional.of(currentWeek));
 		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE)).willReturn(List.of(activePlan));
 		given(planWeekAllocationRepository.findByBudgetWeek(currentWeek)).willReturn(List.of());
@@ -142,7 +151,11 @@ class SyncBudgetStateOnReadUseCaseTest {
 			.finalAmount(10_000L)
 			.build();
 
-		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(any(User.class), any(), any()))
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			eq(userId),
+			any(),
+			any()
+		))
 			.willReturn(Optional.of(currentWeek));
 		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE)).willReturn(List.of(activePlan));
 		given(planWeekAllocationRepository.findByBudgetWeek(currentWeek)).willReturn(List.of(allocation));

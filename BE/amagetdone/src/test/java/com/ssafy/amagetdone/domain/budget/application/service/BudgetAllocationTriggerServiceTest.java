@@ -22,6 +22,7 @@ import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseMonth
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetMonthStatus;
 import com.ssafy.amagetdone.domain.budget.model.vo.ExpenseScope;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
+import com.ssafy.amagetdone.domain.member.model.repository.UserRepository;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
@@ -51,6 +52,9 @@ class BudgetAllocationTriggerServiceTest {
 	@Mock
 	private PlanRepository planRepository;
 
+	@Mock
+	private UserRepository userRepository;
+
 	@Test
 	void triggersRefreshBeforeRunningAllocationPipeline() {
 		Clock clock = Clock.fixed(Instant.parse("2026-03-19T00:00:00Z"), ZoneId.of("Asia/Seoul"));
@@ -60,6 +64,7 @@ class BudgetAllocationTriggerServiceTest {
 			budgetMonthRepository,
 			essentialExpenseMonthRepository,
 			planRepository,
+			userRepository,
 			clock
 		);
 		Integer userId = 1;
@@ -81,7 +86,9 @@ class BudgetAllocationTriggerServiceTest {
 		Plan activePlan = Plan.create(user, "Travel", "desc", 500_000L, baseMonth, baseMonth.plusMonths(1), 1);
 		activePlan.activate();
 
-		given(budgetMonthRepository.findByUser_IdAndBaseDate(userId, baseMonth)).willReturn(Optional.of(budgetMonth));
+		given(userRepository.findByIdForUpdate(userId)).willReturn(Optional.of(user));
+		given(budgetMonthRepository.findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, baseMonth))
+			.willReturn(Optional.of(budgetMonth));
 		given(essentialExpenseMonthRepository.findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(userId))
 			.willReturn(List.of(essential));
 		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE)).willReturn(List.of(activePlan));
@@ -89,14 +96,16 @@ class BudgetAllocationTriggerServiceTest {
 		service.trigger(userId);
 
 		InOrder inOrder = inOrder(
+			userRepository,
 			refreshEssentialExpenseMonthFromAnalysisUseCase,
 			budgetMonthRepository,
 			essentialExpenseMonthRepository,
 			planRepository,
 			allocateBudgetUseCase
 		);
+		inOrder.verify(userRepository).findByIdForUpdate(userId);
 		inOrder.verify(refreshEssentialExpenseMonthFromAnalysisUseCase).execute(userId, baseMonth);
-		inOrder.verify(budgetMonthRepository).findByUser_IdAndBaseDate(userId, baseMonth);
+		inOrder.verify(budgetMonthRepository).findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, baseMonth);
 		inOrder.verify(essentialExpenseMonthRepository).findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(userId);
 		inOrder.verify(planRepository).findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE);
 		inOrder.verify(allocateBudgetUseCase).execute(

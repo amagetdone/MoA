@@ -76,8 +76,8 @@ class PlanCreationBudgetSummaryServiceTest {
 			.finalFreeAmount(200_000L)
 			.build();
 
-		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(
-			user,
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			1,
 			LocalDate.of(2026, 3, 19),
 			LocalDate.of(2026, 3, 19)
 		)).willReturn(Optional.of(budgetWeek));
@@ -150,8 +150,8 @@ class PlanCreationBudgetSummaryServiceTest {
 			.finalFreeAmount(200_000L)
 			.build();
 
-		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(
-			user,
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			1,
 			LocalDate.of(2026, 3, 19),
 			LocalDate.of(2026, 3, 19)
 		)).willReturn(Optional.of(budgetWeek));
@@ -190,8 +190,8 @@ class PlanCreationBudgetSummaryServiceTest {
 		ReflectionTestUtils.setField(plan, "id", 24);
 		plan.setStatus(PlanStatus.ACTIVE);
 
-		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(
-			user,
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			1,
 			LocalDate.of(2026, 3, 19),
 			LocalDate.of(2026, 3, 19)
 		)).willReturn(Optional.empty());

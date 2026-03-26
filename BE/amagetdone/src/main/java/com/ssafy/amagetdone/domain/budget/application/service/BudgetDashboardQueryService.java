@@ -6,9 +6,6 @@ import java.time.temporal.ChronoUnit;
 import com.ssafy.amagetdone.domain.budget.api.dto.BudgetDashboardDto;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
-import com.ssafy.amagetdone.domain.member.model.entity.User;
-
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
@@ -20,13 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class BudgetDashboardQueryService {
 
 	private final BudgetWeekRepository budgetWeekRepository;
-	private final EntityManager entityManager;
 
 	public BudgetDashboardDto.Response getDashboard(Integer userId) {
 		LocalDate today = LocalDate.now();
-		User userReference = entityManager.getReference(User.class, userId);
 		BudgetWeek budgetWeek = budgetWeekRepository
-			.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(userReference, today, today)
+			.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(userId, today, today)
 			.orElseThrow(() -> new IllegalArgumentException("Current budget week not found"));
 
 		long finalFreeAmount = budgetWeek.getFinalFreeAmount();

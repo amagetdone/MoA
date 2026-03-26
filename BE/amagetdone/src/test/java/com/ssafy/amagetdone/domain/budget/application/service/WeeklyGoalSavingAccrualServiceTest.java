@@ -24,8 +24,6 @@ import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
 
-import jakarta.persistence.EntityManager;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,9 +47,6 @@ class WeeklyGoalSavingAccrualServiceTest {
 	private PlanRepository planRepository;
 
 	@Mock
-	private EntityManager entityManager;
-
-	@Mock
 	private PlanPriorityService planPriorityService;
 
 	private final Clock clock = Clock.fixed(Instant.parse("2026-03-24T00:00:00Z"), ZoneId.of("Asia/Seoul"));
@@ -66,7 +61,6 @@ class WeeklyGoalSavingAccrualServiceTest {
 			budgetAdjustmentRepository,
 			planRepository,
 			planPriorityService,
-			entityManager,
 			clock
 		);
 	}
@@ -78,9 +72,8 @@ class WeeklyGoalSavingAccrualServiceTest {
 		Plan completedPlan = activePlan(user, 101, 2, 900L, 1_000L);
 		PlanWeekAllocation allocation = allocation(completedPlan, budgetWeek, 100L);
 
-		given(entityManager.getReference(User.class, 1)).willReturn(user);
-		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(
-			user,
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			1,
 			LocalDate.of(2026, 3, 24),
 			LocalDate.of(2026, 3, 24)
 		)).willReturn(Optional.of(budgetWeek));
@@ -103,9 +96,8 @@ class WeeklyGoalSavingAccrualServiceTest {
 		Plan activePlan = activePlan(user, 101, 2, 800L, 1_000L);
 		PlanWeekAllocation allocation = allocation(activePlan, budgetWeek, 100L);
 
-		given(entityManager.getReference(User.class, 1)).willReturn(user);
-		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(
-			user,
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			1,
 			LocalDate.of(2026, 3, 24),
 			LocalDate.of(2026, 3, 24)
 		)).willReturn(Optional.of(budgetWeek));

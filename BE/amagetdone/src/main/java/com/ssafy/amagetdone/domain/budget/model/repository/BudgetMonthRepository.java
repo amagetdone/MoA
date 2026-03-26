@@ -22,5 +22,9 @@ public interface BudgetMonthRepository extends JpaRepository<BudgetMonth, Intege
 
 	Optional<BudgetMonth> findByUser_IdAndBaseDate(Integer userId, LocalDate baseDate);
 
+	Optional<BudgetMonth> findFirstByUserAndBaseDateOrderByIdDesc(User user, LocalDate baseDate);
+
+	Optional<BudgetMonth> findFirstByUser_IdAndBaseDateOrderByIdDesc(Integer userId, LocalDate baseDate);
+
 	List<BudgetMonth> findAllByUser_IdOrderByBaseDateAsc(Integer userId);
 }

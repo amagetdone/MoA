@@ -129,7 +129,11 @@ public class PlanQueryService {
 	}
 
 	private int resolveCurrentWeek(User user) {
-		return budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(user, today(), today())
+		return budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			user.getId(),
+			today(),
+			today()
+		)
 			.map(BudgetWeek::getWeekSequence)
 			.orElse(0);
 	}

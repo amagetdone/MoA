@@ -107,7 +107,11 @@ class BudgetSpentUpdateServiceTest {
 			null
 		);
 
-		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(any(), any(), any()))
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			any(),
+			any(),
+			any()
+		))
 			.willReturn(Optional.of(budgetWeek));
 		given(essentialWeekAllocationRepository.findByBudgetWeek(budgetWeek)).willReturn(List.of(housingAllocation));
 
