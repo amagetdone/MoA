@@ -19,16 +19,61 @@ class GoalPlanPage extends ConsumerWidget {
     final colors = AppColors.of(context);
     final plan = ref.watch(onboardingViewModelProvider).planResult;
 
-    final planTitle = plan?.planTitle ?? '';
-    final weeklySavings = plan?.weeklySavingsAmount ?? 0;
-    final weeksToGoal = plan?.weeksToGoal ?? 0;
-    final budget = plan?.weeklyBudget;
-    final totalIncome = budget?.totalIncomeAmount ?? 0;
-    final savingAmount = budget?.savingAmount ?? 0;
-    final fixedTotal = budget?.fixedExpense.totalAmount ?? 0;
-    final fixedItems = budget?.fixedExpense.items ?? [];
-    final variableTotal = budget?.variableExpense.totalAmount ?? 0;
-    final freeAmount = budget?.freeAmount ?? 0;
+    if (plan == null) {
+      return Scaffold(
+        backgroundColor: colors.bgPrimary,
+        appBar: const MoreAppBar(title: '', showBack: false),
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.w),
+            child: MoreCard(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.insert_chart_outlined_rounded,
+                    size: 44.w,
+                    color: AppColors.orange500,
+                  ),
+                  SizedBox(height: 16.h),
+                  Text(
+                    '표시할 목표 계획이 없어요.',
+                    style: AppTextStyles.bodyLg.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    '목표를 다시 생성한 뒤 계획을 확인해주세요.',
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: colors.textTertiary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        bottomNavigationBar: MoreBottomButton(
+          text: '목표 목록으로 이동',
+          onPressed: () => context.go(AppRoutes.goalTab),
+        ),
+      );
+    }
+
+    final planTitle = plan.planTitle;
+    final weeklySavings = plan.weeklySavingsAmount;
+    final weeksToGoal = plan.weeksToGoal;
+    final budget = plan.weeklyBudget;
+    final totalIncome = budget.totalIncomeAmount;
+    final savingAmount = budget.savingAmount;
+    final fixedTotal = budget.fixedExpense.totalAmount;
+    final fixedItems = budget.fixedExpense.items;
+    final variableTotal = budget.variableExpense.totalAmount;
+    final freeAmount = budget.freeAmount;
 
     return Scaffold(
       backgroundColor: colors.bgPrimary,
@@ -85,8 +130,8 @@ class GoalPlanPage extends ConsumerWidget {
                           style: const TextStyle(color: AppColors.orange500),
                         ),
                         TextSpan(
-                            text:
-                                '만 저축하면\n$weeksToGoal주 후 $planTitle 이룰 수 있어요 !'),
+                          text: '만 저축하면\n$weeksToGoal주 후 $planTitle 이룰 수 있어요 !',
+                        ),
                       ],
                     ),
                   ),
@@ -167,13 +212,15 @@ class GoalPlanPage extends ConsumerWidget {
                         children: fixedItems.asMap().entries.map((entry) {
                           return Padding(
                             padding: EdgeInsets.only(
-                              bottom:
-                                  entry.key < fixedItems.length - 1 ? 6.h : 0,
+                              bottom: entry.key < fixedItems.length - 1
+                                  ? 6.h
+                                  : 0,
                             ),
                             child: _BudgetRow(
                               label: entry.value.category,
                               value: CurrencyFormatter.formatKRW(
-                                  entry.value.amount),
+                                entry.value.amount,
+                              ),
                               isSubItem: true,
                             ),
                           );
@@ -200,8 +247,7 @@ class GoalPlanPage extends ConsumerWidget {
                     isHeader: true,
                     color: AppColors.orange500,
                   ),
-                  const _BudgetSubLabel(
-                      text: '고정/변동/저축비를 제외한 자유롭게 사용 가능한 금액'),
+                  const _BudgetSubLabel(text: '고정/변동/저축비를 제외한 자유롭게 사용 가능한 금액'),
                 ],
               ),
             ),

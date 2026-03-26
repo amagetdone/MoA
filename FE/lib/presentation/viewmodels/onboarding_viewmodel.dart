@@ -110,8 +110,12 @@ class PlanWeeklyBudget {
     return PlanWeeklyBudget(
       totalIncomeAmount: (json['totalIncomeAmount'] as num).toInt(),
       savingAmount: (json['savingAmount'] as num).toInt(),
-      fixedExpense: PlanExpense.fromJson(json['fixedExpense'] as Map<String, dynamic>),
-      variableExpense: PlanExpense.fromJson(json['variableExpense'] as Map<String, dynamic>),
+      fixedExpense: PlanExpense.fromJson(
+        json['fixedExpense'] as Map<String, dynamic>,
+      ),
+      variableExpense: PlanExpense.fromJson(
+        json['variableExpense'] as Map<String, dynamic>,
+      ),
       freeAmount: (json['freeAmount'] as num).toInt(),
     );
   }
@@ -139,7 +143,52 @@ class PlanResult {
       planTitle: json['planTitle'] as String,
       weeklySavingsAmount: (mission['weeklySavingsAmount'] as num).toInt(),
       weeksToGoal: (mission['weeksToGoal'] as num).toInt(),
-      weeklyBudget: PlanWeeklyBudget.fromJson(json['weeklyBudget'] as Map<String, dynamic>),
+      weeklyBudget: PlanWeeklyBudget.fromJson(
+        json['weeklyBudget'] as Map<String, dynamic>,
+      ),
+    );
+  }
+
+  factory PlanResult.fromGoal(Goal goal) {
+    final mission = goal.weeklyMission ?? const GoalWeeklyMission();
+    final budget = goal.weeklyBudget ?? const GoalWeeklyBudget();
+
+    return PlanResult(
+      planId: int.tryParse(goal.id) ?? 0,
+      planTitle: goal.name,
+      weeklySavingsAmount: mission.weeklySavingsAmount > 0
+          ? mission.weeklySavingsAmount
+          : budget.savingAmount,
+      weeksToGoal: mission.weeksToGoal > 0
+          ? mission.weeksToGoal
+          : goal.totalWeeks,
+      weeklyBudget: PlanWeeklyBudget(
+        totalIncomeAmount: budget.totalIncomeAmount,
+        savingAmount: budget.savingAmount,
+        fixedExpense: PlanExpense(
+          totalAmount: budget.fixedExpense.totalAmount,
+          items: budget.fixedExpense.items
+              .map(
+                (item) => PlanBudgetItem(
+                  category: item.category,
+                  amount: item.amount,
+                ),
+              )
+              .toList(),
+        ),
+        variableExpense: PlanExpense(
+          totalAmount: budget.variableExpense.totalAmount,
+          items: budget.variableExpense.items
+              .map(
+                (item) => PlanBudgetItem(
+                  category: item.category,
+                  amount: item.amount,
+                ),
+              )
+              .toList(),
+        ),
+        freeAmount: budget.freeAmount,
+      ),
     );
   }
 }
@@ -162,12 +211,13 @@ class OnboardingState {
     AnalysisResult? analysisResult,
     PlanResult? planResult,
     String? error,
+    bool clearError = false,
   }) {
     return OnboardingState(
       isLoading: isLoading ?? this.isLoading,
       analysisResult: analysisResult ?? this.analysisResult,
       planResult: planResult ?? this.planResult,
-      error: error ?? this.error,
+      error: clearError ? null : error ?? this.error,
     );
   }
 }
@@ -179,7 +229,7 @@ class OnboardingViewModel extends StateNotifier<OnboardingState> {
   OnboardingViewModel(this._dio) : super(const OnboardingState());
 
   Future<void> syncAndAnalyze() async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
       await _dio.post(
         'transactions/sync',
@@ -190,7 +240,9 @@ class OnboardingViewModel extends StateNotifier<OnboardingState> {
 
       state = state.copyWith(
         isLoading: false,
-        analysisResult: AnalysisResult.fromJson(response.data as Map<String, dynamic>),
+        analysisResult: AnalysisResult.fromJson(
+          response.data as Map<String, dynamic>,
+        ),
       );
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -199,7 +251,8 @@ class OnboardingViewModel extends StateNotifier<OnboardingState> {
 
   Future<int> loadIncome() async {
     final response = await _dio.get('budgets/income');
-    return ((response.data as Map<String, dynamic>)['monthlyIncome'] as num).toInt();
+    return ((response.data as Map<String, dynamic>)['monthlyIncome'] as num)
+        .toInt();
   }
 
   Future<void> saveIncome(int income) async {
@@ -212,7 +265,7 @@ class OnboardingViewModel extends StateNotifier<OnboardingState> {
   }
 
   Future<void> createPlan(Goal goal) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
       final response = await _dio.post(
         'v1/plans',
@@ -233,9 +286,17 @@ class OnboardingViewModel extends StateNotifier<OnboardingState> {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
+
+  void cacheCreatedPlan(Goal goal) {
+    state = state.copyWith(
+      isLoading: false,
+      planResult: PlanResult.fromGoal(goal),
+      clearError: true,
+    );
+  }
 }
 
 final onboardingViewModelProvider =
     StateNotifierProvider<OnboardingViewModel, OnboardingState>((ref) {
-  return OnboardingViewModel(ref.read(apiClientProvider).dio);
-});
+      return OnboardingViewModel(ref.read(apiClientProvider).dio);
+    });

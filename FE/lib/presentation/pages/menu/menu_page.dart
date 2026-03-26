@@ -40,7 +40,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
       );
     }
 
-    if (state.errorMessage != null) {
+    if (state.errorMessage != null && !state.hasLoadedSummary) {
       return Scaffold(
         backgroundColor: colors.bgPrimary,
         appBar: const MoreAppBar(showBack: false, showLogo: true, showNotification: true),

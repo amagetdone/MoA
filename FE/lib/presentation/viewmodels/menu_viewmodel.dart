@@ -13,6 +13,7 @@ class MenuState {
   final int totalSaved;
   final bool notificationEnabled;
   final bool biometricEnabled;
+  final bool hasLoadedSummary;
   final bool isLoading;
   final String? errorMessage;
 
@@ -25,6 +26,7 @@ class MenuState {
     this.totalSaved = 0,
     this.notificationEnabled = true,
     this.biometricEnabled = false,
+    this.hasLoadedSummary = false,
     this.isLoading = false,
     this.errorMessage,
   });
@@ -38,6 +40,7 @@ class MenuState {
     int? totalSaved,
     bool? notificationEnabled,
     bool? biometricEnabled,
+    bool? hasLoadedSummary,
     bool? isLoading,
     String? errorMessage,
     bool clearErrorMessage = false,
@@ -51,6 +54,7 @@ class MenuState {
       totalSaved: totalSaved ?? this.totalSaved,
       notificationEnabled: notificationEnabled ?? this.notificationEnabled,
       biometricEnabled: biometricEnabled ?? this.biometricEnabled,
+      hasLoadedSummary: hasLoadedSummary ?? this.hasLoadedSummary,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearErrorMessage
           ? null
@@ -87,6 +91,7 @@ class MenuViewModel extends StateNotifier<MenuState> {
         totalSaved: summary.totalSaved,
         notificationEnabled: summary.notificationEnabled,
         biometricEnabled: summary.biometricEnabled,
+        hasLoadedSummary: true,
       );
     } catch (error) {
       if (!mounted) {

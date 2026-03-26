@@ -19,16 +19,62 @@ class OnboardingPlanPage extends ConsumerWidget {
     final colors = AppColors.of(context);
     final plan = ref.watch(onboardingViewModelProvider).planResult;
 
-    final planTitle = plan?.planTitle ?? '';
-    final weeklySavings = plan?.weeklySavingsAmount ?? 0;
-    final weeksToGoal = plan?.weeksToGoal ?? 0;
-    final budget = plan?.weeklyBudget;
-    final totalIncome = budget?.totalIncomeAmount ?? 0;
-    final savingAmount = budget?.savingAmount ?? 0;
-    final fixedTotal = budget?.fixedExpense.totalAmount ?? 0;
-    final fixedItems = budget?.fixedExpense.items ?? [];
-    final variableTotal = budget?.variableExpense.totalAmount ?? 0;
-    final freeAmount = budget?.freeAmount ?? 0;
+    if (plan == null) {
+      return Scaffold(
+        backgroundColor: colors.bgPrimary,
+        appBar: MoreAppBar(title: '', showBack: true),
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.w),
+            child: MoreCard(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.insert_chart_outlined_rounded,
+                    size: 44.w,
+                    color: AppColors.orange500,
+                  ),
+                  SizedBox(height: 16.h),
+                  Text(
+                    '목표 계획을 아직 불러오지 못했어요.',
+                    style: AppTextStyles.bodyLg.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    '목표를 다시 만들면 계획표를 바로 보여드릴게요.',
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: colors.textTertiary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        bottomNavigationBar: MoreBottomButton(
+          text: '목표 다시 만들기',
+          progress: 7 / 7,
+          onPressed: () => context.go(AppRoutes.onboardingGoal),
+        ),
+      );
+    }
+
+    final planTitle = plan.planTitle;
+    final weeklySavings = plan.weeklySavingsAmount;
+    final weeksToGoal = plan.weeksToGoal;
+    final budget = plan.weeklyBudget;
+    final totalIncome = budget.totalIncomeAmount;
+    final savingAmount = budget.savingAmount;
+    final fixedTotal = budget.fixedExpense.totalAmount;
+    final fixedItems = budget.fixedExpense.items;
+    final variableTotal = budget.variableExpense.totalAmount;
+    final freeAmount = budget.freeAmount;
 
     return Scaffold(
       backgroundColor: colors.bgPrimary,
@@ -84,7 +130,9 @@ class OnboardingPlanPage extends ConsumerWidget {
                           text: CurrencyFormatter.formatKRW(weeklySavings),
                           style: const TextStyle(color: AppColors.orange500),
                         ),
-                        TextSpan(text: '만 저축하면\n$weeksToGoal주 후 $planTitle 이룰 수 있어요 !'),
+                        TextSpan(
+                          text: '만 저축하면\n$weeksToGoal주 후 $planTitle 이룰 수 있어요 !',
+                        ),
                       ],
                     ),
                   ),
@@ -165,11 +213,15 @@ class OnboardingPlanPage extends ConsumerWidget {
                         children: fixedItems.asMap().entries.map((entry) {
                           return Padding(
                             padding: EdgeInsets.only(
-                              bottom: entry.key < fixedItems.length - 1 ? 6.h : 0,
+                              bottom: entry.key < fixedItems.length - 1
+                                  ? 6.h
+                                  : 0,
                             ),
                             child: _BudgetRow(
                               label: entry.value.category,
-                              value: CurrencyFormatter.formatKRW(entry.value.amount),
+                              value: CurrencyFormatter.formatKRW(
+                                entry.value.amount,
+                              ),
                               isSubItem: true,
                             ),
                           );

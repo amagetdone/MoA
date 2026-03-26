@@ -151,11 +151,19 @@ class _HomePageState extends ConsumerState<HomePage> {
         _showcaseContext = ctx;
         return Scaffold(
           backgroundColor: colors.bgPrimary,
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           floatingActionButton: Showcase(
             key: _keyFab,
             title: 'AI 코치',
             description:
                 '소비 패턴을 분석하고 절약 팁을 알려주는 AI 코치예요. 궁금한 점이 있으면 언제든지 물어보세요!',
+            tooltipPosition: TooltipPosition.top,
+            targetPadding: EdgeInsets.all(8.w),
+            tooltipPadding: EdgeInsets.symmetric(
+              horizontal: 20.w,
+              vertical: 12.h,
+            ),
+            disableMovingAnimation: true,
             child: FloatingActionButton.extended(
               onPressed: () => context.push(AppRoutes.chatbot),
               backgroundColor: AppColors.orange500,
@@ -354,6 +362,9 @@ class _HomePageState extends ConsumerState<HomePage> {
             title: '목표 섹션',
             description:
                 '현재 진행 중인 저축 목표들을 한눈에 볼 수 있어요. 목표를 탭하면 상세 내용과 저축 현황을 확인할 수 있어요.',
+            tooltipPosition: TooltipPosition.bottom,
+            targetPadding: EdgeInsets.all(6.w),
+            disableMovingAnimation: true,
             child: GoalsSectionCard(
               goals: topGoals,
               onViewAll: () => context.go(AppRoutes.goalTab),
@@ -370,6 +381,8 @@ class _HomePageState extends ConsumerState<HomePage> {
             title: '저축·예산 카드',
             description:
                 '이번 주 저축 진행률과 남은 여유 예산을 보여줘요. 계획대로 잘 지키고 있는지 매일 확인해보세요!',
+            targetPadding: EdgeInsets.all(6.w),
+            disableMovingAnimation: true,
             child: IntrinsicHeight(
               child: Row(
                 children: [
@@ -402,6 +415,8 @@ class _HomePageState extends ConsumerState<HomePage> {
             title: '소비 차트',
             description:
                 '주간 소비 내역을 카테고리별로 시각화해요. 좌우로 슬라이드하면 이전 주 소비도 확인할 수 있어요.',
+            targetPadding: EdgeInsets.all(6.w),
+            disableMovingAnimation: true,
             child: Builder(
               builder: (context) {
                 final colors = AppColors.of(context);

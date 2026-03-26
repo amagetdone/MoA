@@ -10,6 +10,7 @@ import 'package:more_app/domain/entities/goal.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/viewmodels/goal_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
+import 'package:more_app/presentation/viewmodels/onboarding_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 import 'package:more_app/presentation/widgets/common/more_date_field.dart';
@@ -69,31 +70,38 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
     );
 
     try {
-      final createdGoal = await ref.read(goalViewModelProvider.notifier).addGoal(goal);
+      final createdGoal = await ref
+          .read(goalViewModelProvider.notifier)
+          .addGoal(goal);
       unawaited(ref.read(homeViewModelProvider.notifier).loadData());
 
       if (!mounted) return;
 
       if (widget.isOnboarding) {
-        context.go(AppRoutes.onboardingLoading, extra: {'nextRoute': AppRoutes.onboardingPlan});
+        ref
+            .read(onboardingViewModelProvider.notifier)
+            .cacheCreatedPlan(createdGoal);
+        context.go(
+          AppRoutes.onboardingLoading,
+          extra: {'nextRoute': AppRoutes.onboardingPlan},
+        );
       } else {
         context.go(
-          AppRoutes.goalLoadingLocation(
-            createdGoal.id,
-            source: 'create',
-          ),
+          AppRoutes.goalLoadingLocation(createdGoal.id, source: 'create'),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('목표 생성에 실패했습니다: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('목표 생성에 실패했습니다: $e')));
       return;
     }
   }
 
-  final TextEditingController _priorityController = TextEditingController(text: '1');
+  final TextEditingController _priorityController = TextEditingController(
+    text: '1',
+  );
 
   int get _maxPriority {
     final currentGoals = ref.read(goalViewModelProvider).inProgressGoals;
@@ -138,7 +146,9 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
                 contentPadding: EdgeInsets.symmetric(vertical: 14.h),
                 isDense: true,
                 hintText: '1',
-                hintStyle: AppTextStyles.bodyMd.copyWith(color: colors.textTertiary),
+                hintStyle: AppTextStyles.bodyMd.copyWith(
+                  color: colors.textTertiary,
+                ),
               ),
               onChanged: (value) {
                 final parsed = int.tryParse(value);
@@ -210,9 +220,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
             ? () => context.go(AppRoutes.onboardingAnalysis)
             : null,
         skipText: widget.isOnboarding ? '건너뛰기' : null,
-        onSkip: widget.isOnboarding
-            ? () => context.go(AppRoutes.home)
-            : null,
+        onSkip: widget.isOnboarding ? () => context.go(AppRoutes.home) : null,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
@@ -250,9 +258,7 @@ class _GoalCreatePageState extends ConsumerState<GoalCreatePage> {
             // Description (optional, auto-expanding)
             Text(
               '목표 설명 (선택)',
-              style: AppTextStyles.bodySm.copyWith(
-                color: colors.textSecondary,
-              ),
+              style: AppTextStyles.bodySm.copyWith(color: colors.textSecondary),
             ),
             SizedBox(height: 8.h),
             Container(

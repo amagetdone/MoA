@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -42,6 +43,7 @@ class PushNotificationSyncService {
   StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
   StreamSubscription<RemoteMessage>? _messageOpenedSubscription;
   bool _initialized = false;
+  bool _firebaseReady = false;
   String? _lastOpenedMessageId;
 
   bool get _isSupportedPlatform {
@@ -73,15 +75,19 @@ class PushNotificationSyncService {
 
     _initialized = true;
 
+    await _notificationInboxRepository.initialize();
+    await _restoreInboxFromLaunchPayload();
+
+    if (!await _ensureFirebaseReady()) {
+      return;
+    }
+
     final preferences = await _appLocalDataSource.getMenuPreferences();
     try {
       await FirebaseMessaging.instance.setAutoInitEnabled(
         preferences.notificationEnabled,
       );
     } catch (_) {}
-
-    await _notificationInboxRepository.initialize();
-    await _restoreInboxFromLaunchPayload();
 
     _tokenRefreshSubscription = FirebaseMessaging.instance.onTokenRefresh
         .listen((token) {
@@ -107,6 +113,33 @@ class PushNotificationSyncService {
         await _handleOpenedMessage(initialMessage);
       }
     } catch (_) {}
+  }
+
+  Future<bool> _ensureFirebaseReady() async {
+    if (!_isSupportedPlatform) {
+      return false;
+    }
+
+    if (Firebase.apps.isNotEmpty) {
+      _firebaseReady = true;
+      return true;
+    }
+
+    try {
+      if (kIsWeb) {
+        await Firebase.initializeApp(options: FirebaseWebPushConfig.options);
+      } else {
+        await Firebase.initializeApp();
+        if (defaultTargetPlatform == TargetPlatform.android) {
+          FirebaseMessaging.onBackgroundMessage(
+            firebaseMessagingBackgroundHandler,
+          );
+        }
+      }
+    } catch (_) {}
+
+    _firebaseReady = Firebase.apps.isNotEmpty;
+    return _firebaseReady;
   }
 
   Future<void> _restoreInboxFromLaunchPayload() async {
@@ -148,6 +181,9 @@ class PushNotificationSyncService {
     }
 
     await initialize();
+    if (!await _ensureFirebaseReady()) {
+      return;
+    }
 
     final preferences = await _appLocalDataSource.getMenuPreferences();
     if (!preferences.notificationEnabled) {
@@ -212,6 +248,13 @@ class PushNotificationSyncService {
     }
 
     await initialize();
+    if (!await _ensureFirebaseReady()) {
+      if (!enabled) {
+        return false;
+      }
+
+      throw StateError('푸시 알림 기능을 초기화하지 못했습니다. 새로고침 후 다시 시도해주세요.');
+    }
     try {
       await FirebaseMessaging.instance.setAutoInitEnabled(enabled);
     } catch (_) {}
@@ -251,6 +294,9 @@ class PushNotificationSyncService {
     }
 
     await initialize();
+    if (!await _ensureFirebaseReady()) {
+      return;
+    }
     try {
       await FirebaseMessaging.instance.deleteToken();
     } catch (_) {}

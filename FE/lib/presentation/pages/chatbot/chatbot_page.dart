@@ -17,6 +17,11 @@ class ChatbotPage extends ConsumerStatefulWidget {
 class _ChatbotPageState extends ConsumerState<ChatbotPage> {
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  static const _suggestions = [
+    '이번 주 소비 피드백 알려줘',
+    '저축 팁 추천해줘',
+    '목표를 어떻게 잡는 게 좋을까?',
+  ];
 
   @override
   void dispose() {
@@ -37,8 +42,8 @@ class _ChatbotPageState extends ConsumerState<ChatbotPage> {
     });
   }
 
-  void _sendMessage() {
-    final text = _inputController.text.trim();
+  void _sendMessage([String? preset]) {
+    final text = (preset ?? _inputController.text).trim();
     if (text.isEmpty) return;
     _inputController.clear();
     ref.read(chatbotViewModelProvider.notifier).sendMessage(text);
@@ -60,29 +65,53 @@ class _ChatbotPageState extends ConsumerState<ChatbotPage> {
       appBar: AppBar(
         backgroundColor: colors.bgPrimary,
         elevation: 0,
-        centerTitle: true,
+        centerTitle: false,
+        toolbarHeight: 72.h,
+        titleSpacing: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new, size: 20.w, color: colors.textPrimary),
+          icon: Icon(
+            Icons.arrow_back_ios_new,
+            size: 20.w,
+            color: colors.textPrimary,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 28.w,
-              height: 28.w,
+              width: 40.w,
+              height: 40.w,
               decoration: BoxDecoration(
-                color: AppColors.green500.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
+                color: AppColors.orange500.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14.r),
               ),
-              child: Icon(Icons.auto_awesome, size: 16.w, color: AppColors.green500),
+              child: Icon(
+                Icons.smart_toy_outlined,
+                color: AppColors.orange500,
+                size: 22.w,
+              ),
             ),
-            SizedBox(width: 8.w),
-            Text(
-              'AI 코치',
-              style: AppTextStyles.bodyLg.copyWith(
-                fontWeight: FontWeight.w700,
-                color: colors.textPrimary,
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '모아 AI 코치',
+                    style: AppTextStyles.headingMd.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    '예산과 소비 패턴을 편하게 물어보세요',
+                    style: AppTextStyles.caption.copyWith(
+                      color: colors.textTertiary,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -92,7 +121,9 @@ class _ChatbotPageState extends ConsumerState<ChatbotPage> {
             IconButton(
               icon: Icon(Icons.refresh, size: 20.w, color: colors.textTertiary),
               tooltip: '새 대화 시작',
-              onPressed: state.isLoading ? null : viewModel.startNewConversation,
+              onPressed: state.isLoading
+                  ? null
+                  : viewModel.startNewConversation,
             ),
         ],
       ),
@@ -115,10 +146,15 @@ class _ChatbotPageState extends ConsumerState<ChatbotPage> {
                     infoMessage: state.isExpired ? null : state.infoMessage,
                     errorMessage: state.errorMessage,
                     onRetry: viewModel.restoreLatestConversation,
+                    suggestions: _suggestions,
+                    onSuggestionTap: _sendMessage,
                   )
                 : ListView.builder(
                     controller: _scrollController,
-                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 12.h,
+                    ),
                     itemCount: state.messages.length,
                     itemBuilder: (context, index) {
                       return _ChatBubble(message: state.messages[index]);
@@ -202,7 +238,10 @@ class _InitialLoading extends StatelessWidget {
           SizedBox(
             width: 28.w,
             height: 28.w,
-            child: const CircularProgressIndicator(strokeWidth: 2.6),
+            child: const CircularProgressIndicator(
+              strokeWidth: 2.6,
+              color: AppColors.orange500,
+            ),
           ),
           SizedBox(height: 14.h),
           Text(
@@ -222,57 +261,112 @@ class _EmptyState extends StatelessWidget {
     this.infoMessage,
     this.errorMessage,
     required this.onRetry,
+    required this.suggestions,
+    required this.onSuggestionTap,
   });
 
   final AppColorScheme colors;
   final String? infoMessage;
   final String? errorMessage;
   final VoidCallback onRetry;
+  final List<String> suggestions;
+  final void Function(String) onSuggestionTap;
 
   @override
   Widget build(BuildContext context) {
     final title = errorMessage != null
         ? 'AI 코치를 불러오지 못했어요'
         : (infoMessage ?? 'AI 코치에게 물어보세요');
-    final description = errorMessage ??
-        '예산, 소비 패턴, 목표 달성에 대해\n무엇이든 물어보세요.';
+    final description = errorMessage ?? '예산, 소비 패턴, 목표 달성에 대해\n무엇이든 물어보세요.';
 
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 72.w,
-            height: 72.w,
-            decoration: BoxDecoration(
-              color: AppColors.green500.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.auto_awesome, size: 36.w, color: AppColors.green500),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20.w),
+        child: Container(
+          width: double.infinity,
+          padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 20.h),
+          decoration: BoxDecoration(
+            color: colors.bgSurface,
+            borderRadius: BorderRadius.circular(24.r),
+            boxShadow: [
+              BoxShadow(
+                color: colors.cardShadow,
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          SizedBox(height: 16.h),
-          Text(
-            title,
-            style: AppTextStyles.bodyLg.copyWith(
-              fontWeight: FontWeight.w700,
-              color: colors.textPrimary,
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72.w,
+                height: 72.w,
+                decoration: BoxDecoration(
+                  color: AppColors.orange500.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(24.r),
+                ),
+                child: Icon(
+                  Icons.smart_toy_outlined,
+                  size: 36.w,
+                  color: AppColors.orange500,
+                ),
+              ),
+              SizedBox(height: 16.h),
+              Text(
+                title,
+                style: AppTextStyles.bodyLg.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: colors.textPrimary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                description,
+                style: AppTextStyles.bodySm.copyWith(
+                  color: colors.textTertiary,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              if (errorMessage == null) ...[
+                SizedBox(height: 18.h),
+                Wrap(
+                  spacing: 8.w,
+                  runSpacing: 8.h,
+                  alignment: WrapAlignment.center,
+                  children: suggestions
+                      .map(
+                        (suggestion) => ActionChip(
+                          label: Text(suggestion),
+                          onPressed: () => onSuggestionTap(suggestion),
+                          labelStyle: AppTextStyles.caption.copyWith(
+                            color: AppColors.orange500,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          side: BorderSide(
+                            color: AppColors.orange500.withValues(alpha: 0.24),
+                          ),
+                          backgroundColor: AppColors.orange500.withValues(
+                            alpha: 0.06,
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
+              if (errorMessage != null) ...[
+                SizedBox(height: 16.h),
+                OutlinedButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('다시 불러오기'),
+                ),
+              ],
+            ],
           ),
-          SizedBox(height: 8.h),
-          Text(
-            description,
-            style: AppTextStyles.bodySm.copyWith(color: colors.textTertiary),
-            textAlign: TextAlign.center,
-          ),
-          if (errorMessage != null) ...[
-            SizedBox(height: 16.h),
-            OutlinedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('다시 불러오기'),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -292,17 +386,23 @@ class _ChatBubble extends StatelessWidget {
       padding: EdgeInsets.only(bottom: 12.h),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           if (!isUser) ...[
             Container(
               width: 32.w,
               height: 32.w,
               decoration: BoxDecoration(
-                color: AppColors.green500.withValues(alpha: 0.15),
+                color: AppColors.orange500.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.auto_awesome, size: 16.w, color: AppColors.green500),
+              child: Icon(
+                Icons.smart_toy_outlined,
+                size: 16.w,
+                color: AppColors.orange500,
+              ),
             ),
             SizedBox(width: 8.w),
           ],
@@ -310,9 +410,7 @@ class _ChatBubble extends StatelessWidget {
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
               decoration: BoxDecoration(
-                color: isUser
-                    ? AppColors.orange500
-                    : colors.bgSurface,
+                color: isUser ? AppColors.orange500 : colors.gray50,
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(isUser ? 16.r : 4.r),
                   topRight: Radius.circular(isUser ? 4.r : 16.r),
@@ -333,26 +431,30 @@ class _ChatBubble extends StatelessWidget {
                       style: AppTextStyles.bodySm.copyWith(color: Colors.white),
                     )
                   : message.isStreaming
-                      ? _StreamingContent(content: message.content, colors: colors)
-                      : MarkdownBody(
-                          data: message.content,
-                          styleSheet: MarkdownStyleSheet(
-                            p: AppTextStyles.bodySm.copyWith(color: colors.textPrimary),
-                            h1: AppTextStyles.bodyLg.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: colors.textPrimary,
-                            ),
-                            h2: AppTextStyles.bodyLg.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: colors.textPrimary,
-                            ),
-                            listBullet: AppTextStyles.bodySm.copyWith(color: colors.textPrimary),
-                            code: AppTextStyles.bodySm.copyWith(
-                              fontFamily: 'monospace',
-                              backgroundColor: colors.bgPrimary,
-                            ),
-                          ),
+                  ? _StreamingContent(content: message.content, colors: colors)
+                  : MarkdownBody(
+                      data: message.content,
+                      styleSheet: MarkdownStyleSheet(
+                        p: AppTextStyles.bodySm.copyWith(
+                          color: colors.textPrimary,
                         ),
+                        h1: AppTextStyles.bodyLg.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: colors.textPrimary,
+                        ),
+                        h2: AppTextStyles.bodyLg.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: colors.textPrimary,
+                        ),
+                        listBullet: AppTextStyles.bodySm.copyWith(
+                          color: colors.textPrimary,
+                        ),
+                        code: AppTextStyles.bodySm.copyWith(
+                          fontFamily: 'monospace',
+                          backgroundColor: colors.bgPrimary,
+                        ),
+                      ),
+                    ),
             ),
           ),
           if (isUser) SizedBox(width: 8.w),
@@ -398,7 +500,9 @@ class _StreamingContentState extends State<_StreamingContent>
       builder: (context, _) {
         return Text(
           '${widget.content}${_cursorController.value > 0.5 ? '▌' : ''}',
-          style: AppTextStyles.bodySm.copyWith(color: widget.colors.textPrimary),
+          style: AppTextStyles.bodySm.copyWith(
+            color: widget.colors.textPrimary,
+          ),
         );
       },
     );
@@ -423,7 +527,12 @@ class _InputBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: colors.bgSurface,
-      padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h + MediaQuery.of(context).padding.bottom),
+      padding: EdgeInsets.fromLTRB(
+        16.w,
+        8.h,
+        16.w,
+        16.h + MediaQuery.of(context).padding.bottom,
+      ),
       child: Row(
         children: [
           Expanded(
@@ -442,8 +551,13 @@ class _InputBar extends StatelessWidget {
                 style: AppTextStyles.bodySm.copyWith(color: colors.textPrimary),
                 decoration: InputDecoration(
                   hintText: '메시지를 입력하세요...',
-                  hintStyle: AppTextStyles.bodySm.copyWith(color: colors.textTertiary),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                  hintStyle: AppTextStyles.bodySm.copyWith(
+                    color: colors.textTertiary,
+                  ),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 10.h,
+                  ),
                   border: InputBorder.none,
                 ),
               ),
@@ -456,7 +570,7 @@ class _InputBar extends StatelessWidget {
               width: 44.w,
               height: 44.w,
               decoration: BoxDecoration(
-                color: isLoading ? colors.borderDefault : AppColors.green500,
+                color: isLoading ? colors.borderDefault : AppColors.orange500,
                 shape: BoxShape.circle,
               ),
               child: isLoading

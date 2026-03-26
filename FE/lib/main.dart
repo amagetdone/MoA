@@ -51,12 +51,16 @@ Future<void> main() async {
   if (kIsWeb) {
     try {
       await Firebase.initializeApp(options: FirebaseWebPushConfig.options);
-    } catch (_) {}
+    } catch (error) {
+      debugPrint('Firebase web initialize failed: $error');
+    }
   } else if (defaultTargetPlatform == TargetPlatform.android) {
     try {
       await Firebase.initializeApp();
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    } catch (_) {}
+    } catch (error) {
+      debugPrint('Firebase native initialize failed: $error');
+    }
   }
 
   runApp(const ProviderScope(child: AppBootstrap()));
