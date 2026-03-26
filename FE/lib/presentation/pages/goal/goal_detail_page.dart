@@ -55,11 +55,6 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
       );
     }
 
-    final currentWeek = goal.currentWeekNumber.clamp(
-      1,
-      goal.totalWeeks > 0 ? goal.totalWeeks : goal.currentWeekNumber,
-    );
-
     return Scaffold(
       backgroundColor: colors.bgPrimary,
       body: SafeArea(
@@ -79,8 +74,6 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
                   ),
                   Expanded(
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
                       children: [
                         Flexible(
                           child: Text(
@@ -93,13 +86,15 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          '$currentWeek주차 / 총 ${goal.totalWeeks}주',
-                          style: AppTextStyles.bodySm.copyWith(
-                            color: colors.textTertiary,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        SizedBox(width: 10.w),
+                        _Badge(
+                          label: goal.remainingDays >= 0
+                              ? 'D-${goal.remainingDays}'
+                              : 'D+${-goal.remainingDays}',
+                          bgColor: goal.remainingDays < 0
+                              ? AppColors.red500
+                              : AppColors.orange500,
+                          textColor: Colors.white,
                         ),
                       ],
                     ),
@@ -117,12 +112,16 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
                       goal: goal,
                       showVideoLoading:
                           goal.isAiPending ||
-                          (isDetailLoading && goal.sketchVideoAssetPath == null),
+                          (isDetailLoading &&
+                              goal.sketchVideoAssetPath == null),
                       isRetryingVideo: _isRetryingVideo,
-                      onRetryVideo: goal.isAiFailed ? () => _retryGoalVideo(goal) : null,
+                      onRetryVideo: goal.isAiFailed
+                          ? () => _retryGoalVideo(goal)
+                          : null,
                     ),
                     SizedBox(height: 14.h),
-                    if (goal.description != null && goal.description!.isNotEmpty) ...[
+                    if (goal.description != null &&
+                        goal.description!.isNotEmpty) ...[
                       MoreCard(
                         padding: EdgeInsets.all(18.w),
                         child: Column(
@@ -150,7 +149,8 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
                     GoalLineChart(history: history, goal: goal),
                     SizedBox(height: 14.h),
                     GoalBarChart(history: history, goal: goal),
-                    if (goal.weeklyMission != null || goal.weeklyBudget != null) ...[
+                    if (goal.weeklyMission != null ||
+                        goal.weeklyBudget != null) ...[
                       SizedBox(height: 14.h),
                       _WeeklySummaryCard(goal: goal),
                     ],
@@ -178,9 +178,9 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('AI 영상 재시도에 실패했습니다: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('AI 영상 재시도에 실패했습니다: $error')));
     } finally {
       if (mounted) {
         setState(() => _isRetryingVideo = false);
@@ -245,16 +245,6 @@ class _HeroCard extends StatelessWidget {
                       bgColor: AppColors.orange500,
                       textColor: Colors.white,
                     ),
-                    SizedBox(height: 6.h),
-                    _Badge(
-                      label: goal.remainingDays >= 0
-                          ? 'D-${goal.remainingDays}'
-                          : 'D+${-goal.remainingDays}',
-                      bgColor: colors.cardShadow,
-                      textColor: goal.remainingDays < 0
-                          ? AppColors.red500
-                          : Colors.white,
-                    ),
                   ],
                 ),
               ),
@@ -268,7 +258,10 @@ class _HeroCard extends StatelessWidget {
                 if (goal.isAiPending || goal.isAiFailed) ...[
                   Container(
                     width: double.infinity,
-                    padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 14.w,
+                      vertical: 12.h,
+                    ),
                     decoration: BoxDecoration(
                       color: goal.isAiPending
                           ? AppColors.orange500.withValues(alpha: 0.10)
@@ -434,7 +427,9 @@ class _WeeklySummaryCard extends StatelessWidget {
           if (weeklyMission != null) ...[
             _SummaryRow(
               label: '주간 미션 저축액',
-              value: CurrencyFormatter.formatKRW(weeklyMission.weeklySavingsAmount),
+              value: CurrencyFormatter.formatKRW(
+                weeklyMission.weeklySavingsAmount,
+              ),
             ),
             _SummaryRow(
               label: '목표까지 남은 주차',
@@ -444,7 +439,9 @@ class _WeeklySummaryCard extends StatelessWidget {
           if (weeklyBudget != null) ...[
             _SummaryRow(
               label: '주간 총수입',
-              value: CurrencyFormatter.formatKRW(weeklyBudget.totalIncomeAmount),
+              value: CurrencyFormatter.formatKRW(
+                weeklyBudget.totalIncomeAmount,
+              ),
             ),
             _SummaryRow(
               label: '주간 저축액',
