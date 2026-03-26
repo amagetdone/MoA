@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
-import java.util.Objects;
 
 import com.ssafy.amagetdone.domain.account.api.dto.AccountAdminDto;
 import com.ssafy.amagetdone.domain.account.exception.AccountErrorCode;
@@ -66,7 +65,6 @@ public class ExecuteAdminAccountPaymentUseCase {
 		);
 
 		AccountTransactionOverride override = AccountTransactionOverride.builder()
-			.id(buildTransactionId(account.getId(), item))
 			.category(resolveCategory(item))
 			.transactionDateTime(toDateTime(item.transactionDate(), item.transactionTime()))
 			.transactionBalance(item.transactionBalance())
@@ -129,10 +127,4 @@ public class ExecuteAdminAccountPaymentUseCase {
 		return Integer.parseInt(value);
 	}
 
-	private Integer buildTransactionId(String accountId, DemandDepositTransactionDto.Item item) {
-		return Math.floorMod(
-			Objects.hash("ADMIN_ACCOUNT_PAYMENT", accountId, item.transactionUniqueNo(), item.transactionDate(), item.transactionTime()),
-			Integer.MAX_VALUE - 1
-		) + 1;
-	}
 }

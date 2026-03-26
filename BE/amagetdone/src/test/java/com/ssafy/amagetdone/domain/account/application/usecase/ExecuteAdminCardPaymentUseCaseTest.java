@@ -120,6 +120,7 @@ class ExecuteAdminCardPaymentUseCaseTest {
 		ArgumentCaptor<CardTransactionOverride> captor = ArgumentCaptor.forClass(CardTransactionOverride.class);
 		ArgumentCaptor<TransactionSyncedEvent> eventCaptor = ArgumentCaptor.forClass(TransactionSyncedEvent.class);
 		verify(cardTransactionOverrideRepository).save(captor.capture());
+		assertThat(captor.getValue().getId()).isNull();
 		verify(applicationEventPublisher).publishEvent(eventCaptor.capture());
 		assertThat(captor.getValue().getCard()).isEqualTo(card);
 		assertThat(captor.getValue().getMerchant()).isEqualTo(merchant);

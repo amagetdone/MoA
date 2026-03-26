@@ -80,9 +80,6 @@ class InitializeCardTransactionOverridesUseCaseTest {
 	@Mock
 	private TransactionCategoryAssignmentService transactionCategoryAssignmentService;
 
-	@Mock
-	private CardTransactionOverrideBulkSavePort cardTransactionOverrideBulkSavePort;
-
 	@Test
 	void executeDeletesLinkedAnalysisResultsBeforeReloadingCardTransactions() {
 		Account withdrawalAccount = Account.create(
@@ -125,8 +122,7 @@ class InitializeCardTransactionOverridesUseCaseTest {
 			cardTransactionOverrideRepository,
 			transactionAnalysisResultRepository,
 			scenario,
-			transactionCategoryAssignmentService,
-			cardTransactionOverrideBulkSavePort
+			transactionCategoryAssignmentService
 		);
 		CardTransactionOverride existing = CardTransactionOverride.builder().id(202).card(card).build();
 		given(cardRepository.findByCardNo("5241111122223333")).willReturn(Optional.of(card));
@@ -145,8 +141,7 @@ class InitializeCardTransactionOverridesUseCaseTest {
 		verify(cardTransactionOverrideRepository).deleteByCard_CardUniqueNo(card.getCardUniqueNo());
 		verify(transactionCategoryAssignmentService).assignCategories(any());
 		verify(merchantRepository, never()).save(any(Merchant.class));
-		verify(cardTransactionOverrideBulkSavePort).saveAll(captor.capture());
-		verify(cardTransactionOverrideRepository, never()).saveAll(any());
+		verify(cardTransactionOverrideRepository).saveAll(captor.capture());
 		ArgumentCaptor<Iterable<Integer>> merchantIdsCaptor = ArgumentCaptor.forClass(Iterable.class);
 		verify(merchantRepository).findAllById(merchantIdsCaptor.capture());
 		assertThat(toIdSet(merchantIdsCaptor.getValue())).isEqualTo(merchantsById.keySet());
@@ -154,6 +149,9 @@ class InitializeCardTransactionOverridesUseCaseTest {
 		assertThat(response.targetNo()).isEqualTo("5241111122223333");
 		assertThat(response.transactionCount()).isEqualTo(captor.getValue().size());
 		assertThat(captor.getValue().size()).isGreaterThanOrEqualTo(600);
+		assertThat(captor.getValue())
+			.extracting(CardTransactionOverride::getId)
+			.containsOnlyNulls();
 		assertThat(captor.getValue())
 			.extracting(CardTransactionOverride::getTransactionDateTime)
 			.map(YearMonth::from)
@@ -191,8 +189,7 @@ class InitializeCardTransactionOverridesUseCaseTest {
 			cardTransactionOverrideRepository,
 			transactionAnalysisResultRepository,
 			scenario,
-			transactionCategoryAssignmentService,
-			cardTransactionOverrideBulkSavePort
+			transactionCategoryAssignmentService
 		);
 		Card card = Card.builder()
 			.cardUniqueNo(123456789L)
@@ -213,8 +210,7 @@ class InitializeCardTransactionOverridesUseCaseTest {
 			cardTransactionOverrideRepository,
 			transactionAnalysisResultRepository,
 			new CardRealTransactionScenario(),
-			transactionCategoryAssignmentService,
-			cardTransactionOverrideBulkSavePort
+			transactionCategoryAssignmentService
 		);
 		given(cardRepository.findByCardNo("missing")).willReturn(Optional.empty());
 

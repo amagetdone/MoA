@@ -2,7 +2,6 @@ package com.ssafy.amagetdone.domain.account.application.usecase;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import com.ssafy.amagetdone.domain.account.api.dto.AccountAdminDto;
 import com.ssafy.amagetdone.domain.account.exception.AccountErrorCode;
@@ -67,7 +66,6 @@ public class InitializeAccountTransactionOverridesUseCase {
 		accountTransactionOverrideRepository.saveAll(
 			seeds.stream()
 				.map(seed -> AccountTransactionOverride.builder()
-					.id(toEntityId("ACCOUNT_INIT", account.getId(), seed.transactionUniqueNo()))
 					.category(resolveCategory(assignedCategories, extractCategoryText(seed)))
 					.transactionDateTime(seed.transactionDateTime())
 					.transactionBalance(seed.transactionBalance())
@@ -102,10 +100,6 @@ public class InitializeAccountTransactionOverridesUseCase {
 		if (!existingTransactionIds.isEmpty()) {
 			transactionAnalysisResultRepository.deleteByTransaction_IdIn(existingTransactionIds);
 		}
-	}
-
-	private int toEntityId(String prefix, String targetId, Long transactionUniqueNo) {
-		return Math.floorMod(Objects.hash(prefix, targetId, transactionUniqueNo), Integer.MAX_VALUE - 1) + 1;
 	}
 
 	private String extractCategoryText(AccountSeed seed) {

@@ -113,6 +113,7 @@ class CancelAdminCardPaymentUseCaseTest {
 
 		ArgumentCaptor<CardTransactionOverride> captor = ArgumentCaptor.forClass(CardTransactionOverride.class);
 		verify(cardTransactionOverrideRepository).save(captor.capture());
+		assertThat(captor.getValue().getId()).isNull();
 		assertThat(captor.getValue().getCard()).isEqualTo(card);
 		assertThat(captor.getValue().getBillStatementsStatus()).isEqualTo("CANCEL");
 		assertThat(captor.getValue().getTransactionUniqueNo()).isEqualTo(89L);

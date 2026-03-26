@@ -16,6 +16,7 @@ import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.account.model.repository.CardRepository;
 import com.ssafy.amagetdone.domain.account.model.repository.CategoryRepository;
 import com.ssafy.amagetdone.domain.account.model.repository.MerchantRepository;
+import com.ssafy.amagetdone.domain.member.model.repository.UserRepository;
 import com.ssafy.amagetdone.domain.transaction.infra.client.SsafyCardTransactionApiClient;
 import com.ssafy.amagetdone.domain.transaction.infra.client.SsafyDemandDepositTransactionApiClient;
 import com.ssafy.amagetdone.domain.transaction.infra.client.dto.CardTransactionDto;
@@ -46,6 +47,7 @@ public class TransactionSyncService {
 	private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.BASIC_ISO_DATE;
 	private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HHmmss");
 
+	private final UserRepository userRepository;
 	private final AccountRepository accountRepository;
 	private final CardRepository cardRepository;
 	private final CategoryRepository categoryRepository;
@@ -59,6 +61,8 @@ public class TransactionSyncService {
 	private final ApplicationEventPublisher applicationEventPublisher;
 
 	public SyncResult syncLatest(Integer userId, int months, boolean forceFullSync) {
+		acquireUserSyncLock(userId);
+
 		List<Account> linkedAccounts = accountRepository.findAllLinkedAccountsByUserId(userId).stream()
 			.filter(Account::isActive)
 			.toList();
@@ -71,6 +75,13 @@ public class TransactionSyncService {
 			.mapToInt(card -> syncCard(card, months, forceFullSync))
 			.sum();
 		return new SyncResult(insertedAccountCount, insertedCardCount);
+	}
+
+	private void acquireUserSyncLock(Integer userId) {
+		if (userId == null) {
+			return;
+		}
+		userRepository.findByIdForUpdate(userId);
 	}
 
 	private int syncAccount(Account account, int months, boolean forceFullSync) {
@@ -227,7 +238,6 @@ public class TransactionSyncService {
 	) {
 		String memo = hasText(item.transactionMemo()) ? item.transactionMemo() : item.transactionSummary();
 		return AccountTransactionOverride.builder()
-			.id(buildTransactionId("ACCOUNT", account.getId(), item.transactionUniqueNo(), item.transactionDate(), item.transactionTime()))
 			.category(defaultCategory)
 			.transactionDateTime(toDateTime(item.transactionDate(), item.transactionTime()))
 			.transactionBalance(item.transactionBalance())
@@ -248,7 +258,6 @@ public class TransactionSyncService {
 	) {
 		Merchant merchant = resolveMerchant(item.merchantId(), item.merchantName());
 		return CardTransactionOverride.builder()
-			.id(buildTransactionId("CARD", String.valueOf(card.getCardUniqueNo()), item.transactionUniqueNo(), item.transactionDate(), item.transactionTime()))
 			.category(defaultCategory)
 			.transactionDateTime(toDateTime(item.transactionDate(), item.transactionTime()))
 			.transactionBalance(item.transactionBalance())
