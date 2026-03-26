@@ -51,8 +51,8 @@ class _FakeStreamingChatbotService(_FakeChatbotService):
             }
         )
         yield {"event": "status", "data": {"message": "routing"}}
-        yield {"event": "token", "data": {"text": "이번 주 "}}
-        yield {"event": "token", "data": {"text": "예산은 안정적이에요."}}
+        yield {"event": "token", "data": {"text": "Budget"}}
+        yield {"event": "token", "data": {"text": " is on track."}}
         yield {
             "event": "done",
             "data": {"conversation_id": conversation_id or "generated-id"},
@@ -61,10 +61,14 @@ class _FakeStreamingChatbotService(_FakeChatbotService):
 
 def test_chatbot_message_endpoint_returns_json_response() -> None:
     service = _FakeChatbotService()
+
+    def load_chatbot_service() -> _FakeChatbotService:
+        return service
+
     app = create_app(
         classifier=object(),
         image_generation_service=object(),
-        chatbot_service=service,
+        load_chatbot_service=load_chatbot_service,
     )
 
     with TestClient(app) as client:
@@ -215,10 +219,14 @@ def test_chatbot_service_close_is_called_when_app_shuts_down() -> None:
 
 def test_chatbot_stream_endpoint_returns_sse_response() -> None:
     service = _FakeStreamingChatbotService()
+
+    def load_chatbot_service() -> _FakeStreamingChatbotService:
+        return service
+
     app = create_app(
         classifier=object(),
         image_generation_service=object(),
-        chatbot_service=service,
+        load_chatbot_service=load_chatbot_service,
     )
 
     with TestClient(app) as client:
