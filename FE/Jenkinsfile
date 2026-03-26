@@ -69,6 +69,7 @@ pipeline {
                           cp .env.example .env
                         fi
 
+                        flutter clean
                         flutter pub get
                         flutter test
                         flutter build web --release --dart-define-from-file=.env
