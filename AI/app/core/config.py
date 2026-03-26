@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -98,7 +100,9 @@ def build_postgresql_dsn(*, jdbc_url: str, username: str, password: str) -> str:
         return ""
 
     normalized_port = port if port_separator and port else "5432"
+    encoded_username = quote(username, safe="")
+    encoded_password = quote(password, safe="")
     return (
         "postgresql+psycopg://"
-        f"{username}:{password}@{host}:{normalized_port}/{database_name}"
+        f"{encoded_username}:{encoded_password}@{host}:{normalized_port}/{database_name}"
     )
