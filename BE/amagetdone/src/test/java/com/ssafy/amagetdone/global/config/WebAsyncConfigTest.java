@@ -41,6 +41,8 @@ class WebAsyncConfigTest {
 			.andExpect(request().asyncStarted())
 			.andReturn();
 
+		mvcResult.getAsyncResult(1_000L);
+
 		mockMvc.perform(asyncDispatch(mvcResult))
 			.andExpect(status().isOk())
 			.andExpect(content().string(org.hamcrest.Matchers.allOf(
