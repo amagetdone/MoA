@@ -17,12 +17,14 @@ import com.ssafy.amagetdone.domain.account.model.entity.Category;
 import com.ssafy.amagetdone.domain.account.model.entity.Merchant;
 import com.ssafy.amagetdone.domain.account.model.repository.CardRepository;
 import com.ssafy.amagetdone.domain.account.model.repository.MerchantRepository;
+import com.ssafy.amagetdone.domain.notification.application.event.TransactionSyncedEvent;
 import com.ssafy.amagetdone.domain.transaction.application.service.TransactionCategoryAssignmentService;
 import com.ssafy.amagetdone.domain.transaction.infra.client.dto.CardTransactionDto;
 import com.ssafy.amagetdone.domain.transaction.model.entity.CardTransactionOverride;
 import com.ssafy.amagetdone.domain.transaction.model.repository.CardTransactionOverrideRepository;
 import com.ssafy.amagetdone.domain.transaction.support.util.TransactionMerchantTextResolver;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +40,7 @@ public class ExecuteAdminCardPaymentUseCase {
 	private final SsafyAdminCreditCardApiClient ssafyAdminCreditCardApiClient;
 	private final TransactionCategoryAssignmentService transactionCategoryAssignmentService;
 	private final AccountSsafyApiProperties properties;
+	private final ApplicationEventPublisher applicationEventPublisher;
 
 	public ExecuteAdminCardPaymentUseCase(
 		CardRepository cardRepository,
@@ -45,7 +48,8 @@ public class ExecuteAdminCardPaymentUseCase {
 		MerchantRepository merchantRepository,
 		SsafyAdminCreditCardApiClient ssafyAdminCreditCardApiClient,
 		TransactionCategoryAssignmentService transactionCategoryAssignmentService,
-		AccountSsafyApiProperties properties
+		AccountSsafyApiProperties properties,
+		ApplicationEventPublisher applicationEventPublisher
 	) {
 		this.cardRepository = cardRepository;
 		this.cardTransactionOverrideRepository = cardTransactionOverrideRepository;
@@ -53,6 +57,7 @@ public class ExecuteAdminCardPaymentUseCase {
 		this.ssafyAdminCreditCardApiClient = ssafyAdminCreditCardApiClient;
 		this.transactionCategoryAssignmentService = transactionCategoryAssignmentService;
 		this.properties = properties;
+		this.applicationEventPublisher = applicationEventPublisher;
 	}
 
 	@Transactional
@@ -83,6 +88,7 @@ public class ExecuteAdminCardPaymentUseCase {
 			.card(card)
 			.build();
 		cardTransactionOverrideRepository.save(override);
+		publishTransactionEvent(userId, override);
 
 		return new AccountAdminDto.PaymentResponse(
 			"card",
@@ -93,6 +99,20 @@ public class ExecuteAdminCardPaymentUseCase {
 			item.transactionBalance(),
 			item.billStatementsStatus()
 		);
+	}
+
+	private void publishTransactionEvent(Integer userId, CardTransactionOverride override) {
+		if (userId == null) {
+			return;
+		}
+		applicationEventPublisher.publishEvent(new TransactionSyncedEvent(
+			userId,
+			"CARD",
+			String.valueOf(override.getTransactionUniqueNo()),
+			override.getTransactionBalance(),
+			override.getMerchant() == null ? override.getTransactionMemo() : override.getMerchant().getName(),
+			override.getTransactionDateTime()
+		));
 	}
 
 	private Category resolveCategory(CardTransactionDto.Item item) {

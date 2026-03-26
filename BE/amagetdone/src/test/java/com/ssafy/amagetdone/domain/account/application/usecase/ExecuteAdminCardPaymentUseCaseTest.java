@@ -20,6 +20,7 @@ import com.ssafy.amagetdone.domain.account.model.entity.Merchant;
 import com.ssafy.amagetdone.domain.account.model.repository.CardRepository;
 import com.ssafy.amagetdone.domain.account.model.repository.MerchantRepository;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
+import com.ssafy.amagetdone.domain.notification.application.event.TransactionSyncedEvent;
 import com.ssafy.amagetdone.domain.transaction.application.service.TransactionCategoryAssignmentService;
 import com.ssafy.amagetdone.domain.transaction.infra.client.dto.CardTransactionDto;
 import com.ssafy.amagetdone.domain.transaction.model.entity.CardTransactionOverride;
@@ -27,6 +28,7 @@ import com.ssafy.amagetdone.domain.transaction.model.repository.CardTransactionO
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 
 class ExecuteAdminCardPaymentUseCaseTest {
 
@@ -37,6 +39,7 @@ class ExecuteAdminCardPaymentUseCaseTest {
 		MerchantRepository merchantRepository = mock(MerchantRepository.class);
 		SsafyAdminCreditCardApiClient ssafyAdminCreditCardApiClient = mock(SsafyAdminCreditCardApiClient.class);
 		TransactionCategoryAssignmentService transactionCategoryAssignmentService = mock(TransactionCategoryAssignmentService.class);
+		ApplicationEventPublisher applicationEventPublisher = mock(ApplicationEventPublisher.class);
 		AccountSsafyApiProperties properties = new AccountSsafyApiProperties();
 		properties.setApiKey("test-api-key");
 		ExecuteAdminCardPaymentUseCase useCase = new ExecuteAdminCardPaymentUseCase(
@@ -45,7 +48,8 @@ class ExecuteAdminCardPaymentUseCaseTest {
 			merchantRepository,
 			ssafyAdminCreditCardApiClient,
 			transactionCategoryAssignmentService,
-			properties
+			properties,
+			applicationEventPublisher
 		);
 
 		User user = User.createPendingSocialUser();
@@ -114,11 +118,19 @@ class ExecuteAdminCardPaymentUseCaseTest {
 		AccountAdminDto.PaymentResponse result = useCase.execute(7, request);
 
 		ArgumentCaptor<CardTransactionOverride> captor = ArgumentCaptor.forClass(CardTransactionOverride.class);
+		ArgumentCaptor<TransactionSyncedEvent> eventCaptor = ArgumentCaptor.forClass(TransactionSyncedEvent.class);
 		verify(cardTransactionOverrideRepository).save(captor.capture());
 		assertThat(captor.getValue().getId()).isNull();
+		verify(applicationEventPublisher).publishEvent(eventCaptor.capture());
 		assertThat(captor.getValue().getCard()).isEqualTo(card);
 		assertThat(captor.getValue().getMerchant()).isEqualTo(merchant);
 		assertThat(captor.getValue().getTransactionUniqueNo()).isEqualTo(88L);
+		assertThat(eventCaptor.getValue().userId()).isEqualTo(7);
+		assertThat(eventCaptor.getValue().sourceType()).isEqualTo("CARD");
+		assertThat(eventCaptor.getValue().transactionId()).isEqualTo("88");
+		assertThat(eventCaptor.getValue().amount()).isEqualTo(28900L);
+		assertThat(eventCaptor.getValue().merchantOrMemo()).isEqualTo(merchant.getName());
+		assertThat(eventCaptor.getValue().occurredAt()).isEqualTo(LocalDateTime.of(2026, 3, 24, 9, 27));
 		assertThat(result.targetType()).isEqualTo("card");
 		assertThat(result.targetNo()).isEqualTo("5241111122223333");
 		assertThat(result.status()).isEqualTo("BILLED");

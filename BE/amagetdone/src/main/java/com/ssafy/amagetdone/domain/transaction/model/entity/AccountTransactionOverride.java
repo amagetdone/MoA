@@ -38,7 +38,7 @@ public class AccountTransactionOverride extends TransactionOverride {
 	@Column(name = "transactionAfterBalance", nullable = false)
 	private Long transactionAfterBalance;
 
-	@Column(name = "transactionSummary", nullable = false, length = 30)
+	@Column(name = "transactionSummary", nullable = false, length = 100)
 	private String transactionSummary;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
