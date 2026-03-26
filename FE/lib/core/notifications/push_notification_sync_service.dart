@@ -83,11 +83,10 @@ class PushNotificationSyncService {
     await _notificationInboxRepository.initialize();
     await _restoreInboxFromLaunchPayload();
 
-    _tokenRefreshSubscription = FirebaseMessaging.instance.onTokenRefresh.listen(
-      (token) {
-        unawaited(_upsertTokenIfAllowed(token));
-      },
-    );
+    _tokenRefreshSubscription = FirebaseMessaging.instance.onTokenRefresh
+        .listen((token) {
+          unawaited(_upsertTokenIfAllowed(token));
+        });
 
     _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen((
       message,
@@ -102,7 +101,8 @@ class PushNotificationSyncService {
     });
 
     try {
-      final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+      final initialMessage = await FirebaseMessaging.instance
+          .getInitialMessage();
       if (initialMessage != null) {
         await _handleOpenedMessage(initialMessage);
       }
@@ -177,7 +177,21 @@ class PushNotificationSyncService {
         sound: true,
       );
 
-      if (settings.authorizationStatus == AuthorizationStatus.denied) {
+      final isGranted =
+          settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
+
+      if (!isGranted) {
+        return;
+      }
+    } else if (kIsWeb) {
+      final settings = await FirebaseMessaging.instance
+          .getNotificationSettings();
+      final isGranted =
+          settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
+
+      if (!isGranted) {
         return;
       }
     }
@@ -298,10 +312,7 @@ class PushNotificationSyncService {
       random.nextInt(0x7fffffff).toRadixString(16),
     ].join('-');
 
-    await _secureStorage.write(
-      key: _installationIdKey,
-      value: installationId,
-    );
+    await _secureStorage.write(key: _installationIdKey, value: installationId);
     return installationId;
   }
 }

@@ -69,7 +69,11 @@ class AuthViewModel extends StateNotifier<AuthState> {
       }
 
       state = AuthAuthenticated(result);
-      unawaited(_pushNotificationSyncService.syncTokenIfEnabled());
+      unawaited(
+        _pushNotificationSyncService.syncTokenIfEnabled(
+          promptPermission: false,
+        ),
+      );
     } catch (error) {
       if (attempt != _socialLoginAttempt) {
         return;
@@ -92,13 +96,18 @@ class AuthViewModel extends StateNotifier<AuthState> {
     try {
       final result = await _repository.loginWithTest(id: id);
       state = AuthAuthenticated(result, isTest: true);
-      unawaited(_pushNotificationSyncService.syncTokenIfEnabled());
+      unawaited(
+        _pushNotificationSyncService.syncTokenIfEnabled(
+          promptPermission: false,
+        ),
+      );
     } catch (error) {
       state = AuthError(error.toString());
     }
   }
 
-  Future<void> loginWithGoogle() => _runSocialLogin(_repository.loginWithGoogle);
+  Future<void> loginWithGoogle() =>
+      _runSocialLogin(_repository.loginWithGoogle);
 
   Future<void> resetInterruptedLogin() async {
     if (state is! AuthLoading) {
@@ -117,7 +126,11 @@ class AuthViewModel extends StateNotifier<AuthState> {
       final result = await _repository.autoLogin();
       if (result != null) {
         state = AuthAutoLoginSuccess(result);
-        unawaited(_pushNotificationSyncService.syncTokenIfEnabled());
+        unawaited(
+          _pushNotificationSyncService.syncTokenIfEnabled(
+            promptPermission: false,
+          ),
+        );
       } else {
         state = const AuthUnauthenticated();
       }
