@@ -167,13 +167,12 @@ class _HomePageState extends ConsumerState<HomePage> {
         targetPadding: EdgeInsets.all(8.w),
         tooltipPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
         disableMovingAnimation: true,
-        child: FloatingActionButton.extended(
+        child: FloatingActionButton(
           onPressed: () => showChatbotSheet(context),
           backgroundColor: AppColors.orange500,
           foregroundColor: Colors.white,
           elevation: 6,
-          icon: const Icon(Icons.chat_bubble_rounded),
-          label: const Text('AI 코치'),
+          child: const Icon(Icons.chat_bubble_rounded),
         ),
       ),
       body: Column(
