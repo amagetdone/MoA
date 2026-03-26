@@ -50,9 +50,7 @@ public class BudgetAllocationTriggerService {
 		refreshEssentialExpenseMonthFromAnalysisUseCase.execute(userId, baseMonth);
 
 		User userReference = userReference(userId);
-		long monthlyIncome = budgetMonthRepository.findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, baseMonth)
-			.map(BudgetMonth::getTotalIncomeAmount)
-			.orElse(0L);
+		long monthlyIncome = resolveMonthlyIncome(userId, baseMonth);
 
 		List<EssentialExpenseMonth> essentials = essentialExpenseMonthRepository
 			.findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(userId);
@@ -66,6 +64,13 @@ public class BudgetAllocationTriggerService {
 			activePlans,
 			allocationEndDate
 		);
+	}
+
+	private long resolveMonthlyIncome(Integer userId, LocalDate baseMonth) {
+		return budgetMonthRepository.findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, baseMonth)
+			.or(() -> budgetMonthRepository.findFirstByUser_IdOrderByBaseDateDescIdDesc(userId))
+			.map(BudgetMonth::getTotalIncomeAmount)
+			.orElse(0L);
 	}
 
 	private User userReference(Integer userId) {

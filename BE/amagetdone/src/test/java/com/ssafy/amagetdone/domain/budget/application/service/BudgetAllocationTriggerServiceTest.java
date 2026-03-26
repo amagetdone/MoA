@@ -107,6 +107,62 @@ class BudgetAllocationTriggerServiceTest {
 			eq(List.of(essential)),
 			eq(List.of(activePlan)),
 			eq(baseMonth.withDayOfMonth(baseMonth.lengthOfMonth()))
+			);
+	}
+
+	@Test
+	void triggerHistoricalFallsBackToLatestMonthlyIncomeWhenStartMonthIncomeIsMissing() {
+		Clock clock = Clock.fixed(Instant.parse("2026-03-19T00:00:00Z"), ZoneId.of("Asia/Seoul"));
+		BudgetAllocationTriggerService service = new BudgetAllocationTriggerService(
+			allocateBudgetUseCase,
+			refreshEssentialExpenseMonthFromAnalysisUseCase,
+			budgetMonthRepository,
+			essentialExpenseMonthRepository,
+			planRepository,
+			clock
+		);
+		Integer userId = 1;
+		LocalDate historicalStartMonth = LocalDate.of(2025, 12, 1);
+		LocalDate latestBaseMonth = LocalDate.of(2026, 3, 1);
+		User user = user(userId);
+		BudgetMonth latestBudgetMonth = BudgetMonth.builder()
+			.user(user)
+			.baseDate(latestBaseMonth)
+			.status(BudgetMonthStatus.OPEN)
+			.totalIncomeAmount(3_000_000L)
+			.build();
+		Plan activePlan = Plan.create(user, "Travel", "desc", 500_000L, historicalStartMonth, latestBaseMonth.plusMonths(1), 1);
+		activePlan.activate();
+
+		given(budgetMonthRepository.findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, historicalStartMonth))
+			.willReturn(Optional.empty());
+		given(budgetMonthRepository.findFirstByUser_IdOrderByBaseDateDescIdDesc(userId))
+			.willReturn(Optional.of(latestBudgetMonth));
+		given(essentialExpenseMonthRepository.findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(userId))
+			.willReturn(List.of());
+		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE)).willReturn(List.of(activePlan));
+
+		service.triggerHistorical(userId, historicalStartMonth, latestBaseMonth.withDayOfMonth(latestBaseMonth.lengthOfMonth()));
+
+		InOrder inOrder = inOrder(
+			refreshEssentialExpenseMonthFromAnalysisUseCase,
+			budgetMonthRepository,
+			essentialExpenseMonthRepository,
+			planRepository,
+			allocateBudgetUseCase
+		);
+		inOrder.verify(refreshEssentialExpenseMonthFromAnalysisUseCase).execute(userId, historicalStartMonth);
+		inOrder.verify(budgetMonthRepository).findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, historicalStartMonth);
+		inOrder.verify(budgetMonthRepository).findFirstByUser_IdOrderByBaseDateDescIdDesc(userId);
+		inOrder.verify(essentialExpenseMonthRepository).findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(userId);
+		inOrder.verify(planRepository).findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE);
+		inOrder.verify(allocateBudgetUseCase).execute(
+			any(User.class),
+			eq(historicalStartMonth),
+			eq(3_000_000L),
+			eq(List.of()),
+			eq(List.of(activePlan)),
+			eq(latestBaseMonth.withDayOfMonth(latestBaseMonth.lengthOfMonth()))
 		);
 	}
 
