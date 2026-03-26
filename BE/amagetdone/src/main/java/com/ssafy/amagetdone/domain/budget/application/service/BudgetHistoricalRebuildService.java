@@ -50,7 +50,6 @@ public class BudgetHistoricalRebuildService {
 	private final PlanWeekAllocationRepository planWeekAllocationRepository;
 	private final BudgetAllocationTriggerService budgetAllocationTriggerService;
 	private final BudgetActualSpentRefreshService budgetActualSpentRefreshService;
-	private final BudgetRolloverResyncService budgetRolloverResyncService;
 	private final DailyGoalSavingAccrualService dailyGoalSavingAccrualService;
 	private final EntityManager entityManager;
 	private final Clock clock;
@@ -129,7 +128,6 @@ public class BudgetHistoricalRebuildService {
 		if (!allocationResult.budgetWeeks().isEmpty()) {
 			budgetActualSpentRefreshService.refresh(userId, allocationResult.budgetWeeks());
 		}
-		budgetRolloverResyncService.resync(userId);
 		flushAndClear();
 
 		return dailyGoalSavingAccrualService.backfillAccrual(userId, new GoalSavingAccrualForceDto.BackfillRequest(null));

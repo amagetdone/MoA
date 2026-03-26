@@ -82,9 +82,6 @@ class BudgetHistoricalRebuildServiceTest {
 	private BudgetActualSpentRefreshService budgetActualSpentRefreshService;
 
 	@Mock
-	private BudgetRolloverResyncService budgetRolloverResyncService;
-
-	@Mock
 	private DailyGoalSavingAccrualService dailyGoalSavingAccrualService;
 
 	@Mock
@@ -168,7 +165,6 @@ class BudgetHistoricalRebuildServiceTest {
 			planWeekAllocationRepository,
 			budgetAllocationTriggerService,
 			budgetActualSpentRefreshService,
-			budgetRolloverResyncService,
 			dailyGoalSavingAccrualService,
 			entityManager,
 			Clock.fixed(Instant.parse("2026-03-20T00:00:00Z"), ZoneId.of("Asia/Seoul"))
@@ -184,7 +180,6 @@ class BudgetHistoricalRebuildServiceTest {
 		verify(budgetWeekRepository).deleteAll(List.of(staleWeek));
 		verify(budgetAllocationTriggerService).triggerHistorical(1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 20));
 		verify(budgetActualSpentRefreshService).refresh(1, List.of(rebuiltWeek));
-		verify(budgetRolloverResyncService).resync(1);
 		verify(dailyGoalSavingAccrualService).backfillAccrual(1, new GoalSavingAccrualForceDto.BackfillRequest(null));
 		verify(entityManager, org.mockito.Mockito.times(2)).flush();
 		verify(entityManager, org.mockito.Mockito.times(2)).clear();
@@ -198,7 +193,6 @@ class BudgetHistoricalRebuildServiceTest {
 			entityManager,
 			budgetAllocationTriggerService,
 			budgetActualSpentRefreshService,
-			budgetRolloverResyncService,
 			dailyGoalSavingAccrualService
 		);
 		inOrder.verify(budgetAdjustmentRepository).deleteAll(List.of(staleAutoAdd, staleManualAdd));
@@ -211,7 +205,6 @@ class BudgetHistoricalRebuildServiceTest {
 		inOrder.verify(entityManager).clear();
 		inOrder.verify(budgetAllocationTriggerService).triggerHistorical(1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 20));
 		inOrder.verify(budgetActualSpentRefreshService).refresh(1, List.of(rebuiltWeek));
-		inOrder.verify(budgetRolloverResyncService).resync(1);
 		inOrder.verify(entityManager).flush();
 		inOrder.verify(entityManager).clear();
 		inOrder.verify(dailyGoalSavingAccrualService).backfillAccrual(1, new GoalSavingAccrualForceDto.BackfillRequest(null));
@@ -232,7 +225,6 @@ class BudgetHistoricalRebuildServiceTest {
 			planWeekAllocationRepository,
 			budgetAllocationTriggerService,
 			budgetActualSpentRefreshService,
-			budgetRolloverResyncService,
 			dailyGoalSavingAccrualService,
 			entityManager,
 			Clock.fixed(Instant.parse("2026-03-20T00:00:00Z"), ZoneId.of("Asia/Seoul"))
@@ -292,7 +284,6 @@ class BudgetHistoricalRebuildServiceTest {
 			planWeekAllocationRepository,
 			budgetAllocationTriggerService,
 			budgetActualSpentRefreshService,
-			budgetRolloverResyncService,
 			dailyGoalSavingAccrualService,
 			entityManager,
 			Clock.fixed(Instant.parse("2026-03-20T00:00:00Z"), ZoneId.of("Asia/Seoul"))
@@ -359,7 +350,6 @@ class BudgetHistoricalRebuildServiceTest {
 			planWeekAllocationRepository,
 			budgetAllocationTriggerService,
 			budgetActualSpentRefreshService,
-			budgetRolloverResyncService,
 			dailyGoalSavingAccrualService,
 			entityManager,
 			Clock.fixed(Instant.parse("2026-03-20T00:00:00Z"), ZoneId.of("Asia/Seoul"))

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willDoNothing;
 import static org.mockito.Mockito.verify;
 
 import java.lang.reflect.Field;
@@ -226,6 +227,25 @@ class MemberAuthServiceTest {
 
 		assertTrue(containsLog(appender, "event=SOCIAL_AUTH_FAILURE"));
 		assertTrue(containsLog(appender, "event=MEMBER_LOGIN_FAILURE"));
+	}
+
+	@Test
+	void resetTestUserDelegatesToUseCaseWithCurrentUserId() {
+		MemberAuthService memberAuthService = new MemberAuthService(
+			List.of(kakaoSocialAuthClient, googleSocialAuthClient, testSocialAuthClient),
+			testSocialAuthClient,
+			findOrCreateSocialUserUseCase,
+			issueMemberTokensUseCase,
+			resetTestSocialUserUseCase,
+			ensureFinMemberLinkedUseCase,
+			accountRepository,
+			planRepository
+		);
+		willDoNothing().given(resetTestSocialUserUseCase).execute(5);
+
+		memberAuthService.resetTestUser(5);
+
+		verify(resetTestSocialUserUseCase).execute(5);
 	}
 
 	private void setUserId(User user, int id) {

@@ -48,10 +48,13 @@ public interface AuthDocsController {
 	);
 
 	@Operation(summary = "테스트 소셜 사용자 초기화", description = "테스트용 소셜 사용자를 초기화합니다.")
+	@SecurityRequirement(name = "bearerAuth")
 	@ApiResponses({
 		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "테스트 사용자 초기화 성공")
 	})
-	ApiResponse<TestSocialResetDto.Response> resetTestSocialUser();
+	ApiResponse<TestSocialResetDto.Response> resetTestSocialUser(
+		@Parameter(hidden = true) String authorization
+	);
 
 	@Operation(summary = "테스트 금융 자산 동기화", description = "테스트 소셜 사용자 계좌와 카드를 수동 동기화합니다.")
 	@SecurityRequirement(name = "bearerAuth")

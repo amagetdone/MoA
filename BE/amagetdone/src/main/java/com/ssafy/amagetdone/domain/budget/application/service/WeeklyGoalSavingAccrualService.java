@@ -114,7 +114,6 @@ public class WeeklyGoalSavingAccrualService {
 
 	private void applyAccruals(List<PlanWeekAllocation> allocations, long pool, BudgetWeek budgetWeek) {
 		long remaining = pool;
-		Map<Integer, Long> savedAmountDeltas = new LinkedHashMap<>();
 		Map<Integer, Long> currentSavedAmounts = new LinkedHashMap<>();
 		List<Integer> completedPriorities = new ArrayList<>();
 
@@ -130,7 +129,7 @@ public class WeeklyGoalSavingAccrualService {
 			if (accrual > 0L) {
 				savedAmount += accrual;
 				currentSavedAmounts.put(plan.getId(), savedAmount);
-				savedAmountDeltas.merge(plan.getId(), accrual, Long::sum);
+				plan.setSavedAmount(savedAmount);
 				budgetAdjustmentRepository.save(BudgetAdjustment.builder()
 					.budgetWeek(budgetWeek)
 					.plan(plan)
@@ -151,8 +150,6 @@ public class WeeklyGoalSavingAccrualService {
 				plan.setStatus(PlanStatus.COMPLETED);
 			}
 		}
-
-		savedAmountDeltas.forEach((planId, delta) -> planRepository.adjustSavedAmount(planId, delta));
 
 		planWeekAllocationRepository.saveAll(allocations);
 		List<Plan> updatedPlans = allocations.stream()

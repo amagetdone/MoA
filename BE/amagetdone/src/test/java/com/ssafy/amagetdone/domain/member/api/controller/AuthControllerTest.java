@@ -132,14 +132,19 @@ class AuthControllerTest {
 
 	@Test
 	void socialTestResetReturnsSuccess() throws Exception {
-		willDoNothing().given(memberAuthService).resetTestUser();
+		given(jwtAccessTokenReader.readUserId("Bearer access-token")).willReturn(7);
+		willDoNothing().given(memberAuthService).resetTestUser(7);
 
-		mockMvc.perform(apiPost("/v1/auth/social/test/reset"))
+		mockMvc.perform(apiPost("/v1/auth/social/test/reset")
+				.header("Authorization", "Bearer access-token"))
 			.andExpect(status().isOk())
 			.andExpect(content().encoding("UTF-8"))
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.message").value("\uD14C\uC2A4\uD2B8 \uC18C\uC15C \uC0AC\uC6A9\uC790\uB97C \uCD08\uAE30\uD654\uD588\uC2B5\uB2C8\uB2E4."))
 			.andExpect(jsonPath("$.data.success").value(true));
+
+		verify(jwtAccessTokenReader).readUserId("Bearer access-token");
+		verify(memberAuthService).resetTestUser(7);
 	}
 
 	@Test

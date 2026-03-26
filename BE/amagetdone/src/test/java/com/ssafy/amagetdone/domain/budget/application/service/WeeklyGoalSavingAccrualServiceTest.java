@@ -1,5 +1,6 @@
 package com.ssafy.amagetdone.domain.budget.application.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -81,12 +82,12 @@ class WeeklyGoalSavingAccrualServiceTest {
 		given(planWeekAllocationRepository.findByBudgetWeek(budgetWeek)).willReturn(List.of());
 		given(budgetAdjustmentRepository.findByBudgetWeekOrderByCreatedAtDesc(budgetWeek)).willReturn(List.of());
 		given(budgetAdjustmentRepository.save(any(BudgetAdjustment.class))).willAnswer(invocation -> invocation.getArgument(0));
-		given(planRepository.adjustSavedAmount(101, 100L)).willReturn(1);
-
 		weeklyGoalSavingAccrualService.applyWeeklyAccrual(1);
 
+		assertEquals(1_000L, completedPlan.getSavedAmount());
 		verify(planPriorityService).compactPrioritiesAfterCompletion(1, 2);
 		verify(planRepository).saveAll(List.of(completedPlan));
+		verify(planRepository, never()).adjustSavedAmount(any(), any());
 	}
 
 	@Test
@@ -105,12 +106,12 @@ class WeeklyGoalSavingAccrualServiceTest {
 		given(planWeekAllocationRepository.findByBudgetWeek(budgetWeek)).willReturn(List.of());
 		given(budgetAdjustmentRepository.findByBudgetWeekOrderByCreatedAtDesc(budgetWeek)).willReturn(List.of());
 		given(budgetAdjustmentRepository.save(any(BudgetAdjustment.class))).willAnswer(invocation -> invocation.getArgument(0));
-		given(planRepository.adjustSavedAmount(101, 100L)).willReturn(1);
-
 		weeklyGoalSavingAccrualService.applyWeeklyAccrual(1);
 
+		assertEquals(900L, activePlan.getSavedAmount());
 		verify(planPriorityService, never()).compactPrioritiesAfterCompletion(any(), any());
 		verify(planRepository, never()).saveAll(any());
+		verify(planRepository, never()).adjustSavedAmount(any(), any());
 	}
 
 	private User user(int userId) {

@@ -10,5 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface SocialAccountRepository extends JpaRepository<SocialAccount, Integer> {
 	Optional<SocialAccount> findByProviderAndProviderUid(SocialProvider provider, String providerUid);
 
+	Optional<SocialAccount> findByUser_IdAndProvider(Integer userId, SocialProvider provider);
+
 	boolean existsByUser_IdAndProvider(Integer userId, SocialProvider provider);
 }

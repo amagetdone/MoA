@@ -52,15 +52,16 @@ public class MemberAuthService {
 		return authenticateInternal(SocialProvider.TEST, identity);
 	}
 
-	public void resetTestUser() {
+	public void resetTestUser(Integer userId) {
 		String requestId = MemberLogHelper.requestId();
 		try {
-			resetTestSocialUserUseCase.execute();
-			log.info("event=TEST_SOCIAL_RESET_SUCCESS requestId={}", requestId);
+			resetTestSocialUserUseCase.execute(userId);
+			log.info("event=TEST_SOCIAL_RESET_SUCCESS requestId={} localUserId={}", requestId, userId);
 		} catch (RuntimeException exception) {
 			log.warn(
-				"event=TEST_SOCIAL_RESET_FAILURE requestId={} errorType={}",
+				"event=TEST_SOCIAL_RESET_FAILURE requestId={} localUserId={} errorType={}",
 				requestId,
+				userId,
 				exception.getClass().getSimpleName()
 			);
 			throw exception;

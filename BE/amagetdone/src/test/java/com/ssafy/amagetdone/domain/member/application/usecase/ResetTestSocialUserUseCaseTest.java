@@ -137,10 +137,10 @@ class ResetTestSocialUserUseCaseTest {
 		user.activate();
 		SocialAccount socialAccount = SocialAccount.create(user, SocialProvider.TEST, "test-social-user-001");
 
-		given(socialAccountRepository.findByProviderAndProviderUid(SocialProvider.TEST, "test-social-user-001"))
+		given(socialAccountRepository.findByUser_IdAndProvider(1, SocialProvider.TEST))
 			.willReturn(Optional.of(socialAccount));
 
-		useCase.execute();
+		useCase.execute(1);
 
 		verify(transactionAnalysisResultRepository).deleteAllByUserId(1);
 		verify(accountTransactionOverrideRepository).deleteAllByUserId(1);
@@ -169,10 +169,10 @@ class ResetTestSocialUserUseCaseTest {
 	@Test
 	void executeIsIdempotentWhenTestUserDoesNotExist() {
 		ResetTestSocialUserUseCase useCase = createUseCase();
-		given(socialAccountRepository.findByProviderAndProviderUid(SocialProvider.TEST, "test-social-user-001"))
+		given(socialAccountRepository.findByUser_IdAndProvider(1, SocialProvider.TEST))
 			.willReturn(Optional.empty());
 
-		useCase.execute();
+		useCase.execute(1);
 
 		verifyNoInteractions(accountRepository, planRepository, planWeekAllocationRepository, refreshTokenStore);
 	}

@@ -64,8 +64,12 @@ public class AuthController implements AuthDocsController {
 	}
 
 	@PostMapping("/social/test/reset")
-	public ApiResponse<TestSocialResetDto.Response> resetTestSocialUser() {
-		memberAuthService.resetTestUser();
+	public ApiResponse<TestSocialResetDto.Response> resetTestSocialUser(
+		@Parameter(hidden = true)
+		@RequestHeader(name = "Authorization", required = false) String authorization
+	) {
+		int userId = jwtAccessTokenReader.readUserId(authorization);
+		memberAuthService.resetTestUser(userId);
 		return ApiResponse.ok("테스트 소셜 사용자를 초기화했습니다.", new TestSocialResetDto.Response(true));
 	}
 

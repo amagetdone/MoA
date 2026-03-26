@@ -12,7 +12,6 @@ import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseMonth
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekCategoryRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseSnapshotWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialWeekAllocationRepository;
-import com.ssafy.amagetdone.domain.member.infra.client.MockSocialAuthClient;
 import com.ssafy.amagetdone.domain.member.model.repository.RefreshTokenStore;
 import com.ssafy.amagetdone.domain.member.model.repository.SocialAccountRepository;
 import com.ssafy.amagetdone.domain.member.model.vo.SocialProvider;
@@ -95,68 +94,68 @@ public class ResetTestSocialUserUseCase {
 	}
 
 	@Transactional
-	public void execute() {
-		socialAccountRepository.findByProviderAndProviderUid(SocialProvider.TEST, MockSocialAuthClient.TEST_PROVIDER_UID)
+	public void execute(Integer userId) {
+		socialAccountRepository.findByUser_IdAndProvider(userId, SocialProvider.TEST)
 			.ifPresent(socialAccount -> {
-				Integer userId = socialAccount.getUser().getId();
+				Integer targetUserId = socialAccount.getUser().getId();
 
 				// 1. Transaction analysis results (FK → TransactionOverride)
-				transactionAnalysisResultRepository.deleteAllByUserId(userId);
+				transactionAnalysisResultRepository.deleteAllByUserId(targetUserId);
 
 				// 2. Transaction overrides (FK → Account/Card, inherits TransactionOverride)
-				accountTransactionOverrideRepository.deleteAllByUserId(userId);
-				cardTransactionOverrideRepository.deleteAllByUserId(userId);
+				accountTransactionOverrideRepository.deleteAllByUserId(targetUserId);
+				cardTransactionOverrideRepository.deleteAllByUserId(targetUserId);
 
 				// 3. Transaction analysis metadata (FK → User)
-				transactionAnalysisMetadataRepository.deleteAllByUserId(userId);
+				transactionAnalysisMetadataRepository.deleteAllByUserId(targetUserId);
 
 				// 4. Budget adjustments (FK → BudgetWeek, Plan)
-				budgetAdjustmentRepository.deleteAllByUserId(userId);
+				budgetAdjustmentRepository.deleteAllByUserId(targetUserId);
 
 				// 5. Budget rollovers (FK → BudgetWeek)
-				budgetRolloverRepository.deleteAllByUserId(userId);
+				budgetRolloverRepository.deleteAllByUserId(targetUserId);
 
 				// 6. Essential week allocations (FK → BudgetWeek, EssentialExpenseSnapshotWeek)
-				essentialWeekAllocationRepository.deleteAllByUserId(userId);
+				essentialWeekAllocationRepository.deleteAllByUserId(targetUserId);
 
 				// 7. Essential expense snapshot week categories (FK → EssentialExpenseSnapshotWeek)
-				essentialExpenseSnapshotWeekCategoryRepository.deleteAllByUserId(userId);
+				essentialExpenseSnapshotWeekCategoryRepository.deleteAllByUserId(targetUserId);
 
 				// 8. Essential expense snapshot weeks (FK → User)
-				essentialExpenseSnapshotWeekRepository.deleteAllByUserId(userId);
+				essentialExpenseSnapshotWeekRepository.deleteAllByUserId(targetUserId);
 
 				// 9. Essential expense months (FK → BudgetMonth)
-				essentialExpenseMonthRepository.deleteAllByUserId(userId);
+				essentialExpenseMonthRepository.deleteAllByUserId(targetUserId);
 
 				// 10. Plan week allocations (FK → Plan, BudgetWeek)
-				planWeekAllocationRepository.deleteAllByUserId(userId);
+				planWeekAllocationRepository.deleteAllByUserId(targetUserId);
 
 				// 11. Pockets (FK → Account, BudgetWeek)
-				pocketRepository.deleteAllByUserId(userId);
+				pocketRepository.deleteAllByUserId(targetUserId);
 
 				// 12. Plans (FK → User)
-				planRepository.deleteAllByUserId(userId);
+				planRepository.deleteAllByUserId(targetUserId);
 
 				// 13. Budget weeks (FK → User)
-				budgetWeekRepository.deleteAllByUserId(userId);
+				budgetWeekRepository.deleteAllByUserId(targetUserId);
 
 				// 14. Budget months (FK → User)
-				budgetMonthRepository.deleteAllByUserId(userId);
+				budgetMonthRepository.deleteAllByUserId(targetUserId);
 
 				// 15. Account verifications (FK → User)
-				accountVerificationRepository.deleteAllByUserId(userId);
+				accountVerificationRepository.deleteAllByUserId(targetUserId);
 
 				// 16. Cards (FK → Account)
-				cardRepository.deleteAllByUserId(userId);
+				cardRepository.deleteAllByUserId(targetUserId);
 
 				// 17. Accounts (FK → User)
-				accountRepository.deleteByUserId(userId);
+				accountRepository.deleteByUserId(targetUserId);
 
 				// 18. Reset user status to PENDING
 				socialAccount.getUser().resetToPending();
 
 				// 19. Invalidate refresh tokens
-				refreshTokenStore.invalidateAll(userId);
+				refreshTokenStore.invalidateAll(targetUserId);
 			});
 	}
 }
