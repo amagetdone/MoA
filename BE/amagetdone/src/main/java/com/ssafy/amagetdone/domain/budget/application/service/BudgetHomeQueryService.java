@@ -149,7 +149,7 @@ public class BudgetHomeQueryService {
 			.filter(a -> a.getPlan() != null && a.getPlan().getId() != null)
 			.collect(java.util.stream.Collectors.toMap(
 				a -> a.getPlan().getId(),
-				a -> zero(a.getFinalAmount()),
+				a -> zero(a.getPlannedAmount()),
 				Long::sum
 			));
 
