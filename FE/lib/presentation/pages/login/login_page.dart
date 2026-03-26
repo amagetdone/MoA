@@ -26,11 +26,13 @@ class _LoginPageState extends ConsumerState<LoginPage>
   Timer? _interruptedLoginTimer;
   bool _backgroundedDuringLogin = false;
   WebWindowFocusListener? _webWindowFocusListener;
+  bool _sessionExpiredDialogShown = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _maybeShowSessionExpiredDialog();
 
     if (kIsWeb) {
       _webWindowFocusListener = WebWindowFocusListener(
@@ -41,11 +43,107 @@ class _LoginPageState extends ConsumerState<LoginPage>
   }
 
   @override
+  void didUpdateWidget(covariant LoginPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.reason != widget.reason) {
+      _maybeShowSessionExpiredDialog();
+    }
+  }
+
+  @override
   void dispose() {
     _interruptedLoginTimer?.cancel();
     _webWindowFocusListener?.detach();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _maybeShowSessionExpiredDialog() {
+    if (widget.reason != AppRoutes.sessionExpiredReason ||
+        _sessionExpiredDialogShown) {
+      return;
+    }
+
+    _sessionExpiredDialogShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) {
+        return;
+      }
+
+      final colors = AppColors.of(context);
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        builder: (dialogContext) {
+          return AlertDialog(
+            insetPadding: EdgeInsets.symmetric(horizontal: 28.w),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            titlePadding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 8.h),
+            contentPadding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 20.h),
+            actionsPadding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 20.h),
+            title: Row(
+              children: [
+                Container(
+                  width: 40.w,
+                  height: 40.w,
+                  decoration: BoxDecoration(
+                    color: AppColors.red500.withValues(alpha: 0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.warning_amber_rounded,
+                    color: AppColors.red500,
+                    size: 22.w,
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Text(
+                    '세션이 종료되었어요',
+                    style: AppTextStyles.headingMd.copyWith(
+                      color: colors.textPrimary,
+                      fontSize: 18.sp,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              '다른 기기에서 로그인되어 현재 세션이 종료되었습니다.\n보안을 위해 다시 로그인해주세요.',
+              style: AppTextStyles.bodyMd.copyWith(
+                color: colors.textSecondary,
+                height: 1.5,
+              ),
+            ),
+            actions: [
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.orange500,
+                    foregroundColor: colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 14.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14.r),
+                    ),
+                  ),
+                  child: const Text('확인'),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (!mounted || widget.reason != AppRoutes.sessionExpiredReason) {
+        return;
+      }
+
+      context.replace(AppRoutes.login);
+    });
   }
 
   void _scheduleInterruptedLoginReset() {
@@ -157,28 +255,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              if (widget.reason == AppRoutes.sessionExpiredReason) ...[
-                SizedBox(height: 16.h),
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                  decoration: BoxDecoration(
-                    color: AppColors.red500.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12.r),
-                    border: Border.all(
-                      color: AppColors.red500.withValues(alpha: 0.18),
-                    ),
-                  ),
-                  child: Text(
-                    '다른 기기에서 로그인되어 세션이 종료되었습니다. 다시 로그인해주세요.',
-                    style: AppTextStyles.bodySm.copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
               const Spacer(flex: 4),
               _SocialLoginButton(
                 onPressed:
