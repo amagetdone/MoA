@@ -12,4 +12,6 @@ abstract class NotificationInboxRepository {
   });
   Future<void> markAsRead(String id);
   Future<void> markAllAsRead();
+  Future<void> deleteNotification(String id);
+  Future<void> clearNotifications();
 }

@@ -9,6 +9,7 @@ class NotificationInboxPersistence {
   static const _boxName = 'more_notification_inbox_box';
   static const _storagePath = 'more_app';
   static const _maxItems = 100;
+  static const _ownerUserIdKey = '__owner_user_id__';
 
   static bool _initialized = false;
   static Box<String>? _box;
@@ -26,12 +27,18 @@ class NotificationInboxPersistence {
   static Future<List<AppNotificationItem>> getNotifications() async {
     await ensureReady();
     final box = _box!;
-    final items = box.values
-        .map((value) => AppNotificationItem.fromJson(
-              jsonDecode(value) as Map<String, dynamic>,
-            ))
-        .toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final items =
+        box
+            .toMap()
+            .entries
+            .where((entry) => !_isMetadataKey(entry.key.toString()))
+            .map(
+              (entry) => AppNotificationItem.fromJson(
+                jsonDecode(entry.value) as Map<String, dynamic>,
+              ),
+            )
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return items;
   }
 
@@ -48,14 +55,31 @@ class NotificationInboxPersistence {
     }
   }
 
+  static Future<void> syncOwner(String? ownerUserId) async {
+    await ensureReady();
+    final box = _box!;
+    final normalizedOwner = ownerUserId?.trim() ?? '';
+    final currentOwner = box.get(_ownerUserIdKey) ?? '';
+
+    if (currentOwner == normalizedOwner) {
+      return;
+    }
+
+    await clearNotifications();
+
+    if (normalizedOwner.isEmpty) {
+      await box.delete(_ownerUserIdKey);
+      return;
+    }
+
+    await box.put(_ownerUserIdKey, normalizedOwner);
+  }
+
   static Future<void> saveRemoteMessage(
     RemoteMessage message, {
     bool markAsRead = false,
   }) async {
-    final item = mapRemoteMessageToInboxItem(
-      message,
-      markAsRead: markAsRead,
-    );
+    final item = mapRemoteMessageToInboxItem(message, markAsRead: markAsRead);
     if (item == null) {
       return;
     }
@@ -99,18 +123,31 @@ class NotificationInboxPersistence {
     }
   }
 
+  static Future<void> deleteNotification(String id) async {
+    await ensureReady();
+    await _box!.delete(id);
+  }
+
+  static Future<void> clearNotifications() async {
+    await ensureReady();
+    final keysToDelete = _box!.keys
+        .whereType<String>()
+        .where((key) => !_isMetadataKey(key))
+        .toList();
+    if (keysToDelete.isEmpty) {
+      return;
+    }
+    await _box!.deleteAll(keysToDelete);
+  }
+
   static AppNotificationItem? mapRemoteMessageToInboxItem(
     RemoteMessage message, {
     bool markAsRead = false,
   }) {
     final title =
-        message.notification?.title ??
-        message.data['title']?.toString() ??
-        '';
+        message.notification?.title ?? message.data['title']?.toString() ?? '';
     final body =
-        message.notification?.body ??
-        message.data['body']?.toString() ??
-        '';
+        message.notification?.body ?? message.data['body']?.toString() ?? '';
 
     if (title.isEmpty && body.isEmpty) {
       return null;
@@ -187,5 +224,9 @@ class NotificationInboxPersistence {
     }
 
     return null;
+  }
+
+  static bool _isMetadataKey(String key) {
+    return key == _ownerUserIdKey;
   }
 }

@@ -97,7 +97,9 @@ final pushNotificationSyncServiceProvider =
 
 final notificationInboxRepositoryProvider =
     Provider<NotificationInboxRepository>((ref) {
-      final repository = NotificationInboxRepositoryImpl();
+      final repository = NotificationInboxRepositoryImpl(
+        authLocalDataSource: ref.read(authLocalDataSourceProvider),
+      );
       return repository;
     });
 
@@ -222,7 +224,9 @@ final menuRepositoryProvider = Provider<MenuRepository>((ref) {
   );
 });
 
-final chatbotRemoteDataSourceProvider = Provider<RealChatbotRemoteDataSource>((ref) {
+final chatbotRemoteDataSourceProvider = Provider<RealChatbotRemoteDataSource>((
+  ref,
+) {
   return RealChatbotRemoteDataSource(dio: ref.read(apiClientProvider).dio);
 });
 

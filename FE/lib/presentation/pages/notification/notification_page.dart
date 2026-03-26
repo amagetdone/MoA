@@ -26,12 +26,13 @@ class NotificationPage extends ConsumerWidget {
           Padding(
             padding: EdgeInsets.only(right: 12.w),
             child: TextButton(
-              onPressed: () => ref
-                  .read(notificationInboxRepositoryProvider)
-                  .markAllAsRead(),
+              onPressed: () =>
+                  ref.read(notificationInboxRepositoryProvider).markAllAsRead(),
               child: Text(
                 '모두 읽음',
-                style: AppTextStyles.bodySm.copyWith(color: AppColors.orange500),
+                style: AppTextStyles.bodySm.copyWith(
+                  color: AppColors.orange500,
+                ),
               ),
             ),
           ),
@@ -84,6 +85,9 @@ class NotificationPage extends ConsumerWidget {
                     context.push(route);
                   }
                 },
+                onDelete: () => ref
+                    .read(notificationInboxRepositoryProvider)
+                    .deleteNotification(item.id),
               );
             },
           );
@@ -105,10 +109,12 @@ class _NotificationCard extends StatelessWidget {
   const _NotificationCard({
     required this.item,
     required this.onTap,
+    required this.onDelete,
   });
 
   final AppNotificationItem item;
   final VoidCallback onTap;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -164,6 +170,18 @@ class _NotificationCard extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+          SizedBox(width: 8.w),
+          IconButton(
+            onPressed: onDelete,
+            splashRadius: 18.w,
+            padding: EdgeInsets.zero,
+            constraints: BoxConstraints.tight(Size(28.w, 28.w)),
+            icon: Icon(
+              Icons.close_rounded,
+              size: 18.w,
+              color: colors.textTertiary,
             ),
           ),
         ],

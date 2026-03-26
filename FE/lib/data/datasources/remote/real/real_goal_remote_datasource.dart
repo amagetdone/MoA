@@ -27,12 +27,21 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
 
     final data = response.data as Map<String, dynamic>;
     final createdPlanId = (data['planId'] as num?)?.toInt() ?? 0;
+    final createdWeeklyMission = _weeklyMissionFromJson(
+      data['weeklyMission'] as Map<String, dynamic>?,
+    );
+    final createdWeeklyBudget = _weeklyBudgetFromJson(
+      data['weeklyBudget'] as Map<String, dynamic>?,
+    );
 
     if (createdPlanId > 0) {
       try {
         final detailedGoal = await findGoalById(createdPlanId.toString());
         if (detailedGoal != null) {
-          return detailedGoal;
+          return detailedGoal.copyWith(
+            weeklyMission: detailedGoal.weeklyMission ?? createdWeeklyMission,
+            weeklyBudget: detailedGoal.weeklyBudget ?? createdWeeklyBudget,
+          );
         }
       } catch (_) {}
     }
@@ -120,6 +129,12 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
       dday: dday,
       achievementRateOverride: achievementRate,
       graphData: _graphDataFromJson(data['graphData'] as Map<String, dynamic>?),
+      weeklyMission: _weeklyMissionFromJson(
+        data['weeklyMission'] as Map<String, dynamic>?,
+      ),
+      weeklyBudget: _weeklyBudgetFromJson(
+        data['weeklyBudget'] as Map<String, dynamic>?,
+      ),
       weeklyPlans: weeklyPlanPage.weeklyPlans.isNotEmpty
           ? weeklyPlanPage.weeklyPlans
           : _weeklyPlansFromJson(data['weeklyPlans'] as List<dynamic>?),

@@ -348,6 +348,8 @@ class PushNotificationSyncService {
   }
 
   Future<void> handleLogout() async {
+    await _notificationInboxRepository.clearNotifications();
+
     if (!_isSupportedPlatform) {
       return;
     }
