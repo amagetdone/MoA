@@ -71,6 +71,19 @@ class Goal {
         : 0.0;
   }
 
+  double get overallProgressRate {
+    if (achievementRateOverride != null) {
+      return (achievementRateOverride! / 100).clamp(0.0, 1.0);
+    }
+    if (targetAmount > 0) {
+      return (currentAmount / targetAmount).clamp(0.0, 1.0);
+    }
+    if (status == GoalStatus.achieved) {
+      return 1.0;
+    }
+    return 0.0;
+  }
+
   int get remainingAmount =>
       (targetAmount - currentAmount).clamp(0, targetAmount);
 

@@ -244,7 +244,7 @@ class _GoalItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final overallProgress = goal.progressRate.clamp(0.0, 1.0);
+    final overallProgress = goal.overallProgressRate.clamp(0.0, 1.0);
     final percent = (overallProgress * 100).toStringAsFixed(0);
     final weeklySaved = goal.weeklySavedAmount;
     final weeklyTarget = goal.weeklyTargetAmount;
@@ -267,7 +267,7 @@ class _GoalItem extends StatelessWidget {
                     ? null
                     : goal.sketchVideoAssetPath,
                 iconName: goal.iconName,
-                progressRate: goal.progressRate,
+                progressRate: overallProgress,
                 size: 48.w,
                 borderRadius: 14.r,
                 forceLoading: goal.isAiPending,
@@ -334,14 +334,17 @@ class _GoalItem extends StatelessWidget {
                 ),
               ),
               SizedBox(width: 10.w),
-              Padding(
-                padding: EdgeInsets.only(bottom: 1.h),
-                child: Text(
-                  '$percent%',
-                  style: AppTextStyles.bodySm.copyWith(
-                    color: AppColors.orange500,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12.sp,
+              SizedBox(
+                height: 16.h,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Text(
+                    '$percent%',
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: AppColors.orange500,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12.sp,
+                    ),
                   ),
                 ),
               ),
@@ -413,10 +416,10 @@ class _GoalProgressBar extends StatelessWidget {
               ),
               Positioned(
                 left: markerLeft - 1.w,
-                bottom: -1.h,
+                bottom: 0,
                 child: Container(
                   width: 2.w,
-                  height: 12.h,
+                  height: 6.h,
                   decoration: BoxDecoration(
                     color: AppColors.orange500,
                     borderRadius: BorderRadius.circular(999.r),
