@@ -60,12 +60,18 @@ public class BudgetRolloverService {
 		int rolloverStep = 1;
 
 		while (rolloverAmount > 0L) {
-			BudgetWeek targetWeek = budgetWeekRepository
+			java.util.Optional<BudgetWeek> nextWeekOpt = budgetWeekRepository
 				.findFirstByUserAndWeekSequenceGreaterThanOrderByWeekSequenceAsc(
 					currentSourceWeek.getUser(),
 					currentSourceWeek.getWeekSequence()
-				)
-				.orElseThrow(() -> new IllegalStateException("Next budget week not found"));
+				);
+			if (nextWeekOpt.isEmpty()) {
+				List<PlanWeekAllocation> currentAllocations = planWeekAllocationRepository.findByBudgetWeek(currentSourceWeek);
+				deductFromPlans(currentSourceWeek, currentAllocations, rolloverAmount);
+				budgetWeekRepository.save(currentSourceWeek);
+				return;
+			}
+			BudgetWeek targetWeek = nextWeekOpt.get();
 
 			List<PlanWeekAllocation> targetAllocations = planWeekAllocationRepository.findByBudgetWeek(targetWeek);
 			applyRollover(targetWeek, targetAllocations, rolloverAmount);
