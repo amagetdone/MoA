@@ -323,6 +323,11 @@ class _AssetPageState extends ConsumerState<AssetPage> {
   Widget _buildTransactionItem(Transaction t) {
     final colors = AppColors.of(context);
     final isPlus = t.type == TransactionType.income;
+    final showCategoryChip = !isPlus && t.category.trim().isNotEmpty;
+    final showMemoText =
+        t.memo != null &&
+        t.memo!.toUpperCase() != 'VARIABLE' &&
+        t.memo!.toUpperCase() != 'FIXED';
     final amountText = '${isPlus ? '+' : '-'}${CurrencyFormatter.formatKRW(t.amount)}';
     final balanceText = CurrencyFormatter.formatKRW(t.balanceAfter);
     final timeText = DateFormat('HH:mm').format(t.dateTime);
@@ -349,19 +354,33 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                     ],
                   ),
                   SizedBox(height: 4.h),
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                        decoration: BoxDecoration(color: _categoryColor(t.category).withValues(alpha: 0.35), borderRadius: BorderRadius.circular(10.r)),
-                        child: Text(t.category, style: AppTextStyles.caption.copyWith(color: _categoryColor(t.category), fontSize: 10.sp)),
-                      ),
-                      if (t.memo != null && t.memo!.toUpperCase() != 'VARIABLE' && t.memo!.toUpperCase() != 'FIXED') ...[
-                        SizedBox(width: 6.w),
-                        Text(t.memo!, style: AppTextStyles.caption.copyWith(color: colors.textTertiary)),
+                  if (showCategoryChip || showMemoText)
+                    Row(
+                      children: [
+                        if (showCategoryChip)
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                            decoration: BoxDecoration(
+                              color: _categoryColor(t.category).withValues(alpha: 0.35),
+                              borderRadius: BorderRadius.circular(10.r),
+                            ),
+                            child: Text(
+                              t.category,
+                              style: AppTextStyles.caption.copyWith(
+                                color: _categoryColor(t.category),
+                                fontSize: 10.sp,
+                              ),
+                            ),
+                          ),
+                        if (showMemoText) ...[
+                          if (showCategoryChip) SizedBox(width: 6.w),
+                          Text(
+                            t.memo!,
+                            style: AppTextStyles.caption.copyWith(color: colors.textTertiary),
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
+                    ),
                 ],
               ),
             ),
