@@ -2,12 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:more_app/data/datasources/remote/chatbot_web_stream.dart';
 import 'package:more_app/domain/repositories/chatbot_repository.dart';
 
 class RealChatbotRemoteDataSource {
   RealChatbotRemoteDataSource({required Dio dio}) : _dio = dio;
 
   final Dio _dio;
+  final _storage = const FlutterSecureStorage();
 
   Future<Map<String, dynamic>> fetchLatestConversation() async {
     final response = await _dio.get<Map<String, dynamic>>(
@@ -42,6 +45,12 @@ class RealChatbotRemoteDataSource {
     final body = <String, dynamic>{'message': message};
     if (conversationId != null) body['conversation_id'] = conversationId;
 
+    final webStream = await _openWebStream(body);
+    if (webStream != null) {
+      yield* _parseResponseChunks(webStream);
+      return;
+    }
+
     final response = await _dio.post<ResponseBody>(
       'v1/chatbot/messages/stream',
       data: body,
@@ -52,11 +61,42 @@ class RealChatbotRemoteDataSource {
       ),
     );
 
-    final stream = response.data!.stream;
+    final stream = response.data!.stream.map(
+      (chunk) => utf8.decode(chunk, allowMalformed: true).replaceAll('\r\n', '\n'),
+    );
+    yield* _parseResponseChunks(stream);
+  }
+
+  Future<Stream<String>?> _openWebStream(Map<String, dynamic> body) async {
+    final headers = <String, String>{};
+    for (final entry in _dio.options.headers.entries) {
+      final value = entry.value;
+      if (value == null) {
+        continue;
+      }
+      headers[entry.key] = value is Iterable ? value.join(', ') : value.toString();
+    }
+
+    final accessToken = await _storage.read(key: 'access_token');
+    if (accessToken != null && accessToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $accessToken';
+    }
+    headers['Accept'] = 'text/event-stream';
+    headers['Content-Type'] = 'application/json';
+
+    final uri = Uri.parse(_dio.options.baseUrl).resolve('v1/chatbot/messages/stream');
+    return openChatbotWebStream(
+      uri: uri,
+      headers: headers,
+      jsonBody: jsonEncode(body),
+    );
+  }
+
+  Stream<ChatStreamEvent> _parseResponseChunks(Stream<String> stream) async* {
     String buffer = '';
 
     await for (final chunk in stream) {
-      buffer += utf8.decode(chunk, allowMalformed: true).replaceAll('\r\n', '\n');
+      buffer += chunk;
 
       // SSE 프레임 단위 처리: 빈 줄 기준으로 분리
       while (buffer.contains('\n\n')) {

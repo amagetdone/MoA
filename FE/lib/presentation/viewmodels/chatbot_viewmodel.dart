@@ -307,6 +307,6 @@ class ChatbotViewModel extends StateNotifier<ChatbotState> {
 }
 
 final chatbotViewModelProvider =
-    StateNotifierProvider.autoDispose<ChatbotViewModel, ChatbotState>((ref) {
+    StateNotifierProvider<ChatbotViewModel, ChatbotState>((ref) {
   return ChatbotViewModel(ref.read(chatbotRepositoryProvider));
 });
