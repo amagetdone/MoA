@@ -186,6 +186,13 @@ class _MenuPageState extends ConsumerState<MenuPage> {
 
             // Menu items
             _MenuListItem(
+              icon: Icons.auto_awesome,
+              title: 'AI 코치',
+              subtitle: '예산·소비·목표에 대해 AI에게 물어보세요',
+              onTap: () => context.push(AppRoutes.chatbot),
+              iconColor: AppColors.green500,
+            ),
+            _MenuListItem(
               icon: Icons.account_balance_wallet_outlined,
               title: '내 자산',
               subtitle: '총 자산·거래내역',
@@ -284,12 +291,14 @@ class _MenuListItem extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final Color? iconColor;
 
   const _MenuListItem({
     required this.icon,
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.iconColor,
   });
 
   @override
@@ -308,7 +317,7 @@ class _MenuListItem extends StatelessWidget {
                 color: colors.gray100,
                 borderRadius: BorderRadius.circular(12.r),
               ),
-              child: Icon(icon, size: 20.w, color: colors.white),
+              child: Icon(icon, size: 20.w, color: iconColor ?? colors.white),
             ),
             SizedBox(width: 14.w),
             Expanded(

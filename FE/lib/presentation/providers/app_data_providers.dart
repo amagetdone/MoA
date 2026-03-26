@@ -43,6 +43,9 @@ import 'package:more_app/domain/repositories/menu_repository.dart';
 import 'package:more_app/domain/repositories/notification_inbox_repository.dart';
 import 'package:more_app/domain/repositories/budget_repository.dart';
 import 'package:more_app/domain/repositories/spending_repository.dart';
+import 'package:more_app/data/datasources/remote/real/real_chatbot_remote_datasource.dart';
+import 'package:more_app/data/repositories/chatbot_repository_impl.dart';
+import 'package:more_app/domain/repositories/chatbot_repository.dart';
 import 'package:more_app/domain/entities/app_notification_item.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/viewmodels/biometric_preference_viewmodel.dart';
@@ -216,6 +219,16 @@ final menuRepositoryProvider = Provider<MenuRepository>((ref) {
   return MenuRepositoryImpl(
     remoteDataSource: ref.read(menuRemoteDataSourceProvider),
     localDataSource: ref.read(appLocalDataSourceProvider),
+  );
+});
+
+final chatbotRemoteDataSourceProvider = Provider<RealChatbotRemoteDataSource>((ref) {
+  return RealChatbotRemoteDataSource(dio: ref.read(apiClientProvider).dio);
+});
+
+final chatbotRepositoryProvider = Provider<ChatbotRepository>((ref) {
+  return ChatbotRepositoryImpl(
+    dataSource: ref.read(chatbotRemoteDataSourceProvider),
   );
 });
 
