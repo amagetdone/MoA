@@ -177,11 +177,13 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                   TextField(
                     controller: _accountController,
                     focusNode: _accountFocusNode,
-                    enabled: !_isAccountVerified,
+                    enabled: selectedBank != null && !_isAccountVerified,
                     keyboardType: TextInputType.number,
                     style: TextStyle(fontSize: 14.sp, color: colors.textPrimary),
                     decoration: InputDecoration(
-                      hintText: '계좌번호를 입력해주세요.',
+                      hintText: selectedBank == null
+                          ? '은행을 먼저 선택해주세요.'
+                          : '계좌번호를 입력해주세요.',
                       hintStyle: AppTextStyles.bodySm.copyWith(color: colors.textTertiary, fontSize: 13.sp),
                       filled: true,
                       fillColor: colors.bgSurface,
@@ -205,7 +207,10 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                       suffixIcon: Padding(
                         padding: EdgeInsets.only(right: 8.w),
                         child: TextButton(
-                          onPressed: _accountController.text.isNotEmpty && !_isVerifying && !_isAccountVerified
+                          onPressed: selectedBank != null &&
+                                  _accountController.text.isNotEmpty &&
+                                  !_isVerifying &&
+                                  !_isAccountVerified
                               ? () async {
                                   setState(() => _isVerifying = true);
                                   try {
