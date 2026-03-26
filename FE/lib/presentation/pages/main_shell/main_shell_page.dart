@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -18,6 +20,9 @@ class MainShellPage extends ConsumerWidget {
     // 탭 전환 시 해당 탭 데이터 갱신
     switch (index) {
       case 0:
+        unawaited(
+          ref.read(spendingRepositoryProvider).syncTransactions(months: 3),
+        );
         ref.read(homeViewModelProvider.notifier).loadData();
         break;
       case 1:
@@ -30,10 +35,7 @@ class MainShellPage extends ConsumerWidget {
         ref.read(menuViewModelProvider.notifier).loadData();
         break;
     }
-    navigationShell.goBranch(
-      index,
-      initialLocation: true,
-    );
+    navigationShell.goBranch(index, initialLocation: true);
   }
 
   @override
@@ -72,24 +74,33 @@ class MainShellPage extends ConsumerWidget {
               destinations: [
                 NavigationDestination(
                   icon: Icon(Icons.home_outlined, size: 24.r),
-                  selectedIcon: Icon(Icons.home, color: AppColors.orange500, size: 24.r),
+                  selectedIcon: Icon(
+                    Icons.home,
+                    color: AppColors.orange500,
+                    size: 24.r,
+                  ),
                   label: '홈',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.bar_chart_outlined, size: 24.r),
-                  selectedIcon: Icon(Icons.bar_chart, color: AppColors.orange500, size: 24.r),
+                  selectedIcon: Icon(
+                    Icons.bar_chart,
+                    color: AppColors.orange500,
+                    size: 24.r,
+                  ),
                   label: '분석',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.flag_outlined, size: 24.r),
-                  selectedIcon: Icon(Icons.flag, color: AppColors.orange500, size: 24.r),
+                  selectedIcon: Icon(
+                    Icons.flag,
+                    color: AppColors.orange500,
+                    size: 24.r,
+                  ),
                   label: '목표',
                 ),
                 NavigationDestination(
-                  icon: _MenuNavIcon(
-                    unreadCount: unreadCount,
-                    selected: false,
-                  ),
+                  icon: _MenuNavIcon(unreadCount: unreadCount, selected: false),
                   selectedIcon: _MenuNavIcon(
                     unreadCount: unreadCount,
                     selected: true,
@@ -107,10 +118,7 @@ class MainShellPage extends ConsumerWidget {
 }
 
 class _MenuNavIcon extends StatelessWidget {
-  const _MenuNavIcon({
-    required this.unreadCount,
-    required this.selected,
-  });
+  const _MenuNavIcon({required this.unreadCount, required this.selected});
 
   final int unreadCount;
   final bool selected;

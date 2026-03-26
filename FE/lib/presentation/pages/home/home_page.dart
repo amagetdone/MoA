@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -69,6 +71,9 @@ class _HomePageState extends ConsumerState<HomePage> {
       viewportFraction: 1,
     );
     Future.microtask(() {
+      unawaited(
+        ref.read(spendingRepositoryProvider).syncTransactions(months: 3),
+      );
       ref
           .read(pushNotificationSyncServiceProvider)
           .promptPermissionIfNeededOnLaunch();

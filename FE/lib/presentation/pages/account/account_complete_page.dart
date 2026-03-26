@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/providers/app_data_providers.dart';
 import 'package:more_app/presentation/viewmodels/account_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
@@ -106,6 +107,12 @@ class AccountCompletePage extends ConsumerWidget {
         text: '완료',
         progress: isOnboarding ? 4 / 7 : null,
         onPressed: () async {
+          try {
+            await ref
+                .read(spendingRepositoryProvider)
+                .syncTransactions(months: 3);
+          } catch (_) {}
+
           await ref.read(accountViewModelProvider.notifier).loadData();
           await ref.read(homeViewModelProvider.notifier).loadData();
 
