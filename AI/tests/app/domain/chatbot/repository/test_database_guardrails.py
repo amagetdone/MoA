@@ -2,6 +2,7 @@ import pytest
 
 from app.core.database import (
     ReadOnlyDatabase,
+    RequestScopedReadOnlyDatabase,
     assert_select_only_sql,
     build_thread_id,
     jdbc_to_sqlalchemy_dsn,
@@ -26,11 +27,19 @@ class _FakeResult:
 
 
 class _FakeBeginContext:
+    def __init__(self) -> None:
+        self.rollback_calls = 0
+        self.is_active = True
+
     def __enter__(self) -> "_FakeBeginContext":
         return self
 
     def __exit__(self, exc_type, exc, tb) -> bool:
         return False
+
+    def rollback(self) -> None:
+        self.rollback_calls += 1
+        self.is_active = False
 
 
 class _FakeConnection:
@@ -38,6 +47,8 @@ class _FakeConnection:
         self.rows = rows
         self.driver_sql_calls: list[str] = []
         self.execute_calls: list[tuple[str, dict[str, object]]] = []
+        self.begin_contexts: list[_FakeBeginContext] = []
+        self.close_calls = 0
 
     def __enter__(self) -> "_FakeConnection":
         return self
@@ -46,7 +57,9 @@ class _FakeConnection:
         return False
 
     def begin(self) -> _FakeBeginContext:
-        return _FakeBeginContext()
+        context = _FakeBeginContext()
+        self.begin_contexts.append(context)
+        return context
 
     def exec_driver_sql(self, statement: str) -> None:
         self.driver_sql_calls.append(statement)
@@ -55,12 +68,17 @@ class _FakeConnection:
         self.execute_calls.append((str(statement), parameters))
         return _FakeResult(self.rows)
 
+    def close(self) -> None:
+        self.close_calls += 1
+
 
 class _FakeEngine:
     def __init__(self, rows: list[dict[str, object]]) -> None:
         self.connection = _FakeConnection(rows)
+        self.connect_calls = 0
 
     def connect(self) -> _FakeConnection:
+        self.connect_calls += 1
         return self.connection
 
 
@@ -176,3 +194,26 @@ def test_read_only_database_from_dsn_uses_bounded_pool_configuration(monkeypatch
             "pool_recycle": 1800,
         },
     }
+
+
+def test_request_scoped_database_reuses_single_connection_for_multiple_selects() -> None:
+    engine = _FakeEngine(rows=[{"id": 1}])
+    database = ReadOnlyDatabase(engine=engine)
+    scoped = database.create_request_scoped()
+
+    first = scoped.execute_select("SELECT 1 AS id", parameters={"user_id": 7})
+    second = scoped.execute_select("SELECT 2 AS id", parameters={"user_id": 8})
+    scoped.close()
+
+    assert isinstance(scoped, RequestScopedReadOnlyDatabase)
+    assert first == [{"id": 1}]
+    assert second == [{"id": 1}]
+    assert engine.connect_calls == 1
+    assert engine.connection.driver_sql_calls == ["SET TRANSACTION READ ONLY"]
+    assert engine.connection.execute_calls == [
+        ("SELECT 1 AS id", {"user_id": 7}),
+        ("SELECT 2 AS id", {"user_id": 8}),
+    ]
+    assert engine.connection.close_calls == 1
+    assert len(engine.connection.begin_contexts) == 1
+    assert engine.connection.begin_contexts[0].rollback_calls == 1

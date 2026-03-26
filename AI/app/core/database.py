@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import threading
 from typing import Any
 
 from app.core.config import build_postgresql_dsn
@@ -91,6 +92,9 @@ class ReadOnlyDatabase:
             )
         )
 
+    def create_request_scoped(self) -> "RequestScopedReadOnlyDatabase":
+        return RequestScopedReadOnlyDatabase(engine=self._engine)
+
     def execute_select(
         self,
         sql: str,
@@ -107,3 +111,62 @@ class ReadOnlyDatabase:
                     parameters or {},
                 )
                 return [dict(row) for row in result.mappings().all()]
+
+
+class RequestScopedReadOnlyDatabase:
+    def __init__(self, *, engine: Any) -> None:
+        self._engine = engine
+        self._connection: Any | None = None
+        self._transaction: Any | None = None
+        self._lock = threading.RLock()
+        self._closed = False
+
+    def execute_select(
+        self,
+        sql: str,
+        *,
+        parameters: dict[str, object] | None = None,
+    ) -> list[dict[str, object]]:
+        normalized_sql = assert_select_only_sql(sql)
+
+        with self._lock:
+            connection = self._get_or_create_connection()
+            result = connection.execute(
+                text(normalized_sql),
+                parameters or {},
+            )
+            return [dict(row) for row in result.mappings().all()]
+
+    def close(self) -> None:
+        with self._lock:
+            if self._closed:
+                return
+
+            transaction = self._transaction
+            connection = self._connection
+            self._transaction = None
+            self._connection = None
+            self._closed = True
+
+            if transaction is not None:
+                rollback = getattr(transaction, "rollback", None)
+                if callable(rollback):
+                    rollback()
+
+            if connection is not None:
+                close = getattr(connection, "close", None)
+                if callable(close):
+                    close()
+
+    def _get_or_create_connection(self) -> Any:
+        if self._closed:
+            raise RuntimeError("request-scoped database connection is already closed")
+
+        if self._connection is None:
+            connection = self._engine.connect()
+            transaction = connection.begin()
+            connection.exec_driver_sql("SET TRANSACTION READ ONLY")
+            self._connection = connection
+            self._transaction = transaction
+
+        return self._connection

@@ -7,9 +7,11 @@ from typing import Any
 from uuid import uuid4
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langgraph.checkpoint.memory import InMemorySaver
 
 from app.core.config import Settings
 from app.core.database import ReadOnlyDatabase, build_thread_id, validate_user_id
+from app.core.llm import build_chat_model
 from app.core.logging import LangfuseTraceLogger
 from app.domain.chatbot.agents.graph import ChatbotToolBundle, build_chatbot_graph
 from app.domain.chatbot.agents.tools.finance_tools import (
@@ -46,6 +48,8 @@ class ChatbotService:
         *,
         settings: Settings,
         graph_factory: Callable[[int], Any] | None = None,
+        request_database_factory: Callable[[], Any] | None = None,
+        request_graph_factory: Callable[[int, Any], Any] | None = None,
         tracer: LangfuseTraceLogger | None = None,
         conversation_id_factory: Callable[[], str] | None = None,
         conversation_store: ConversationMemoryStore | None = None,
@@ -62,6 +66,8 @@ class ChatbotService:
         self._graph_factory = graph_factory or _build_default_graph_factory(
             settings=settings,
         )
+        self._request_database_factory = request_database_factory
+        self._request_graph_factory = request_graph_factory
         self._graph_cache: dict[int, Any] = {}
         self._closeables = list(closeables or [])
 
@@ -81,51 +87,54 @@ class ChatbotService:
             user_id=validated_user_id,
             conversation_id=resolved_conversation_id,
         )
-        graph = self._get_graph(validated_user_id)
         self._conversation_store.append_user_message(
             user_id=validated_user_id,
             conversation_id=resolved_conversation_id,
             content=message,
         )
+        graph, resources = self._build_request_runtime(validated_user_id)
 
-        with self._tracer.start_as_current_span(
-            name="chatbot.reply",
-            input={
-                "user_id": user_id,
-                "message": message,
-                "conversation_id": conversation_id,
-            },
-            metadata={
-                "thread_id": thread_id,
-            },
-        ) as span:
-            result = await graph.ainvoke(
-                {"messages": [HumanMessage(content=message)]},
-                config={"configurable": {"thread_id": thread_id}},
-            )
-            answer = self._extract_answer(result)
-            warnings = list(result.get("warnings") or [])
-            tool_summaries = list(result.get("tool_summaries") or [])
-            if answer.strip():
-                self._conversation_store.append_assistant_message(
-                    user_id=validated_user_id,
-                    conversation_id=resolved_conversation_id,
-                    content=answer,
-                )
-            response = {
-                "conversation_id": resolved_conversation_id,
-                "answer": answer,
-                "warnings": warnings,
-                "tool_summaries": tool_summaries,
-            }
-            span.update(
-                output=response,
-                metadata={
-                    "warning_count": len(warnings),
-                    "tool_summary_count": len(tool_summaries),
+        try:
+            with self._tracer.start_as_current_span(
+                name="chatbot.reply",
+                input={
+                    "user_id": user_id,
+                    "message": message,
+                    "conversation_id": conversation_id,
                 },
-            )
-            return response
+                metadata={
+                    "thread_id": thread_id,
+                },
+            ) as span:
+                result = await graph.ainvoke(
+                    {"messages": [HumanMessage(content=message)]},
+                    config={"configurable": {"thread_id": thread_id}},
+                )
+                answer = self._extract_answer(result)
+                warnings = list(result.get("warnings") or [])
+                tool_summaries = list(result.get("tool_summaries") or [])
+                if answer.strip():
+                    self._conversation_store.append_assistant_message(
+                        user_id=validated_user_id,
+                        conversation_id=resolved_conversation_id,
+                        content=answer,
+                    )
+                response = {
+                    "conversation_id": resolved_conversation_id,
+                    "answer": answer,
+                    "warnings": warnings,
+                    "tool_summaries": tool_summaries,
+                }
+                span.update(
+                    output=response,
+                    metadata={
+                        "warning_count": len(warnings),
+                        "tool_summary_count": len(tool_summaries),
+                    },
+                )
+                return response
+        finally:
+            await _close_resources(resources)
 
     async def stream_reply(
         self,
@@ -143,64 +152,67 @@ class ChatbotService:
             user_id=validated_user_id,
             conversation_id=resolved_conversation_id,
         )
-        graph = self._get_graph(validated_user_id)
         self._conversation_store.append_user_message(
             user_id=validated_user_id,
             conversation_id=resolved_conversation_id,
             content=message,
         )
+        graph, resources = self._build_request_runtime(validated_user_id)
 
         async def _event_stream() -> AsyncIterator[dict[str, object]]:
-            with self._tracer.start_as_current_span(
-                name="chatbot.stream_reply",
-                input={
-                    "user_id": user_id,
-                    "message": message,
-                    "conversation_id": conversation_id,
-                },
-                metadata={
-                    "thread_id": thread_id,
-                },
-            ) as span:
-                yielded_text: list[str] = []
-                yield {"event": "status", "data": {"message": "routing"}}
-
-                async for mode, chunk in graph.astream(
-                    {"messages": [HumanMessage(content=message)]},
-                    config={"configurable": {"thread_id": thread_id}},
-                    stream_mode=["updates", "messages"],
-                ):
-                    if mode == "updates":
-                        continue
-
-                    text = self._extract_stream_text(chunk)
-                    if not text:
-                        continue
-
-                    yielded_text.append(text)
-                    yield {"event": "token", "data": {"text": text}}
-
-                answer = "".join(yielded_text)
-                if answer.strip():
-                    self._conversation_store.append_assistant_message(
-                        user_id=validated_user_id,
-                        conversation_id=resolved_conversation_id,
-                        content=answer,
-                    )
-
-                span.update(
-                    output={
-                        "conversation_id": resolved_conversation_id,
-                        "answer": answer,
+            try:
+                with self._tracer.start_as_current_span(
+                    name="chatbot.stream_reply",
+                    input={
+                        "user_id": user_id,
+                        "message": message,
+                        "conversation_id": conversation_id,
                     },
                     metadata={
-                        "token_count": len(yielded_text),
+                        "thread_id": thread_id,
                     },
-                )
-                yield {
-                    "event": "done",
-                    "data": {"conversation_id": resolved_conversation_id},
-                }
+                ) as span:
+                    yielded_text: list[str] = []
+                    yield {"event": "status", "data": {"message": "routing"}}
+
+                    async for mode, chunk in graph.astream(
+                        {"messages": [HumanMessage(content=message)]},
+                        config={"configurable": {"thread_id": thread_id}},
+                        stream_mode=["updates", "messages"],
+                    ):
+                        if mode == "updates":
+                            continue
+
+                        text = self._extract_stream_text(chunk)
+                        if not text:
+                            continue
+
+                        yielded_text.append(text)
+                        yield {"event": "token", "data": {"text": text}}
+
+                    answer = "".join(yielded_text)
+                    if answer.strip():
+                        self._conversation_store.append_assistant_message(
+                            user_id=validated_user_id,
+                            conversation_id=resolved_conversation_id,
+                            content=answer,
+                        )
+
+                    span.update(
+                        output={
+                            "conversation_id": resolved_conversation_id,
+                            "answer": answer,
+                        },
+                        metadata={
+                            "token_count": len(yielded_text),
+                        },
+                    )
+                    yield {
+                        "event": "done",
+                        "data": {"conversation_id": resolved_conversation_id},
+                    }
+            finally:
+                await _close_resources(resources)
 
         return _event_stream()
 
@@ -235,6 +247,17 @@ class ChatbotService:
         if user_id not in self._graph_cache:
             self._graph_cache[user_id] = self._graph_factory(user_id)
         return self._graph_cache[user_id]
+
+    def _build_request_runtime(self, user_id: int) -> tuple[Any, list[Any]]:
+        if (
+            self._request_database_factory is None
+            or self._request_graph_factory is None
+        ):
+            return self._get_graph(user_id), []
+
+        request_database = self._request_database_factory()
+        graph = self._request_graph_factory(user_id, request_database)
+        return graph, [request_database]
 
     def _resolve_conversation_id(
         self,
@@ -352,10 +375,9 @@ def build_chatbot_service(
 
     tracer = tracer or LangfuseTraceLogger.from_settings(settings)
     database = _build_chatbot_database(settings=settings)
-    repository = ChatbotRepository.from_database(database)
-    graph_factory = _build_user_graph_factory(
+    request_graph_factory = _build_request_scoped_graph_factory(
         settings=settings,
-        repository=repository,
+        tracer=tracer,
     )
     closeables: list[Any] = []
     engine = getattr(database, "_engine", None)
@@ -364,7 +386,8 @@ def build_chatbot_service(
 
     return ChatbotService(
         settings=settings,
-        graph_factory=graph_factory,
+        request_database_factory=database.create_request_scoped,
+        request_graph_factory=request_graph_factory,
         tracer=tracer,
         closeables=closeables,
     )
@@ -400,31 +423,77 @@ def _build_user_graph_factory(
     repository: ChatbotRepository,
 ) -> Callable[[int], Any]:
     def _factory(user_id: int) -> Any:
-        budget_tools = [
+        tool_bundle = _build_tool_bundle(repository=repository, user_id=user_id)
+        return build_chatbot_graph(settings=settings, tools=tool_bundle)
+
+    return _factory
+
+
+def _build_request_scoped_graph_factory(
+    *,
+    settings: Settings,
+    tracer: LangfuseTraceLogger,
+) -> Callable[[int, Any], Any]:
+    checkpointer = InMemorySaver()
+    model_factory = _build_cached_model_factory(
+        settings=settings,
+        tracer=tracer,
+    )
+
+    def _factory(user_id: int, request_database: Any) -> Any:
+        repository = ChatbotRepository.from_database(request_database)
+        tool_bundle = _build_tool_bundle(
+            repository=repository,
+            user_id=user_id,
+        )
+        return build_chatbot_graph(
+            settings=settings,
+            model_factory=model_factory,
+            tools=tool_bundle,
+            checkpointer=checkpointer,
+        )
+
+    return _factory
+
+
+def _build_cached_model_factory(
+    *,
+    settings: Settings,
+    tracer: LangfuseTraceLogger,
+) -> Callable[[str], Any]:
+    models: dict[str, Any] = {}
+
+    def _factory(role: str) -> Any:
+        if role not in models:
+            models[role] = build_chat_model(settings=settings, tracer=tracer)
+        return models[role]
+
+    return _factory
+
+
+def _build_tool_bundle(
+    *,
+    repository: ChatbotRepository,
+    user_id: int,
+) -> ChatbotToolBundle:
+    return ChatbotToolBundle(
+        budget=[
             build_budget_tool(repository=repository, user_id=user_id),
-        ]
-        goal_tools = [
+        ],
+        goals=[
             build_goal_tool(repository=repository, user_id=user_id),
-        ]
-        spending_tools = [
+        ],
+        spending=[
             build_spending_summary_tool(repository=repository, user_id=user_id),
             build_spending_by_category_tool(repository=repository, user_id=user_id),
-        ]
-        anomaly_tools = [
+        ],
+        anomalies=[
             build_recent_spending_anomalies_tool(
                 repository=repository,
                 user_id=user_id,
             ),
-        ]
-        tool_bundle = ChatbotToolBundle(
-            budget=budget_tools,
-            goals=goal_tools,
-            spending=spending_tools,
-            anomalies=anomaly_tools,
-        )
-        return build_chatbot_graph(settings=settings, tools=tool_bundle)
-
-    return _factory
+        ],
+    )
 
 
 def _has_chatbot_runtime_config(settings: Settings) -> bool:
@@ -473,3 +542,8 @@ async def _close_resource(resource: Any) -> None:
         if hasattr(result, "__await__"):
             await result
         return
+
+
+async def _close_resources(resources: Sequence[Any]) -> None:
+    for resource in resources:
+        await _close_resource(resource)

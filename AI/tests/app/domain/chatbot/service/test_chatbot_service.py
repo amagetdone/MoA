@@ -129,6 +129,38 @@ class _FakeGraphFactory:
         return graph
 
 
+class _FakeCloseable:
+    def __init__(self) -> None:
+        self.close_calls = 0
+
+    def close(self) -> None:
+        self.close_calls += 1
+
+
+class _FakeRequestDatabaseFactory:
+    def __init__(self) -> None:
+        self.calls = 0
+        self.instances: list[_FakeCloseable] = []
+
+    def __call__(self) -> _FakeCloseable:
+        self.calls += 1
+        instance = _FakeCloseable()
+        self.instances.append(instance)
+        return instance
+
+
+class _FakeRequestGraphFactory:
+    def __init__(self) -> None:
+        self.calls: list[tuple[int, _FakeCloseable]] = []
+        self.graphs: list[_FakeGraph] = []
+
+    def __call__(self, user_id: int, request_database: _FakeCloseable) -> _FakeGraph:
+        self.calls.append((user_id, request_database))
+        graph = _FakeGraph(reply_final_answer="request scoped answer")
+        self.graphs.append(graph)
+        return graph
+
+
 def _build_settings() -> Settings:
     return Settings(
         _env_file=None,
@@ -520,3 +552,62 @@ def test_get_latest_conversation_returns_latest_metadata() -> None:
         "last_activity_at": "2026-03-26T10:00:00+00:00",
         "expires_at": "2026-03-29T10:00:00+00:00",
     }
+
+
+def test_reply_uses_and_closes_request_scoped_database() -> None:
+    request_database_factory = _FakeRequestDatabaseFactory()
+    request_graph_factory = _FakeRequestGraphFactory()
+    service = ChatbotService(
+        settings=_build_settings(),
+        tracer=_FakeTracer(),
+        request_database_factory=request_database_factory,
+        request_graph_factory=request_graph_factory,
+    )
+
+    async def run() -> dict[str, object]:
+        return await service.reply(
+            user_id=7,
+            message="hello",
+            conversation_id="conv-1",
+        )
+
+    result = anyio.run(run)
+
+    assert result["answer"] == "request scoped answer"
+    assert request_database_factory.calls == 1
+    assert len(request_database_factory.instances) == 1
+    assert request_graph_factory.calls == [(7, request_database_factory.instances[0])]
+    assert request_database_factory.instances[0].close_calls == 1
+
+
+def test_stream_reply_uses_and_closes_request_scoped_database() -> None:
+    request_database_factory = _FakeRequestDatabaseFactory()
+    request_graph_factory = _FakeRequestGraphFactory()
+    service = ChatbotService(
+        settings=_build_settings(),
+        tracer=_FakeTracer(),
+        request_database_factory=request_database_factory,
+        request_graph_factory=request_graph_factory,
+    )
+
+    async def run() -> list[dict[str, object]]:
+        events: list[dict[str, object]] = []
+        stream = await service.stream_reply(
+            user_id=7,
+            message="hello",
+            conversation_id="conv-1",
+        )
+        async for event in stream:
+            events.append(event)
+        return events
+
+    events = anyio.run(run)
+
+    assert events[-1] == {
+        "event": "done",
+        "data": {"conversation_id": "conv-1"},
+    }
+    assert request_database_factory.calls == 1
+    assert len(request_database_factory.instances) == 1
+    assert request_graph_factory.calls == [(7, request_database_factory.instances[0])]
+    assert request_database_factory.instances[0].close_calls == 1
