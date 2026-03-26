@@ -62,6 +62,20 @@ class NotificationInboxPersistence {
     await saveNotification(item);
   }
 
+  static Future<void> savePayloadEnvelope(
+    Map<String, dynamic> envelope, {
+    bool markAsRead = false,
+  }) async {
+    final item = mapPayloadEnvelopeToInboxItem(
+      envelope,
+      markAsRead: markAsRead,
+    );
+    if (item == null) {
+      return;
+    }
+    await saveNotification(item);
+  }
+
   static Future<void> markAsRead(String id) async {
     await ensureReady();
     final box = _box!;
@@ -110,6 +124,38 @@ class NotificationInboxPersistence {
     final payload = message.data.map(
       (key, value) => MapEntry(key, value.toString()),
     );
+
+    return AppNotificationItem(
+      id: id,
+      title: title,
+      body: body,
+      createdAt: createdAt,
+      type: payload['type'] ?? 'general',
+      route: _resolveRoute(payload),
+      payload: payload,
+      isRead: markAsRead,
+    );
+  }
+
+  static AppNotificationItem? mapPayloadEnvelopeToInboxItem(
+    Map<String, dynamic> envelope, {
+    bool markAsRead = false,
+  }) {
+    final title = envelope['title']?.toString() ?? '';
+    final body = envelope['body']?.toString() ?? '';
+
+    if (title.isEmpty && body.isEmpty) {
+      return null;
+    }
+
+    final payload = (envelope['data'] as Map<dynamic, dynamic>? ?? const {})
+        .map((key, value) => MapEntry(key.toString(), value?.toString() ?? ''));
+
+    final sentTimeRaw = envelope['sentTime']?.toString();
+    final createdAt = DateTime.tryParse(sentTimeRaw ?? '') ?? DateTime.now();
+    final id =
+        envelope['messageId']?.toString() ??
+        '${createdAt.microsecondsSinceEpoch}-${title.hashCode}-${body.hashCode}';
 
     return AppNotificationItem(
       id: id,
