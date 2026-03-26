@@ -248,8 +248,10 @@ class _GoalItem extends StatelessWidget {
     final percent = (overallProgress * 100).toStringAsFixed(0);
     final weeklySaved = goal.weeklySavedAmount;
     final weeklyTarget = goal.weeklyTargetAmount;
-    final totalWeeks = goal.totalWeeks.clamp(1, 999);
-    final currentWeek = goal.currentWeekNumber.clamp(1, totalWeeks);
+    final currentWeek = goal.currentWeekNumber.clamp(1, 999);
+    final weeklyTargetMarkerProgress = goal.targetAmount > 0
+        ? ((weeklyTarget * currentWeek) / goal.targetAmount).clamp(0.0, 1.0)
+        : 0.0;
 
     return GestureDetector(
       onTap: () => context.push(AppRoutes.goalDetailLocation(goal.id)),
@@ -323,34 +325,24 @@ class _GoalItem extends StatelessWidget {
 
           // Progress bar + percent
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _SegmentedGoalProgressBar(
-                      progress: overallProgress,
-                      totalWeeks: totalWeeks,
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      '$currentWeek주차 / 총 $totalWeeks주',
-                      style: AppTextStyles.caption.copyWith(
-                        color: colors.textTertiary,
-                        fontSize: 10.sp,
-                      ),
-                    ),
-                  ],
+                child: _GoalProgressBar(
+                  progress: overallProgress,
+                  markerProgress: weeklyTargetMarkerProgress,
                 ),
               ),
               SizedBox(width: 10.w),
-              Text(
-                '$percent%',
-                style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.orange500,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12.sp,
+              Padding(
+                padding: EdgeInsets.only(bottom: 1.h),
+                child: Text(
+                  '$percent%',
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.orange500,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12.sp,
+                  ),
                 ),
               ),
             ],
@@ -361,41 +353,53 @@ class _GoalItem extends StatelessWidget {
   }
 }
 
-class _SegmentedGoalProgressBar extends StatelessWidget {
-  const _SegmentedGoalProgressBar({
+class _GoalProgressBar extends StatelessWidget {
+  const _GoalProgressBar({
     required this.progress,
-    required this.totalWeeks,
+    required this.markerProgress,
   });
 
   final double progress;
-  final int totalWeeks;
+  final double markerProgress;
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    final segmentCount = totalWeeks.clamp(1, 16);
     final normalizedProgress = progress.clamp(0.0, 1.0);
-    final filledSegments = normalizedProgress * segmentCount;
+    final normalizedMarker = markerProgress.clamp(0.0, 1.0);
 
-    return Row(
-      children: List.generate(segmentCount, (index) {
-        final segmentFill = (filledSegments - index).clamp(0.0, 1.0);
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(
-              right: index == segmentCount - 1 ? 0 : 3.w,
-            ),
-            child: Stack(
-              children: [
-                Container(
+    return SizedBox(
+      height: 16.h,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final markerLeft = normalizedMarker <= 0
+              ? 0.0
+              : (constraints.maxWidth * normalizedMarker).clamp(
+                  2.w,
+                  constraints.maxWidth - 2.w,
+                );
+
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
                   height: 6.h,
                   decoration: BoxDecoration(
                     color: AppColors.orange500.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(3.r),
                   ),
                 ),
-                FractionallySizedBox(
-                  widthFactor: segmentFill,
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: normalizedProgress,
                   child: Container(
                     height: 6.h,
                     decoration: BoxDecoration(
@@ -406,21 +410,23 @@ class _SegmentedGoalProgressBar extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (segmentFill <= 0)
-                  Container(
-                    height: 6.h,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(3.r),
-                      border: Border.all(
-                        color: colors.borderDefault.withValues(alpha: 0.45),
-                      ),
-                    ),
+              ),
+              Positioned(
+                left: markerLeft - 1.w,
+                bottom: -1.h,
+                child: Container(
+                  width: 2.w,
+                  height: 12.h,
+                  decoration: BoxDecoration(
+                    color: AppColors.orange500,
+                    borderRadius: BorderRadius.circular(999.r),
                   ),
-              ],
-            ),
-          ),
-        );
-      }),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
