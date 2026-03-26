@@ -42,6 +42,7 @@ def build_chat_model(
     tracer: LangfuseTraceLogger | None = None,
 ) -> ChatOpenAI:
     settings = settings or Settings()
+    tracer = tracer or LangfuseTraceLogger.from_settings(settings)
     callbacks = _build_chat_model_callbacks(settings=settings, tracer=tracer)
 
     kwargs: dict[str, Any] = {
@@ -130,11 +131,10 @@ def _build_chat_model_callbacks(
         return []
 
     public_key = settings.langfuse_public_key or ""
-    secret_key = settings.langfuse_secret_key or ""
-    if not public_key.strip() or not secret_key.strip():
+    if not public_key.strip():
         return []
 
-    callbacks: list[Any] = [LangfuseCallbackHandler(public_key=public_key)]
-    if tracer is not None and tracer.enabled:
-        return callbacks
-    return callbacks
+    if tracer is None or not tracer.enabled:
+        return []
+
+    return [LangfuseCallbackHandler(public_key=public_key)]

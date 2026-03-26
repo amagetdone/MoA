@@ -52,6 +52,14 @@ class _FakeChatOpenAI:
         self.kwargs = kwargs
 
 
+class _FakeEnabledTracer:
+    enabled = True
+
+
+class _FakeDisabledTracer:
+    enabled = False
+
+
 def _build_tool_bundle() -> ChatbotToolBundle:
     return ChatbotToolBundle(
         budget=[_dummy_tool],
@@ -198,14 +206,27 @@ def test_build_chatbot_graph_routes_to_expected_specialist(
 
 def test_build_chat_model_attaches_langfuse_callbacks_when_configured(monkeypatch) -> None:
     captured: dict[str, Any] = {}
+    callback_calls: list[dict[str, Any]] = []
 
     def fake_chat_openai(**kwargs: Any) -> _FakeChatOpenAI:
         captured.update(kwargs)
         return _FakeChatOpenAI(**kwargs)
 
+    def fake_callback_handler(*, public_key: str) -> object:
+        callback_calls.append({"public_key": public_key})
+        return object()
+
     monkeypatch.setattr(
         "app.domain.chatbot.agents.graph.ChatOpenAI",
         fake_chat_openai,
+    )
+    monkeypatch.setattr(
+        "app.domain.chatbot.agents.graph.LangfuseTraceLogger.from_settings",
+        lambda settings: _FakeEnabledTracer(),
+    )
+    monkeypatch.setattr(
+        "app.domain.chatbot.agents.graph.LangfuseCallbackHandler",
+        fake_callback_handler,
     )
 
     settings = Settings(
@@ -228,6 +249,7 @@ def test_build_chat_model_attaches_langfuse_callbacks_when_configured(monkeypatc
     assert captured["streaming"] is True
     assert "callbacks" in captured
     assert len(captured["callbacks"]) == 1
+    assert callback_calls == [{"public_key": "public-key"}]
 
 
 def test_build_chat_model_omits_langfuse_callbacks_when_unconfigured(
@@ -242,6 +264,10 @@ def test_build_chat_model_omits_langfuse_callbacks_when_unconfigured(
     monkeypatch.setattr(
         "app.domain.chatbot.agents.graph.ChatOpenAI",
         fake_chat_openai,
+    )
+    monkeypatch.setattr(
+        "app.domain.chatbot.agents.graph.LangfuseTraceLogger.from_settings",
+        lambda settings: _FakeDisabledTracer(),
     )
 
     settings = Settings(
