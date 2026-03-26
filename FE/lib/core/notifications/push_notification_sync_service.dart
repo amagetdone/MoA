@@ -44,6 +44,7 @@ class PushNotificationSyncService {
   StreamSubscription<RemoteMessage>? _messageOpenedSubscription;
   bool _initialized = false;
   bool _firebaseReady = false;
+  bool _permissionPromptInProgress = false;
   String? _lastOpenedMessageId;
 
   bool get _isSupportedPlatform {
@@ -240,6 +241,50 @@ class PushNotificationSyncService {
     }
 
     await _upsertTokenIfAllowed(token);
+  }
+
+  Future<void> promptPermissionIfNeededOnLaunch() async {
+    if (!_isSupportedPlatform || _permissionPromptInProgress) {
+      return;
+    }
+
+    await initialize();
+    if (!await _ensureFirebaseReady()) {
+      return;
+    }
+
+    final preferences = await _appLocalDataSource.getMenuPreferences();
+    if (!preferences.notificationEnabled) {
+      return;
+    }
+
+    AuthorizationStatus currentStatus;
+    try {
+      final settings = await FirebaseMessaging.instance
+          .getNotificationSettings();
+      currentStatus = settings.authorizationStatus;
+    } catch (_) {
+      return;
+    }
+
+    final isAlreadyResolved =
+        currentStatus == AuthorizationStatus.authorized ||
+        currentStatus == AuthorizationStatus.provisional ||
+        currentStatus == AuthorizationStatus.denied;
+    if (isAlreadyResolved) {
+      if (currentStatus == AuthorizationStatus.authorized ||
+          currentStatus == AuthorizationStatus.provisional) {
+        await syncTokenIfEnabled(promptPermission: false);
+      }
+      return;
+    }
+
+    _permissionPromptInProgress = true;
+    try {
+      await syncTokenIfEnabled(promptPermission: true);
+    } finally {
+      _permissionPromptInProgress = false;
+    }
   }
 
   Future<bool> setNotificationsEnabled(bool enabled) async {

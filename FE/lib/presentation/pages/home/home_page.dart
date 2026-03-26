@@ -68,6 +68,9 @@ class _HomePageState extends ConsumerState<HomePage> {
       viewportFraction: 1,
     );
     Future.microtask(() {
+      ref
+          .read(pushNotificationSyncServiceProvider)
+          .promptPermissionIfNeededOnLaunch();
       ref.read(homeViewModelProvider.notifier).loadData();
       _loadHomeSpending();
     });

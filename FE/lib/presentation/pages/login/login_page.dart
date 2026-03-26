@@ -10,6 +10,7 @@ import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/web_window_focus_listener.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/navigation/auth_route_resolver.dart';
+import 'package:more_app/presentation/providers/app_data_providers.dart';
 import 'package:more_app/presentation/viewmodels/auth_viewmodel.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -35,6 +36,12 @@ class _LoginPageState extends ConsumerState<LoginPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _maybeShowSessionExpiredDialog();
+
+    Future.microtask(() {
+      ref
+          .read(pushNotificationSyncServiceProvider)
+          .promptPermissionIfNeededOnLaunch();
+    });
 
     if (kIsWeb) {
       _webWindowFocusListener = WebWindowFocusListener(
