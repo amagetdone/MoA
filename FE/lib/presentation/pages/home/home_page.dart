@@ -155,151 +155,141 @@ class _HomePageState extends ConsumerState<HomePage> {
     final colors = AppColors.of(context);
     final state = ref.watch(homeViewModelProvider);
 
-    return ShowCaseWidget(
-      builder: (ctx) {
-        _showcaseContext = ctx;
-        return Scaffold(
-          backgroundColor: colors.bgPrimary,
-          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-          floatingActionButton: Showcase(
-            key: _keyFab,
-            title: 'AI 코치',
-            description:
-                '소비 패턴을 분석하고 절약 팁을 알려주는 AI 코치예요. 궁금한 점이 있으면 언제든지 물어보세요!',
-            tooltipPosition: TooltipPosition.top,
-            targetPadding: EdgeInsets.all(8.w),
-            tooltipPadding: EdgeInsets.symmetric(
-              horizontal: 20.w,
-              vertical: 12.h,
-            ),
-            disableMovingAnimation: true,
-            child: FloatingActionButton.extended(
-              onPressed: () => showChatbotSheet(context),
-              backgroundColor: AppColors.orange500,
-              foregroundColor: Colors.white,
-              elevation: 6,
-              icon: const Icon(Icons.chat_bubble_rounded),
-              label: const Text('AI 코치'),
-            ),
-          ),
-          body: Column(
-            children: [
-              // Custom header with week bar
-              Builder(
-                builder: (context) {
-                  final now = DateTime.now();
-                  final monday = now.subtract(Duration(days: now.weekday - 1));
-                  final sunday = monday.add(const Duration(days: 6));
-                  const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+    _showcaseContext = context;
+    return Scaffold(
+      backgroundColor: colors.bgPrimary,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: Showcase(
+        key: _keyFab,
+        title: 'AI 코치',
+        description: '소비 패턴을 분석하고 절약 팁을 알려주는 AI 코치예요. 궁금한 점이 있으면 언제든지 물어보세요!',
+        tooltipPosition: TooltipPosition.top,
+        targetPadding: EdgeInsets.all(8.w),
+        tooltipPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+        disableMovingAnimation: true,
+        child: FloatingActionButton.extended(
+          onPressed: () => showChatbotSheet(context),
+          backgroundColor: AppColors.orange500,
+          foregroundColor: Colors.white,
+          elevation: 6,
+          icon: const Icon(Icons.chat_bubble_rounded),
+          label: const Text('AI 코치'),
+        ),
+      ),
+      body: Column(
+        children: [
+          // Custom header with week bar
+          Builder(
+            builder: (context) {
+              final now = DateTime.now();
+              final monday = now.subtract(Duration(days: now.weekday - 1));
+              final sunday = monday.add(const Duration(days: 6));
+              const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
 
-                  return Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [AppColors.orange500, AppColors.orange300],
-                      ),
-                      borderRadius: BorderRadius.vertical(
-                        bottom: Radius.circular(24.r),
-                      ),
-                    ),
-                    child: SafeArea(
-                      bottom: false,
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 16.h),
-                        child: Column(
+              return Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.orange500, AppColors.orange300],
+                  ),
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(24.r),
+                  ),
+                ),
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 16.h),
+                    child: Column(
+                      children: [
+                        // Title row
+                        Row(
                           children: [
-                            // Title row
-                            Row(
-                              children: [
-                                Text(
-                                  '이번 주 현황',
-                                  style: AppTextStyles.headingLg.copyWith(
-                                    color: const Color(0xFFFFFFFF),
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  '${monday.month}/${monday.day} - ${sunday.month}/${sunday.day}',
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: const Color(
-                                      0xFFFFFFFF,
-                                    ).withValues(alpha: 0.7),
-                                    fontSize: 11.sp,
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              '이번 주 현황',
+                              style: AppTextStyles.headingLg.copyWith(
+                                color: const Color(0xFFFFFFFF),
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
-                            SizedBox(height: 14.h),
-                            // Week day bar
-                            Row(
-                              children: List.generate(7, (i) {
-                                final isToday = i == now.weekday - 1;
-                                final isPast = i < now.weekday - 1;
-                                return Expanded(
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 2.w,
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        Text(
-                                          weekdays[i],
-                                          style: TextStyle(
-                                            fontSize: 10.sp,
-                                            fontWeight: isToday
-                                                ? FontWeight.w700
-                                                : FontWeight.w400,
-                                            color: isToday
-                                                ? const Color(0xFFFFFFFF)
-                                                : isPast
-                                                ? const Color(
-                                                    0xFFFFFFFF,
-                                                  ).withValues(alpha: 0.7)
-                                                : const Color(
-                                                    0xFFFFFFFF,
-                                                  ).withValues(alpha: 0.35),
-                                          ),
-                                        ),
-                                        SizedBox(height: 4.h),
-                                        Container(
-                                          height: 4.h,
-                                          decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(
-                                              2.r,
-                                            ),
-                                            color: isToday
-                                                ? const Color(0xFFFFFFFF)
-                                                : isPast
-                                                ? const Color(
-                                                    0xFFFFFFFF,
-                                                  ).withValues(alpha: 0.4)
-                                                : const Color(
-                                                    0xFFFFFFFF,
-                                                  ).withValues(alpha: 0.15),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              }),
+                            const Spacer(),
+                            Text(
+                              '${monday.month}/${monday.day} - ${sunday.month}/${sunday.day}',
+                              style: AppTextStyles.caption.copyWith(
+                                color: const Color(
+                                  0xFFFFFFFF,
+                                ).withValues(alpha: 0.7),
+                                fontSize: 11.sp,
+                              ),
                             ),
                           ],
                         ),
-                      ),
+                        SizedBox(height: 14.h),
+                        // Week day bar
+                        Row(
+                          children: List.generate(7, (i) {
+                            final isToday = i == now.weekday - 1;
+                            final isPast = i < now.weekday - 1;
+                            return Expanded(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 2.w),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      weekdays[i],
+                                      style: TextStyle(
+                                        fontSize: 10.sp,
+                                        fontWeight: isToday
+                                            ? FontWeight.w700
+                                            : FontWeight.w400,
+                                        color: isToday
+                                            ? const Color(0xFFFFFFFF)
+                                            : isPast
+                                            ? const Color(
+                                                0xFFFFFFFF,
+                                              ).withValues(alpha: 0.7)
+                                            : const Color(
+                                                0xFFFFFFFF,
+                                              ).withValues(alpha: 0.35),
+                                      ),
+                                    ),
+                                    SizedBox(height: 4.h),
+                                    Container(
+                                      height: 4.h,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(
+                                          2.r,
+                                        ),
+                                        color: isToday
+                                            ? const Color(0xFFFFFFFF)
+                                            : isPast
+                                            ? const Color(
+                                                0xFFFFFFFF,
+                                              ).withValues(alpha: 0.4)
+                                            : const Color(
+                                                0xFFFFFFFF,
+                                              ).withValues(alpha: 0.15),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                      ],
                     ),
-                  );
-                },
-              ),
-              // Body
-              Expanded(child: _buildBody(context, ref, state)),
-            ],
+                  ),
+                ),
+              );
+            },
           ),
-        );
-      },
+          // Body
+          Expanded(child: _buildBody(context, ref, state)),
+        ],
+      ),
     );
   }
 
