@@ -231,6 +231,7 @@ public class TransactionQueryService {
 		);
 	}
 
+	@Transactional
 	public TransactionListDto.Response listTransactions(Integer userId, TransactionListDto.Query query) {
 		LocalDate resolvedToDate = query.toDate() == null ? LocalDate.now() : query.toDate();
 		LocalDate resolvedFromDate = query.fromDate() == null ? resolvedToDate.minusMonths(1) : query.fromDate();

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.lang.reflect.Method;
 
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
 import com.ssafy.amagetdone.domain.account.model.entity.Card;
@@ -47,9 +49,24 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.annotation.Transactional;
 
 @ExtendWith(MockitoExtension.class)
 class TransactionQueryServiceTest {
+
+	@Test
+	void listTransactionsOverridesClassReadOnlyTransaction() throws Exception {
+		Method method = TransactionQueryService.class.getDeclaredMethod(
+			"listTransactions",
+			Integer.class,
+			TransactionListDto.Query.class
+		);
+
+		Transactional transactional = method.getAnnotation(Transactional.class);
+
+		assertTrue(transactional != null, "listTransactions should declare its own @Transactional");
+		assertFalse(transactional.readOnly(), "listTransactions must run in a writable transaction");
+	}
 
 	@Mock
 	private AccountTransactionOverrideRepository accountTransactionOverrideRepository;
