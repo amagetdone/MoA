@@ -64,8 +64,16 @@ class HomeRepositoryImpl implements HomeRepository {
       }
 
       var merged = goal.copyWith(
+        targetAmount: cached.targetAmount,
+        currentAmount: cached.currentAmount,
+        startDate: cached.startDate,
+        endDate: cached.endDate,
+        status: cached.status,
         iconName: cached.iconName,
         sketchVideoAssetPath: cached.sketchVideoAssetPath,
+        dday: cached.dday,
+        achievementRateOverride: cached.achievementRateOverride,
+        apiProgressRate: cached.apiProgressRate,
         graphData: cached.graphData,
         weeklyPlans: cached.weeklyPlans,
         weeklyMission: cached.weeklyMission,

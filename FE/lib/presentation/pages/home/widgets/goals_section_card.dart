@@ -87,7 +87,7 @@ class _GoalsSectionCardState extends State<GoalsSectionCard> {
                 Row(
                   children: [
                     Text(
-                      '목표',
+                      '이번 주 목표',
                       style: AppTextStyles.bodyMd.copyWith(
                         fontWeight: FontWeight.w700,
                         color: colors.textPrimary,
@@ -95,7 +95,9 @@ class _GoalsSectionCardState extends State<GoalsSectionCard> {
                     ),
                     const Spacer(),
                     GestureDetector(
-                      onTap: pageCount == 0 ? widget.onAddGoal : widget.onViewAll,
+                      onTap: pageCount == 0
+                          ? widget.onAddGoal
+                          : widget.onViewAll,
                       child: Row(
                         children: [
                           Text(
@@ -106,7 +108,11 @@ class _GoalsSectionCardState extends State<GoalsSectionCard> {
                               fontSize: 11.sp,
                             ),
                           ),
-                          Icon(Icons.chevron_right, size: 14.w, color: colors.textTertiary),
+                          Icon(
+                            Icons.chevron_right,
+                            size: 14.w,
+                            color: colors.textTertiary,
+                          ),
                         ],
                       ),
                     ),
@@ -118,7 +124,7 @@ class _GoalsSectionCardState extends State<GoalsSectionCard> {
                   _GoalEmptyBody(onTap: widget.onAddGoal)
                 else
                   SizedBox(
-                    height: 90.h,
+                    height: 122.h,
                     child: PageView.builder(
                       itemCount: pageCount,
                       onPageChanged: (i) => setState(() => _currentPage = i),
@@ -238,7 +244,12 @@ class _GoalItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final percent = (goal.progressRate * 100).toStringAsFixed(0);
+    final overallProgress = goal.progressRate.clamp(0.0, 1.0);
+    final percent = (overallProgress * 100).toStringAsFixed(0);
+    final weeklySaved = goal.weeklySavedAmount;
+    final weeklyTarget = goal.weeklyTargetAmount;
+    final totalWeeks = goal.totalWeeks.clamp(1, 999);
+    final currentWeek = goal.currentWeekNumber.clamp(1, totalWeeks);
 
     return GestureDetector(
       onTap: () => context.push(AppRoutes.goalDetailLocation(goal.id)),
@@ -275,7 +286,16 @@ class _GoalItem extends StatelessWidget {
                     ),
                     SizedBox(height: 2.h),
                     Text(
-                      '${CurrencyFormatter.formatKRW(goal.currentAmount)} / ${CurrencyFormatter.formatKRW(goal.targetAmount)}',
+                      '이번 주 ${CurrencyFormatter.formatKRW(weeklySaved)} / ${CurrencyFormatter.formatKRW(weeklyTarget)}',
+                      style: AppTextStyles.caption.copyWith(
+                        color: colors.textSecondary,
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      '전체 기간 ${CurrencyFormatter.formatKRW(goal.currentAmount)} / ${CurrencyFormatter.formatKRW(goal.targetAmount)}',
                       style: AppTextStyles.caption.copyWith(
                         color: colors.textTertiary,
                         fontSize: 11.sp,
@@ -303,27 +323,22 @@ class _GoalItem extends StatelessWidget {
 
           // Progress bar + percent
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                child: Stack(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      height: 6.h,
-                      decoration: BoxDecoration(
-                        color: AppColors.orange500.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(3.r),
-                      ),
+                    _SegmentedGoalProgressBar(
+                      progress: overallProgress,
+                      totalWeeks: totalWeeks,
                     ),
-                    FractionallySizedBox(
-                      widthFactor: goal.progressRate.clamp(0.0, 1.0),
-                      child: Container(
-                        height: 6.h,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(3.r),
-                          gradient: const LinearGradient(
-                            colors: [AppColors.orange300, AppColors.orange500],
-                          ),
-                        ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      '$currentWeek주차 / 총 $totalWeeks주',
+                      style: AppTextStyles.caption.copyWith(
+                        color: colors.textTertiary,
+                        fontSize: 10.sp,
                       ),
                     ),
                   ],
@@ -342,6 +357,70 @@ class _GoalItem extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SegmentedGoalProgressBar extends StatelessWidget {
+  const _SegmentedGoalProgressBar({
+    required this.progress,
+    required this.totalWeeks,
+  });
+
+  final double progress;
+  final int totalWeeks;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final segmentCount = totalWeeks.clamp(1, 16);
+    final normalizedProgress = progress.clamp(0.0, 1.0);
+    final filledSegments = normalizedProgress * segmentCount;
+
+    return Row(
+      children: List.generate(segmentCount, (index) {
+        final segmentFill = (filledSegments - index).clamp(0.0, 1.0);
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(
+              right: index == segmentCount - 1 ? 0 : 3.w,
+            ),
+            child: Stack(
+              children: [
+                Container(
+                  height: 6.h,
+                  decoration: BoxDecoration(
+                    color: AppColors.orange500.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(3.r),
+                  ),
+                ),
+                FractionallySizedBox(
+                  widthFactor: segmentFill,
+                  child: Container(
+                    height: 6.h,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(3.r),
+                      gradient: const LinearGradient(
+                        colors: [AppColors.orange300, AppColors.orange500],
+                      ),
+                    ),
+                  ),
+                ),
+                if (segmentFill <= 0)
+                  Container(
+                    height: 6.h,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(3.r),
+                      border: Border.all(
+                        color: colors.borderDefault.withValues(alpha: 0.45),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      }),
     );
   }
 }

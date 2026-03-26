@@ -326,7 +326,8 @@ Goal _goalFromJson(Map<String, dynamic> json) {
             weeklySavingsAmount:
                 (weeklyMissionJson['weeklySavingsAmount'] as num?)?.toInt() ??
                 0,
-            weeksToGoal: (weeklyMissionJson['weeksToGoal'] as num?)?.toInt() ?? 0,
+            weeksToGoal:
+                (weeklyMissionJson['weeksToGoal'] as num?)?.toInt() ?? 0,
           ),
     weeklyBudget: weeklyBudgetJson == null
         ? null
@@ -343,6 +344,10 @@ Goal _goalFromJson(Map<String, dynamic> json) {
             ),
             freeAmount: (weeklyBudgetJson['freeAmount'] as num?)?.toInt() ?? 0,
           ),
+    weeklySavedAmountOverride: (json['weeklySavedAmountOverride'] as num?)
+        ?.toInt(),
+    weeklyTargetAmountOverride: (json['weeklyTargetAmountOverride'] as num?)
+        ?.toInt(),
     currentWeekOverride: (json['currentWeekOverride'] as num?)?.toInt(),
     totalWeeksOverride: (json['totalWeeksOverride'] as num?)?.toInt(),
     detailLoaded: json['detailLoaded'] as bool? ?? false,
@@ -390,12 +395,16 @@ Map<String, dynamic> _goalToJson(Goal goal) {
         : {
             'totalIncomeAmount': goal.weeklyBudget!.totalIncomeAmount,
             'savingAmount': goal.weeklyBudget!.savingAmount,
-            'fixedExpense': _goalBudgetSectionToJson(goal.weeklyBudget!.fixedExpense),
+            'fixedExpense': _goalBudgetSectionToJson(
+              goal.weeklyBudget!.fixedExpense,
+            ),
             'variableExpense': _goalBudgetSectionToJson(
               goal.weeklyBudget!.variableExpense,
             ),
             'freeAmount': goal.weeklyBudget!.freeAmount,
           },
+    'weeklySavedAmountOverride': goal.weeklySavedAmountOverride,
+    'weeklyTargetAmountOverride': goal.weeklyTargetAmountOverride,
     'currentWeekOverride': goal.currentWeekOverride,
     'totalWeeksOverride': goal.totalWeeksOverride,
     'detailLoaded': goal.detailLoaded,

@@ -49,6 +49,9 @@ class RealHomeRemoteDataSource implements HomeRemoteDataSource {
         status: GoalStatus.inProgress,
         dDay: dDay,
         apiProgressRate: (plan['progressRate'] as num?)?.toInt() ?? 0,
+        weeklySavedAmountOverride: (plan['savedAmount'] as num?)?.toInt() ?? 0,
+        weeklyTargetAmountOverride:
+            (plan['targetAmount'] as num?)?.toInt() ?? 0,
       );
     }).toList();
 
@@ -62,7 +65,8 @@ class RealHomeRemoteDataSource implements HomeRemoteDataSource {
       daysRemaining: (freeSpending['daysRemaining'] as num?)?.toInt() ?? 0,
       dailyAvailable: (freeSpending['dailyAvailable'] as num?)?.toInt() ?? 0,
       weeklySaved: (weeklySaving['thisWeekSavingAmount'] as num?)?.toInt() ?? 0,
-      savingTargetAmount: ((weeklySaving['thisWeekSavingAmount'] as num?)?.toInt() ?? 0) +
+      savingTargetAmount:
+          ((weeklySaving['thisWeekSavingAmount'] as num?)?.toInt() ?? 0) +
           ((weeklySaving['remainingToTargetAmount'] as num?)?.toInt() ?? 0),
       savingProgressRate: (weeklySaving['progressRate'] as num?)?.toInt() ?? 0,
     );

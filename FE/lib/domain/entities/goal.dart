@@ -21,6 +21,8 @@ class Goal {
   final List<GoalWeeklyPlan> weeklyPlans;
   final GoalWeeklyMission? weeklyMission;
   final GoalWeeklyBudget? weeklyBudget;
+  final int? weeklySavedAmountOverride;
+  final int? weeklyTargetAmountOverride;
   final int? currentWeekOverride;
   final int? totalWeeksOverride;
   final bool detailLoaded;
@@ -48,6 +50,8 @@ class Goal {
     this.weeklyPlans = const [],
     this.weeklyMission,
     this.weeklyBudget,
+    this.weeklySavedAmountOverride,
+    this.weeklyTargetAmountOverride,
     this.currentWeekOverride,
     this.totalWeeksOverride,
     this.detailLoaded = false,
@@ -129,6 +133,23 @@ class Goal {
     return status == GoalStatus.inProgress;
   }
 
+  int get weeklySavedAmount {
+    if (weeklySavedAmountOverride != null) {
+      return weeklySavedAmountOverride!;
+    }
+    return currentAmount;
+  }
+
+  int get weeklyTargetAmount {
+    if (weeklyTargetAmountOverride != null) {
+      return weeklyTargetAmountOverride!;
+    }
+    if (weeklyMission != null && weeklyMission!.weeklySavingsAmount > 0) {
+      return weeklyMission!.weeklySavingsAmount;
+    }
+    return targetAmount;
+  }
+
   GoalStatus get effectiveStatus {
     if (isEffectivelyAchieved) {
       return GoalStatus.achieved;
@@ -157,6 +178,8 @@ class Goal {
     List<GoalWeeklyPlan>? weeklyPlans,
     GoalWeeklyMission? weeklyMission,
     GoalWeeklyBudget? weeklyBudget,
+    int? weeklySavedAmountOverride,
+    int? weeklyTargetAmountOverride,
     int? currentWeekOverride,
     int? totalWeeksOverride,
     bool? detailLoaded,
@@ -188,6 +211,10 @@ class Goal {
       weeklyPlans: weeklyPlans ?? this.weeklyPlans,
       weeklyMission: weeklyMission ?? this.weeklyMission,
       weeklyBudget: weeklyBudget ?? this.weeklyBudget,
+      weeklySavedAmountOverride:
+          weeklySavedAmountOverride ?? this.weeklySavedAmountOverride,
+      weeklyTargetAmountOverride:
+          weeklyTargetAmountOverride ?? this.weeklyTargetAmountOverride,
       currentWeekOverride: currentWeekOverride ?? this.currentWeekOverride,
       totalWeeksOverride: totalWeeksOverride ?? this.totalWeeksOverride,
       detailLoaded: detailLoaded ?? this.detailLoaded,
