@@ -100,6 +100,9 @@ class HomeViewModel extends StateNotifier<HomeState> {
         _repository.fetchHomeDashboard(),
         _accountRepository.fetchAccountDashboard(),
       ]);
+      if (!mounted) {
+        return;
+      }
       final dashboard = results[0] as HomeDashboard;
       final accountDashboard = results[1] as AccountDashboard;
 
@@ -133,6 +136,9 @@ class HomeViewModel extends StateNotifier<HomeState> {
         savingProgressRate: dashboard.savingProgressRate,
       );
     } catch (error) {
+      if (!mounted) {
+        return;
+      }
       state = state.copyWith(isLoading: false, errorMessage: error.toString());
     }
   }

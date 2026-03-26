@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:more_app/core/auth/logout_intent_tracker.dart';
 import 'package:more_app/core/notifications/push_notification_sync_service.dart';
 import 'package:more_app/domain/entities/auth_result.dart';
 import 'package:more_app/domain/repositories/auth_repository.dart';
@@ -57,6 +58,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
   }
 
   Future<void> _runSocialLogin(Future<AuthResult> Function() action) async {
+    LogoutIntentTracker.clear();
     final attempt = ++_socialLoginAttempt;
     state = const AuthLoading();
 
@@ -85,6 +87,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
   Future<void> loginWithKakao() => _runSocialLogin(_repository.loginWithKakao);
 
   Future<void> loginWithTest({required int id}) async {
+    LogoutIntentTracker.clear();
     state = const AuthLoading();
     try {
       final result = await _repository.loginWithTest(id: id);
@@ -108,6 +111,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
   }
 
   Future<void> autoLogin() async {
+    LogoutIntentTracker.clear();
     state = const AuthLoading();
     try {
       final result = await _repository.autoLogin();
@@ -123,12 +127,14 @@ class AuthViewModel extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
+    LogoutIntentTracker.markUserInitiatedLogout();
     state = const AuthLoading();
     try {
       await _repository.logout();
       unawaited(_pushNotificationSyncService.handleLogout());
       state = const AuthUnauthenticated();
     } catch (error) {
+      LogoutIntentTracker.clear();
       state = AuthError(error.toString());
     }
   }
