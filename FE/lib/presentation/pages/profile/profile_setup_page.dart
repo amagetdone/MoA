@@ -31,6 +31,8 @@ class ProfileSetupPage extends ConsumerStatefulWidget {
 }
 
 class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
+  static const int _maxProfileImageBytes = 3 * 1024 * 1024;
+
   late final TextEditingController _nicknameController;
   late final TextEditingController _emailController;
   late final TextEditingController _birthDateController;
@@ -88,6 +90,13 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
     );
     if (picked != null) {
       final bytes = await picked.readAsBytes();
+      if (bytes.length > _maxProfileImageBytes) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('최대 3MB 이미지만 첨부할 수 있어요.')),
+        );
+        return;
+      }
       setState(() {
         _selectedImageBytes = bytes;
         _selectedImageName = _resolvePickedImageName(picked);
@@ -97,9 +106,12 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
   }
 
   String _resolvePickedImageName(XFile picked) {
+    if (picked.name.isNotEmpty && picked.name.contains('.')) {
+      return picked.name;
+    }
     final segments = picked.path.split(RegExp(r'[\\/]'));
     final fileName = segments.isNotEmpty ? segments.last : '';
-    if (fileName.isNotEmpty) {
+    if (fileName.isNotEmpty && fileName.contains('.')) {
       return fileName;
     }
     return 'profile_image.jpg';
@@ -511,8 +523,15 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                           color: colors.textTertiary,
                           decoration: TextDecoration.underline,
                         ),
+                        ),
                       ),
+                  SizedBox(height: 6.h),
+                  Text(
+                    '최대 3MB 이미지만 첨부할 수 있어요.',
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: colors.textTertiary,
                     ),
+                  ),
                 ],
               ),
             ),
