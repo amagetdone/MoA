@@ -1,7 +1,6 @@
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
 import 'package:more_app/data/datasources/remote/menu_remote_datasource.dart';
 import 'package:more_app/data/models/app_snapshot_dto.dart';
-import 'package:more_app/domain/entities/goal.dart';
 import 'package:more_app/domain/entities/menu_summary.dart';
 import 'package:more_app/domain/repositories/menu_repository.dart';
 
@@ -37,9 +36,7 @@ class MenuRepositoryImpl implements MenuRepository {
 
   @override
   Future<MenuSummary> updateNotification(bool enabled) async {
-    await _localDataSource.updateMenuPreferences(
-      notificationEnabled: enabled,
-    );
+    await _localDataSource.updateMenuPreferences(notificationEnabled: enabled);
 
     try {
       await _remoteDataSource.updateMenuPreferences(
@@ -55,9 +52,7 @@ class MenuRepositoryImpl implements MenuRepository {
     await _localDataSource.updateMenuPreferences(biometricEnabled: enabled);
 
     try {
-      await _remoteDataSource.updateMenuPreferences(
-        biometricEnabled: enabled,
-      );
+      await _remoteDataSource.updateMenuPreferences(biometricEnabled: enabled);
     } catch (_) {}
 
     return fetchMenuSummary();
@@ -65,10 +60,10 @@ class MenuRepositoryImpl implements MenuRepository {
 
   MenuSummary _toMenuSummary(AppSnapshotDto snapshot) {
     final activeGoalCount = snapshot.goals
-        .where((goal) => goal.status == GoalStatus.inProgress)
+        .where((goal) => goal.isEffectivelyInProgress)
         .length;
     final achievedGoalCount = snapshot.goals
-        .where((goal) => goal.status == GoalStatus.achieved)
+        .where((goal) => goal.isEffectivelyAchieved)
         .length;
     final totalSaved = snapshot.goals.fold(0, (sum, goal) {
       return sum + goal.currentAmount;

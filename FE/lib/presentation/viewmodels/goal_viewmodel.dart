@@ -22,11 +22,11 @@ class GoalState {
   });
 
   List<Goal> get filteredGoals => showAchieved
-      ? goals.where((g) => g.status == GoalStatus.achieved).toList()
-      : goals.where((g) => g.status == GoalStatus.inProgress).toList();
+      ? goals.where((g) => g.isEffectivelyAchieved).toList()
+      : goals.where((g) => g.isEffectivelyInProgress).toList();
 
   List<Goal> get inProgressGoals =>
-      goals.where((g) => g.status == GoalStatus.inProgress).toList()
+      goals.where((g) => g.isEffectivelyInProgress).toList()
         ..sort((a, b) => a.priority.compareTo(b.priority));
 
   Goal? findGoalById(String id) {
@@ -103,7 +103,9 @@ class GoalViewModel extends StateNotifier<GoalState> {
     try {
       final detailedGoal = await _repository.findGoalById(goalId);
       if (detailedGoal != null) {
-        final existingIndex = state.goals.indexWhere((item) => item.id == goalId);
+        final existingIndex = state.goals.indexWhere(
+          (item) => item.id == goalId,
+        );
         final updatedGoals = List<Goal>.from(state.goals);
         if (existingIndex == -1) {
           updatedGoals.add(detailedGoal);
@@ -212,10 +214,7 @@ class GoalViewModel extends StateNotifier<GoalState> {
   Future<Goal?> refreshGoalStatus(String goalId) async {
     try {
       final goals = await _repository.fetchGoals();
-      state = state.copyWith(
-        goals: goals,
-        clearErrorMessage: true,
-      );
+      state = state.copyWith(goals: goals, clearErrorMessage: true);
       return _findGoal(goals, goalId);
     } catch (error) {
       state = state.copyWith(errorMessage: error.toString());

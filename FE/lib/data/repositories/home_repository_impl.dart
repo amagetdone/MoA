@@ -52,7 +52,7 @@ class HomeRepositoryImpl implements HomeRepository {
 
     final cachedById = {
       for (final goal in cachedGoals.where(
-        (goal) => goal.status == GoalStatus.inProgress,
+        (goal) => goal.isEffectivelyInProgress,
       ))
         goal.id: goal,
     };
@@ -82,8 +82,7 @@ class HomeRepositoryImpl implements HomeRepository {
       }
 
       return merged;
-    }).toList()
-      ..sort((a, b) => a.priority.compareTo(b.priority));
+    }).toList()..sort((a, b) => a.priority.compareTo(b.priority));
 
     return mergedGoals;
   }

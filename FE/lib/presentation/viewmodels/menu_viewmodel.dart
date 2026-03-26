@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:more_app/domain/repositories/goal_repository.dart';
 import 'package:more_app/core/notifications/push_notification_sync_service.dart';
 import 'package:more_app/domain/repositories/menu_repository.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
@@ -64,12 +65,16 @@ class MenuState {
 }
 
 class MenuViewModel extends StateNotifier<MenuState> {
-  MenuViewModel(this._repository, this._pushNotificationSyncService)
-    : super(const MenuState(isLoading: true)) {
+  MenuViewModel(
+    this._repository,
+    this._goalRepository,
+    this._pushNotificationSyncService,
+  ) : super(const MenuState(isLoading: true)) {
     loadData();
   }
 
   final MenuRepository _repository;
+  final GoalRepository _goalRepository;
   final PushNotificationSyncService _pushNotificationSyncService;
 
   Future<void> loadData() async {
@@ -77,6 +82,19 @@ class MenuViewModel extends StateNotifier<MenuState> {
 
     try {
       final summary = await _repository.fetchMenuSummary();
+      var activeGoalCount = summary.activeGoalCount;
+      var achievedGoalCount = summary.achievedGoalCount;
+
+      try {
+        final goals = await _goalRepository.fetchGoals();
+        activeGoalCount = goals
+            .where((goal) => goal.isEffectivelyInProgress)
+            .length;
+        achievedGoalCount = goals
+            .where((goal) => goal.isEffectivelyAchieved)
+            .length;
+      } catch (_) {}
+
       if (!mounted) {
         return;
       }
@@ -86,8 +104,8 @@ class MenuViewModel extends StateNotifier<MenuState> {
         userName: summary.user.name,
         userEmail: summary.user.email,
         profileImageUrl: summary.user.profileImageUrl,
-        activeGoalCount: summary.activeGoalCount,
-        achievedGoalCount: summary.achievedGoalCount,
+        activeGoalCount: activeGoalCount,
+        achievedGoalCount: achievedGoalCount,
         totalSaved: summary.totalSaved,
         notificationEnabled: summary.notificationEnabled,
         biometricEnabled: summary.biometricEnabled,
@@ -103,9 +121,8 @@ class MenuViewModel extends StateNotifier<MenuState> {
 
   Future<void> toggleNotification(bool value) async {
     try {
-      final resolved = await _pushNotificationSyncService.setNotificationsEnabled(
-        value,
-      );
+      final resolved = await _pushNotificationSyncService
+          .setNotificationsEnabled(value);
       final summary = await _repository.updateNotification(resolved);
       if (!mounted) {
         return;
@@ -116,9 +133,7 @@ class MenuViewModel extends StateNotifier<MenuState> {
       );
 
       if (value && !resolved) {
-        state = state.copyWith(
-          errorMessage: '알림 권한이 허용되지 않아 푸시 알림을 켤 수 없습니다.',
-        );
+        state = state.copyWith(errorMessage: '알림 권한이 허용되지 않아 푸시 알림을 켤 수 없습니다.');
       }
     } catch (error) {
       if (!mounted) {
@@ -153,6 +168,7 @@ final menuViewModelProvider = StateNotifierProvider<MenuViewModel, MenuState>((
   ref.watch(authViewModelProvider);
   return MenuViewModel(
     ref.read(menuRepositoryProvider),
+    ref.read(goalRepositoryProvider),
     ref.read(pushNotificationSyncServiceProvider),
   );
 });

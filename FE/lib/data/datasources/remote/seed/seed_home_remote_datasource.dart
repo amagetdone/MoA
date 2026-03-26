@@ -1,6 +1,5 @@
 import 'package:more_app/data/datasources/remote/home_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/seed/seed_data_store.dart';
-import 'package:more_app/domain/entities/goal.dart';
 import 'package:more_app/domain/entities/home_dashboard.dart';
 
 class SeedHomeRemoteDataSource implements HomeRemoteDataSource {
@@ -18,9 +17,7 @@ class SeedHomeRemoteDataSource implements HomeRemoteDataSource {
       return sum + account.balance;
     });
     final activeGoals =
-        snapshot.goals
-            .where((goal) => goal.status == GoalStatus.inProgress)
-            .toList()
+        snapshot.goals.where((goal) => goal.isEffectivelyInProgress).toList()
           ..sort((a, b) => a.priority.compareTo(b.priority));
 
     return HomeDashboard(

@@ -107,8 +107,34 @@ class Goal {
 
   bool get isAiFailed => aiPipelineStatus == GoalAiPipelineStatus.failed;
 
-  bool get isAiSucceeded =>
-      aiPipelineStatus == GoalAiPipelineStatus.succeeded;
+  bool get isAiSucceeded => aiPipelineStatus == GoalAiPipelineStatus.succeeded;
+
+  bool get isEffectivelyAchieved {
+    if (status == GoalStatus.achieved) {
+      return true;
+    }
+    if ((apiProgressRate ?? 0) >= 100) {
+      return true;
+    }
+    if ((achievementRateOverride ?? 0) >= 100) {
+      return true;
+    }
+    return targetAmount > 0 && currentAmount >= targetAmount;
+  }
+
+  bool get isEffectivelyInProgress {
+    if (isEffectivelyAchieved) {
+      return false;
+    }
+    return status == GoalStatus.inProgress;
+  }
+
+  GoalStatus get effectiveStatus {
+    if (isEffectivelyAchieved) {
+      return GoalStatus.achieved;
+    }
+    return status;
+  }
 
   Goal copyWith({
     String? id,
@@ -214,10 +240,7 @@ class GoalWeeklyMission {
   final int weeklySavingsAmount;
   final int weeksToGoal;
 
-  const GoalWeeklyMission({
-    this.weeklySavingsAmount = 0,
-    this.weeksToGoal = 0,
-  });
+  const GoalWeeklyMission({this.weeklySavingsAmount = 0, this.weeksToGoal = 0});
 }
 
 class GoalBudgetItem {
@@ -231,10 +254,7 @@ class GoalBudgetSection {
   final int totalAmount;
   final List<GoalBudgetItem> items;
 
-  const GoalBudgetSection({
-    this.totalAmount = 0,
-    this.items = const [],
-  });
+  const GoalBudgetSection({this.totalAmount = 0, this.items = const []});
 }
 
 class GoalWeeklyBudget {
