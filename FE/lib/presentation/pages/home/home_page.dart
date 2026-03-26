@@ -9,6 +9,7 @@ import 'package:more_app/domain/entities/goal.dart';
 import 'package:more_app/domain/entities/spending.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/pages/home/widgets/asset_card.dart';
+import 'package:more_app/presentation/pages/home/widgets/ai_chat_sheet.dart';
 import 'package:more_app/presentation/pages/home/widgets/goals_section_card.dart';
 import 'package:more_app/presentation/pages/home/widgets/savings_card.dart';
 import 'package:more_app/presentation/pages/home/widgets/spending_card.dart';
@@ -123,6 +124,24 @@ class _HomePageState extends ConsumerState<HomePage> {
     return '${start.month}/${start.day} - ${end.month}/${end.day}';
   }
 
+  Future<void> _openAiChatSheet(BuildContext context) {
+    final colors = AppColors.of(context);
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: colors.bgSurface,
+      barrierColor: Colors.black.withValues(alpha: 0.28),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+      ),
+      builder: (_) => FractionallySizedBox(
+        heightFactor: 0.88,
+        child: const AiChatSheet(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
@@ -130,6 +149,14 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     return Scaffold(
       backgroundColor: colors.bgPrimary,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _openAiChatSheet(context),
+        backgroundColor: AppColors.orange500,
+        foregroundColor: Colors.white,
+        elevation: 6,
+        icon: const Icon(Icons.chat_bubble_rounded),
+        label: const Text('AI 코치'),
+      ),
       body: Column(
         children: [
           // Custom header with week bar
