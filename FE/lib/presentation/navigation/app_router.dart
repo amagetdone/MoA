@@ -31,6 +31,7 @@ import 'package:more_app/presentation/pages/profile/profile_setup_page.dart';
 import 'package:more_app/presentation/pages/spending/spending_analysis_page.dart';
 import 'package:more_app/presentation/pages/spending/spending_budget_page.dart';
 import 'package:more_app/presentation/pages/spending/spending_pattern_page.dart';
+import 'package:more_app/presentation/pages/chatbot/chatbot_page.dart';
 import 'package:more_app/presentation/pages/splash/splash_page.dart';
 
 abstract class AppRoutes {
@@ -55,6 +56,7 @@ abstract class AppRoutes {
   static const String onboardingAnalysis = '/onboarding/analysis';
   static const String onboardingPlan = '/onboarding/plan';
 
+  static const String chatbot = '/chatbot';
   static const String profileEdit = '/profile/edit';
   static const String spendingBudget = '/spending/budget';
 
@@ -222,6 +224,7 @@ final appRouter = GoRouter(
       builder: (context, state) => const SpendingPatternPage(),
     ),
     GoRoute(path: AppRoutes.settings, builder: (context, state) => const SettingsPage()),
+    GoRoute(path: AppRoutes.chatbot, builder: (context, state) => const ChatbotPage()),
   ],
 );
 
