@@ -9,6 +9,7 @@ import 'package:more_app/domain/entities/account.dart';
 import 'package:more_app/domain/entities/goal.dart';
 import 'package:more_app/domain/entities/spending.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/pages/chatbot/chatbot_sheet.dart';
 import 'package:more_app/presentation/pages/home/widgets/asset_card.dart';
 import 'package:more_app/presentation/pages/home/widgets/goals_section_card.dart';
 import 'package:more_app/presentation/pages/home/widgets/savings_card.dart';
@@ -168,7 +169,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             disableMovingAnimation: true,
             child: FloatingActionButton.extended(
-              onPressed: () => context.push(AppRoutes.chatbot),
+              onPressed: () => showChatbotSheet(context),
               backgroundColor: AppColors.orange500,
               foregroundColor: Colors.white,
               elevation: 6,

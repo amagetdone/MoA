@@ -11,6 +11,7 @@ import 'package:more_app/presentation/viewmodels/menu_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/pages/chatbot/chatbot_sheet.dart';
 
 class MenuPage extends ConsumerStatefulWidget {
   const MenuPage({super.key});
@@ -196,7 +197,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
               icon: Icons.auto_awesome,
               title: 'AI 코치',
               subtitle: '예산·소비·목표에 대해 AI에게 물어보세요',
-              onTap: () => context.push(AppRoutes.chatbot),
+              onTap: () => showChatbotSheet(context),
               iconColor: AppColors.green500,
             ),
             _MenuListItem(

@@ -8,7 +8,9 @@ import 'package:more_app/domain/entities/chat_message.dart';
 import 'package:more_app/presentation/viewmodels/chatbot_viewmodel.dart';
 
 class ChatbotPage extends ConsumerStatefulWidget {
-  const ChatbotPage({super.key});
+  const ChatbotPage({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   ConsumerState<ChatbotPage> createState() => _ChatbotPageState();
@@ -60,126 +62,174 @@ class _ChatbotPageState extends ConsumerState<ChatbotPage> {
       if (next.messages.isNotEmpty) _scrollToBottom();
     });
 
+    final body = Column(
+      children: [
+        if (state.isExpired && state.infoMessage != null)
+          _ExpiredBanner(
+            message: state.infoMessage!,
+            onNewChat: viewModel.startNewConversation,
+          ),
+        Expanded(
+          child: !state.hasInitialized && state.isLoading
+              ? _InitialLoading(colors: colors)
+              : state.messages.isEmpty
+              ? _EmptyState(
+                  colors: colors,
+                  infoMessage: state.isExpired ? null : state.infoMessage,
+                  errorMessage: state.errorMessage,
+                  onRetry: viewModel.restoreLatestConversation,
+                  suggestions: _suggestions,
+                  onSuggestionTap: _sendMessage,
+                )
+              : ListView.builder(
+                  controller: _scrollController,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 12.h,
+                  ),
+                  itemCount: state.messages.length,
+                  itemBuilder: (context, index) {
+                    return _ChatBubble(message: state.messages[index]);
+                  },
+                ),
+        ),
+        if (state.errorMessage != null && state.messages.isNotEmpty)
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+            child: Text(
+              state.errorMessage!,
+              style: AppTextStyles.bodySm.copyWith(color: AppColors.red500),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        _InputBar(
+          controller: _inputController,
+          isLoading: state.isLoading,
+          onSend: _sendMessage,
+          colors: colors,
+        ),
+      ],
+    );
+
+    if (widget.embedded) {
+      return ColoredBox(
+        color: colors.bgPrimary,
+        child: SafeArea(
+          top: false,
+          child: Column(
+            children: [
+              _ChatbotHeader(
+                colors: colors,
+                showClose: true,
+                canRefresh:
+                    state.messages.isNotEmpty || state.conversationId != null,
+                isLoading: state.isLoading,
+                onClose: () => Navigator.of(context).pop(),
+                onRefresh: viewModel.startNewConversation,
+              ),
+              Expanded(child: body),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: colors.bgPrimary,
-      appBar: AppBar(
-        backgroundColor: colors.bgPrimary,
-        elevation: 0,
-        centerTitle: false,
-        toolbarHeight: 72.h,
-        titleSpacing: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios_new,
-            size: 20.w,
-            color: colors.textPrimary,
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(72.h),
+        child: SafeArea(
+          bottom: false,
+          child: _ChatbotHeader(
+            colors: colors,
+            showClose: false,
+            canRefresh:
+                state.messages.isNotEmpty || state.conversationId != null,
+            isLoading: state.isLoading,
+            onClose: () => Navigator.of(context).pop(),
+            onRefresh: viewModel.startNewConversation,
           ),
-          onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Row(
-          children: [
-            Container(
-              width: 40.w,
-              height: 40.w,
-              decoration: BoxDecoration(
-                color: AppColors.orange500.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(14.r),
-              ),
-              child: Icon(
-                Icons.smart_toy_outlined,
-                color: AppColors.orange500,
-                size: 22.w,
-              ),
+      ),
+      body: body,
+    );
+  }
+}
+
+class _ChatbotHeader extends StatelessWidget {
+  const _ChatbotHeader({
+    required this.colors,
+    required this.showClose,
+    required this.canRefresh,
+    required this.isLoading,
+    required this.onClose,
+    required this.onRefresh,
+  });
+
+  final AppColorScheme colors;
+  final bool showClose;
+  final bool canRefresh;
+  final bool isLoading;
+  final VoidCallback onClose;
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: colors.bgPrimary,
+      padding: EdgeInsets.fromLTRB(8.w, 10.h, 8.w, 8.h),
+      child: Row(
+        children: [
+          IconButton(
+            icon: Icon(
+              showClose ? Icons.close_rounded : Icons.arrow_back_ios_new,
+              size: 20.w,
+              color: colors.textPrimary,
             ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '모아 AI 코치',
-                    style: AppTextStyles.headingMd.copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  SizedBox(height: 2.h),
-                  Text(
-                    '예산과 소비 패턴을 편하게 물어보세요',
-                    style: AppTextStyles.caption.copyWith(
-                      color: colors.textTertiary,
-                    ),
-                  ),
-                ],
-              ),
+            onPressed: onClose,
+          ),
+          Container(
+            width: 40.w,
+            height: 40.w,
+            decoration: BoxDecoration(
+              color: AppColors.orange500.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14.r),
             ),
-          ],
-        ),
-        actions: [
-          if (state.messages.isNotEmpty || state.conversationId != null)
+            child: Icon(
+              Icons.smart_toy_outlined,
+              color: AppColors.orange500,
+              size: 22.w,
+            ),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '모아 AI 코치',
+                  style: AppTextStyles.headingMd.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  '예산과 소비 패턴을 편하게 물어보세요',
+                  style: AppTextStyles.caption.copyWith(
+                    color: colors.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (canRefresh)
             IconButton(
               icon: Icon(Icons.refresh, size: 20.w, color: colors.textTertiary),
               tooltip: '새 대화 시작',
-              onPressed: state.isLoading
-                  ? null
-                  : viewModel.startNewConversation,
+              onPressed: isLoading ? null : onRefresh,
             ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // 만료 배너
-          if (state.isExpired && state.infoMessage != null)
-            _ExpiredBanner(
-              message: state.infoMessage!,
-              onNewChat: viewModel.startNewConversation,
-            ),
-
-          // 메시지 리스트
-          Expanded(
-            child: !state.hasInitialized && state.isLoading
-                ? _InitialLoading(colors: colors)
-                : state.messages.isEmpty
-                ? _EmptyState(
-                    colors: colors,
-                    infoMessage: state.isExpired ? null : state.infoMessage,
-                    errorMessage: state.errorMessage,
-                    onRetry: viewModel.restoreLatestConversation,
-                    suggestions: _suggestions,
-                    onSuggestionTap: _sendMessage,
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 16.w,
-                      vertical: 12.h,
-                    ),
-                    itemCount: state.messages.length,
-                    itemBuilder: (context, index) {
-                      return _ChatBubble(message: state.messages[index]);
-                    },
-                  ),
-          ),
-
-          // 에러 메시지
-          if (state.errorMessage != null && state.messages.isNotEmpty)
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
-              child: Text(
-                state.errorMessage!,
-                style: AppTextStyles.bodySm.copyWith(color: AppColors.red500),
-                textAlign: TextAlign.center,
-              ),
-            ),
-
-          // 입력창
-          _InputBar(
-            controller: _inputController,
-            isLoading: state.isLoading,
-            onSend: _sendMessage,
-            colors: colors,
-          ),
         ],
       ),
     );
