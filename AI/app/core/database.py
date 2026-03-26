@@ -70,8 +70,26 @@ class ReadOnlyDatabase:
         self._engine = engine
 
     @classmethod
-    def from_dsn(cls, dsn: str) -> "ReadOnlyDatabase":
-        return cls(engine=create_engine(dsn, future=True))
+    def from_dsn(
+        cls,
+        dsn: str,
+        *,
+        pool_size: int = 3,
+        max_overflow: int = 0,
+        pool_timeout: int = 30,
+        pool_recycle: int = 1800,
+    ) -> "ReadOnlyDatabase":
+        return cls(
+            engine=create_engine(
+                dsn,
+                future=True,
+                pool_pre_ping=True,
+                pool_size=pool_size,
+                max_overflow=max_overflow,
+                pool_timeout=pool_timeout,
+                pool_recycle=pool_recycle,
+            )
+        )
 
     def execute_select(
         self,

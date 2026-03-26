@@ -351,7 +351,7 @@ def build_chatbot_service(
         return None
 
     tracer = tracer or LangfuseTraceLogger.from_settings(settings)
-    database = ReadOnlyDatabase.from_dsn(settings.database_dsn)
+    database = _build_chatbot_database(settings=settings)
     repository = ChatbotRepository.from_database(database)
     graph_factory = _build_user_graph_factory(
         settings=settings,
@@ -371,15 +371,20 @@ def build_chatbot_service(
 
 
 def _build_default_graph_factory(*, settings: Settings) -> Callable[[int], Any]:
+    database: ReadOnlyDatabase | None = None
+    repository: ChatbotRepository | None = None
+
     def _factory(user_id: int) -> Any:
+        nonlocal database, repository
         if not _has_chatbot_runtime_config(settings):
             raise ChatbotConfigurationError(
                 "AI_API_KEY, OPENAI_BASE_URL, DB_URL, DB_USERNAME, and DB_PASSWORD "
                 "must be configured for the default chatbot service"
             )
 
-        database = ReadOnlyDatabase.from_dsn(settings.database_dsn)
-        repository = ChatbotRepository.from_database(database)
+        if database is None or repository is None:
+            database = _build_chatbot_database(settings=settings)
+            repository = ChatbotRepository.from_database(database)
         graph_factory = _build_user_graph_factory(
             settings=settings,
             repository=repository,
@@ -431,6 +436,16 @@ def _has_chatbot_runtime_config(settings: Settings) -> bool:
             bool(settings.db_username.strip()),
             bool(settings.db_password.strip()),
         ]
+    )
+
+
+def _build_chatbot_database(*, settings: Settings) -> ReadOnlyDatabase:
+    return ReadOnlyDatabase.from_dsn(
+        settings.database_dsn,
+        pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
+        pool_timeout=settings.db_pool_timeout_seconds,
+        pool_recycle=settings.db_pool_recycle_seconds,
     )
 
 

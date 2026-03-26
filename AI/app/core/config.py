@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     db_url: str = Field(default="", alias="DB_URL")
     db_username: str = Field(default="", alias="DB_USERNAME")
     db_password: str = Field(default="", alias="DB_PASSWORD")
+    db_pool_size: int = Field(default=3, alias="DB_POOL_SIZE")
+    db_max_overflow: int = Field(default=0, alias="DB_MAX_OVERFLOW")
+    db_pool_timeout_seconds: int = Field(default=30, alias="DB_POOL_TIMEOUT_SECONDS")
+    db_pool_recycle_seconds: int = Field(default=1800, alias="DB_POOL_RECYCLE_SECONDS")
     chatbot_stream_status_events_enabled: bool = Field(
         default=True,
         alias="CHATBOT_STREAM_STATUS_EVENTS_ENABLED",

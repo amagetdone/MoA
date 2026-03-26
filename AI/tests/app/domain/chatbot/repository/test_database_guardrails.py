@@ -150,3 +150,29 @@ def test_read_only_database_executes_select_in_read_only_transaction() -> None:
     assert engine.connection.execute_calls == [
         ("SELECT 1 AS id", {"user_id": 7}),
     ]
+
+
+def test_read_only_database_from_dsn_uses_bounded_pool_configuration(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_create_engine(dsn: str, **kwargs):
+        captured["dsn"] = dsn
+        captured["kwargs"] = kwargs
+        return _FakeEngine(rows=[])
+
+    monkeypatch.setattr("app.core.database.create_engine", fake_create_engine)
+
+    database = ReadOnlyDatabase.from_dsn("postgresql+psycopg://user:pass@db/app")
+
+    assert isinstance(database, ReadOnlyDatabase)
+    assert captured == {
+        "dsn": "postgresql+psycopg://user:pass@db/app",
+        "kwargs": {
+            "future": True,
+            "pool_pre_ping": True,
+            "pool_size": 3,
+            "max_overflow": 0,
+            "pool_timeout": 30,
+            "pool_recycle": 1800,
+        },
+    }
