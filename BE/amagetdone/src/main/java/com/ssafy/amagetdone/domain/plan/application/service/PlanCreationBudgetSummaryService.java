@@ -80,8 +80,8 @@ public class PlanCreationBudgetSummaryService {
 
 	private BudgetWeek resolveSummaryWeek(Plan plan) {
 		LocalDate summaryDate = plan.getStatus() == PlanStatus.ACTIVE ? LocalDate.now(clock) : plan.getStartDate();
-		return budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(
-			plan.getUser(),
+		return budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			plan.getUser().getId(),
 			summaryDate,
 			summaryDate
 		).orElseGet(() -> budgetWeekRepository.findFirstByUserOrderByWeekEndDateDesc(plan.getUser()).orElse(null));

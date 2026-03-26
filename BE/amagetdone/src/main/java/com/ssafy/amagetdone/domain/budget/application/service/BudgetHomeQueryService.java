@@ -14,14 +14,11 @@ import com.ssafy.amagetdone.domain.account.model.entity.Account;
 import com.ssafy.amagetdone.domain.budget.api.dto.BudgetHomeDto;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
-import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
-
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
@@ -37,13 +34,11 @@ public class BudgetHomeQueryService {
 	private final PlanWeekAllocationRepository planWeekAllocationRepository;
 	private final ListAccountsUseCase listAccountsUseCase;
 	private final InquireAccountBalanceUseCase inquireAccountBalanceUseCase;
-	private final EntityManager entityManager;
 
 	public BudgetHomeDto.Response getHome(Integer userId) {
 		LocalDate today = LocalDate.now();
-		User userReference = entityManager.getReference(User.class, userId);
 		BudgetWeek budgetWeek = budgetWeekRepository
-			.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(userReference, today, today)
+			.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(userId, today, today)
 			.orElseThrow(() -> new IllegalArgumentException("Current budget week not found"));
 
 		List<Plan> selectedPlans = selectActivePlans(userId);

@@ -66,7 +66,7 @@ class PlanQueryServiceTest {
 
 		given(planRepository.findByIdAndUserIdAndDeletedFalse(1, 1)).willReturn(Optional.of(plan));
 		given(planWeekAllocationRepository.findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(1)).willReturn(allocations);
-		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(any(), any(), any()))
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(any(), any(), any()))
 			.willReturn(Optional.of(currentBudgetWeek(11)));
 
 		PlanDetailResponse response = service.getPlanDetail(1, 1);
@@ -95,7 +95,7 @@ class PlanQueryServiceTest {
 
 		given(planRepository.findByIdAndUserIdAndDeletedFalse(1, 1)).willReturn(Optional.of(plan));
 		given(planWeekAllocationRepository.findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(1)).willReturn(List.of());
-		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(any(), any(), any()))
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(any(), any(), any()))
 			.willReturn(Optional.empty());
 
 		PlanDetailResponse response = service.getPlanDetail(1, 1);
@@ -122,7 +122,7 @@ class PlanQueryServiceTest {
 
 		given(planRepository.findByIdAndUserIdAndDeletedFalse(1, 1)).willReturn(Optional.of(plan));
 		given(planWeekAllocationRepository.findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(1)).willReturn(allocations);
-		given(budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(any(), any(), any()))
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(any(), any(), any()))
 			.willReturn(Optional.of(currentBudgetWeek(11)));
 
 		PlanDetailResponse response = service.getPlanDetail(1, 1);

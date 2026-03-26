@@ -14,15 +14,12 @@ import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetAdjustmentRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetAdjustmentType;
-import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.plan.application.service.PlanPriorityService;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
-
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
@@ -40,7 +37,6 @@ public class WeeklyGoalSavingAccrualService {
 	private final BudgetAdjustmentRepository budgetAdjustmentRepository;
 	private final PlanRepository planRepository;
 	private final PlanPriorityService planPriorityService;
-	private final EntityManager entityManager;
 	private final Clock clock;
 
 	public void applyWeeklyAccrual(Integer userId) {
@@ -78,9 +74,8 @@ public class WeeklyGoalSavingAccrualService {
 	}
 
 	private BudgetWeek findCurrentWeek(Integer userId, LocalDate today) {
-		User userReference = entityManager.getReference(User.class, userId);
 		return budgetWeekRepository
-			.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(userReference, today, today)
+			.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(userId, today, today)
 			.orElse(null);
 	}
 

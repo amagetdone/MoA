@@ -11,7 +11,6 @@ import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialWeekAllocation;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialWeekAllocationRepository;
-import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.transaction.model.entity.TransactionAnalysisResult;
 import com.ssafy.amagetdone.domain.transaction.model.vo.TransactionExcludedReason;
 
@@ -28,8 +27,8 @@ public class BudgetSpentUpdateService {
 	private final BudgetWeekRepository budgetWeekRepository;
 	private final EssentialWeekAllocationRepository essentialWeekAllocationRepository;
 
-	public void updateSpentAmounts(User user, List<TransactionAnalysisResult> analysisResults) {
-		if (user == null || analysisResults == null || analysisResults.isEmpty()) {
+	public void updateSpentAmounts(com.ssafy.amagetdone.domain.member.model.entity.User user, List<TransactionAnalysisResult> analysisResults) {
+		if (user == null || user.getId() == null || analysisResults == null || analysisResults.isEmpty()) {
 			return;
 		}
 
@@ -51,7 +50,12 @@ public class BudgetSpentUpdateService {
 			LocalDate spentDate = analysisResult.getTransaction().getTransactionDateTime().toLocalDate();
 			Optional<BudgetWeek> budgetWeek = budgetWeeksByDate.computeIfAbsent(
 				spentDate,
-				date -> budgetWeekRepository.findByUserAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqual(user, date, date)
+				date -> budgetWeekRepository
+					.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+						user.getId(),
+						date,
+						date
+					)
 			);
 			if (budgetWeek.isEmpty()) {
 				continue;

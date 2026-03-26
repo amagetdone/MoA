@@ -29,6 +29,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework:spring-webflux'
 	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.16'
 	implementation 'io.github.cdimascio:dotenv-java:3.2.0'
@@ -42,6 +43,7 @@ dependencies {
 	testAnnotationProcessor 'org.projectlombok:lombok:1.18.38'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
+	testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
 	testRuntimeOnly 'com.h2database:h2'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
