@@ -245,12 +245,19 @@ class _GoalItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final overallProgress = goal.overallProgressRate.clamp(0.0, 1.0);
-    final percent = (overallProgress * 100).toStringAsFixed(0);
+    final percentValue = overallProgress * 100;
+    final percent = percentValue > 0 && percentValue < 1
+        ? percentValue.toStringAsFixed(1)
+        : percentValue.toStringAsFixed(0);
     final weeklySaved = goal.weeklySavedAmount;
     final weeklyTarget = goal.weeklyTargetAmount;
-    final currentWeek = goal.currentWeekNumber.clamp(1, 999);
+    final remainingWeeklyTarget = (weeklyTarget - weeklySaved).clamp(
+      0,
+      weeklyTarget,
+    );
     final weeklyTargetMarkerProgress = goal.targetAmount > 0
-        ? ((weeklyTarget * currentWeek) / goal.targetAmount).clamp(0.0, 1.0)
+        ? ((goal.currentAmount + remainingWeeklyTarget) / goal.targetAmount)
+              .clamp(0.0, 1.0)
         : 0.0;
 
     return GestureDetector(
@@ -325,19 +332,25 @@ class _GoalItem extends StatelessWidget {
 
           // Progress bar + percent
           Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                child: _GoalProgressBar(
-                  progress: overallProgress,
-                  markerProgress: weeklyTargetMarkerProgress,
+                child: SizedBox(
+                  height: 12.h,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _GoalProgressBar(
+                      progress: overallProgress,
+                      markerProgress: weeklyTargetMarkerProgress,
+                    ),
+                  ),
                 ),
               ),
               SizedBox(width: 10.w),
               SizedBox(
-                height: 16.h,
+                height: 12.h,
                 child: Align(
-                  alignment: Alignment.bottomCenter,
+                  alignment: Alignment.center,
                   child: Text(
                     '$percent%',
                     style: AppTextStyles.bodySm.copyWith(
@@ -371,39 +384,33 @@ class _GoalProgressBar extends StatelessWidget {
     final normalizedMarker = markerProgress.clamp(0.0, 1.0);
 
     return SizedBox(
-      height: 16.h,
+      height: 6.h,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final markerLeft = normalizedMarker <= 0
               ? 0.0
               : (constraints.maxWidth * normalizedMarker).clamp(
-                  2.w,
-                  constraints.maxWidth - 2.w,
+                  1.w,
+                  constraints.maxWidth - 1.w,
                 );
+          final progressWidth = constraints.maxWidth * normalizedProgress;
 
           return Stack(
             clipBehavior: Clip.none,
             children: [
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  height: 6.h,
-                  decoration: BoxDecoration(
-                    color: AppColors.orange500.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(3.r),
-                  ),
+              Container(
+                height: 6.h,
+                decoration: BoxDecoration(
+                  color: AppColors.orange500.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(3.r),
                 ),
               ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: FractionallySizedBox(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: normalizedProgress,
+              if (normalizedProgress > 0)
+                Positioned(
+                  left: 0,
+                  bottom: 0,
                   child: Container(
+                    width: progressWidth.clamp(2.w, constraints.maxWidth),
                     height: 6.h,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(3.r),
@@ -413,12 +420,11 @@ class _GoalProgressBar extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
               Positioned(
-                left: markerLeft - 1.w,
+                left: markerLeft - 0.5.w,
                 bottom: 0,
                 child: Container(
-                  width: 2.w,
+                  width: 1.w,
                   height: 6.h,
                   decoration: BoxDecoration(
                     color: AppColors.orange500,
