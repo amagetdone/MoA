@@ -31,7 +31,7 @@ public class S3ObjectStorageService implements S3StorageService {
 	public String upload(MultipartFile file, ImageCategory category) {
 		validateFile(file);
 
-		String objectKey = category.getPrefix() + "/" + UUID.randomUUID() + "." + extractExt(file.getOriginalFilename());
+		String objectKey = category.getPrefix() + "/" + UUID.randomUUID() + "." + extractExt(file);
 		ObjectMetadata metadata = new ObjectMetadata();
 		metadata.setContentLength(file.getSize());
 		metadata.setContentType(file.getContentType());
@@ -71,14 +71,25 @@ public class S3ObjectStorageService implements S3StorageService {
 		}
 	}
 
-	private String extractExt(String fileName) {
-		if (fileName == null) {
+	private String extractExt(MultipartFile file) {
+		String fileName = file.getOriginalFilename();
+		if (fileName != null) {
+			int dotIndex = fileName.lastIndexOf('.');
+			if (dotIndex >= 0 && dotIndex < fileName.length() - 1) {
+				return fileName.substring(dotIndex + 1);
+			}
+		}
+
+		String contentType = file.getContentType();
+		if (contentType == null || contentType.isBlank()) {
 			throw new IllegalArgumentException("File extension is missing.");
 		}
-		int dotIndex = fileName.lastIndexOf('.');
-		if (dotIndex < 0 || dotIndex == fileName.length() - 1) {
-			throw new IllegalArgumentException("File extension is missing.");
-		}
-		return fileName.substring(dotIndex + 1);
+		return switch (contentType.toLowerCase()) {
+			case "image/jpeg", "image/jpg" -> "jpg";
+			case "image/png" -> "png";
+			case "image/gif" -> "gif";
+			case "image/webp" -> "webp";
+			default -> throw new IllegalArgumentException("File extension is missing.");
+		};
 	}
 }

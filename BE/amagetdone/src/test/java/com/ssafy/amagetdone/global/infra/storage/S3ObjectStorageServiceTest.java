@@ -61,6 +61,23 @@ class S3ObjectStorageServiceTest {
 	}
 
 	@Test
+	void uploadFallsBackToContentTypeWhenFileNameExtensionIsMissing() {
+		MockMultipartFile file = new MockMultipartFile(
+			"image",
+			"profile-image",
+			"image/png",
+			"image-content".getBytes(StandardCharsets.UTF_8)
+		);
+
+		String objectKey = storageService.upload(file, ImageCategory.PROFILE);
+
+		ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
+		verify(amazonS3).putObject(eq("test-bucket"), keyCaptor.capture(), any(), any(ObjectMetadata.class));
+		org.junit.jupiter.api.Assertions.assertTrue(objectKey.startsWith("profile/"));
+		org.junit.jupiter.api.Assertions.assertTrue(objectKey.endsWith(".png"));
+	}
+
+	@Test
 	void loadBytesReadsObjectContent() throws Exception {
 		S3Object s3Object = new S3Object();
 		s3Object.setObjectContent(new ByteArrayInputStream("abc".getBytes(StandardCharsets.UTF_8)));
@@ -99,5 +116,17 @@ class S3ObjectStorageServiceTest {
 		);
 
 		assertEquals("File is empty.", exception.getMessage());
+	}
+
+	@Test
+	void uploadRejectsFileWithoutExtensionAndContentType() {
+		MockMultipartFile file = new MockMultipartFile("image", "profile-image", null, "abc".getBytes(StandardCharsets.UTF_8));
+
+		IllegalArgumentException exception = assertThrows(
+			IllegalArgumentException.class,
+			() -> storageService.upload(file, ImageCategory.PROFILE)
+		);
+
+		assertEquals("File extension is missing.", exception.getMessage());
 	}
 }
