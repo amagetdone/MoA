@@ -29,6 +29,7 @@ import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
 
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
@@ -51,6 +52,7 @@ public class BudgetHistoricalRebuildService {
 	private final BudgetActualSpentRefreshService budgetActualSpentRefreshService;
 	private final BudgetRolloverResyncService budgetRolloverResyncService;
 	private final DailyGoalSavingAccrualService dailyGoalSavingAccrualService;
+	private final EntityManager entityManager;
 	private final Clock clock;
 
 	public GoalSavingAccrualForceDto.Response rebuild(Integer userId, Integer planId) {
@@ -117,6 +119,7 @@ public class BudgetHistoricalRebuildService {
 			affectedMonths = new ArrayList<>(budgetMonthRepository.saveAll(affectedMonths));
 			seedMissingEssentialExpenseMonths(userId, affectedMonths);
 		}
+		flushAndClear();
 
 		BudgetAllocationService.AllocationResult allocationResult = budgetAllocationTriggerService.triggerHistorical(
 			userId,
@@ -127,8 +130,14 @@ public class BudgetHistoricalRebuildService {
 			budgetActualSpentRefreshService.refresh(userId, allocationResult.budgetWeeks());
 		}
 		budgetRolloverResyncService.resync(userId);
+		flushAndClear();
 
 		return dailyGoalSavingAccrualService.backfillAccrual(userId, new GoalSavingAccrualForceDto.BackfillRequest(null));
+	}
+
+	private void flushAndClear() {
+		entityManager.flush();
+		entityManager.clear();
 	}
 
 	private List<BudgetMonth> budgetMonthsWithSeedFallback(Integer userId, LocalDate serviceStartDate, LocalDate today) {
