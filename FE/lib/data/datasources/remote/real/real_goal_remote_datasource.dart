@@ -76,11 +76,7 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
 
     GoalWeeklyPlanPage weeklyPlanPage;
     try {
-      weeklyPlanPage = await fetchGoalWeeklyPlans(
-        id,
-        page: 0,
-        size: 200,
-      );
+      weeklyPlanPage = await fetchGoalWeeklyPlans(id, page: 0, size: 200);
     } catch (_) {
       weeklyPlanPage = GoalWeeklyPlanPage(goalId: id);
     }
@@ -93,6 +89,7 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
     final totalWeeks = (data['totalWeeks'] as num?)?.toInt();
     final dday = (data['dday'] as num?)?.toInt();
     final achievementRate = (data['achievementRate'] as num?)?.toDouble();
+    final apiStatus = data['status'] as String?;
 
     final endDate = _inferEndDate(dday);
     final startDate = _inferStartDate(
@@ -110,7 +107,8 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
       startDate: startDate,
       endDate: endDate,
       priority: priority,
-      status: _parseStatus(
+      status: _parseGoalStatus(
+        apiStatus: apiStatus,
         savedAmount: savedAmount,
         targetAmount: targetAmount,
         dday: dday,
@@ -128,6 +126,7 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
       currentWeekOverride: currentWeek,
       totalWeeksOverride: totalWeeks,
       detailLoaded: true,
+      apiStatus: apiStatus,
     );
   }
 
@@ -144,10 +143,7 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
   }) async {
     final response = await _dio.get(
       'v1/plans/$id/weekly-plans',
-      queryParameters: {
-        'page': page,
-        'size': size,
-      },
+      queryParameters: {'page': page, 'size': size},
     );
 
     final data = response.data as Map<String, dynamic>;
@@ -175,10 +171,7 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
   Future<Goal> updateGoal(Goal goal) async {
     await _dio.patch(
       'v1/plans/${goal.id}',
-      data: {
-        'title': goal.name,
-        'description': goal.description ?? '',
-      },
+      data: {'title': goal.name, 'description': goal.description ?? ''},
     );
 
     return goal.copyWith(
@@ -217,7 +210,9 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
     final aiPipelineStatus = parseGoalAiPipelineStatus(
       json['aiPipelineStatus'] as String?,
     );
-    final videoUrl = aiPipelineStatus == null ||
+    final apiStatus = json['status'] as String?;
+    final videoUrl =
+        aiPipelineStatus == null ||
             aiPipelineStatus == GoalAiPipelineStatus.succeeded
         ? await _fetchVideoUrlSafely(planId)
         : null;
@@ -237,7 +232,8 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
       startDate: startDate,
       endDate: endDate,
       priority: priority,
-      status: _parseStatus(
+      status: _parseGoalStatus(
+        apiStatus: apiStatus,
         savedAmount: savedAmount,
         targetAmount: targetAmount,
         dday: dday,
@@ -249,6 +245,7 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
       dday: dday,
       achievementRateOverride: achievementRate,
       aiPipelineStatus: aiPipelineStatus,
+      apiStatus: apiStatus,
     );
   }
 
@@ -268,12 +265,23 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
     return null;
   }
 
-  GoalStatus _parseStatus({
+  GoalStatus _parseGoalStatus({
+    required String? apiStatus,
     required int savedAmount,
     required int targetAmount,
     required int? dday,
     required double? achievementRate,
   }) {
+    switch (apiStatus?.trim().toUpperCase()) {
+      case 'WAITING':
+      case 'ACTIVE':
+        return GoalStatus.inProgress;
+      case 'COMPLETED':
+        return GoalStatus.achieved;
+      case 'CANCELLED':
+        return GoalStatus.failed;
+    }
+
     if ((achievementRate ?? 0) >= 100 ||
         (targetAmount > 0 && savedAmount >= targetAmount)) {
       return GoalStatus.achieved;
@@ -387,7 +395,9 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
     if (title.contains('여행') || title.contains('휴가') || title.contains('제주')) {
       return 'travel';
     }
-    if (title.contains('노트북') || title.contains('컴퓨터') || title.contains('아이패드')) {
+    if (title.contains('노트북') ||
+        title.contains('컴퓨터') ||
+        title.contains('아이패드')) {
       return 'laptop';
     }
     if (title.contains('비상')) {

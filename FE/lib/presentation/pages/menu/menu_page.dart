@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -258,6 +259,9 @@ class _ProfileAvatar extends StatelessWidget {
           : Image.network(
               imageUrl!,
               fit: BoxFit.cover,
+              webHtmlElementStrategy: kIsWeb
+                  ? WebHtmlElementStrategy.prefer
+                  : WebHtmlElementStrategy.never,
               errorBuilder: (context, error, stackTrace) {
                 return Center(child: fallback());
               },
