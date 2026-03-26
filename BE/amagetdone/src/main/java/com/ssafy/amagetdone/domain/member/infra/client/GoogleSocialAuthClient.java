@@ -39,7 +39,17 @@ public class GoogleSocialAuthClient implements SocialAuthClient {
 	@Override
 	public SocialUserIdentity fetchIdentity(SocialAuthDto.Request request) {
 		if (request.idToken() != null && !request.idToken().isBlank()) {
-			return fetchByIdToken(request.idToken());
+			try {
+				return fetchByIdToken(request.idToken());
+			} catch (MemberException exception) {
+				if (request.accessToken() == null || request.accessToken().isBlank()) {
+					throw exception;
+				}
+			}
+		}
+
+		if (request.accessToken() != null && !request.accessToken().isBlank()) {
+			return fetchByAccessToken(request.accessToken());
 		}
 
 		throw new MemberException(MemberErrorCode.GOOGLE_ID_TOKEN_REQUIRED);
@@ -67,6 +77,28 @@ public class GoogleSocialAuthClient implements SocialAuthClient {
 		}
 	}
 
+	private SocialUserIdentity fetchByAccessToken(String accessToken) {
+		String uri = UriComponentsBuilder.fromUriString(properties.getGoogle().getTokenInfoUri())
+			.queryParam("access_token", accessToken)
+			.encode(StandardCharsets.UTF_8)
+			.toUriString();
+
+		try {
+			GoogleTokenInfoResponse response = restClient.get()
+				.uri(uri)
+				.retrieve()
+				.body(GoogleTokenInfoResponse.class);
+
+			if (!isValidGoogleAccessTokenInfo(response)) {
+				throw new MemberException(MemberErrorCode.INVALID_GOOGLE_ID_TOKEN);
+			}
+
+			return new SocialUserIdentity(SocialProvider.GOOGLE, response.sub());
+		} catch (RestClientException exception) {
+			throw new MemberException(MemberErrorCode.INVALID_GOOGLE_ID_TOKEN, exception);
+		}
+	}
+
 	private boolean isValidGoogleTokenInfo(GoogleTokenInfoResponse response) {
 		return response != null
 			&& response.sub() != null
@@ -75,6 +107,16 @@ public class GoogleSocialAuthClient implements SocialAuthClient {
 			&& !properties.getGoogle().getClientId().isBlank()
 			&& properties.getGoogle().getClientId().equals(response.aud())
 			&& VALID_GOOGLE_ISSUERS.contains(response.iss())
+			&& isNotExpired(response.exp());
+	}
+
+	private boolean isValidGoogleAccessTokenInfo(GoogleTokenInfoResponse response) {
+		return response != null
+			&& response.sub() != null
+			&& !response.sub().isBlank()
+			&& properties.getGoogle().getClientId() != null
+			&& !properties.getGoogle().getClientId().isBlank()
+			&& properties.getGoogle().getClientId().equals(response.aud())
 			&& isNotExpired(response.exp());
 	}
 

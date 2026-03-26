@@ -78,7 +78,7 @@ class FindOrCreateSocialUserUseCaseTest {
 		FindOrCreateSocialUserUseCase.Result result = useCase.execute(identity);
 
 		assertEquals("tester2", result.user().getNickname());
-		assertEquals("test2@test.com", result.user().getEmail());
+		assertEquals("test2@tester.com", result.user().getEmail());
 		assertEquals(LocalDate.of(1997, 3, 1), result.user().getBirthDate());
 		assertEquals(Boolean.TRUE, result.user().getHasFixedIncome());
 		assertNull(result.user().getUserKey());
@@ -105,7 +105,7 @@ class FindOrCreateSocialUserUseCaseTest {
 
 		assertFalse(result.isNewUser());
 		assertEquals("tester5", result.user().getNickname());
-		assertEquals("test5@test.com", result.user().getEmail());
+		assertEquals("test5@tester.com", result.user().getEmail());
 		assertNotNull(result.user().getBirthDate());
 		assertEquals(Boolean.TRUE, result.user().getHasFixedIncome());
 		assertEquals("ACTIVE", result.user().getStatus().name());

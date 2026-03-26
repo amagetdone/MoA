@@ -225,7 +225,7 @@ public class BudgetAllocationService {
 			LocalDate monthBaseDate = currentMonthStart;
 			BudgetMonth budgetMonth = referencedBudgetMonths.get(monthBaseDate);
 			if (budgetMonth == null) {
-				budgetMonth = budgetMonthRepository.findByUserAndBaseDate(user, monthBaseDate)
+				budgetMonth = budgetMonthRepository.findFirstByUserAndBaseDateOrderByIdDesc(user, monthBaseDate)
 					.orElseGet(() -> BudgetMonth.builder()
 						.user(user)
 						.baseDate(monthBaseDate)
@@ -477,7 +477,7 @@ public class BudgetAllocationService {
 				continue;
 			}
 
-			Map<LocalDate, Long> distributedAmounts = distributeByDenominator(baseWeeklyAmount, 7L, slices);
+			Map<LocalDate, Long> distributedAmounts = distributeByDenominator(targetAmount, (long) plan.getTargetWeeks() * 7L, slices);
 			shortageSummaries.put(plan, new PlanShortageSummary(plan, baseWeeklyAmount, 0L, 0));
 
 			for (Map.Entry<LocalDate, Long> entry : distributedAmounts.entrySet()) {

@@ -54,5 +54,7 @@ GIT.md
 docs/*.md
 !docs/subagents.skills.md
 docs/superpowers/
+docs/test/
+.j14d101.pem
 
 ui

@@ -59,6 +59,7 @@ class MemberProfileServiceTest {
 		);
 
 		assertEquals("ACTIVE", response.status());
+		assertEquals("ssafy-user-key", user.getUserKey());
 		assertTrue(containsLog(appender, "event=MEMBER_SIGNUP_COMPLETE_SUCCESS"));
 	}
 

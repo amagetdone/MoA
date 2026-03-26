@@ -50,17 +50,28 @@ class GoogleSocialAuthClientTest {
 	}
 
 	@Test
-	void fetchIdentityRejectsAccessTokenOnlyRequest() {
+	void fetchIdentityUsesAccessTokenWhenIdTokenIsNull() {
 		RestClient.Builder builder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
 		SocialAuthProperties properties = new SocialAuthProperties();
+		properties.getGoogle().setClientId("expected-client-id");
+		properties.getGoogle().setTokenInfoUri("https://oauth2.googleapis.com/tokeninfo");
 		GoogleSocialAuthClient client = new GoogleSocialAuthClient(builder, properties);
 
-		MemberException exception = assertThrows(
-			MemberException.class,
-			() -> client.fetchIdentity(new SocialAuthDto.Request("google-access-token", null))
-		);
+		server.expect(requestTo("https://oauth2.googleapis.com/tokeninfo?access_token=google-access-token"))
+			.andExpect(method(GET))
+			.andRespond(withSuccess("""
+				{
+				  "aud": "expected-client-id",
+				  "exp": "%s",
+				  "sub": "google-user-456"
+				}
+				""".formatted(Instant.now().plusSeconds(300).getEpochSecond()), APPLICATION_JSON));
 
-		assertEquals("MEMBER_002", exception.getErrorCode().code());
+		SocialUserIdentity identity = client.fetchIdentity(new SocialAuthDto.Request("google-access-token", null));
+
+		assertEquals(SocialProvider.GOOGLE, identity.provider());
+		assertEquals("google-user-456", identity.providerUid());
 	}
 
 	@Test

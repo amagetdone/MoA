@@ -65,7 +65,7 @@ class BudgetAllocationServiceTest {
 			planWeekAllocationRepository
 		);
 
-		Mockito.lenient().when(budgetMonthRepository.findByUserAndBaseDate(any(User.class), any(LocalDate.class)))
+		Mockito.lenient().when(budgetMonthRepository.findFirstByUserAndBaseDateOrderByIdDesc(any(User.class), any(LocalDate.class)))
 			.thenReturn(java.util.Optional.empty());
 		Mockito.lenient().when(
 			budgetWeekRepository.findByUserAndWeekStartDateBetweenOrderByWeekSequence(any(User.class), any(LocalDate.class), any(LocalDate.class))
@@ -110,13 +110,13 @@ class BudgetAllocationServiceTest {
 
 		assertEquals(700_000L, week2.getPlannedIncomeAmount());
 		assertEquals(327_419L, week2.getPlannedEssentialAmount());
-		assertEquals(333_333L, week2.getPlannedSavingAmount());
-		assertTrue(Math.abs(week2.getFinalFreeAmount() - 39_248L) <= 1L);
+		assertEquals(333_334L, week2.getPlannedSavingAmount());
+		assertTrue(Math.abs(week2.getFinalFreeAmount() - 39_247L) <= 1L);
 
 		assertEquals(53_571L, planAllocation(result.planAllocations(), 1, "Emergency Fund").getPlannedAmount());
 		assertEquals(89_286L, planAllocation(result.planAllocations(), 1, "Car Fund").getPlannedAmount());
 		assertEquals(125_000L, planAllocation(result.planAllocations(), 2, "Emergency Fund").getPlannedAmount());
-		assertEquals(208_333L, planAllocation(result.planAllocations(), 2, "Car Fund").getPlannedAmount());
+		assertEquals(208_334L, planAllocation(result.planAllocations(), 2, "Car Fund").getPlannedAmount());
 	}
 
 	@Test

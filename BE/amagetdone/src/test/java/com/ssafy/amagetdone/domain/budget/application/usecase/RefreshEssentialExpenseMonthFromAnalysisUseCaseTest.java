@@ -96,7 +96,7 @@ class RefreshEssentialExpenseMonthFromAnalysisUseCaseTest {
 		));
 		given(essentialExpenseMonthRepository.findAllByBudgetMonth_User_IdAndBudgetMonth_BaseDate(userId, baseMonth))
 			.willReturn(List.of());
-		given(budgetMonthRepository.findByUser_IdAndBaseDate(userId, baseMonth))
+		given(budgetMonthRepository.findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, baseMonth))
 			.willReturn(Optional.of(marchBudgetMonth));
 		given(essentialExpenseMonthRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
 
@@ -134,7 +134,7 @@ class RefreshEssentialExpenseMonthFromAnalysisUseCaseTest {
 		));
 		given(essentialExpenseMonthRepository.findAllByBudgetMonth_User_IdAndBudgetMonth_BaseDate(userId, baseMonth))
 			.willReturn(List.of());
-		given(budgetMonthRepository.findByUser_IdAndBaseDate(userId, baseMonth))
+		given(budgetMonthRepository.findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, baseMonth))
 			.willReturn(Optional.of(budgetMonth(100, userId, baseMonth)));
 		given(essentialExpenseMonthRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
 
@@ -184,7 +184,7 @@ class RefreshEssentialExpenseMonthFromAnalysisUseCaseTest {
 		));
 		given(essentialExpenseMonthRepository.findAllByBudgetMonth_User_IdAndBudgetMonth_BaseDate(userId, baseMonth))
 			.willReturn(List.of(userInputHousing, analyzerHousing));
-		given(budgetMonthRepository.findByUser_IdAndBaseDate(userId, baseMonth))
+		given(budgetMonthRepository.findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, baseMonth))
 			.willReturn(Optional.of(marchBudgetMonth));
 		given(essentialExpenseMonthRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
 
@@ -230,7 +230,7 @@ class RefreshEssentialExpenseMonthFromAnalysisUseCaseTest {
 		));
 		given(essentialExpenseMonthRepository.findAllByBudgetMonth_User_IdAndBudgetMonth_BaseDate(userId, baseMonth))
 			.willReturn(List.of(staleTransport));
-		given(budgetMonthRepository.findByUser_IdAndBaseDate(userId, baseMonth))
+		given(budgetMonthRepository.findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, baseMonth))
 			.willReturn(Optional.of(marchBudgetMonth));
 		given(essentialExpenseMonthRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
 
@@ -274,7 +274,7 @@ class RefreshEssentialExpenseMonthFromAnalysisUseCaseTest {
 			.willReturn(List.of(staleTransport));
 		given(essentialWeekAllocationRepository.findAllByEssentialExpenseMonthIn(List.of(staleTransport)))
 			.willReturn(List.of(weeklyAllocation));
-		given(budgetMonthRepository.findByUser_IdAndBaseDate(userId, baseMonth))
+		given(budgetMonthRepository.findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, baseMonth))
 			.willReturn(Optional.of(marchBudgetMonth));
 		given(essentialExpenseMonthRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
 

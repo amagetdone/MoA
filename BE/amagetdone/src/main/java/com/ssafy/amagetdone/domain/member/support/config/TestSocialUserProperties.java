@@ -61,16 +61,7 @@ public class TestSocialUserProperties {
 	}
 
 	public String resolveEmail(int testUserId) {
-		String suffix = suffix(testUserId);
-		if (suffix.isEmpty()) {
-			return email;
-		}
-
-		int separatorIndex = email.indexOf('@');
-		if (separatorIndex < 0) {
-			return email + suffix;
-		}
-		return email.substring(0, separatorIndex) + suffix + email.substring(separatorIndex);
+		return "test" + testUserId + "@tester.com";
 	}
 
 	public LocalDate resolveBirthDate(int testUserId) {

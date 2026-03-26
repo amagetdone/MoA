@@ -40,6 +40,7 @@ import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepos
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
 
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
@@ -85,6 +86,9 @@ class BudgetHistoricalRebuildServiceTest {
 
 	@Mock
 	private DailyGoalSavingAccrualService dailyGoalSavingAccrualService;
+
+	@Mock
+	private EntityManager entityManager;
 
 	@Test
 	void rebuildResetsHistoricalBudgetStateThenReplaysAutoAccrual() {
@@ -166,6 +170,7 @@ class BudgetHistoricalRebuildServiceTest {
 			budgetActualSpentRefreshService,
 			budgetRolloverResyncService,
 			dailyGoalSavingAccrualService,
+			entityManager,
 			Clock.fixed(Instant.parse("2026-03-20T00:00:00Z"), ZoneId.of("Asia/Seoul"))
 		);
 
@@ -181,6 +186,8 @@ class BudgetHistoricalRebuildServiceTest {
 		verify(budgetActualSpentRefreshService).refresh(1, List.of(rebuiltWeek));
 		verify(budgetRolloverResyncService).resync(1);
 		verify(dailyGoalSavingAccrualService).backfillAccrual(1, new GoalSavingAccrualForceDto.BackfillRequest(null));
+		verify(entityManager, org.mockito.Mockito.times(2)).flush();
+		verify(entityManager, org.mockito.Mockito.times(2)).clear();
 
 		InOrder inOrder = inOrder(
 			budgetAdjustmentRepository,
@@ -188,6 +195,7 @@ class BudgetHistoricalRebuildServiceTest {
 			essentialWeekAllocationRepository,
 			planWeekAllocationRepository,
 			budgetWeekRepository,
+			entityManager,
 			budgetAllocationTriggerService,
 			budgetActualSpentRefreshService,
 			budgetRolloverResyncService,
@@ -199,9 +207,13 @@ class BudgetHistoricalRebuildServiceTest {
 		inOrder.verify(essentialWeekAllocationRepository).deleteAll(List.of(staleEssentialAllocation));
 		inOrder.verify(planWeekAllocationRepository).deleteAll(List.of(stalePlanAllocation));
 		inOrder.verify(budgetWeekRepository).deleteAll(List.of(staleWeek));
+		inOrder.verify(entityManager).flush();
+		inOrder.verify(entityManager).clear();
 		inOrder.verify(budgetAllocationTriggerService).triggerHistorical(1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 20));
 		inOrder.verify(budgetActualSpentRefreshService).refresh(1, List.of(rebuiltWeek));
 		inOrder.verify(budgetRolloverResyncService).resync(1);
+		inOrder.verify(entityManager).flush();
+		inOrder.verify(entityManager).clear();
 		inOrder.verify(dailyGoalSavingAccrualService).backfillAccrual(1, new GoalSavingAccrualForceDto.BackfillRequest(null));
 	}
 
@@ -222,6 +234,7 @@ class BudgetHistoricalRebuildServiceTest {
 			budgetActualSpentRefreshService,
 			budgetRolloverResyncService,
 			dailyGoalSavingAccrualService,
+			entityManager,
 			Clock.fixed(Instant.parse("2026-03-20T00:00:00Z"), ZoneId.of("Asia/Seoul"))
 		);
 
@@ -281,6 +294,7 @@ class BudgetHistoricalRebuildServiceTest {
 			budgetActualSpentRefreshService,
 			budgetRolloverResyncService,
 			dailyGoalSavingAccrualService,
+			entityManager,
 			Clock.fixed(Instant.parse("2026-03-20T00:00:00Z"), ZoneId.of("Asia/Seoul"))
 		);
 
@@ -347,6 +361,7 @@ class BudgetHistoricalRebuildServiceTest {
 			budgetActualSpentRefreshService,
 			budgetRolloverResyncService,
 			dailyGoalSavingAccrualService,
+			entityManager,
 			Clock.fixed(Instant.parse("2026-03-20T00:00:00Z"), ZoneId.of("Asia/Seoul"))
 		);
 
