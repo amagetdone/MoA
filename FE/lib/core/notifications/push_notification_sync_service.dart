@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:more_app/core/notifications/firebase_web_push_config.dart';
 import 'package:more_app/core/notifications/notification_inbox_persistence.dart';
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
 import 'package:more_app/data/datasources/local/auth_local_datasource.dart';
@@ -42,9 +44,9 @@ class PushNotificationSyncService {
   bool _initialized = false;
   String? _lastOpenedMessageId;
 
-  bool get _isSupportedMobilePlatform {
+  bool get _isSupportedPlatform {
     if (kIsWeb) {
-      return false;
+      return true;
     }
 
     return switch (defaultTargetPlatform) {
@@ -54,6 +56,10 @@ class PushNotificationSyncService {
   }
 
   String get _platform {
+    if (kIsWeb) {
+      return 'WEB';
+    }
+
     return switch (defaultTargetPlatform) {
       TargetPlatform.iOS => 'IOS',
       _ => 'ANDROID',
@@ -61,18 +67,21 @@ class PushNotificationSyncService {
   }
 
   Future<void> initialize() async {
-    if (_initialized || !_isSupportedMobilePlatform) {
+    if (_initialized || !_isSupportedPlatform) {
       return;
     }
 
     _initialized = true;
 
     final preferences = await _appLocalDataSource.getMenuPreferences();
-    await FirebaseMessaging.instance.setAutoInitEnabled(
-      preferences.notificationEnabled,
-    );
+    try {
+      await FirebaseMessaging.instance.setAutoInitEnabled(
+        preferences.notificationEnabled,
+      );
+    } catch (_) {}
 
     await _notificationInboxRepository.initialize();
+    await _restoreInboxFromLaunchPayload();
 
     _tokenRefreshSubscription = FirebaseMessaging.instance.onTokenRefresh.listen(
       (token) {
@@ -92,10 +101,35 @@ class PushNotificationSyncService {
       unawaited(_handleOpenedMessage(message));
     });
 
-    final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
-    if (initialMessage != null) {
-      await _handleOpenedMessage(initialMessage);
+    try {
+      final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+      if (initialMessage != null) {
+        await _handleOpenedMessage(initialMessage);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _restoreInboxFromLaunchPayload() async {
+    if (!kIsWeb) {
+      return;
     }
+
+    final encodedPayload = Uri.base.queryParameters['fcmPayload'];
+    if (encodedPayload == null || encodedPayload.isEmpty) {
+      return;
+    }
+
+    try {
+      final envelope =
+          jsonDecode(
+                utf8.decode(base64Url.decode(base64.normalize(encodedPayload))),
+              )
+              as Map<String, dynamic>;
+      await NotificationInboxPersistence.savePayloadEnvelope(
+        envelope,
+        markAsRead: true,
+      );
+    } catch (_) {}
   }
 
   Future<void> dispose() async {
@@ -109,7 +143,7 @@ class PushNotificationSyncService {
   }
 
   Future<void> syncTokenIfEnabled({bool promptPermission = true}) async {
-    if (!_isSupportedMobilePlatform) {
+    if (!_isSupportedPlatform) {
       return;
     }
 
@@ -117,7 +151,9 @@ class PushNotificationSyncService {
 
     final preferences = await _appLocalDataSource.getMenuPreferences();
     if (!preferences.notificationEnabled) {
-      await FirebaseMessaging.instance.setAutoInitEnabled(false);
+      try {
+        await FirebaseMessaging.instance.setAutoInitEnabled(false);
+      } catch (_) {}
       return;
     }
 
@@ -126,7 +162,9 @@ class PushNotificationSyncService {
       return;
     }
 
-    await FirebaseMessaging.instance.setAutoInitEnabled(true);
+    try {
+      await FirebaseMessaging.instance.setAutoInitEnabled(true);
+    } catch (_) {}
 
     if (promptPermission) {
       final settings = await FirebaseMessaging.instance.requestPermission(
@@ -144,7 +182,9 @@ class PushNotificationSyncService {
       }
     }
 
-    final token = await FirebaseMessaging.instance.getToken();
+    final token = await FirebaseMessaging.instance.getToken(
+      vapidKey: kIsWeb ? FirebaseWebPushConfig.vapidKey : null,
+    );
     if (token == null || token.isEmpty) {
       return;
     }
@@ -153,12 +193,14 @@ class PushNotificationSyncService {
   }
 
   Future<bool> setNotificationsEnabled(bool enabled) async {
-    if (!_isSupportedMobilePlatform) {
+    if (!_isSupportedPlatform) {
       return enabled;
     }
 
     await initialize();
-    await FirebaseMessaging.instance.setAutoInitEnabled(enabled);
+    try {
+      await FirebaseMessaging.instance.setAutoInitEnabled(enabled);
+    } catch (_) {}
 
     if (!enabled) {
       try {
@@ -190,7 +232,7 @@ class PushNotificationSyncService {
   }
 
   Future<void> handleLogout() async {
-    if (!_isSupportedMobilePlatform) {
+    if (!_isSupportedPlatform) {
       return;
     }
 

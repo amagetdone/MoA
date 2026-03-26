@@ -9,6 +9,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
+import 'package:more_app/core/notifications/firebase_web_push_config.dart';
 import 'package:more_app/core/notifications/push_notification_sync_service.dart';
 import 'package:more_app/core/theme/app_theme.dart';
 import 'package:more_app/core/utils/app_env.dart';
@@ -46,7 +47,11 @@ Future<void> main() async {
     }
   }
 
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+  if (kIsWeb) {
+    try {
+      await Firebase.initializeApp(options: FirebaseWebPushConfig.options);
+    } catch (_) {}
+  } else if (defaultTargetPlatform == TargetPlatform.android) {
     try {
       await Firebase.initializeApp();
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
