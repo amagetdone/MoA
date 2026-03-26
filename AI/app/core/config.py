@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -19,6 +21,18 @@ class Settings(BaseSettings):
     api_root_path: str = Field(default="", alias="API_ROOT_PATH")
     ai_api_key: str = Field(default="", alias="AI_API_KEY")
     openai_base_url: str = Field(default="", alias="OPENAI_BASE_URL")
+    chat_model: str = Field(default="gpt-4.1-mini", alias="CHAT_MODEL")
+    db_url: str = Field(default="", alias="DB_URL")
+    db_username: str = Field(default="", alias="DB_USERNAME")
+    db_password: str = Field(default="", alias="DB_PASSWORD")
+    chatbot_stream_status_events_enabled: bool = Field(
+        default=True,
+        alias="CHATBOT_STREAM_STATUS_EVENTS_ENABLED",
+    )
+    chatbot_default_goal_limit: int = Field(
+        default=5,
+        alias="CHATBOT_DEFAULT_GOAL_LIMIT",
+    )
     image_generation_model: str = Field(
         default="gemini-2.5-flash-image",
         alias="IMAGE_GENERATION_MODEL",
@@ -42,6 +56,14 @@ class Settings(BaseSettings):
     def model_source(self) -> str:
         return self.model_local_dir or self.model_id
 
+    @property
+    def database_dsn(self) -> str:
+        return build_postgresql_dsn(
+            jdbc_url=self.db_url,
+            username=self.db_username,
+            password=self.db_password,
+        )
+
     @field_validator(
         "model_revision",
         "model_local_dir",
@@ -58,3 +80,29 @@ class Settings(BaseSettings):
         if isinstance(value, str) and value.strip() == "":
             return None
         return value
+
+
+def build_postgresql_dsn(*, jdbc_url: str, username: str, password: str) -> str:
+    if not jdbc_url or not username or not password:
+        return ""
+
+    prefix = "jdbc:postgresql://"
+    if not jdbc_url.startswith(prefix):
+        return ""
+
+    remainder = jdbc_url.removeprefix(prefix)
+    host_port, separator, database_name = remainder.partition("/")
+    if not separator or not host_port or not database_name:
+        return ""
+
+    host, port_separator, port = host_port.partition(":")
+    if not host:
+        return ""
+
+    normalized_port = port if port_separator and port else "5432"
+    encoded_username = quote(username, safe="")
+    encoded_password = quote(password, safe="")
+    return (
+        "postgresql+psycopg://"
+        f"{encoded_username}:{encoded_password}@{host}:{normalized_port}/{database_name}"
+    )
