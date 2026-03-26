@@ -9,10 +9,9 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import reactor.core.publisher.Flux;
 
-import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 @Tag(name = "Chatbot", description = "Chatbot relay API")
 public interface ChatbotDocsController {
@@ -47,7 +46,7 @@ public interface ChatbotDocsController {
 		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "502", description = "Upstream relay failed", content = @Content),
 		@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "503", description = "Chatbot unavailable", content = @Content)
 	})
-	ResponseEntity<Flux<DataBuffer>> streamMessage(
+	ResponseEntity<StreamingResponseBody> streamMessage(
 		@Parameter(hidden = true) AuthenticatedMember authenticatedMember,
 		@io.swagger.v3.oas.annotations.parameters.RequestBody(
 			required = true,

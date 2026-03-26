@@ -7,9 +7,7 @@ import com.ssafy.amagetdone.global.security.AuthenticatedMember;
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
-import reactor.core.publisher.Flux;
 
-import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 @RestController
 @RequestMapping("/v1/chatbot")
@@ -37,7 +36,7 @@ public class ChatbotController implements ChatbotDocsController {
 	}
 
 	@PostMapping(path = "/messages/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-	public ResponseEntity<Flux<DataBuffer>> streamMessage(
+	public ResponseEntity<StreamingResponseBody> streamMessage(
 		@AuthenticationPrincipal AuthenticatedMember authenticatedMember,
 		@RequestBody ChatbotMessageRequest request
 	) {
