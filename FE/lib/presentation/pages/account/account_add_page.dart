@@ -8,6 +8,7 @@ import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
+import 'package:more_app/presentation/widgets/common/bank_icon.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 
 class AccountAddPage extends ConsumerStatefulWidget {
@@ -34,7 +35,9 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final List<BankCatalogItem> displayBanks = isExpanded ? allBanks : allBanks.take(9).toList();
+    final List<BankCatalogItem> displayBanks = isExpanded
+        ? allBanks
+        : allBanks.take(9).toList();
 
     return Scaffold(
       backgroundColor: colors.bgPrimary,
@@ -49,9 +52,22 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('은행 선택', style: AppTextStyles.headingLg.copyWith(color: colors.textPrimary, fontSize: 22.sp, fontWeight: FontWeight.bold)),
+                  Text(
+                    '은행 선택',
+                    style: AppTextStyles.headingLg.copyWith(
+                      color: colors.textPrimary,
+                      fontSize: 22.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   SizedBox(height: 4.h),
-                  Text('은행을 선택하세요.', style: AppTextStyles.bodySm.copyWith(color: colors.textTertiary, fontSize: 13.sp)),
+                  Text(
+                    '은행을 선택하세요.',
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: colors.textTertiary,
+                      fontSize: 13.sp,
+                    ),
+                  ),
                   SizedBox(height: 20.h),
 
                   GridView.builder(
@@ -71,32 +87,40 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                         onTap: _isAccountVerified
                             ? null
                             : () {
-                          setState(() {
-                            if (selectedBank != bank.name) {
-                              _accountController.clear();
-                              _isAccountVerified = false;
-                            }
-                            selectedBank = bank.name;
-                          });
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            _accountFocusNode.requestFocus();
-                            _scrollController.animateTo(
-                              _scrollController.position.maxScrollExtent,
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeOut,
-                            );
-                          });
-                        },
+                                setState(() {
+                                  if (selectedBank != bank.name) {
+                                    _accountController.clear();
+                                    _isAccountVerified = false;
+                                  }
+                                  selectedBank = bank.name;
+                                });
+                                WidgetsBinding.instance.addPostFrameCallback((
+                                  _,
+                                ) {
+                                  _accountFocusNode.requestFocus();
+                                  _scrollController.animateTo(
+                                    _scrollController.position.maxScrollExtent,
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeOut,
+                                  );
+                                });
+                              },
                         child: Container(
                           decoration: BoxDecoration(
                             color: colors.bgSurface,
                             borderRadius: BorderRadius.circular(12.r),
                             border: Border.all(
-                              color: isSelected ? AppColors.orange500 : Colors.transparent,
+                              color: isSelected
+                                  ? AppColors.orange500
+                                  : Colors.transparent,
                               width: 1.5,
                             ),
                             boxShadow: [
-                              BoxShadow(color: colors.cardShadow, blurRadius: 4, offset: const Offset(0, 2)),
+                              BoxShadow(
+                                color: colors.cardShadow,
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
                             ],
                           ),
                           child: Column(
@@ -108,16 +132,9 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                                   height: 50.w,
                                   color: Colors.white,
                                   child: Center(
-                                    child: SizedBox(
-                                      width: 28.w,
-                                      height: 28.w,
-                                      child: Image.asset(
-                                        bank.logoPath ?? '',
-                                        fit: BoxFit.contain,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return Center(child: Text('B', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp, color: colors.textPrimary)));
-                                        },
-                                      ),
+                                    child: BankIcon(
+                                      bankName: bank.name,
+                                      size: 28.w,
                                     ),
                                   ),
                                 ),
@@ -126,12 +143,14 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                               FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: Text(
-                                    bank.name,
-                                    style: AppTextStyles.caption.copyWith(
-                                        color: colors.textPrimary,
-                                        fontSize: 11.sp,
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500
-                                    )
+                                  bank.name,
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: colors.textPrimary,
+                                    fontSize: 11.sp,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.w500,
+                                  ),
                                 ),
                               ),
                             ],
@@ -147,7 +166,9 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                     onTap: () => setState(() => isExpanded = !isExpanded),
                     child: Center(
                       child: Icon(
-                        isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                        isExpanded
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
                         color: colors.dimText,
                         size: 24.w,
                       ),
@@ -155,22 +176,38 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                   ),
                   SizedBox(height: 20.h),
 
-                  Text('계좌번호', style: AppTextStyles.bodyMd.copyWith(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15.sp)),
+                  Text(
+                    '계좌번호',
+                    style: AppTextStyles.bodyMd.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15.sp,
+                    ),
+                  ),
                   SizedBox(height: 12.h),
                   TextField(
                     controller: _accountController,
                     focusNode: _accountFocusNode,
                     enabled: selectedBank != null && !_isAccountVerified,
                     keyboardType: TextInputType.number,
-                    style: TextStyle(fontSize: 14.sp, color: colors.textPrimary),
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      color: colors.textPrimary,
+                    ),
                     decoration: InputDecoration(
                       hintText: selectedBank == null
                           ? '은행을 먼저 선택해주세요.'
                           : '계좌번호를 입력해주세요.',
-                      hintStyle: AppTextStyles.bodySm.copyWith(color: colors.textTertiary, fontSize: 13.sp),
+                      hintStyle: AppTextStyles.bodySm.copyWith(
+                        color: colors.textTertiary,
+                        fontSize: 13.sp,
+                      ),
                       filled: true,
                       fillColor: colors.bgSurface,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16.w,
+                        vertical: 12.h,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12.r),
                         borderSide: BorderSide(color: colors.borderDefault),
@@ -181,7 +218,10 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12.r),
-                        borderSide: const BorderSide(color: AppColors.orange500, width: 1.2),
+                        borderSide: const BorderSide(
+                          color: AppColors.orange500,
+                          width: 1.2,
+                        ),
                       ),
                       disabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12.r),
@@ -190,7 +230,8 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                       suffixIcon: Padding(
                         padding: EdgeInsets.only(right: 8.w),
                         child: TextButton(
-                          onPressed: selectedBank != null &&
+                          onPressed:
+                              selectedBank != null &&
                                   _accountController.text.isNotEmpty &&
                                   !_isVerifying &&
                                   !_isAccountVerified
@@ -199,23 +240,33 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                                   try {
                                     final confirmed = await ref
                                         .read(accountRepositoryProvider)
-                                        .confirmAccount(_accountController.text);
+                                        .confirmAccount(
+                                          _accountController.text,
+                                        );
                                     if (mounted) {
                                       setState(() {
                                         _isAccountVerified = confirmed;
                                         _isVerifying = false;
                                       });
                                       if (!confirmed) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('계좌 실소유 확인에 실패했습니다.')),
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('계좌 실소유 확인에 실패했습니다.'),
+                                          ),
                                         );
                                       }
                                     }
                                   } catch (e) {
                                     if (mounted) {
                                       setState(() => _isVerifying = false);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('계좌 확인 중 오류가 발생했습니다.')),
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('계좌 확인 중 오류가 발생했습니다.'),
+                                        ),
                                       );
                                     }
                                   }
@@ -228,13 +279,15 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
                           child: Text(
-                            _isVerifying ? '확인중...' : (_isAccountVerified ? '확인완료' : '확인하기'),
+                            _isVerifying
+                                ? '확인중...'
+                                : (_isAccountVerified ? '확인완료' : '확인하기'),
                             style: AppTextStyles.bodySm.copyWith(
                               color: _isAccountVerified
                                   ? AppColors.green500
                                   : (_accountController.text.isNotEmpty
-                                      ? AppColors.orange500
-                                      : colors.textTertiary),
+                                        ? AppColors.orange500
+                                        : colors.textTertiary),
                               fontWeight: FontWeight.w600,
                               fontSize: 13.sp,
                             ),
@@ -252,7 +305,11 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
           MoreBottomButton(
             text: _isRequesting ? '요청 중...' : '다음',
             onPressed: () async {
-              if (selectedBank == null || _accountController.text.isEmpty || _isRequesting) return;
+              if (selectedBank == null ||
+                  _accountController.text.isEmpty ||
+                  _isRequesting) {
+                return;
+              }
 
               setState(() => _isRequesting = true);
               try {
@@ -265,11 +322,14 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                 final route = widget.isOnboarding
                     ? AppRoutes.onboardingAccountVerify
                     : AppRoutes.accountVerify;
-                context.push(route, extra: {
-                  'bankName': selectedBank,
-                  'accountNumber': _accountController.text,
-                  'isOnboarding': widget.isOnboarding,
-                });
+                context.push(
+                  route,
+                  extra: {
+                    'bankName': selectedBank,
+                    'accountNumber': _accountController.text,
+                    'isOnboarding': widget.isOnboarding,
+                  },
+                );
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -280,7 +340,11 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                 if (mounted) setState(() => _isRequesting = false);
               }
             },
-            enabled: selectedBank != null && _accountController.text.isNotEmpty && _isAccountVerified && !_isRequesting,
+            enabled:
+                selectedBank != null &&
+                _accountController.text.isNotEmpty &&
+                _isAccountVerified &&
+                !_isRequesting,
           ),
         ],
       ),

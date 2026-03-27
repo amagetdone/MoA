@@ -7,11 +7,7 @@ class BankIcon extends StatelessWidget {
   final String bankName;
   final double size;
 
-  const BankIcon({
-    super.key,
-    required this.bankName,
-    this.size = 40,
-  });
+  const BankIcon({super.key, required this.bankName, this.size = 40});
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +76,10 @@ class BankIcon extends StatelessWidget {
         return const Color(0xFF1F5DB6);
       case '산업은행':
         return const Color(0xFF0054A6);
+      case '한국은행':
+        return const Color(0xFF1E4E8C);
+      case '싸피은행':
+        return const Color(0xFF0066FF);
       default:
         return Colors.grey;
     }
