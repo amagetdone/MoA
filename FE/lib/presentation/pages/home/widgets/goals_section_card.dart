@@ -334,7 +334,7 @@ class _GoalItem extends StatelessWidget {
                           child: SizedBox(
                             height: 16.h,
                             child: Align(
-                              alignment: Alignment.bottomLeft,
+                              alignment: Alignment.centerLeft,
                               child: _GoalProgressBar(
                                 progress: overallProgress,
                                 markerProgress: weeklyTargetMarkerProgress,
@@ -345,16 +345,19 @@ class _GoalItem extends StatelessWidget {
                         SizedBox(width: 10.w),
                         SizedBox(
                           width: 36.w,
-                          height: 16.h,
+                          height: 20.h,
                           child: Align(
-                            alignment: Alignment.bottomRight,
-                            child: Text(
-                              '$percent%',
-                              style: AppTextStyles.bodySm.copyWith(
-                                color: AppColors.orange500,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 12.sp,
-                                height: 1,
+                            alignment: Alignment.centerRight,
+                            child: Padding(
+                              padding: EdgeInsets.only(top: 3.h),
+                              child: Text(
+                                '$percent%',
+                                style: AppTextStyles.bodySm.copyWith(
+                                  color: AppColors.orange500,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12.sp,
+                                  height: 1,
+                                ),
                               ),
                             ),
                           ),

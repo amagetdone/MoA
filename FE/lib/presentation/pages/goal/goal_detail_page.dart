@@ -285,7 +285,7 @@ class _HeroCard extends StatelessWidget {
                           child: Text(
                             goal.isAiPending
                                 ? 'AI 스케치 영상을 생성 중입니다.'
-                                : 'AI 영상 생성에 실패했습니다. 재시도할 수 있습니다.',
+                                : 'AI 영상 생성에 실패했습니다.\n재시도할 수 있습니다.',
                             style: AppTextStyles.bodySm.copyWith(
                               color: goal.isAiPending
                                   ? AppColors.orange500

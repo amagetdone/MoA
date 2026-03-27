@@ -295,6 +295,8 @@ class _LineChartCardState extends State<_LineChartCard> {
     final latestPlanned = widget.secondarySeries.isEmpty
         ? 0
         : widget.secondarySeries.last.value.round();
+    const secondaryBarIndex = 0;
+    const primaryBarIndex = 1;
 
     final primaryBar = LineChartBarData(
       spots: [
@@ -306,14 +308,15 @@ class _LineChartCardState extends State<_LineChartCard> {
       isStrokeCapRound: true,
       dotData: FlDotData(
         show: true,
-        checkToShowDot: (spot, _) =>
-            _selectedIndex != null && spot.x.toInt() == _selectedIndex,
-        getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
-          radius: 4.2,
-          color: widget.primaryColor,
-          strokeWidth: 2,
-          strokeColor: Colors.white,
-        ),
+        getDotPainter: (spot, percent, bar, index) {
+          final isSelected = _selectedIndex == spot.x.toInt();
+          return FlDotCirclePainter(
+            radius: isSelected ? 4.6 : 2.8,
+            color: widget.primaryColor,
+            strokeWidth: isSelected ? 2 : 1.4,
+            strokeColor: Colors.white,
+          );
+        },
       ),
       belowBarData: BarAreaData(
         show: true,
@@ -333,22 +336,29 @@ class _LineChartCardState extends State<_LineChartCard> {
         for (final item in widget.secondarySeries) FlSpot(item.x, item.value),
       ],
       isCurved: true,
-      color: widget.secondaryColor,
+      color: widget.secondaryColor.withValues(alpha: 0.78),
       barWidth: 2,
       dashArray: const [6, 4],
-      dotData: FlDotData(
-        show: true,
-        checkToShowDot: (spot, _) =>
-            _selectedIndex != null && spot.x.toInt() == _selectedIndex,
-        getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
-          radius: 3.8,
-          color: widget.secondaryColor,
-          strokeWidth: 2,
-          strokeColor: Colors.white,
-        ),
-      ),
+      dotData: const FlDotData(show: false),
       belowBarData: BarAreaData(show: false),
     );
+
+    final selectedTooltipSpots = _selectedIndex == null
+        ? const <LineBarSpot>[]
+        : [
+            if (_selectedIndex! < primaryBar.spots.length)
+              LineBarSpot(
+                primaryBar,
+                primaryBarIndex,
+                primaryBar.spots[_selectedIndex!],
+              ),
+            if (_selectedIndex! < secondaryBar.spots.length)
+              LineBarSpot(
+                secondaryBar,
+                secondaryBarIndex,
+                secondaryBar.spots[_selectedIndex!],
+              ),
+          ];
 
     return MoreCard(
       child: Column(
@@ -492,9 +502,9 @@ class _LineChartCardState extends State<_LineChartCard> {
                               getTooltipItems: (spots) => spots
                                   .map(
                                     (spot) => LineTooltipItem(
-                                      '${spot.barIndex == 0 ? widget.primaryLegend : widget.secondaryLegend}\n${CurrencyFormatter.formatKRW(spot.y.round())}',
+                                      '${spot.barIndex == primaryBarIndex ? widget.primaryLegend : widget.secondaryLegend}\n${CurrencyFormatter.formatKRW(spot.y.round())}',
                                       AppTextStyles.caption.copyWith(
-                                        color: spot.barIndex == 0
+                                        color: spot.barIndex == primaryBarIndex
                                             ? widget.primaryColor
                                             : widget.secondaryColor,
                                         fontWeight: FontWeight.w800,
@@ -525,25 +535,11 @@ class _LineChartCardState extends State<_LineChartCard> {
                           showingTooltipIndicators: _selectedIndex == null
                               ? const []
                               : [
-                                  if (_selectedIndex! < primaryBar.spots.length)
-                                    ShowingTooltipIndicators([
-                                      LineBarSpot(
-                                        primaryBar,
-                                        0,
-                                        primaryBar.spots[_selectedIndex!],
-                                      ),
-                                    ]),
-                                  if (_selectedIndex! <
-                                      secondaryBar.spots.length)
-                                    ShowingTooltipIndicators([
-                                      LineBarSpot(
-                                        secondaryBar,
-                                        1,
-                                        secondaryBar.spots[_selectedIndex!],
-                                      ),
-                                    ]),
+                                  ShowingTooltipIndicators(
+                                    selectedTooltipSpots,
+                                  ),
                                 ],
-                          lineBarsData: [primaryBar, secondaryBar],
+                          lineBarsData: [secondaryBar, primaryBar],
                         ),
                       ),
                     ),
