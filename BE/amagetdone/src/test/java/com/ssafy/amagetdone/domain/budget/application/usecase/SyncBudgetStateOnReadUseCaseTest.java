@@ -180,6 +180,36 @@ class SyncBudgetStateOnReadUseCaseTest {
 		inOrder.verify(applyDailyGoalSavingAccrualUseCase).execute(userId);
 	}
 
+	@Test
+	void preservesCurrentWeekFinalFreeAmountAfterReallocation() {
+		Integer userId = 1;
+		BudgetWeek currentWeek = budgetWeek(userId, 3, LocalDate.of(2026, 3, 16), LocalDate.of(2026, 3, 22));
+		currentWeek.setFinalFreeAmount(200_000L);
+
+		Plan activePlan = activePlan(userId, 100);
+		PlanWeekAllocation allocation = PlanWeekAllocation.builder()
+			.budgetWeek(currentWeek)
+			.plan(activePlan)
+			.plannedAmount(10_000L)
+			.finalAmount(10_000L)
+			.build();
+
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			eq(userId),
+			any(),
+			any()
+		))
+			.willReturn(Optional.of(currentWeek));
+		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE)).willReturn(List.of(activePlan));
+		given(planWeekAllocationRepository.findByBudgetWeek(currentWeek)).willReturn(List.of(allocation));
+		given(syncLatestTransactionsUseCase.execute(userId, 3, false))
+			.willReturn(new TransactionSyncService.SyncResult(1, 0));
+
+		useCase.execute(userId);
+
+		org.assertj.core.api.Assertions.assertThat(currentWeek.getFinalFreeAmount()).isEqualTo(200_000L);
+	}
+
 	private BudgetWeek budgetWeek(Integer userId, Integer sequence, LocalDate startDate, LocalDate endDate) {
 		BudgetWeek budgetWeek = BudgetWeek.create(null, user(userId), sequence, startDate, endDate);
 		budgetWeek.setStatus(BudgetWeekStatus.ACTIVE);
