@@ -92,9 +92,9 @@ class PlanQueryServiceTest {
 		assertThat(response.graphData().planned()).containsExactly(50_000L, 70_000L, 30_000L);
 		assertThat(response.graphData().actual()).containsExactly(45_000L, 60_000L, 0L);
 		assertThat(response.weeklyPlans()).containsExactly(
-			new PlanDetailResponse.WeeklyPlan(1, 50_000L),
-			new PlanDetailResponse.WeeklyPlan(2, 70_000L),
-			new PlanDetailResponse.WeeklyPlan(3, 30_000L)
+			new PlanDetailResponse.WeeklyPlan(1, 45_000L),
+			new PlanDetailResponse.WeeklyPlan(2, 60_000L),
+			new PlanDetailResponse.WeeklyPlan(3, 0L)
 		);
 		assertThat(response.currentWeek()).isEqualTo(2);
 		assertThat(response.totalWeeks()).isEqualTo(3);
