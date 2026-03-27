@@ -130,7 +130,7 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                                 child: Container(
                                   width: 50.w,
                                   height: 50.w,
-                                  color: Colors.white,
+                                  color: colors.bgSurface,
                                   child: Center(
                                     child: BankIcon(
                                       bankName: bank.name,

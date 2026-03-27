@@ -173,7 +173,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
       backgroundColor: colors.bgPrimary,
       appBar: MoreAppBar(
         title: '',
-        backgroundColor: const Color(0xFFFFCC91).withValues(alpha: 0.6),
+        backgroundColor: colors.bgAccent,
         showBack: true,
         showNotification: false,
       ),
@@ -183,7 +183,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
             height: 120.h,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: const Color(0xFFFFCC91).withValues(alpha: 0.6),
+              color: colors.bgAccent,
             ),
           ),
           SingleChildScrollView(
