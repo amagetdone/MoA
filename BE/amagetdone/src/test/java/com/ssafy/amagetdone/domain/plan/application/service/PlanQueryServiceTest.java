@@ -12,8 +12,11 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
+import com.ssafy.amagetdone.domain.budget.model.entity.BudgetAdjustment;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
+import com.ssafy.amagetdone.domain.budget.model.repository.BudgetAdjustmentRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
+import com.ssafy.amagetdone.domain.budget.model.vo.BudgetAdjustmentType;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanDetailResponse;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanWeeklyPlansPageResponse;
@@ -40,6 +43,9 @@ class PlanQueryServiceTest {
 	private PlanWeekAllocationRepository planWeekAllocationRepository;
 
 	@Mock
+	private BudgetAdjustmentRepository budgetAdjustmentRepository;
+
+	@Mock
 	private BudgetWeekRepository budgetWeekRepository;
 
 	private PlanQueryService service;
@@ -49,38 +55,48 @@ class PlanQueryServiceTest {
 		service = new PlanQueryService(
 			planRepository,
 			planWeekAllocationRepository,
+			budgetAdjustmentRepository,
 			budgetWeekRepository,
 			Clock.fixed(Instant.parse("2026-03-19T00:00:00Z"), ZoneId.of("Asia/Seoul"))
 		);
 	}
 
 	@Test
-	void getPlanDetailReturnsYearlyGraphAndWeeklyPlans() {
+	void getPlanDetailReturnsRelativeWeeksAndActualOnlyThroughCurrentWeek() {
 		Plan plan = plan(1, 1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), 3_000_000L, 1_200_000L);
 		List<PlanWeekAllocation> allocations = List.of(
-			allocation(plan, budgetWeek(10, LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 11)), 50_000L, 45_000L),
-			allocation(plan, budgetWeek(11, LocalDate.of(2026, 1, 12), LocalDate.of(2026, 1, 18)), 70_000L, 60_000L),
-			allocation(plan, budgetWeek(12, LocalDate.of(2025, 12, 29), LocalDate.of(2026, 1, 4)), 30_000L, 20_000L),
+			allocation(plan, budgetWeek(10, LocalDate.of(2026, 3, 9), LocalDate.of(2026, 3, 15)), 50_000L, 45_000L),
+			allocation(plan, budgetWeek(11, LocalDate.of(2026, 3, 16), LocalDate.of(2026, 3, 22)), 70_000L, 60_000L),
+			allocation(plan, budgetWeek(12, LocalDate.of(2026, 3, 23), LocalDate.of(2026, 3, 29)), 30_000L, 20_000L),
 			allocation(plan, budgetWeek(99, LocalDate.of(2027, 1, 4), LocalDate.of(2027, 1, 10)), 90_000L, 80_000L)
+		);
+		List<BudgetAdjustment> adjustments = List.of(
+			adjustment(allocations.get(0), BudgetAdjustmentType.PLAN_SAVED_AUTO_ADD, 45_000L),
+			adjustment(allocations.get(1), BudgetAdjustmentType.PLAN_SAVED_AUTO_ADD, 60_000L)
 		);
 
 		given(planRepository.findByIdAndUserIdAndDeletedFalse(1, 1)).willReturn(Optional.of(plan));
 		given(planWeekAllocationRepository.findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(1)).willReturn(allocations);
+		given(budgetAdjustmentRepository.findAllByBudgetWeekIn(List.of(
+			allocations.get(0).getBudgetWeek(),
+			allocations.get(1).getBudgetWeek(),
+			allocations.get(2).getBudgetWeek()
+		))).willReturn(adjustments);
 		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(any(), any(), any()))
-			.willReturn(Optional.of(currentBudgetWeek(11)));
+			.willReturn(Optional.of(currentBudgetWeek(11, LocalDate.of(2026, 3, 16), LocalDate.of(2026, 3, 22))));
 
 		PlanDetailResponse response = service.getPlanDetail(1, 1);
 
 		assertThat(response.planId()).isEqualTo(1);
-		assertThat(response.graphData().weeks()).containsExactly(10, 11, 12);
+		assertThat(response.graphData().weeks()).containsExactly(1, 2, 3);
 		assertThat(response.graphData().planned()).containsExactly(50_000L, 70_000L, 30_000L);
-		assertThat(response.graphData().actual()).containsExactly(45_000L, 60_000L, 20_000L);
+		assertThat(response.graphData().actual()).containsExactly(45_000L, 60_000L, 0L);
 		assertThat(response.weeklyPlans()).containsExactly(
-			new PlanDetailResponse.WeeklyPlan(10, 50_000L),
-			new PlanDetailResponse.WeeklyPlan(11, 70_000L),
-			new PlanDetailResponse.WeeklyPlan(12, 30_000L)
+			new PlanDetailResponse.WeeklyPlan(1, 50_000L),
+			new PlanDetailResponse.WeeklyPlan(2, 70_000L),
+			new PlanDetailResponse.WeeklyPlan(3, 30_000L)
 		);
-		assertThat(response.currentWeek()).isEqualTo(11);
+		assertThat(response.currentWeek()).isEqualTo(2);
 		assertThat(response.totalWeeks()).isEqualTo(3);
 		assertThat(response.achievementRate()).isEqualTo(40);
 		assertThat(response.dday()).isEqualTo(287L);
@@ -122,8 +138,13 @@ class PlanQueryServiceTest {
 
 		given(planRepository.findByIdAndUserIdAndDeletedFalse(1, 1)).willReturn(Optional.of(plan));
 		given(planWeekAllocationRepository.findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(1)).willReturn(allocations);
+		given(budgetAdjustmentRepository.findAllByBudgetWeekIn(List.of(
+			allocations.get(0).getBudgetWeek(),
+			allocations.get(1).getBudgetWeek(),
+			allocations.get(2).getBudgetWeek()
+		))).willReturn(List.of());
 		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(any(), any(), any()))
-			.willReturn(Optional.of(currentBudgetWeek(11)));
+			.willReturn(Optional.of(currentBudgetWeek(11, LocalDate.of(2026, 3, 16), LocalDate.of(2026, 3, 22))));
 
 		PlanDetailResponse response = service.getPlanDetail(1, 1);
 
@@ -138,12 +159,13 @@ class PlanQueryServiceTest {
 
 		given(planRepository.findByIdAndUserIdAndDeletedFalse(1, 1)).willReturn(Optional.of(plan));
 		given(planWeekAllocationRepository.findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(1)).willReturn(sevenYearAllocations(plan));
+		given(budgetAdjustmentRepository.findAllByBudgetWeekIn(any())).willReturn(List.of());
 
 		PlanWeeklyPlansPageResponse response = service.listPlanWeeklyPlans(1, 1, 1, 3);
 
 		assertThat(response.planId()).isEqualTo(1);
 		assertThat(response.weeklyPlans()).extracting(PlanWeeklyPlansPageResponse.WeeklyPlan::week)
-			.containsExactly(13, 14, 15);
+			.containsExactly(4, 5, 6);
 		assertThat(response.page()).isEqualTo(1);
 		assertThat(response.size()).isEqualTo(3);
 		assertThat(response.totalElements()).isEqualTo(7);
@@ -204,10 +226,11 @@ class PlanQueryServiceTest {
 		return budgetWeek;
 	}
 
-	private BudgetWeek currentBudgetWeek(int weekSequence) {
-		BudgetWeek budgetWeek = BudgetWeek.create(null, User.createPendingSocialUser(), weekSequence,
-			LocalDate.of(2026, 3, 16), LocalDate.of(2026, 3, 22));
+	private BudgetWeek currentBudgetWeek(int weekSequence, LocalDate startDate, LocalDate endDate) {
+		BudgetWeek budgetWeek = BudgetWeek.create(null, User.createPendingSocialUser(), weekSequence, startDate, endDate);
 		ReflectionTestUtils.setField(budgetWeek, "weekSequence", weekSequence);
+		ReflectionTestUtils.setField(budgetWeek, "weekStartDate", startDate);
+		ReflectionTestUtils.setField(budgetWeek, "weekEndDate", endDate);
 		return budgetWeek;
 	}
 
@@ -220,5 +243,19 @@ class PlanQueryServiceTest {
 			.build();
 		ReflectionTestUtils.setField(allocation, "budgetWeek", budgetWeek);
 		return allocation;
+	}
+
+	private BudgetAdjustment adjustment(
+		PlanWeekAllocation allocation,
+		BudgetAdjustmentType adjustmentType,
+		long adjustmentAmount
+	) {
+		return BudgetAdjustment.builder()
+			.budgetWeek(allocation.getBudgetWeek())
+			.plan(allocation.getPlan())
+			.adjustmentType(adjustmentType)
+			.adjustmentAmount(adjustmentAmount)
+			.reason("test")
+			.build();
 	}
 }

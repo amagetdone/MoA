@@ -3,10 +3,17 @@ package com.ssafy.amagetdone.domain.plan.application.service;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
+import com.ssafy.amagetdone.domain.budget.model.entity.BudgetAdjustment;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
+import com.ssafy.amagetdone.domain.budget.model.repository.BudgetAdjustmentRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
+import com.ssafy.amagetdone.domain.budget.model.vo.BudgetAdjustmentType;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanDetailResponse;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanWeeklyPlansPageResponse;
@@ -26,17 +33,20 @@ public class PlanQueryService {
 
 	private final PlanRepository planRepository;
 	private final PlanWeekAllocationRepository planWeekAllocationRepository;
+	private final BudgetAdjustmentRepository budgetAdjustmentRepository;
 	private final BudgetWeekRepository budgetWeekRepository;
 	private final Clock clock;
 
 	public PlanQueryService(
 		PlanRepository planRepository,
 		PlanWeekAllocationRepository planWeekAllocationRepository,
+		BudgetAdjustmentRepository budgetAdjustmentRepository,
 		BudgetWeekRepository budgetWeekRepository,
 		Clock clock
 	) {
 		this.planRepository = planRepository;
 		this.planWeekAllocationRepository = planWeekAllocationRepository;
+		this.budgetAdjustmentRepository = budgetAdjustmentRepository;
 		this.budgetWeekRepository = budgetWeekRepository;
 		this.clock = clock;
 	}
@@ -45,6 +55,7 @@ public class PlanQueryService {
 		Plan plan = findOwnedPlan(userId, planId);
 		List<PlanWeekAllocation> allAllocations = planWeekAllocationRepository.findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(planId);
 		List<PlanWeekAllocation> yearAllocations = filterYearAllocations(allAllocations);
+		List<DisplayAllocation> displayAllocations = toDisplayAllocations(yearAllocations);
 
 		return new PlanDetailResponse(
 			plan.getId(),
@@ -56,18 +67,18 @@ public class PlanQueryService {
 			calculateAchievementRate(plan),
 			ChronoUnit.DAYS.between(today(), plan.getEndDate()),
 			new PlanDetailResponse.GraphData(
-				yearAllocations.stream().map(allocation -> allocation.getBudgetWeek().getWeekSequence()).toList(),
-				yearAllocations.stream().map(PlanWeekAllocation::getPlannedAmount).toList(),
-				yearAllocations.stream().map(PlanWeekAllocation::getFinalAmount).toList()
+				displayAllocations.stream().map(DisplayAllocation::displayWeek).toList(),
+				displayAllocations.stream().map(displayAllocation -> zero(displayAllocation.allocation().getPlannedAmount())).toList(),
+				displayAllocations.stream().map(DisplayAllocation::actualAmount).toList()
 			),
-			yearAllocations.stream()
-				.map(allocation -> new PlanDetailResponse.WeeklyPlan(
-					allocation.getBudgetWeek().getWeekSequence(),
-					allocation.getPlannedAmount()
+			displayAllocations.stream()
+				.map(displayAllocation -> new PlanDetailResponse.WeeklyPlan(
+					displayAllocation.displayWeek(),
+					zero(displayAllocation.allocation().getPlannedAmount())
 				))
 				.toList(),
-			resolveCurrentWeek(plan.getUser()),
-			yearAllocations.size(),
+			resolveCurrentWeek(plan.getUser(), displayAllocations),
+			displayAllocations.size(),
 			calculateCompletionProjection(plan, allAllocations)
 		);
 	}
@@ -75,30 +86,30 @@ public class PlanQueryService {
 	public PlanWeeklyPlansPageResponse listPlanWeeklyPlans(Integer userId, Integer planId, Integer page, Integer size) {
 		validatePageRequest(page, size);
 		Plan plan = findOwnedPlan(userId, planId);
-		List<PlanWeekAllocation> yearAllocations = filterYearAllocations(
+		List<DisplayAllocation> displayAllocations = toDisplayAllocations(filterYearAllocations(
 			planWeekAllocationRepository.findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(plan.getId())
-		);
+		));
 
 		int resolvedPage = page == null ? 0 : page;
 		int resolvedSize = size == null ? 3 : size;
-		int fromIndex = Math.min(resolvedPage * resolvedSize, yearAllocations.size());
-		int toIndex = Math.min(fromIndex + resolvedSize, yearAllocations.size());
-		List<PlanWeeklyPlansPageResponse.WeeklyPlan> weeklyPlans = yearAllocations.subList(fromIndex, toIndex).stream()
-			.map(allocation -> new PlanWeeklyPlansPageResponse.WeeklyPlan(
-				allocation.getBudgetWeek().getWeekSequence(),
-				allocation.getPlannedAmount()
+		int fromIndex = Math.min(resolvedPage * resolvedSize, displayAllocations.size());
+		int toIndex = Math.min(fromIndex + resolvedSize, displayAllocations.size());
+		List<PlanWeeklyPlansPageResponse.WeeklyPlan> weeklyPlans = displayAllocations.subList(fromIndex, toIndex).stream()
+			.map(displayAllocation -> new PlanWeeklyPlansPageResponse.WeeklyPlan(
+				displayAllocation.displayWeek(),
+				zero(displayAllocation.allocation().getPlannedAmount())
 			))
 			.toList();
-		int totalPages = yearAllocations.isEmpty() ? 0 : (int)Math.ceil((double)yearAllocations.size() / resolvedSize);
+		int totalPages = displayAllocations.isEmpty() ? 0 : (int)Math.ceil((double)displayAllocations.size() / resolvedSize);
 
 		return new PlanWeeklyPlansPageResponse(
 			planId,
 			weeklyPlans,
 			resolvedPage,
 			resolvedSize,
-			yearAllocations.size(),
+			displayAllocations.size(),
 			totalPages,
-			(resolvedPage + 1) * resolvedSize < yearAllocations.size()
+			(resolvedPage + 1) * resolvedSize < displayAllocations.size()
 		);
 	}
 
@@ -128,13 +139,21 @@ public class PlanQueryService {
 		return !budgetWeek.getWeekEndDate().isBefore(yearStart) && !budgetWeek.getWeekStartDate().isAfter(yearEnd);
 	}
 
-	private int resolveCurrentWeek(User user) {
-		return budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+	private int resolveCurrentWeek(User user, List<DisplayAllocation> displayAllocations) {
+		BudgetWeek currentWeek = budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
 			user.getId(),
 			today(),
 			today()
 		)
-			.map(BudgetWeek::getWeekSequence)
+			.orElse(null);
+		if (currentWeek == null) {
+			return 0;
+		}
+
+		return displayAllocations.stream()
+			.filter(displayAllocation -> isSameBudgetWeek(displayAllocation.allocation().getBudgetWeek(), currentWeek))
+			.map(DisplayAllocation::displayWeek)
+			.findFirst()
 			.orElse(0);
 	}
 
@@ -187,7 +206,96 @@ public class PlanQueryService {
 		return amount == null ? 0L : amount;
 	}
 
+	private List<DisplayAllocation> toDisplayAllocations(List<PlanWeekAllocation> allocations) {
+		Map<AdjustmentKey, Long> actualAmountsByKey = resolveActualAmountsByKey(allocations);
+		List<DisplayAllocation> displayAllocations = new ArrayList<>();
+		LocalDate today = today();
+
+		for (int index = 0; index < allocations.size(); index++) {
+			PlanWeekAllocation allocation = allocations.get(index);
+			long actualAmount = isFutureWeek(allocation.getBudgetWeek(), today)
+				? 0L
+				: actualAmountsByKey.getOrDefault(AdjustmentKey.from(allocation), 0L);
+			displayAllocations.add(new DisplayAllocation(index + 1, allocation, actualAmount));
+		}
+
+		return displayAllocations;
+	}
+
+	private Map<AdjustmentKey, Long> resolveActualAmountsByKey(List<PlanWeekAllocation> allocations) {
+		List<BudgetWeek> budgetWeeks = allocations.stream()
+			.map(PlanWeekAllocation::getBudgetWeek)
+			.filter(Objects::nonNull)
+			.distinct()
+			.toList();
+		if (budgetWeeks.isEmpty()) {
+			return Map.of();
+		}
+
+		Map<AdjustmentKey, Long> actualAmountsByKey = new LinkedHashMap<>();
+		for (BudgetAdjustment adjustment : budgetAdjustmentRepository.findAllByBudgetWeekIn(budgetWeeks)) {
+			if (!isActualSavingAdjustment(adjustment) || adjustment.getPlan() == null || adjustment.getBudgetWeek() == null) {
+				continue;
+			}
+			actualAmountsByKey.merge(
+				AdjustmentKey.from(adjustment),
+				signedActualAmount(adjustment),
+				Long::sum
+			);
+		}
+		return actualAmountsByKey;
+	}
+
+	private boolean isActualSavingAdjustment(BudgetAdjustment adjustment) {
+		return adjustment.getAdjustmentType() == BudgetAdjustmentType.PLAN_SAVED_ADD
+			|| adjustment.getAdjustmentType() == BudgetAdjustmentType.PLAN_SAVED_AUTO_ADD
+			|| adjustment.getAdjustmentType() == BudgetAdjustmentType.PLAN_SAVED_AUTO_SUBTRACT;
+	}
+
+	private long signedActualAmount(BudgetAdjustment adjustment) {
+		return switch (adjustment.getAdjustmentType()) {
+			case PLAN_SAVED_ADD, PLAN_SAVED_AUTO_ADD -> zero(adjustment.getAdjustmentAmount());
+			case PLAN_SAVED_AUTO_SUBTRACT -> -zero(adjustment.getAdjustmentAmount());
+			default -> 0L;
+		};
+	}
+
+	private boolean isFutureWeek(BudgetWeek budgetWeek, LocalDate today) {
+		return budgetWeek == null || budgetWeek.getWeekStartDate() == null || budgetWeek.getWeekStartDate().isAfter(today);
+	}
+
+	private boolean isSameBudgetWeek(BudgetWeek left, BudgetWeek right) {
+		if (left == null || right == null) {
+			return false;
+		}
+		return Objects.equals(left.getWeekStartDate(), right.getWeekStartDate())
+			&& Objects.equals(left.getWeekEndDate(), right.getWeekEndDate());
+	}
+
 	private LocalDate today() {
 		return LocalDate.now(clock);
+	}
+
+	private record DisplayAllocation(int displayWeek, PlanWeekAllocation allocation, long actualAmount) {
+	}
+
+	private record AdjustmentKey(Integer planId, LocalDate weekStartDate, LocalDate weekEndDate) {
+		private static AdjustmentKey from(PlanWeekAllocation allocation) {
+			BudgetWeek budgetWeek = allocation.getBudgetWeek();
+			return new AdjustmentKey(
+				allocation.getPlan().getId(),
+				budgetWeek == null ? null : budgetWeek.getWeekStartDate(),
+				budgetWeek == null ? null : budgetWeek.getWeekEndDate()
+			);
+		}
+
+		private static AdjustmentKey from(BudgetAdjustment adjustment) {
+			BudgetWeek budgetWeek = adjustment.getBudgetWeek();
+			return new AdjustmentKey(
+				adjustment.getPlan().getId(),
+				budgetWeek == null ? null : budgetWeek.getWeekStartDate(),
+				budgetWeek == null ? null : budgetWeek.getWeekEndDate()
+			);
+		}
 	}
 }

@@ -250,33 +250,33 @@ class PlanControllerTest {
 				40,
 				60L,
 				new PlanDetailResponse.GraphData(
-					List.of(10, 11, 12),
+					List.of(1, 2, 3),
 					List.of(50_000L, 70_000L, 60_000L),
-					List.of(40_000L, 60_000L, 50_000L)
+					List.of(40_000L, 60_000L, 0L)
 				),
 				List.of(
-					new PlanDetailResponse.WeeklyPlan(10, 50_000L),
-					new PlanDetailResponse.WeeklyPlan(11, 70_000L),
-					new PlanDetailResponse.WeeklyPlan(12, 60_000L)
+					new PlanDetailResponse.WeeklyPlan(1, 50_000L),
+					new PlanDetailResponse.WeeklyPlan(2, 70_000L),
+					new PlanDetailResponse.WeeklyPlan(3, 60_000L)
 				),
-				11,
+				2,
 				3,
 				new PlanDetailResponse.CompletionProjection(5, java.time.LocalDate.of(2026, 5, 3))
 			));
 
-		mockMvc.perform(get("/api/v1/plans/1")
-				.contextPath("/api")
-				.with(authentication(
-					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
-				)))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.planId").value(1))
-			.andExpect(jsonPath("$.data.graphData.weeks[0]").value(10))
-			.andExpect(jsonPath("$.data.weeklyPlans[0].week").value(10))
-			.andExpect(jsonPath("$.data.currentWeek").value(11))
-			.andExpect(jsonPath("$.data.totalWeeks").value(3))
-			.andExpect(jsonPath("$.data.completionProjection.weeksToGoal").value(5))
-			.andExpect(jsonPath("$.data.completionProjection.estimatedCompletionDate").value("2026-05-03"));
+			mockMvc.perform(get("/api/v1/plans/1")
+					.contextPath("/api")
+					.with(authentication(
+						UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
+					)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.planId").value(1))
+				.andExpect(jsonPath("$.data.graphData.weeks[0]").value(1))
+				.andExpect(jsonPath("$.data.weeklyPlans[0].week").value(1))
+				.andExpect(jsonPath("$.data.currentWeek").value(2))
+				.andExpect(jsonPath("$.data.totalWeeks").value(3))
+				.andExpect(jsonPath("$.data.completionProjection.weeksToGoal").value(5))
+				.andExpect(jsonPath("$.data.completionProjection.estimatedCompletionDate").value("2026-05-03"));
 	}
 
 	@Test
@@ -285,9 +285,9 @@ class PlanControllerTest {
 			.willReturn(new PlanWeeklyPlansPageResponse(
 				1,
 				List.of(
-					new PlanWeeklyPlansPageResponse.WeeklyPlan(10, 50_000L),
-					new PlanWeeklyPlansPageResponse.WeeklyPlan(11, 70_000L),
-					new PlanWeeklyPlansPageResponse.WeeklyPlan(12, 60_000L)
+					new PlanWeeklyPlansPageResponse.WeeklyPlan(1, 50_000L),
+					new PlanWeeklyPlansPageResponse.WeeklyPlan(2, 70_000L),
+					new PlanWeeklyPlansPageResponse.WeeklyPlan(3, 60_000L)
 				),
 				0,
 				3,
