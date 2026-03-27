@@ -2,6 +2,7 @@ package com.ssafy.amagetdone.domain.budget.application.service;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -53,6 +54,7 @@ public class BudgetReadSyncService {
 		}
 
 		runTransactionAnalysisUseCase.execute(userId, READ_SYNC_MONTHS);
+		runTransactionAnalysisUseCase.execute(userId, YearMonth.from(today));
 		triggerBudgetAllocationUseCase.execute(userId);
 		budgetActualSpentRefreshService.refresh(userId, today);
 		budgetRolloverResyncService.resync(userId);

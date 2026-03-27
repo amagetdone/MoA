@@ -174,6 +174,7 @@ class SyncBudgetStateOnReadUseCaseTest {
 		);
 		inOrder.verify(syncLatestTransactionsUseCase).execute(userId, 3, false);
 		inOrder.verify(runTransactionAnalysisUseCase).execute(userId, 3);
+		inOrder.verify(runTransactionAnalysisUseCase).execute(userId, java.time.YearMonth.of(2026, 3));
 		inOrder.verify(triggerBudgetAllocationUseCase).execute(userId);
 		inOrder.verify(budgetActualSpentRefreshService).refresh(userId, today);
 		inOrder.verify(budgetRolloverResyncService).resync(userId);

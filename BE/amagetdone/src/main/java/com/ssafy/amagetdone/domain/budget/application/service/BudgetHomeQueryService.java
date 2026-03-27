@@ -19,7 +19,6 @@ import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
-import com.ssafy.amagetdone.domain.transaction.model.repository.CardTransactionOverrideRepository;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
@@ -35,7 +34,6 @@ public class BudgetHomeQueryService {
 	private final PlanWeekAllocationRepository planWeekAllocationRepository;
 	private final ListAccountsUseCase listAccountsUseCase;
 	private final InquireAccountBalanceUseCase inquireAccountBalanceUseCase;
-	private final CardTransactionOverrideRepository cardTransactionOverrideRepository;
 
 	public BudgetHomeDto.Response getHome(Integer userId) {
 		LocalDate today = LocalDate.now();
@@ -118,8 +116,6 @@ public class BudgetHomeQueryService {
 		long totalAssetAmount = accounts.stream()
 			.mapToLong(BudgetHomeDto.AssetAccount::balanceAmount)
 			.sum();
-		long unsettledCardAmount = cardTransactionOverrideRepository.sumBilledTransactionBalanceByUserId(userId);
-		totalAssetAmount -= unsettledCardAmount;
 
 		return BudgetHomeDto.AssetSummary.of(totalAssetAmount, accounts);
 	}
