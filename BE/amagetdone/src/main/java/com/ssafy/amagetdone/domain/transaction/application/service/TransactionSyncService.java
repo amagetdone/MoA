@@ -200,6 +200,7 @@ public class TransactionSyncService {
 			"ACCOUNT",
 			String.valueOf(transaction.getTransactionUniqueNo()),
 			transaction.getTransactionBalance(),
+			transaction.getTransactionTypeName(),
 			transaction.getTransactionSummary(),
 			transaction.getTransactionDateTime()
 		)));
@@ -214,6 +215,7 @@ public class TransactionSyncService {
 			"CARD",
 			String.valueOf(transaction.getTransactionUniqueNo()),
 			transaction.getTransactionBalance(),
+			null,
 			transaction.getMerchant() == null ? transaction.getTransactionMemo() : transaction.getMerchant().getName(),
 			transaction.getTransactionDateTime()
 		)));

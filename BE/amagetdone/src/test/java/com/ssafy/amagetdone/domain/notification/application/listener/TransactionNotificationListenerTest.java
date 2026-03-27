@@ -82,7 +82,7 @@ class TransactionNotificationListenerTest {
 	}
 
 	private TransactionSyncedEvent event() {
-		return new TransactionSyncedEvent(1, "CARD", "txn-1", 5400L, "Starbucks", LocalDateTime.of(2026, 3, 24, 9, 30));
+		return new TransactionSyncedEvent(1, "CARD", "txn-1", 5400L, null, "Starbucks", LocalDateTime.of(2026, 3, 24, 9, 30));
 	}
 
 	private DeviceToken deviceToken(Integer id, String fcmToken) {

@@ -35,7 +35,7 @@ public class FcmPushNotificationService implements PushNotificationService {
 			firebaseMessaging.send(Message.builder()
 				.setToken(deviceToken.getFcmToken())
 				.setNotification(Notification.builder()
-					.setTitle("\uacb0\uc81c \uc54c\ub9bc")
+					.setTitle(buildTransactionTitle(event))
 					.setBody(buildBody(event))
 					.build())
 				.putAllData(buildData(event))
@@ -122,12 +122,17 @@ public class FcmPushNotificationService implements PushNotificationService {
 		}
 	}
 
+	private String buildTransactionTitle(TransactionSyncedEvent event) {
+		return resolveTransactionLabel(event) + " \uc54c\ub9bc";
+	}
+
 	private String buildBody(TransactionSyncedEvent event) {
+		String transactionLabel = resolveTransactionLabel(event);
 		String merchant = event.merchantOrMemo();
 		if (merchant == null || merchant.isBlank()) {
-			return event.amount() + "\uc6d0 \uacb0\uc81c";
+			return event.amount() + "\uc6d0 " + transactionLabel;
 		}
-		return merchant + " " + event.amount() + "\uc6d0 \uacb0\uc81c";
+		return merchant + " " + event.amount() + "\uc6d0 " + transactionLabel;
 	}
 
 	private Map<String, String> buildData(TransactionSyncedEvent event) {
@@ -137,7 +142,20 @@ public class FcmPushNotificationService implements PushNotificationService {
 		data.put("transactionId", event.transactionId());
 		data.put("amount", String.valueOf(event.amount()));
 		data.put("occurredAt", String.valueOf(event.occurredAt()));
+		if (event.transactionTypeName() != null && !event.transactionTypeName().isBlank()) {
+			data.put("transactionTypeName", event.transactionTypeName());
+		}
 		return data;
+	}
+
+	private String resolveTransactionLabel(TransactionSyncedEvent event) {
+		if ("\uc785\uae08".equals(event.transactionTypeName())) {
+			return "\uc785\uae08";
+		}
+		if ("\ucd9c\uae08".equals(event.transactionTypeName())) {
+			return "\ucd9c\uae08";
+		}
+		return "\uacb0\uc81c";
 	}
 
 	private String buildPlanAiTitle(PlanAiCompletedEvent event) {
