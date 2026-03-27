@@ -63,9 +63,12 @@ class LocalNotificationService {
       return;
     }
 
+    final route = item == null
+        ? null
+        : NotificationInboxPersistence.resolveRouteForItem(item);
     final payload = item == null
         ? null
-        : jsonEncode({'route': item.route, 'messageId': item.id});
+        : jsonEncode({'route': route, 'messageId': item.id});
 
     await _plugin.show(
       _notificationId(message, item?.id),
@@ -107,7 +110,9 @@ class LocalNotificationService {
 
   int _notificationId(RemoteMessage message, String? itemId) {
     final source =
-        message.messageId ?? itemId ?? DateTime.now().microsecondsSinceEpoch.toString();
+        message.messageId ??
+        itemId ??
+        DateTime.now().microsecondsSinceEpoch.toString();
     return source.hashCode & 0x7fffffff;
   }
 }

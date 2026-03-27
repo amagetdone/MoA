@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:more_app/core/notifications/notification_inbox_persistence.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/domain/entities/app_notification_item.dart';
@@ -80,7 +81,8 @@ class NotificationPage extends ConsumerWidget {
                     return;
                   }
 
-                  final route = item.route;
+                  final route =
+                      NotificationInboxPersistence.resolveRouteForItem(item);
                   if (route != null && route.isNotEmpty) {
                     context.push(route);
                   }

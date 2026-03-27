@@ -140,6 +140,15 @@ class NotificationInboxPersistence {
     await _box!.deleteAll(keysToDelete);
   }
 
+  static String? resolveRouteForItem(AppNotificationItem item) {
+    return _resolveRoute(
+      item.payload,
+      title: item.title,
+      body: item.body,
+      fallbackRoute: item.route,
+    );
+  }
+
   static AppNotificationItem? mapRemoteMessageToInboxItem(
     RemoteMessage message, {
     bool markAsRead = false,
@@ -168,7 +177,7 @@ class NotificationInboxPersistence {
       body: body,
       createdAt: createdAt,
       type: payload['type'] ?? 'general',
-      route: _resolveRoute(payload),
+      route: _resolveRoute(payload, title: title, body: body),
       payload: payload,
       isRead: markAsRead,
     );
@@ -200,19 +209,33 @@ class NotificationInboxPersistence {
       body: body,
       createdAt: createdAt,
       type: payload['type'] ?? 'general',
-      route: _resolveRoute(payload),
+      route: _resolveRoute(payload, title: title, body: body),
       payload: payload,
       isRead: markAsRead,
     );
   }
 
-  static String? _resolveRoute(Map<String, String> payload) {
+  static String? _resolveRoute(
+    Map<String, String> payload, {
+    String title = '',
+    String body = '',
+    String? fallbackRoute,
+  }) {
+    final type = payload['type']?.trim().toUpperCase() ?? '';
+    final accountNo = _resolveAccountNo(payload);
+    if (_isAccountTransactionAlert(type: type, title: title, body: body)) {
+      return AppRoutes.assetLocation(accountNo: accountNo);
+    }
+
     final explicitRoute = payload['route'];
     if (explicitRoute != null && explicitRoute.isNotEmpty) {
       return explicitRoute;
     }
 
-    final type = payload['type']?.toUpperCase();
+    if (fallbackRoute != null && fallbackRoute.isNotEmpty) {
+      return fallbackRoute;
+    }
+
     final planId = payload['planId'];
 
     if (type == 'PLAN_AI_COMPLETED' && planId != null && planId.isNotEmpty) {
@@ -224,6 +247,39 @@ class NotificationInboxPersistence {
     }
 
     return null;
+  }
+
+  static String? _resolveAccountNo(Map<String, String> payload) {
+    for (final key in const [
+      'accountNo',
+      'accountNumber',
+      'sourceId',
+      'accountId',
+    ]) {
+      final value = payload[key]?.trim();
+      if (value != null && value.isNotEmpty) {
+        return value;
+      }
+    }
+
+    return null;
+  }
+
+  static bool _isAccountTransactionAlert({
+    required String type,
+    required String title,
+    required String body,
+  }) {
+    const alertTypeKeywords = ['PAYMENT', 'DEPOSIT', 'WITHDRAW', 'TRANSACTION'];
+    if (alertTypeKeywords.any(type.contains)) {
+      return true;
+    }
+
+    final compactText = '$title$body'.replaceAll(' ', '');
+    return compactText.contains('결제알림') ||
+        compactText.contains('입금알림') ||
+        compactText.contains('출금알림') ||
+        compactText.contains('입출금');
   }
 
   static bool _isMetadataKey(String key) {

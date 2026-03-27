@@ -397,7 +397,10 @@ class PushNotificationSyncService {
     }
 
     await _notificationInboxRepository.saveNotification(item);
-    _navigateFromNotification(item.route, item.id);
+    _navigateFromNotification(
+      NotificationInboxPersistence.resolveRouteForItem(item),
+      item.id,
+    );
   }
 
   void _navigateFromNotification(String? route, String messageId) {
