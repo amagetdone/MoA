@@ -38,6 +38,9 @@ class SpendingRoseChart extends StatefulWidget {
 }
 
 class _SpendingRoseChartState extends State<SpendingRoseChart> {
+  static const _collapsedCategoryNames = {'기타', '기타서비스'};
+  static const _maxVisibleCategories = 4;
+
   int? _selectedIndex;
 
   List<_DonutEntry> _buildEntries() {
@@ -45,17 +48,25 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
 
     final merged = <String, int>{};
     for (final c in widget.categories) {
-      merged[c.name] = (merged[c.name] ?? 0) + c.amount;
+      final normalizedName = c.name.trim();
+      merged[normalizedName] = (merged[normalizedName] ?? 0) + c.amount;
     }
 
-    final sorted = merged.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final sorted =
+        merged.entries
+            .where((entry) => !_collapsedCategoryNames.contains(entry.key))
+            .toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
 
     final entries = <_DonutEntry>[];
     int othersAmount = 0;
 
+    for (final categoryName in _collapsedCategoryNames) {
+      othersAmount += merged[categoryName] ?? 0;
+    }
+
     for (int i = 0; i < sorted.length; i++) {
-      if (i < 4) {
+      if (i < _maxVisibleCategories) {
         entries.add(
           _DonutEntry(
             name: sorted[i].key,
