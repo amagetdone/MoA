@@ -18,7 +18,9 @@ import com.ssafy.amagetdone.domain.budget.model.repository.BudgetMonthRepository
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseMonthRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialWeekAllocationRepository;
+import com.ssafy.amagetdone.domain.budget.model.repository.BudgetRolloverRepository;
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetMonthStatus;
+import com.ssafy.amagetdone.domain.account.model.repository.PocketRepository;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
@@ -53,6 +55,12 @@ class BudgetAllocationServiceTest {
 	@Mock
 	private PlanWeekAllocationRepository planWeekAllocationRepository;
 
+	@Mock
+	private BudgetRolloverRepository budgetRolloverRepository;
+
+	@Mock
+	private PocketRepository pocketRepository;
+
 	private BudgetAllocationService budgetAllocationService;
 
 	@BeforeEach
@@ -63,7 +71,9 @@ class BudgetAllocationServiceTest {
 			budgetWeekRepository,
 			essentialExpenseMonthRepository,
 			essentialWeekAllocationRepository,
-			planWeekAllocationRepository
+			planWeekAllocationRepository,
+			budgetRolloverRepository,
+			pocketRepository
 		);
 
 		Mockito.lenient().when(budgetMonthRepository.findFirstByUserAndBaseDateOrderByIdDesc(any(User.class), any(LocalDate.class)))
