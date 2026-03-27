@@ -10,6 +10,9 @@ import 'package:more_app/domain/entities/goal.dart';
 import 'package:more_app/domain/entities/spending.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 
+const _minChartZoom = 0.8;
+const _maxChartZoom = 2.4;
+
 class GoalLineChart extends StatelessWidget {
   const GoalLineChart({super.key, required this.history, required this.goal});
 
@@ -42,8 +45,6 @@ class GoalLineChart extends StatelessWidget {
 
       return _LineChartCard(
         title: '달성 추이',
-        helperText:
-            '1주차부터 마지막 주차까지 전체 경로를 한 번에 보여줍니다. 원하는 지점을 터치하면 금액을 확인할 수 있습니다.',
         primaryLegend: '실제',
         secondaryLegend: '예상 경로',
         primaryColor: AppColors.green500,
@@ -90,8 +91,6 @@ class GoalLineChart extends StatelessWidget {
 
     return _LineChartCard(
       title: '달성 추이',
-      helperText:
-          '1주차부터 마지막 주차까지 전체 경로를 한 번에 보여줍니다. 원하는 지점을 터치하면 금액을 확인할 수 있습니다.',
       primaryLegend: '실제',
       secondaryLegend: '예상 경로',
       primaryColor: AppColors.green500,
@@ -210,7 +209,6 @@ class GoalBarChart extends StatelessWidget {
 class _LineChartCard extends StatefulWidget {
   const _LineChartCard({
     required this.title,
-    required this.helperText,
     required this.primaryLegend,
     required this.secondaryLegend,
     required this.primaryColor,
@@ -220,7 +218,6 @@ class _LineChartCard extends StatefulWidget {
   });
 
   final String title;
-  final String helperText;
   final String primaryLegend;
   final String secondaryLegend;
   final Color primaryColor;
@@ -233,17 +230,65 @@ class _LineChartCard extends StatefulWidget {
 }
 
 class _LineChartCardState extends State<_LineChartCard> {
+  final Map<int, Offset> _activePointers = <int, Offset>{};
+
+  double _zoom = 1.0;
+  double? _pinchStartDistance;
+  double _pinchStartZoom = 1.0;
   int? _selectedIndex;
+
+  void _zoomIn() => _setZoom(_zoom + 0.2);
+
+  void _zoomOut() => _setZoom(_zoom - 0.2);
+
+  void _setZoom(double value) {
+    setState(() {
+      _zoom = value.clamp(_minChartZoom, _maxChartZoom).toDouble();
+    });
+  }
+
+  void _handlePointerDown(PointerDownEvent event) {
+    _activePointers[event.pointer] = event.localPosition;
+    if (_activePointers.length == 2) {
+      _pinchStartDistance = _calculatePointerDistance(_activePointers);
+      _pinchStartZoom = _zoom;
+    }
+  }
+
+  void _handlePointerMove(PointerMoveEvent event) {
+    if (!_activePointers.containsKey(event.pointer)) {
+      return;
+    }
+    _activePointers[event.pointer] = event.localPosition;
+    if (_activePointers.length != 2 || _pinchStartDistance == null) {
+      return;
+    }
+
+    final distance = _calculatePointerDistance(_activePointers);
+    if (distance == null || _pinchStartDistance == 0) {
+      return;
+    }
+
+    _setZoom(_pinchStartZoom * (distance / _pinchStartDistance!));
+  }
+
+  void _handlePointerEnd(PointerEvent event) {
+    _activePointers.remove(event.pointer);
+    if (_activePointers.length < 2) {
+      _pinchStartDistance = null;
+      _pinchStartZoom = _zoom;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final pointCount = widget.primarySeries.length;
     final allValues = <double>[
       ...widget.primarySeries.map((e) => e.value),
       ...widget.secondarySeries.map((e) => e.value),
     ];
     final maxY = _resolvePositiveChartMaxY(allValues, paddingFactor: 1.1);
-    final titleInterval = math.max(1, (widget.primarySeries.length / 6).ceil());
     final latestActual = widget.primarySeries.isEmpty
         ? 0
         : widget.primarySeries.last.value.round();
@@ -340,133 +385,162 @@ class _LineChartCardState extends State<_LineChartCard> {
             ],
           ),
           SizedBox(height: 8.h),
-          Text(
-            widget.helperText,
-            style: AppTextStyles.caption.copyWith(color: colors.textTertiary),
-          ),
-          SizedBox(height: 12.h),
+          _ChartControlRow(onZoomIn: _zoomIn, onZoomOut: _zoomOut),
+          SizedBox(height: 8.h),
           SizedBox(
             height: 300.h,
-            child: LineChart(
-              LineChartData(
-                minX: 0,
-                maxX: math.max(0, widget.primarySeries.length - 1).toDouble(),
-                minY: 0,
-                maxY: maxY,
-                clipData: const FlClipData.all(),
-                borderData: FlBorderData(show: false),
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: _resolveGridInterval(maxY),
-                  getDrawingHorizontalLine: (_) =>
-                      FlLine(color: colors.borderDefault, strokeWidth: 1),
-                ),
-                titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 42.w,
-                      interval: _resolveGridInterval(maxY),
-                      getTitlesWidget: (value, meta) => Padding(
-                        padding: EdgeInsets.only(right: 6.w),
-                        child: Text(
-                          _formatAxisAmount(value),
-                          style: AppTextStyles.caption.copyWith(
-                            color: colors.textTertiary,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final stepWidth = 56.w * _zoom;
+                final chartWidth = math.max(
+                  constraints.maxWidth,
+                  math.max(1, pointCount) * stepWidth,
+                );
+                final visibleCount = math.max(
+                  1,
+                  (constraints.maxWidth / stepWidth).ceil(),
+                );
+                final titleInterval = math.max(1, (visibleCount / 4).ceil());
+
+                return Listener(
+                  onPointerDown: _handlePointerDown,
+                  onPointerMove: _handlePointerMove,
+                  onPointerUp: _handlePointerEnd,
+                  onPointerCancel: _handlePointerEnd,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: chartWidth,
+                      child: LineChart(
+                        LineChartData(
+                          minX: 0,
+                          maxX: math.max(0, pointCount - 1).toDouble(),
+                          minY: 0,
+                          maxY: maxY,
+                          clipData: const FlClipData.all(),
+                          borderData: FlBorderData(show: false),
+                          gridData: FlGridData(
+                            show: true,
+                            drawVerticalLine: false,
+                            horizontalInterval: _resolveGridInterval(maxY),
+                            getDrawingHorizontalLine: (_) => FlLine(
+                              color: colors.borderDefault,
+                              strokeWidth: 1,
+                            ),
                           ),
+                          titlesData: FlTitlesData(
+                            topTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            rightTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            leftTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 42.w,
+                                interval: _resolveGridInterval(maxY),
+                                getTitlesWidget: (value, meta) => Padding(
+                                  padding: EdgeInsets.only(right: 6.w),
+                                  child: Text(
+                                    _formatAxisAmount(value),
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: colors.textTertiary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 28.h,
+                                interval: titleInterval.toDouble(),
+                                getTitlesWidget: (value, meta) {
+                                  final index = value.toInt();
+                                  if (index < 0 ||
+                                      index >= widget.primarySeries.length) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return Padding(
+                                    padding: EdgeInsets.only(top: 6.h),
+                                    child: Text(
+                                      widget.primarySeries[index].label,
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: colors.textTertiary,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          lineTouchData: LineTouchData(
+                            enabled: true,
+                            handleBuiltInTouches: false,
+                            touchTooltipData: LineTouchTooltipData(
+                              fitInsideHorizontally: true,
+                              fitInsideVertically: true,
+                              tooltipRoundedRadius: 12.r,
+                              tooltipPadding: EdgeInsets.symmetric(
+                                horizontal: 10.w,
+                                vertical: 6.h,
+                              ),
+                              tooltipMargin: 8.h,
+                              getTooltipColor: (_) => colors.bgSurface,
+                              getTooltipItems: (spots) => spots
+                                  .map(
+                                    (spot) => LineTooltipItem(
+                                      '${spot.barIndex == 0 ? widget.primaryLegend : widget.secondaryLegend}\n${CurrencyFormatter.formatKRW(spot.y.round())}',
+                                      AppTextStyles.caption.copyWith(
+                                        color: spot.barIndex == 0
+                                            ? widget.primaryColor
+                                            : widget.secondaryColor,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                            touchCallback: (event, response) {
+                              if (event is FlTapUpEvent) {
+                                setState(() {
+                                  _selectedIndex =
+                                      response?.lineBarSpots?.isEmpty ?? true
+                                      ? null
+                                      : response!.lineBarSpots!.first.spotIndex;
+                                });
+                              }
+                            },
+                          ),
+                          showingTooltipIndicators: _selectedIndex == null
+                              ? const []
+                              : [
+                                  if (_selectedIndex! < primaryBar.spots.length)
+                                    ShowingTooltipIndicators([
+                                      LineBarSpot(
+                                        primaryBar,
+                                        0,
+                                        primaryBar.spots[_selectedIndex!],
+                                      ),
+                                    ]),
+                                  if (_selectedIndex! <
+                                      secondaryBar.spots.length)
+                                    ShowingTooltipIndicators([
+                                      LineBarSpot(
+                                        secondaryBar,
+                                        1,
+                                        secondaryBar.spots[_selectedIndex!],
+                                      ),
+                                    ]),
+                                ],
+                          lineBarsData: [primaryBar, secondaryBar],
                         ),
                       ),
                     ),
                   ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 28.h,
-                      interval: titleInterval.toDouble(),
-                      getTitlesWidget: (value, meta) {
-                        final index = value.toInt();
-                        if (index < 0 || index >= widget.primarySeries.length) {
-                          return const SizedBox.shrink();
-                        }
-                        return Padding(
-                          padding: EdgeInsets.only(top: 6.h),
-                          child: Text(
-                            widget.primarySeries[index].label,
-                            style: AppTextStyles.caption.copyWith(
-                              color: colors.textTertiary,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                lineTouchData: LineTouchData(
-                  enabled: true,
-                  handleBuiltInTouches: false,
-                  touchTooltipData: LineTouchTooltipData(
-                    fitInsideHorizontally: true,
-                    fitInsideVertically: true,
-                    tooltipRoundedRadius: 12.r,
-                    tooltipPadding: EdgeInsets.symmetric(
-                      horizontal: 10.w,
-                      vertical: 6.h,
-                    ),
-                    tooltipMargin: 8.h,
-                    getTooltipColor: (_) => colors.bgSurface,
-                    getTooltipItems: (spots) => spots
-                        .map(
-                          (spot) => LineTooltipItem(
-                            '${spot.barIndex == 0 ? widget.primaryLegend : widget.secondaryLegend}\n${CurrencyFormatter.formatKRW(spot.y.round())}',
-                            AppTextStyles.caption.copyWith(
-                              color: spot.barIndex == 0
-                                  ? widget.primaryColor
-                                  : widget.secondaryColor,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                  touchCallback: (event, response) {
-                    if (event is FlTapUpEvent) {
-                      setState(() {
-                        _selectedIndex = response?.lineBarSpots?.isEmpty ?? true
-                            ? null
-                            : response!.lineBarSpots!.first.spotIndex;
-                      });
-                    }
-                  },
-                ),
-                showingTooltipIndicators: _selectedIndex == null
-                    ? const []
-                    : [
-                        if (_selectedIndex! < primaryBar.spots.length)
-                          ShowingTooltipIndicators([
-                            LineBarSpot(
-                              primaryBar,
-                              0,
-                              primaryBar.spots[_selectedIndex!],
-                            ),
-                          ]),
-                        if (_selectedIndex! < secondaryBar.spots.length)
-                          ShowingTooltipIndicators([
-                            LineBarSpot(
-                              secondaryBar,
-                              1,
-                              secondaryBar.spots[_selectedIndex!],
-                            ),
-                          ]),
-                      ],
-                lineBarsData: [primaryBar, secondaryBar],
-              ),
+                );
+              },
             ),
           ),
         ],
@@ -510,8 +584,11 @@ class _BarChartCard extends StatefulWidget {
 
 class _BarChartCardState extends State<_BarChartCard> {
   final ScrollController _scrollController = ScrollController();
+  final Map<int, Offset> _activePointers = <int, Offset>{};
 
   double _zoom = 1.0;
+  double? _pinchStartDistance;
+  double _pinchStartZoom = 1.0;
   int? _selectedIndex;
 
   @override
@@ -531,9 +608,48 @@ class _BarChartCardState extends State<_BarChartCard> {
 
   void _handleScroll() => setState(() {});
 
-  void _zoomIn() => setState(() => _zoom = (_zoom + 0.2).clamp(0.8, 2.4));
+  void _zoomIn() => _setZoom(_zoom + 0.2);
 
-  void _zoomOut() => setState(() => _zoom = (_zoom - 0.2).clamp(0.8, 2.4));
+  void _zoomOut() => _setZoom(_zoom - 0.2);
+
+  void _setZoom(double value) {
+    setState(() {
+      _zoom = value.clamp(_minChartZoom, _maxChartZoom).toDouble();
+    });
+  }
+
+  void _handlePointerDown(PointerDownEvent event) {
+    _activePointers[event.pointer] = event.localPosition;
+    if (_activePointers.length == 2) {
+      _pinchStartDistance = _calculatePointerDistance(_activePointers);
+      _pinchStartZoom = _zoom;
+    }
+  }
+
+  void _handlePointerMove(PointerMoveEvent event) {
+    if (!_activePointers.containsKey(event.pointer)) {
+      return;
+    }
+    _activePointers[event.pointer] = event.localPosition;
+    if (_activePointers.length != 2 || _pinchStartDistance == null) {
+      return;
+    }
+
+    final distance = _calculatePointerDistance(_activePointers);
+    if (distance == null || _pinchStartDistance == 0) {
+      return;
+    }
+
+    _setZoom(_pinchStartZoom * (distance / _pinchStartDistance!));
+  }
+
+  void _handlePointerEnd(PointerEvent event) {
+    _activePointers.remove(event.pointer);
+    if (_activePointers.length < 2) {
+      _pinchStartDistance = null;
+      _pinchStartZoom = _zoom;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -559,12 +675,7 @@ class _BarChartCardState extends State<_BarChartCard> {
             rightColor: colors.textPrimary,
           ),
           SizedBox(height: 10.h),
-          _ChartControlRow(
-            onZoomIn: _zoomIn,
-            onZoomOut: _zoomOut,
-            helperText:
-                '좌우로 스크롤하고, 막대를 터치해 금액을 확인하세요. 화면에 보이는 구간 기준으로 높이가 다시 계산됩니다.',
-          ),
+          _ChartControlRow(onZoomIn: _zoomIn, onZoomOut: _zoomOut),
           SizedBox(height: 8.h),
           SizedBox(
             height: 360.h,
@@ -599,146 +710,153 @@ class _BarChartCardState extends State<_BarChartCard> {
                 final titleInterval = math.max(1, (visibleCount / 4).ceil());
                 final barWidth = math.min(stepWidth * 0.48, 28.w).toDouble();
 
-                return SingleChildScrollView(
-                  controller: _scrollController,
-                  scrollDirection: Axis.horizontal,
-                  child: SizedBox(
-                    width: chartWidth,
-                    child: BarChart(
-                      BarChartData(
-                        minY: bounds.minY,
-                        maxY: bounds.maxY,
-                        alignment: BarChartAlignment.spaceAround,
-                        borderData: FlBorderData(show: false),
-                        gridData: FlGridData(
-                          show: true,
-                          drawVerticalLine: false,
-                          horizontalInterval: bounds.interval,
-                          getDrawingHorizontalLine: (_) => FlLine(
-                            color: colors.borderDefault,
-                            strokeWidth: 1,
-                          ),
-                        ),
-                        titlesData: FlTitlesData(
-                          topTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          rightTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          leftTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 42.w,
-                              interval: bounds.interval,
-                              getTitlesWidget: (value, meta) => Padding(
-                                padding: EdgeInsets.only(right: 6.w),
-                                child: Text(
-                                  _formatAxisAmount(value),
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: colors.textTertiary,
-                                  ),
-                                ),
-                              ),
+                return Listener(
+                  onPointerDown: _handlePointerDown,
+                  onPointerMove: _handlePointerMove,
+                  onPointerUp: _handlePointerEnd,
+                  onPointerCancel: _handlePointerEnd,
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: chartWidth,
+                      child: BarChart(
+                        BarChartData(
+                          minY: bounds.minY,
+                          maxY: bounds.maxY,
+                          alignment: BarChartAlignment.spaceAround,
+                          borderData: FlBorderData(show: false),
+                          gridData: FlGridData(
+                            show: true,
+                            drawVerticalLine: false,
+                            horizontalInterval: bounds.interval,
+                            getDrawingHorizontalLine: (_) => FlLine(
+                              color: colors.borderDefault,
+                              strokeWidth: 1,
                             ),
                           ),
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 28.h,
-                              interval: titleInterval.toDouble(),
-                              getTitlesWidget: (value, meta) {
-                                final index = value.toInt();
-                                if (index < 0 || index >= widget.bars.length) {
-                                  return const SizedBox.shrink();
-                                }
-                                return Padding(
-                                  padding: EdgeInsets.only(top: 6.h),
+                          titlesData: FlTitlesData(
+                            topTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            rightTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            leftTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 42.w,
+                                interval: bounds.interval,
+                                getTitlesWidget: (value, meta) => Padding(
+                                  padding: EdgeInsets.only(right: 6.w),
                                   child: Text(
-                                    widget.bars[index].label,
+                                    _formatAxisAmount(value),
                                     style: AppTextStyles.caption.copyWith(
                                       color: colors.textTertiary,
                                     ),
                                   ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        barTouchData: BarTouchData(
-                          enabled: true,
-                          handleBuiltInTouches: false,
-                          touchTooltipData: BarTouchTooltipData(
-                            fitInsideHorizontally: true,
-                            fitInsideVertically: true,
-                            tooltipRoundedRadius: 12.r,
-                            tooltipPadding: EdgeInsets.symmetric(
-                              horizontal: 10.w,
-                              vertical: 6.h,
-                            ),
-                            tooltipMargin: 8.h,
-                            getTooltipColor: (_) => colors.bgSurface,
-                            getTooltipItem:
-                                (
-                                  group,
-                                  groupIndex,
-                                  rod,
-                                  rodIndex,
-                                ) => BarTooltipItem(
-                                  '${widget.tooltipPrefix}\n${CurrencyFormatter.formatKRW(rod.toY.round())}',
-                                  AppTextStyles.caption.copyWith(
-                                    color: group.x == widget.highlightedIndex
-                                        ? widget.highlightedColor
-                                        : widget.baseColor,
-                                    fontWeight: FontWeight.w800,
-                                  ),
                                 ),
-                          ),
-                          touchCallback: (event, response) {
-                            if (event is FlTapUpEvent) {
-                              setState(() {
-                                _selectedIndex = response?.spot == null
-                                    ? null
-                                    : response!.spot!.touchedBarGroupIndex;
-                              });
-                            }
-                          },
-                        ),
-                        extraLinesData: widget.referenceLineY == null
-                            ? null
-                            : ExtraLinesData(
-                                horizontalLines: [
-                                  HorizontalLine(
-                                    y: widget.referenceLineY!,
-                                    color: colors.textTertiary.withValues(
-                                      alpha: 0.55,
+                              ),
+                            ),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 28.h,
+                                interval: titleInterval.toDouble(),
+                                getTitlesWidget: (value, meta) {
+                                  final index = value.toInt();
+                                  if (index < 0 ||
+                                      index >= widget.bars.length) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return Padding(
+                                    padding: EdgeInsets.only(top: 6.h),
+                                    child: Text(
+                                      widget.bars[index].label,
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: colors.textTertiary,
+                                      ),
                                     ),
-                                    strokeWidth: 1.5,
-                                    dashArray: const [6, 4],
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          barTouchData: BarTouchData(
+                            enabled: true,
+                            handleBuiltInTouches: false,
+                            touchTooltipData: BarTouchTooltipData(
+                              fitInsideHorizontally: true,
+                              fitInsideVertically: true,
+                              tooltipRoundedRadius: 12.r,
+                              tooltipPadding: EdgeInsets.symmetric(
+                                horizontal: 10.w,
+                                vertical: 6.h,
+                              ),
+                              tooltipMargin: 8.h,
+                              getTooltipColor: (_) => colors.bgSurface,
+                              getTooltipItem:
+                                  (
+                                    group,
+                                    groupIndex,
+                                    rod,
+                                    rodIndex,
+                                  ) => BarTooltipItem(
+                                    '${widget.tooltipPrefix}\n${CurrencyFormatter.formatKRW(rod.toY.round())}',
+                                    AppTextStyles.caption.copyWith(
+                                      color: group.x == widget.highlightedIndex
+                                          ? widget.highlightedColor
+                                          : widget.baseColor,
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                   ),
-                                ],
-                              ),
-                        barGroups: List.generate(widget.bars.length, (index) {
-                          return BarChartGroupData(
-                            x: index,
-                            showingTooltipIndicators: _selectedIndex == index
-                                ? const [0]
-                                : const [],
-                            barRods: [
-                              BarChartRodData(
-                                toY: widget.bars[index].value,
-                                color: index == widget.highlightedIndex
-                                    ? widget.highlightedColor
-                                    : widget.baseColor,
-                                width: barWidth,
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(4.r),
-                                  topRight: Radius.circular(4.r),
+                            ),
+                            touchCallback: (event, response) {
+                              if (event is FlTapUpEvent) {
+                                setState(() {
+                                  _selectedIndex = response?.spot == null
+                                      ? null
+                                      : response!.spot!.touchedBarGroupIndex;
+                                });
+                              }
+                            },
+                          ),
+                          extraLinesData: widget.referenceLineY == null
+                              ? null
+                              : ExtraLinesData(
+                                  horizontalLines: [
+                                    HorizontalLine(
+                                      y: widget.referenceLineY!,
+                                      color: colors.textTertiary.withValues(
+                                        alpha: 0.55,
+                                      ),
+                                      strokeWidth: 1.5,
+                                      dashArray: const [6, 4],
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
-                          );
-                        }),
+                          barGroups: List.generate(widget.bars.length, (index) {
+                            return BarChartGroupData(
+                              x: index,
+                              showingTooltipIndicators: _selectedIndex == index
+                                  ? const [0]
+                                  : const [],
+                              barRods: [
+                                BarChartRodData(
+                                  toY: widget.bars[index].value,
+                                  color: index == widget.highlightedIndex
+                                      ? widget.highlightedColor
+                                      : widget.baseColor,
+                                  width: barWidth,
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(4.r),
+                                    topRight: Radius.circular(4.r),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }),
+                        ),
                       ),
                     ),
                   ),
@@ -844,27 +962,16 @@ class _MetricBlock extends StatelessWidget {
 }
 
 class _ChartControlRow extends StatelessWidget {
-  const _ChartControlRow({
-    required this.onZoomIn,
-    required this.onZoomOut,
-    required this.helperText,
-  });
+  const _ChartControlRow({required this.onZoomIn, required this.onZoomOut});
 
   final VoidCallback onZoomIn;
   final VoidCallback onZoomOut;
-  final String helperText;
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
     return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        Expanded(
-          child: Text(
-            helperText,
-            style: AppTextStyles.caption.copyWith(color: colors.textTertiary),
-          ),
-        ),
         _ZoomButton(icon: Icons.remove_rounded, onTap: onZoomOut),
         SizedBox(width: 6.w),
         _ZoomButton(icon: Icons.add_rounded, onTap: onZoomIn),
@@ -961,6 +1068,15 @@ class _BarChartBounds {
   final double minY;
   final double maxY;
   final double interval;
+}
+
+double? _calculatePointerDistance(Map<int, Offset> activePointers) {
+  if (activePointers.length < 2) {
+    return null;
+  }
+
+  final points = activePointers.values.take(2).toList(growable: false);
+  return (points.first - points.last).distance;
 }
 
 List<GoalWeeklyPlan> _buildNormalizedWeeklyPlans({
