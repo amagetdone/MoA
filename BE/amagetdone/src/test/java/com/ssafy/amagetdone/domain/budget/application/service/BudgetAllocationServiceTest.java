@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -69,6 +70,14 @@ class BudgetAllocationServiceTest {
 			.thenReturn(java.util.Optional.empty());
 		Mockito.lenient().when(
 			budgetWeekRepository.findByUserAndWeekStartDateBetweenOrderByWeekSequence(any(User.class), any(LocalDate.class), any(LocalDate.class))
+		)
+			.thenReturn(List.of());
+		Mockito.lenient().when(
+			budgetWeekRepository.findAllByUserIdAndWeekEndDateGreaterThanEqualAndWeekStartDateLessThanEqualOrderByWeekStartDateAscIdDesc(
+				any(Integer.class),
+				any(LocalDate.class),
+				any(LocalDate.class)
+			)
 		)
 			.thenReturn(List.of());
 		Mockito.lenient().when(budgetWeekRepository.findFirstByUserOrderByWeekEndDateDesc(any(User.class)))
@@ -301,6 +310,52 @@ class BudgetAllocationServiceTest {
 		assertEquals(56_000L, result.budgetWeeks().stream().mapToLong(BudgetWeek::getPlannedEssentialAmount).sum());
 	}
 
+	@Test
+	void allocateBudgetRenumbersOverlappingWeeksAndDeletesLegacyFrames() {
+		User user = user(1);
+		LocalDate serviceStartDate = LocalDate.of(2026, 3, 1);
+		LocalDate allocationEndDate = LocalDate.of(2026, 3, 31);
+		BudgetWeek crossingMonthWeek = existingBudgetWeek(100, user, 10, LocalDate.of(2026, 2, 23), LocalDate.of(2026, 3, 1));
+		BudgetWeek week2 = existingBudgetWeek(101, user, 11, LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 8));
+		BudgetWeek week3 = existingBudgetWeek(102, user, 12, LocalDate.of(2026, 3, 9), LocalDate.of(2026, 3, 15));
+		BudgetWeek week4 = existingBudgetWeek(103, user, 13, LocalDate.of(2026, 3, 16), LocalDate.of(2026, 3, 22));
+		BudgetWeek week5 = existingBudgetWeek(104, user, 14, LocalDate.of(2026, 3, 23), LocalDate.of(2026, 3, 29));
+		BudgetWeek staleFutureWeek = existingBudgetWeek(105, user, 6, LocalDate.of(2026, 3, 30), LocalDate.of(2026, 3, 31));
+
+		Mockito.when(
+			budgetWeekRepository.findAllByUserIdAndWeekEndDateGreaterThanEqualAndWeekStartDateLessThanEqualOrderByWeekStartDateAscIdDesc(
+				eq(user.getId()),
+				eq(serviceStartDate),
+				eq(allocationEndDate)
+			)
+		).thenReturn(List.of(crossingMonthWeek, week2, week3, week4, week5, staleFutureWeek));
+
+		BudgetAllocationService.AllocationResult result = budgetAllocationService.allocateBudget(
+			user,
+			serviceStartDate,
+			0L,
+			List.of(),
+			List.of(),
+			allocationEndDate
+		);
+
+		assertEquals(6, result.budgetWeeks().size());
+		assertBudgetWeek(result.budgetWeeks(), LocalDate.of(2026, 3, 1), 10);
+		assertBudgetWeek(result.budgetWeeks(), LocalDate.of(2026, 3, 2), 11);
+		assertBudgetWeek(result.budgetWeeks(), LocalDate.of(2026, 3, 9), 12);
+		assertBudgetWeek(result.budgetWeeks(), LocalDate.of(2026, 3, 16), 13);
+		assertBudgetWeek(result.budgetWeeks(), LocalDate.of(2026, 3, 23), 14);
+		assertBudgetWeek(result.budgetWeeks(), LocalDate.of(2026, 3, 30), 15);
+
+		@SuppressWarnings("unchecked")
+		org.mockito.ArgumentCaptor<Iterable<? extends BudgetWeek>> captor =
+			org.mockito.ArgumentCaptor.forClass(Iterable.class);
+		Mockito.verify(budgetWeekRepository).deleteAll(captor.capture());
+		List<Integer> deletedIds = new java.util.ArrayList<>();
+		captor.getValue().forEach(week -> deletedIds.add(week.getId()));
+		assertEquals(List.of(100), deletedIds);
+	}
+
 	private User user(int userId) {
 		User user = User.createPendingSocialUser();
 		ReflectionTestUtils.setField(user, "id", userId);
@@ -357,6 +412,14 @@ class BudgetAllocationServiceTest {
 			.orElseThrow();
 	}
 
+	private void assertBudgetWeek(List<BudgetWeek> budgetWeeks, LocalDate startDate, int weekSequence) {
+		BudgetWeek budgetWeek = budgetWeeks.stream()
+			.filter(candidate -> candidate.getWeekStartDate().equals(startDate))
+			.findFirst()
+			.orElseThrow();
+		assertEquals(weekSequence, budgetWeek.getWeekSequence());
+	}
+
 	private PlanWeekAllocation planAllocation(List<PlanWeekAllocation> allocations, int weekSequence, String title) {
 		return allocations.stream()
 			.filter(allocation -> allocation.getBudgetWeek().getWeekSequence() == weekSequence)
@@ -373,5 +436,18 @@ class BudgetAllocationServiceTest {
 			.filter(summary -> summary.plan().getTitle().equals(title))
 			.findFirst()
 			.orElseThrow();
+	}
+
+	private BudgetWeek existingBudgetWeek(int id, User user, int weekSequence, LocalDate startDate, LocalDate endDate) {
+		return BudgetWeek.builder()
+			.id(id)
+			.user(user)
+			.weekSequence(weekSequence)
+			.weekStartDate(startDate)
+			.weekEndDate(endDate)
+			.periodDays((int)(java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1L))
+			.partial(true)
+			.status(com.ssafy.amagetdone.domain.budget.model.vo.BudgetWeekStatus.PLANNED)
+			.build();
 	}
 }

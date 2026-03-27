@@ -59,6 +59,7 @@ public class BudgetHistoricalRebuildService {
 			.orElseThrow(() -> new PlanException(PlanErrorCode.PLAN_NOT_FOUND));
 
 		LocalDate today = LocalDate.now(clock);
+		LocalDate rebuildEndDate = today.withDayOfMonth(today.lengthOfMonth());
 		LocalDate serviceStartDate = plan.getStartDate();
 		if (serviceStartDate == null || serviceStartDate.isAfter(today)) {
 			return new GoalSavingAccrualForceDto.Response(
@@ -76,16 +77,16 @@ public class BudgetHistoricalRebuildService {
 			);
 		}
 
-		List<BudgetMonth> budgetMonths = budgetMonthsWithSeedFallback(userId, serviceStartDate, today);
+		List<BudgetMonth> budgetMonths = budgetMonthsWithSeedFallback(userId, serviceStartDate, rebuildEndDate);
 		List<BudgetWeek> affectedWeeks = budgetWeekRepository.findAllByUser_IdOrderByWeekStartDateAsc(userId).stream()
-			.filter(week -> overlaps(week, serviceStartDate, today))
+			.filter(week -> overlaps(week, serviceStartDate, rebuildEndDate))
 			.toList();
 
 		List<BudgetMonth> affectedMonths = budgetMonths.stream()
 			.filter(month -> month != null)
 			.filter(month -> month.getUser() != null && Objects.equals(month.getUser().getId(), userId))
 			.filter(month -> !month.getBaseDate().isBefore(serviceStartDate.withDayOfMonth(1)))
-			.filter(month -> !month.getBaseDate().isAfter(today.withDayOfMonth(1)))
+			.filter(month -> !month.getBaseDate().isAfter(rebuildEndDate.withDayOfMonth(1)))
 			.toList();
 
 		List<BudgetAdjustment> adjustments = affectedWeeks.isEmpty()
@@ -123,7 +124,7 @@ public class BudgetHistoricalRebuildService {
 		BudgetAllocationService.AllocationResult allocationResult = budgetAllocationTriggerService.triggerHistorical(
 			userId,
 			serviceStartDate,
-			today
+			rebuildEndDate
 		);
 		if (!allocationResult.budgetWeeks().isEmpty()) {
 			budgetActualSpentRefreshService.refresh(userId, allocationResult.budgetWeeks());

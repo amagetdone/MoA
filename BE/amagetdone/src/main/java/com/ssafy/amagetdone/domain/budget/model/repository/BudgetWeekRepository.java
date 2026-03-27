@@ -24,6 +24,12 @@ public interface BudgetWeekRepository extends JpaRepository<BudgetWeek, Integer>
 		LocalDate weekEndDate
 	);
 
+	List<BudgetWeek> findAllByUserIdAndWeekEndDateGreaterThanEqualAndWeekStartDateLessThanEqualOrderByWeekStartDateAscIdDesc(
+		Integer userId,
+		LocalDate weekStartDate,
+		LocalDate weekEndDate
+	);
+
 	void deleteAllByUserIdAndWeekEndDateGreaterThanEqualAndWeekStartDateLessThanEqual(
 		Integer userId,
 		LocalDate weekStartDate,

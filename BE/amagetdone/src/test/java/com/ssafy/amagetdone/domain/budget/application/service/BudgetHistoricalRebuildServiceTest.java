@@ -92,6 +92,7 @@ class BudgetHistoricalRebuildServiceTest {
 		User user = user(1);
 		Plan targetPlan = activePlan(user, 11, 120_000L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 6, 30));
 		BudgetWeek staleWeek = budgetWeek(user, 101, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 7));
+		BudgetWeek futureWeek = budgetWeek(user, 103, LocalDate.of(2026, 3, 30), LocalDate.of(2026, 3, 31));
 		BudgetMonth staleMonth = budgetMonth(user, 201, LocalDate.of(2026, 3, 1));
 		PlanWeekAllocation stalePlanAllocation = PlanWeekAllocation.builder()
 			.plan(targetPlan)
@@ -141,15 +142,15 @@ class BudgetHistoricalRebuildServiceTest {
 		);
 
 		given(planRepository.findByIdAndUserId(11, 1)).willReturn(Optional.of(targetPlan));
-		given(budgetWeekRepository.findAllByUser_IdOrderByWeekStartDateAsc(1)).willReturn(List.of(staleWeek));
+		given(budgetWeekRepository.findAllByUser_IdOrderByWeekStartDateAsc(1)).willReturn(List.of(staleWeek, futureWeek));
 		given(budgetMonthRepository.findAllByUser_IdOrderByBaseDateAsc(1)).willReturn(List.of(staleMonth));
-		given(budgetAdjustmentRepository.findAllByBudgetWeekIn(List.of(staleWeek)))
+		given(budgetAdjustmentRepository.findAllByBudgetWeekIn(List.of(staleWeek, futureWeek)))
 			.willReturn(List.of(staleAutoAdd, staleManualAdd));
-		given(essentialWeekAllocationRepository.findAllByBudgetWeekIn(List.of(staleWeek)))
+		given(essentialWeekAllocationRepository.findAllByBudgetWeekIn(List.of(staleWeek, futureWeek)))
 			.willReturn(List.of(staleEssentialAllocation));
-		given(planWeekAllocationRepository.findAllByBudgetWeekIn(List.of(staleWeek)))
+		given(planWeekAllocationRepository.findAllByBudgetWeekIn(List.of(staleWeek, futureWeek)))
 			.willReturn(List.of(stalePlanAllocation));
-		given(budgetAllocationTriggerService.triggerHistorical(1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 20)))
+		given(budgetAllocationTriggerService.triggerHistorical(1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31)))
 			.willReturn(rebuiltAllocation);
 		given(dailyGoalSavingAccrualService.backfillAccrual(1, new GoalSavingAccrualForceDto.BackfillRequest(null)))
 			.willReturn(rebuiltResponse);
@@ -177,8 +178,8 @@ class BudgetHistoricalRebuildServiceTest {
 		verify(budgetAdjustmentRepository).deleteAll(List.of(staleAutoAdd, staleManualAdd));
 		verify(essentialWeekAllocationRepository).deleteAll(List.of(staleEssentialAllocation));
 		verify(planWeekAllocationRepository).deleteAll(List.of(stalePlanAllocation));
-		verify(budgetWeekRepository).deleteAll(List.of(staleWeek));
-		verify(budgetAllocationTriggerService).triggerHistorical(1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 20));
+		verify(budgetWeekRepository).deleteAll(List.of(staleWeek, futureWeek));
+		verify(budgetAllocationTriggerService).triggerHistorical(1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
 		verify(budgetActualSpentRefreshService).refresh(1, List.of(rebuiltWeek));
 		verify(dailyGoalSavingAccrualService).backfillAccrual(1, new GoalSavingAccrualForceDto.BackfillRequest(null));
 		verify(entityManager, org.mockito.Mockito.times(2)).flush();
@@ -196,14 +197,14 @@ class BudgetHistoricalRebuildServiceTest {
 			dailyGoalSavingAccrualService
 		);
 		inOrder.verify(budgetAdjustmentRepository).deleteAll(List.of(staleAutoAdd, staleManualAdd));
-		inOrder.verify(budgetRolloverRepository).deleteAllBySourceBudgetWeekIn(List.of(staleWeek));
-		inOrder.verify(budgetRolloverRepository).deleteAllByTargetBudgetWeekIn(List.of(staleWeek));
+		inOrder.verify(budgetRolloverRepository).deleteAllBySourceBudgetWeekIn(List.of(staleWeek, futureWeek));
+		inOrder.verify(budgetRolloverRepository).deleteAllByTargetBudgetWeekIn(List.of(staleWeek, futureWeek));
 		inOrder.verify(essentialWeekAllocationRepository).deleteAll(List.of(staleEssentialAllocation));
 		inOrder.verify(planWeekAllocationRepository).deleteAll(List.of(stalePlanAllocation));
-		inOrder.verify(budgetWeekRepository).deleteAll(List.of(staleWeek));
+		inOrder.verify(budgetWeekRepository).deleteAll(List.of(staleWeek, futureWeek));
 		inOrder.verify(entityManager).flush();
 		inOrder.verify(entityManager).clear();
-		inOrder.verify(budgetAllocationTriggerService).triggerHistorical(1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 20));
+		inOrder.verify(budgetAllocationTriggerService).triggerHistorical(1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
 		inOrder.verify(budgetActualSpentRefreshService).refresh(1, List.of(rebuiltWeek));
 		inOrder.verify(entityManager).flush();
 		inOrder.verify(entityManager).clear();
@@ -256,7 +257,7 @@ class BudgetHistoricalRebuildServiceTest {
 		given(budgetAdjustmentRepository.findAllByBudgetWeekIn(List.of(staleWeek))).willReturn(List.of(staleAutoAdd));
 		given(essentialWeekAllocationRepository.findAllByBudgetWeekIn(List.of(staleWeek))).willReturn(List.of());
 		given(planWeekAllocationRepository.findAllByBudgetWeekIn(List.of(staleWeek))).willReturn(List.of());
-		given(budgetAllocationTriggerService.triggerHistorical(1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 20)))
+		given(budgetAllocationTriggerService.triggerHistorical(1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31)))
 			.willReturn(new BudgetAllocationService.AllocationResult(List.of(), List.of(), List.of(), List.of(), List.of()));
 		given(dailyGoalSavingAccrualService.backfillAccrual(1, new GoalSavingAccrualForceDto.BackfillRequest(null)))
 			.willReturn(new GoalSavingAccrualForceDto.Response(
@@ -334,7 +335,7 @@ class BudgetHistoricalRebuildServiceTest {
 		given(essentialExpenseMonthRepository.findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(1))
 			.willReturn(List.of(firstExistingEssential));
 		given(essentialExpenseMonthRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
-		given(budgetAllocationTriggerService.triggerHistorical(1, LocalDate.of(2025, 12, 16), LocalDate.of(2026, 3, 20)))
+		given(budgetAllocationTriggerService.triggerHistorical(1, LocalDate.of(2025, 12, 16), LocalDate.of(2026, 3, 31)))
 			.willReturn(new BudgetAllocationService.AllocationResult(List.of(), List.of(), List.of(), List.of(), List.of()));
 		given(dailyGoalSavingAccrualService.backfillAccrual(1, new GoalSavingAccrualForceDto.BackfillRequest(null)))
 			.willReturn(rebuiltResponse);

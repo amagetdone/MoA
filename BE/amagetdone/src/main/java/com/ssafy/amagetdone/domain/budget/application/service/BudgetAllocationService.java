@@ -8,10 +8,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetMonth;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
@@ -90,14 +92,15 @@ public class BudgetAllocationService {
 			allocationEndDate
 		);
 
-		Map<LocalDate, BudgetWeek> budgetWeeksByStartDate = upsertBudgetWeeks(user, weekFrames);
+		List<BudgetWeek> overlappingBudgetWeeks = findOverlappingBudgetWeeks(user, weekFrames);
+		Map<LocalDate, BudgetWeek> budgetWeeksByStartDate = upsertBudgetWeeks(user, weekFrames, overlappingBudgetWeeks);
 		Map<EssentialAllocationKey, ExistingEssentialAllocationState> existingEssentialStates = loadExistingEssentialStates(
-			budgetWeeksByStartDate.values()
+			overlappingBudgetWeeks
 		);
 		Map<PlanAllocationKey, ExistingPlanAllocationState> existingPlanStates = loadExistingPlanStates(
-			budgetWeeksByStartDate.values()
+			overlappingBudgetWeeks
 		);
-		deleteExistingAllocations(budgetWeeksByStartDate.values());
+		deleteExistingAllocations(overlappingBudgetWeeks);
 
 		Map<LocalDate, Long> incomeByWeekStartDate = allocateMonthlyIncome(
 			serviceStartDate,
@@ -254,15 +257,21 @@ public class BudgetAllocationService {
 		return budgetMonthsByBaseDate;
 	}
 
-	private Map<LocalDate, BudgetWeek> upsertBudgetWeeks(User user, List<WeekFrame> weekFrames) {
+	private List<BudgetWeek> findOverlappingBudgetWeeks(User user, List<WeekFrame> weekFrames) {
 		LocalDate firstWeekStartDate = weekFrames.get(0).startDate();
-		LocalDate lastWeekStartDate = weekFrames.get(weekFrames.size() - 1).startDate();
-		Map<LocalDate, BudgetWeek> existingWeeksByStartDate = budgetWeekRepository
-			.findByUserAndWeekStartDateBetweenOrderByWeekSequence(user, firstWeekStartDate, lastWeekStartDate)
-			.stream()
-			.collect(LinkedHashMap::new, (map, budgetWeek) -> map.put(budgetWeek.getWeekStartDate(), budgetWeek), Map::putAll);
+		LocalDate lastWeekEndDate = weekFrames.get(weekFrames.size() - 1).endDate();
+		return budgetWeekRepository
+			.findAllByUserIdAndWeekEndDateGreaterThanEqualAndWeekStartDateLessThanEqualOrderByWeekStartDateAscIdDesc(
+				user.getId(),
+				firstWeekStartDate,
+				lastWeekEndDate
+			);
+	}
 
-		int nextSequence = determineStartingSequence(user, firstWeekStartDate, existingWeeksByStartDate);
+	private Map<LocalDate, BudgetWeek> upsertBudgetWeeks(User user, List<WeekFrame> weekFrames, List<BudgetWeek> overlappingBudgetWeeks) {
+		LocalDate firstWeekStartDate = weekFrames.get(0).startDate();
+		Map<LocalDate, BudgetWeek> existingWeeksByStartDate = selectReusableWeeksByStartDate(overlappingBudgetWeeks);
+		int nextSequence = determineStartingSequence(user, firstWeekStartDate, overlappingBudgetWeeks);
 		List<BudgetWeek> budgetWeeksToSave = new ArrayList<>();
 
 		for (WeekFrame weekFrame : weekFrames) {
@@ -270,20 +279,16 @@ public class BudgetAllocationService {
 			if (budgetWeek == null) {
 				budgetWeek = BudgetWeek.builder()
 					.user(user)
-					.weekSequence(nextSequence)
 					.weekStartDate(weekFrame.startDate())
 					.weekEndDate(weekFrame.endDate())
 					.partial(weekFrame.partial())
 					.periodDays(weekFrame.periodDays())
 					.status(BudgetWeekStatus.PLANNED)
 					.build();
-				nextSequence++;
-			} else if (budgetWeek.getWeekSequence() == null) {
-				budgetWeek.setWeekSequence(nextSequence);
-				nextSequence++;
 			}
 
 			budgetWeek.setUser(user);
+			budgetWeek.setWeekSequence(nextSequence++);
 			budgetWeek.setWeekStartDate(weekFrame.startDate());
 			budgetWeek.setWeekEndDate(weekFrame.endDate());
 			budgetWeek.setPeriodDays(weekFrame.periodDays());
@@ -295,6 +300,7 @@ public class BudgetAllocationService {
 		}
 
 		List<BudgetWeek> savedBudgetWeeks = budgetWeekRepository.saveAll(budgetWeeksToSave);
+		deleteObsoleteBudgetWeeks(overlappingBudgetWeeks, savedBudgetWeeks);
 		Map<LocalDate, BudgetWeek> budgetWeeksByStartDate = new LinkedHashMap<>();
 		for (BudgetWeek savedBudgetWeek : savedBudgetWeeks) {
 			budgetWeeksByStartDate.put(savedBudgetWeek.getWeekStartDate(), savedBudgetWeek);
@@ -305,13 +311,14 @@ public class BudgetAllocationService {
 	private int determineStartingSequence(
 		User user,
 		LocalDate firstWeekStartDate,
-		Map<LocalDate, BudgetWeek> existingWeeksByStartDate
+		List<BudgetWeek> overlappingBudgetWeeks
 	) {
-		if (!existingWeeksByStartDate.isEmpty()) {
-			return existingWeeksByStartDate.values().stream()
+		if (!overlappingBudgetWeeks.isEmpty()) {
+			return overlappingBudgetWeeks.stream()
+				.min(Comparator.comparing(BudgetWeek::getWeekStartDate)
+					.thenComparing(BudgetWeek::getId, Comparator.nullsLast(Integer::compareTo)))
 				.map(BudgetWeek::getWeekSequence)
 				.filter(Objects::nonNull)
-				.min(Integer::compareTo)
 				.orElse(1);
 		}
 
@@ -320,6 +327,28 @@ public class BudgetAllocationService {
 			.map(BudgetWeek::getWeekSequence)
 			.map(sequence -> sequence + 1)
 			.orElse(1);
+	}
+
+	private Map<LocalDate, BudgetWeek> selectReusableWeeksByStartDate(List<BudgetWeek> overlappingBudgetWeeks) {
+		Map<LocalDate, BudgetWeek> reusableWeeksByStartDate = new LinkedHashMap<>();
+		for (BudgetWeek budgetWeek : overlappingBudgetWeeks) {
+			reusableWeeksByStartDate.putIfAbsent(budgetWeek.getWeekStartDate(), budgetWeek);
+		}
+		return reusableWeeksByStartDate;
+	}
+
+	private void deleteObsoleteBudgetWeeks(List<BudgetWeek> overlappingBudgetWeeks, List<BudgetWeek> savedBudgetWeeks) {
+		Set<Integer> retainedIds = savedBudgetWeeks.stream()
+			.map(BudgetWeek::getId)
+			.filter(Objects::nonNull)
+			.collect(HashSet::new, Set::add, Set::addAll);
+		List<BudgetWeek> obsoleteBudgetWeeks = overlappingBudgetWeeks.stream()
+			.filter(budgetWeek -> budgetWeek.getId() != null)
+			.filter(budgetWeek -> !retainedIds.contains(budgetWeek.getId()))
+			.toList();
+		if (!obsoleteBudgetWeeks.isEmpty()) {
+			budgetWeekRepository.deleteAll(obsoleteBudgetWeeks);
+		}
 	}
 
 	private Map<EssentialAllocationKey, ExistingEssentialAllocationState> loadExistingEssentialStates(
