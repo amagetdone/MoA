@@ -111,10 +111,12 @@ class BankCatalog {
     BankCatalogItem(
       code: '001',
       name: '한국은행',
+      logoPath: 'assets/images/logo/hankook_logo.png',
     ),
     BankCatalogItem(
       code: '999',
       name: '싸피은행',
+      logoPath: 'assets/images/logo/ssafy_logo.jpg',
     ),
   ];
 
