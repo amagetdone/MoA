@@ -39,6 +39,15 @@ public final class AccountDto {
 	) {
 	}
 
+	public record CardSummaryResponse(
+		Long cardUniqueNo,
+		String cardNo,
+		String cardName,
+		String cardIssuerName,
+		String linkedAccountNo
+	) {
+	}
+
 	public record AccountBalanceResponse(
 		String accountNo,
 		Long accountBalance,

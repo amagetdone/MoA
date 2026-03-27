@@ -17,7 +17,9 @@ import com.ssafy.amagetdone.domain.account.application.usecase.ReconcileLinkedAc
 import com.ssafy.amagetdone.domain.account.application.usecase.RegisterDemandDepositProductUseCase;
 import com.ssafy.amagetdone.domain.account.infra.client.dto.DemandDepositBalanceDto;
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
+import com.ssafy.amagetdone.domain.account.model.entity.Card;
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
+import com.ssafy.amagetdone.domain.account.model.repository.CardRepository;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 
 import org.junit.jupiter.api.Test;
@@ -52,6 +54,9 @@ class AccountServiceTest {
 
 	@Mock
 	private AccountRepository accountRepository;
+
+	@Mock
+	private CardRepository cardRepository;
 
 	@InjectMocks
 	private AccountService accountService;
@@ -183,5 +188,49 @@ class AccountServiceTest {
 		assertThat(account.isDeleted()).isTrue();
 		verify(findUserAccountUseCase).execute(7, "0011234567890123");
 		verify(accountRepository).save(account);
+	}
+
+	@Test
+	void getCardsReturnsVerifiedActiveLinkedCards() {
+		User user = User.createPendingSocialUser();
+		Account account = Account.create(
+			user,
+			"0011234567890123",
+			null,
+			"생활비 계좌",
+			"수시입출금",
+			"001",
+			"한국은행",
+			"KRW"
+		);
+		account.markVerifiedLinked();
+		Card card = Card.create(
+			2050305894L,
+			account,
+			"293",
+			"1001967923277056",
+			"SSAFY 스마일카드",
+			"1001",
+			"KB국민카드",
+			java.time.LocalDateTime.of(2031, 3, 27, 0, 0),
+			"생활 10% 할인",
+			"1",
+			500000L,
+			10000L
+		);
+
+		when(cardRepository.findAllByWithdrawalAccount_User_IdAndWithdrawalAccount_VerifiedTrueAndWithdrawalAccount_ActiveTrue(7))
+			.thenReturn(List.of(card));
+
+		List<AccountDto.CardSummaryResponse> result = accountService.getCards(7);
+
+		assertThat(result).containsExactly(new AccountDto.CardSummaryResponse(
+			2050305894L,
+			"1001967923277056",
+			"SSAFY 스마일카드",
+			"KB국민카드",
+			"0011234567890123"
+		));
+		verify(cardRepository).findAllByWithdrawalAccount_User_IdAndWithdrawalAccount_VerifiedTrueAndWithdrawalAccount_ActiveTrue(7);
 	}
 }

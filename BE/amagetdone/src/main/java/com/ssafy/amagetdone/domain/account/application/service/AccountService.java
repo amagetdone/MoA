@@ -22,7 +22,9 @@ import com.ssafy.amagetdone.domain.account.infra.client.dto.DemandDepositAccount
 import com.ssafy.amagetdone.domain.account.infra.client.dto.DemandDepositBalanceDto;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
+import com.ssafy.amagetdone.domain.account.model.entity.Card;
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
+import com.ssafy.amagetdone.domain.account.model.repository.CardRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,7 @@ public class AccountService {
 	private final FindAccountUserUseCase findAccountUserUseCase;
 	private final FindUserAccountUseCase findUserAccountUseCase;
 	private final AccountRepository accountRepository;
+	private final CardRepository cardRepository;
 	private final ConfirmAccountOwnershipUseCase confirmAccountOwnershipUseCase;
 	private final SsafyDemandDepositAccountApiClient ssafyDemandDepositAccountApiClient;
 	private final RegisterDemandDepositProductUseCase registerDemandDepositProductUseCase;
@@ -95,6 +98,19 @@ public class AccountService {
 			account.isVerified(),
 			balance.accountBalance()
 		);
+	}
+
+	public List<AccountDto.CardSummaryResponse> getCards(Integer userId) {
+		return cardRepository.findAllByWithdrawalAccount_User_IdAndWithdrawalAccount_VerifiedTrueAndWithdrawalAccount_ActiveTrue(userId)
+			.stream()
+			.map(card -> new AccountDto.CardSummaryResponse(
+				card.getCardUniqueNo(),
+				card.getCardNo(),
+				card.getName(),
+				card.getCardIssuerName(),
+				card.getWithdrawalAccount().getAccountNo()
+			))
+			.toList();
 	}
 
 	public AccountAdminDto.TransactionInitResponse initializeAccountTransactions(

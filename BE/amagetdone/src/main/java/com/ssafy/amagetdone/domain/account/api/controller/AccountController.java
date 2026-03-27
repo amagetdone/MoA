@@ -78,6 +78,16 @@ public class AccountController {
 		return ApiResponse.ok("내 계좌 목록을 조회했습니다.", accountService.getAccounts(userId));
 	}
 
+	@Operation(summary = "내 카드 목록 조회")
+	@GetMapping("/me/cards")
+	public ApiResponse<List<AccountDto.CardSummaryResponse>> getCards(
+		@Parameter(hidden = true)
+		@RequestHeader(name = "Authorization", required = false) String authorization
+	) {
+		int userId = jwtAccessTokenReader.readUserId(authorization);
+		return ApiResponse.ok("내 카드 목록을 조회했습니다.", accountService.getCards(userId));
+	}
+
 	@Operation(summary = "연결 계좌 삭제")
 	@DeleteMapping("/{accountNo}")
 	public ApiResponse<Void> deleteAccount(
