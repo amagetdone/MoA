@@ -93,7 +93,6 @@ public class BudgetAllocationService {
 		);
 
 		List<BudgetWeek> overlappingBudgetWeeks = findOverlappingBudgetWeeks(user, weekFrames);
-		Map<LocalDate, BudgetWeek> budgetWeeksByStartDate = upsertBudgetWeeks(user, weekFrames, overlappingBudgetWeeks);
 		Map<EssentialAllocationKey, ExistingEssentialAllocationState> existingEssentialStates = loadExistingEssentialStates(
 			overlappingBudgetWeeks
 		);
@@ -101,6 +100,7 @@ public class BudgetAllocationService {
 			overlappingBudgetWeeks
 		);
 		deleteExistingAllocations(overlappingBudgetWeeks);
+		Map<LocalDate, BudgetWeek> budgetWeeksByStartDate = upsertBudgetWeeks(user, weekFrames, overlappingBudgetWeeks);
 
 		Map<LocalDate, Long> incomeByWeekStartDate = allocateMonthlyIncome(
 			serviceStartDate,
