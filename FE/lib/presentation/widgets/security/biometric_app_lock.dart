@@ -79,6 +79,10 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
     return state is AuthAuthenticated || state is AuthAutoLoginSuccess;
   }
 
+  bool _shouldAttemptInitialUnlock(AuthState state) {
+    return state is AuthAutoLoginSuccess;
+  }
+
   bool _requiresProtection() {
     final authState = ref.read(authViewModelProvider);
     final biometricEnabled = ref.read(biometricPreferenceProvider);
@@ -89,7 +93,8 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
     if (_didAttemptInitialUnlock ||
         _isLockVisible ||
         _isAuthenticating ||
-        !_requiresProtection()) {
+        !_requiresProtection() ||
+        !_shouldAttemptInitialUnlock(ref.read(authViewModelProvider))) {
       return;
     }
 
@@ -280,7 +285,9 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
         return;
       }
 
-      _scheduleInitialUnlockIfNeeded();
+      if (_shouldAttemptInitialUnlock(next)) {
+        _scheduleInitialUnlockIfNeeded();
+      }
     });
 
     _scheduleInitialUnlockIfNeeded();
