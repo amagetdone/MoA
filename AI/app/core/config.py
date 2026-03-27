@@ -34,6 +34,10 @@ class Settings(BaseSettings):
         default=True,
         alias="CHATBOT_STREAM_STATUS_EVENTS_ENABLED",
     )
+    chatbot_timezone: str = Field(
+        default="Asia/Seoul",
+        alias="CHATBOT_TIMEZONE",
+    )
     chatbot_default_goal_limit: int = Field(
         default=5,
         alias="CHATBOT_DEFAULT_GOAL_LIMIT",

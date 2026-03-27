@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from typing import Callable, Sequence
 
 from langchain.agents import create_agent
@@ -37,6 +38,7 @@ def build_chatbot_graph(
     model_factory: Callable[[str], BaseChatModel] | None = None,
     tools: ChatbotToolBundle | None = None,
     checkpointer: BaseCheckpointSaver | None = None,
+    today: date | None = None,
 ):
     settings = settings or Settings()
     tool_bundle = tools or ChatbotToolBundle.empty()
@@ -71,7 +73,7 @@ def build_chatbot_graph(
     supervisor_graph = create_supervisor(
         [budget_agent, goal_agent, spending_agent, anomaly_agent],
         model=supervisor_model,
-        prompt=build_supervisor_prompt(),
+        prompt=build_supervisor_prompt(today=today),
         state_schema=ChatbotGraphState,
         supervisor_name="supervisor",
     )

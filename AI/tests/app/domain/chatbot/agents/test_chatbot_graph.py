@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Any, Sequence
 
 import anyio
@@ -89,6 +90,50 @@ def test_build_chatbot_graph_compiles_with_checkpointer() -> None:
 
     assert graph is not None
     assert getattr(graph, "checkpointer", None) is not None
+
+
+def test_build_chatbot_graph_uses_explicit_today_in_supervisor_prompt() -> None:
+    models = {
+        "supervisor": _RecordingFakeChatModel(
+            responses=[AIMessage(content="final answer")],
+            name="supervisor",
+        ),
+        "budget": _RecordingFakeChatModel(
+            responses=[AIMessage(content="budget answer")],
+            name="budget_specialist",
+        ),
+        "goal": _RecordingFakeChatModel(
+            responses=[AIMessage(content="goal answer")],
+            name="goal_specialist",
+        ),
+        "spending": _RecordingFakeChatModel(
+            responses=[AIMessage(content="spending answer")],
+            name="spending_specialist",
+        ),
+        "anomaly": _RecordingFakeChatModel(
+            responses=[AIMessage(content="anomaly answer")],
+            name="anomaly_specialist",
+        ),
+    }
+
+    graph = build_chatbot_graph(
+        model_factory=models.__getitem__,
+        tools=_build_tool_bundle(),
+        today=date(2026, 3, 27),
+    )
+
+    anyio.run(
+        lambda: graph.ainvoke(
+            {"messages": [HumanMessage(content="이번 주 소비 보여줘")]},
+            config={"configurable": {"thread_id": "moa:7:conv-1"}},
+        )
+    )
+
+    supervisor_prompt = " ".join(
+        str(getattr(message, "content", ""))
+        for message in models["supervisor"].seen_messages[0]
+    )
+    assert "Today is 2026-03-27 in the user's local timezone." in supervisor_prompt
 
 
 def test_thread_id_is_user_scoped() -> None:

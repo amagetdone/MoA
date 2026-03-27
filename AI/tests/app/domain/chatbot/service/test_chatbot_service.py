@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 import anyio
 import pytest
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
 
 from app.core.config import Settings
 from app.domain.chatbot.repository.conversation_memory_store import (
@@ -13,7 +13,7 @@ from app.domain.chatbot.repository.conversation_memory_store import (
     ConversationMemoryStore,
     ConversationNotFoundError,
 )
-from app.domain.chatbot.service.chatbot_service import ChatbotService
+from app.domain.chatbot.service.chatbot_service import ChatbotService, _build_tool_bundle
 
 
 class _FakeSpan:
@@ -107,9 +107,15 @@ class _FakeGraph:
         input: dict[str, object],
         config: dict[str, object] | None = None,
         stream_mode: object | None = None,
+        subgraphs: bool = False,
     ):
         self.stream_calls.append(
-            {"input": input, "config": config, "stream_mode": stream_mode}
+            {
+                "input": input,
+                "config": config,
+                "stream_mode": stream_mode,
+                "subgraphs": subgraphs,
+            }
         )
         for chunk in self.stream_chunks:
             yield chunk
@@ -170,6 +176,73 @@ def _build_settings() -> Settings:
     )
 
 
+class _ToolBundleRepository:
+    def __init__(self) -> None:
+        self.calls: list[dict[str, object]] = []
+
+    def get_weekly_budget_status(self, *, user_id: int, base_date):
+        self.calls.append(
+            {
+                "method": "get_weekly_budget_status",
+                "user_id": user_id,
+                "base_date": base_date,
+            }
+        )
+        return {"summary": {}, "evidence": [], "warnings": []}
+
+    def get_goal_progress_overview(self, *, user_id: int, status_filter=None, limit=5):
+        self.calls.append(
+            {
+                "method": "get_goal_progress_overview",
+                "user_id": user_id,
+                "status_filter": status_filter,
+                "limit": limit,
+            }
+        )
+        return {"summary": {}, "evidence": [], "warnings": []}
+
+    def get_spending_summary(self, *, user_id: int, date_from, date_to):
+        self.calls.append(
+            {
+                "method": "get_spending_summary",
+                "user_id": user_id,
+                "date_from": date_from,
+                "date_to": date_to,
+            }
+        )
+        return {"summary": {}, "evidence": [], "warnings": []}
+
+    def get_spending_by_category(
+        self,
+        *,
+        user_id: int,
+        date_from,
+        date_to,
+        include_comparison,
+    ):
+        self.calls.append(
+            {
+                "method": "get_spending_by_category",
+                "user_id": user_id,
+                "date_from": date_from,
+                "date_to": date_to,
+                "include_comparison": include_comparison,
+            }
+        )
+        return {"summary": {}, "evidence": [], "warnings": []}
+
+    def get_recent_spending_anomalies(self, *, user_id: int, lookback_days, limit):
+        self.calls.append(
+            {
+                "method": "get_recent_spending_anomalies",
+                "user_id": user_id,
+                "lookback_days": lookback_days,
+                "limit": limit,
+            }
+        )
+        return {"summary": {}, "evidence": [], "warnings": []}
+
+
 def test_reply_uses_user_scoped_thread_id_and_caches_graph_per_user() -> None:
     factory = _FakeGraphFactory()
     tracer = _FakeTracer()
@@ -221,6 +294,33 @@ def test_reply_uses_user_scoped_thread_id_and_caches_graph_per_user() -> None:
         }
     ]
     assert tracer.calls[0]["name"] == "chatbot.reply"
+
+
+def test_build_tool_bundle_uses_explicit_today_for_relative_spending_windows() -> None:
+    repository = _ToolBundleRepository()
+
+    tool_bundle = _build_tool_bundle(
+        repository=repository,
+        user_id=7,
+        today_factory=lambda: date(2026, 3, 27),
+    )
+
+    tool_bundle.spending[1].invoke(
+        {
+            "period": "this_week",
+            "include_comparison": False,
+        }
+    )
+
+    assert repository.calls == [
+        {
+            "method": "get_spending_by_category",
+            "user_id": 7,
+            "date_from": date(2026, 3, 23),
+            "date_to": date(2026, 3, 27),
+            "include_comparison": False,
+        }
+    ]
 
 
 def test_reply_generates_conversation_id_when_missing() -> None:
@@ -384,7 +484,107 @@ def test_stream_reply_emits_only_supervisor_tokens_and_done() -> None:
     assert factory.graphs[7].stream_calls[0]["config"] == {
         "configurable": {"thread_id": "moa:7:conv-1"}
     }
+    assert factory.graphs[7].stream_calls[0]["subgraphs"] is True
     assert tracer.calls[-1]["name"] == "chatbot.stream_reply"
+
+
+def test_stream_reply_filters_subgraph_chunks_to_final_supervisor_tokens() -> None:
+    graph = _FakeGraph(
+        stream_chunks=[
+            (
+                ("supervisor:step-1",),
+                "messages",
+                (
+                    AIMessageChunk(
+                        content="",
+                        tool_call_chunks=[
+                            {
+                                "name": "transfer_to_budget_specialist",
+                                "args": "",
+                                "id": "call-1",
+                                "index": 0,
+                                "type": "tool_call_chunk",
+                            }
+                        ],
+                    ),
+                    {
+                        "checkpoint_ns": "supervisor:step-1",
+                        "langgraph_node": "agent",
+                    },
+                ),
+            ),
+            (
+                ("budget_specialist:step-1",),
+                "messages",
+                (
+                    AIMessageChunk(content="Internal"),
+                    {
+                        "checkpoint_ns": "budget_specialist:step-1",
+                        "langgraph_node": "model",
+                    },
+                ),
+            ),
+            (
+                ("supervisor:step-2",),
+                "messages",
+                (
+                    AIMessageChunk(content="Hel"),
+                    {
+                        "checkpoint_ns": "supervisor:step-2",
+                        "langgraph_node": "agent",
+                    },
+                ),
+            ),
+            (
+                ("supervisor:step-2",),
+                "messages",
+                (
+                    AIMessageChunk(content="lo"),
+                    {
+                        "checkpoint_ns": "supervisor:step-2",
+                        "langgraph_node": "agent",
+                    },
+                ),
+            ),
+            (
+                ("supervisor:step-2",),
+                "messages",
+                (
+                    AIMessageChunk(content="", chunk_position="last"),
+                    {
+                        "checkpoint_ns": "supervisor:step-2",
+                        "langgraph_node": "agent",
+                    },
+                ),
+            ),
+        ]
+    )
+    service = ChatbotService(
+        settings=_build_settings(),
+        graph_factory=lambda _user_id: graph,
+        tracer=_FakeTracer(),
+    )
+
+    async def run() -> list[dict[str, object]]:
+        events: list[dict[str, object]] = []
+        stream = await service.stream_reply(
+            user_id=7,
+            message="Reply with exactly Hello.",
+            conversation_id="conv-1",
+        )
+        async for event in stream:
+            events.append(event)
+        return events
+
+    events = anyio.run(run)
+
+    assert events == [
+        {"event": "status", "data": {"message": "routing"}},
+        {"event": "token", "data": {"text": "Hel"}},
+        {"event": "token", "data": {"text": "lo"}},
+        {"event": "done", "data": {"conversation_id": "conv-1"}},
+    ]
+    assert graph.stream_calls[0]["subgraphs"] is True
 
 
 def test_stream_reply_without_conversation_id_reuses_latest_active_conversation() -> None:

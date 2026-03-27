@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable, Sequence
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -10,6 +10,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langgraph.checkpoint.memory import InMemorySaver
 
 from app.core.config import Settings
+from app.core.time import current_date_in_timezone
 from app.core.database import ReadOnlyDatabase, build_thread_id, validate_user_id
 from app.core.llm import build_chat_model
 from app.core.logging import LangfuseTraceLogger
@@ -175,15 +176,20 @@ class ChatbotService:
                     yielded_text: list[str] = []
                     yield {"event": "status", "data": {"message": "routing"}}
 
-                    async for mode, chunk in graph.astream(
+                    async for event in graph.astream(
                         {"messages": [HumanMessage(content=message)]},
                         config={"configurable": {"thread_id": thread_id}},
                         stream_mode=["updates", "messages"],
+                        subgraphs=True,
                     ):
+                        namespace, mode, chunk = self._unpack_stream_event(event)
                         if mode == "updates":
                             continue
 
-                        text = self._extract_stream_text(chunk)
+                        text = self._extract_stream_text(
+                            chunk,
+                            namespace=namespace,
+                        )
                         if not text:
                             continue
 
@@ -291,33 +297,110 @@ class ChatbotService:
         return ""
 
     @staticmethod
-    def _extract_stream_text(chunk: Any) -> str:
+    def _unpack_stream_event(
+        event: Any,
+    ) -> tuple[tuple[str, ...], str, Any]:
+        if (
+            isinstance(event, tuple)
+            and len(event) == 3
+            and isinstance(event[0], tuple)
+            and isinstance(event[1], str)
+        ):
+            return event[0], event[1], event[2]
+        if (
+            isinstance(event, tuple)
+            and len(event) == 2
+            and isinstance(event[0], str)
+        ):
+            return (), event[0], event[1]
+        return (), "", event
+
+    @staticmethod
+    def _extract_stream_text(
+        chunk: Any,
+        *,
+        namespace: tuple[str, ...] = (),
+    ) -> str:
+        message, metadata = ChatbotService._extract_stream_message_and_metadata(chunk)
+        if message is None:
+            return ""
+        if not ChatbotService._is_user_facing_stream_chunk(
+            message=message,
+            metadata=metadata,
+            namespace=namespace,
+        ):
+            return ""
+        return ChatbotService._message_content(message)
+
+    @staticmethod
+    def _extract_stream_message_and_metadata(
+        chunk: Any,
+    ) -> tuple[Any | None, dict[str, Any]]:
         if isinstance(chunk, tuple):
             if not chunk:
-                return ""
+                return None, {}
             message = chunk[0]
             metadata = chunk[1] if len(chunk) > 1 and isinstance(chunk[1], dict) else {}
-            if not ChatbotService._is_user_facing_stream_chunk(
-                message=message,
-                metadata=metadata,
-            ):
-                return ""
-            return ChatbotService._message_content(message)
-
-        if not ChatbotService._is_user_facing_message(chunk):
-            return ""
-        return ChatbotService._message_content(chunk)
+            return message, metadata
+        return chunk, {}
 
     @staticmethod
     def _is_user_facing_stream_chunk(
         *,
         message: Any,
         metadata: dict[str, Any],
+        namespace: tuple[str, ...] = (),
     ) -> bool:
-        node_name = str(metadata.get("langgraph_node") or "").strip()
-        if node_name and node_name != SUPERVISOR_NODE_NAME:
+        source_name = ChatbotService._stream_source_name(
+            namespace=namespace,
+            metadata=metadata,
+            message=message,
+        )
+        if source_name and source_name != SUPERVISOR_NODE_NAME:
             return False
-        return ChatbotService._is_user_facing_message(message)
+        return not ChatbotService._message_has_tool_calls(message)
+
+    @staticmethod
+    def _stream_source_name(
+        *,
+        namespace: tuple[str, ...],
+        metadata: dict[str, Any],
+        message: Any,
+    ) -> str | None:
+        namespace_name = ChatbotService._root_stream_namespace_name(namespace)
+        if namespace_name is not None:
+            return namespace_name
+
+        checkpoint_name = ChatbotService._root_stream_namespace_name_from_checkpoint(
+            metadata.get("checkpoint_ns") or metadata.get("langgraph_checkpoint_ns")
+        )
+        if checkpoint_name is not None:
+            return checkpoint_name
+
+        node_name = str(metadata.get("langgraph_node") or "").strip()
+        if node_name and node_name not in {"agent", "model"}:
+            return node_name
+
+        return ChatbotService._message_name(message)
+
+    @staticmethod
+    def _root_stream_namespace_name(namespace: tuple[str, ...]) -> str | None:
+        if not namespace:
+            return None
+        return ChatbotService._root_stream_namespace_name_from_checkpoint(namespace[0])
+
+    @staticmethod
+    def _root_stream_namespace_name_from_checkpoint(value: Any) -> str | None:
+        if not isinstance(value, str):
+            return None
+        checkpoint = value.strip()
+        if not checkpoint:
+            return None
+        root_segment = checkpoint.split("|", 1)[0].strip()
+        if not root_segment:
+            return None
+        source_name = root_segment.split(":", 1)[0].strip()
+        return source_name or None
 
     @staticmethod
     def _is_user_facing_message(message: Any) -> bool:
@@ -360,9 +443,11 @@ class ChatbotService:
     def _message_has_tool_calls(message: Any) -> bool:
         if isinstance(message, dict):
             tool_calls = message.get("tool_calls")
+            tool_call_chunks = message.get("tool_call_chunks")
         else:
             tool_calls = getattr(message, "tool_calls", None)
-        return bool(tool_calls)
+            tool_call_chunks = getattr(message, "tool_call_chunks", None)
+        return bool(tool_calls or tool_call_chunks)
 
 
 def build_chatbot_service(
@@ -423,8 +508,17 @@ def _build_user_graph_factory(
     repository: ChatbotRepository,
 ) -> Callable[[int], Any]:
     def _factory(user_id: int) -> Any:
-        tool_bundle = _build_tool_bundle(repository=repository, user_id=user_id)
-        return build_chatbot_graph(settings=settings, tools=tool_bundle)
+        today_factory = _build_chatbot_today_factory(settings=settings)
+        tool_bundle = _build_tool_bundle(
+            repository=repository,
+            user_id=user_id,
+            today_factory=today_factory,
+        )
+        return build_chatbot_graph(
+            settings=settings,
+            tools=tool_bundle,
+            today=today_factory(),
+        )
 
     return _factory
 
@@ -442,15 +536,18 @@ def _build_request_scoped_graph_factory(
 
     def _factory(user_id: int, request_database: Any) -> Any:
         repository = ChatbotRepository.from_database(request_database)
+        today_factory = _build_chatbot_today_factory(settings=settings)
         tool_bundle = _build_tool_bundle(
             repository=repository,
             user_id=user_id,
+            today_factory=today_factory,
         )
         return build_chatbot_graph(
             settings=settings,
             model_factory=model_factory,
             tools=tool_bundle,
             checkpointer=checkpointer,
+            today=today_factory(),
         )
 
     return _factory
@@ -475,17 +572,31 @@ def _build_tool_bundle(
     *,
     repository: ChatbotRepository,
     user_id: int,
+    today_factory: Callable[[], date] | None = None,
 ) -> ChatbotToolBundle:
+    resolved_today_factory = today_factory or date.today
     return ChatbotToolBundle(
         budget=[
-            build_budget_tool(repository=repository, user_id=user_id),
+            build_budget_tool(
+                repository=repository,
+                user_id=user_id,
+                today_factory=resolved_today_factory,
+            ),
         ],
         goals=[
             build_goal_tool(repository=repository, user_id=user_id),
         ],
         spending=[
-            build_spending_summary_tool(repository=repository, user_id=user_id),
-            build_spending_by_category_tool(repository=repository, user_id=user_id),
+            build_spending_summary_tool(
+                repository=repository,
+                user_id=user_id,
+                today_factory=resolved_today_factory,
+            ),
+            build_spending_by_category_tool(
+                repository=repository,
+                user_id=user_id,
+                today_factory=resolved_today_factory,
+            ),
         ],
         anomalies=[
             build_recent_spending_anomalies_tool(
@@ -493,6 +604,17 @@ def _build_tool_bundle(
                 user_id=user_id,
             ),
         ],
+    )
+
+
+def _build_chatbot_today_factory(
+    *,
+    settings: Settings,
+    now_factory: Callable[[], datetime] | None = None,
+) -> Callable[[], date]:
+    return lambda: current_date_in_timezone(
+        settings.chatbot_timezone,
+        now_factory=now_factory or (lambda: datetime.now(UTC)),
     )
 
 
