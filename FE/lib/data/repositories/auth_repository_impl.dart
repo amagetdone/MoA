@@ -37,7 +37,7 @@ class AuthRepositoryImpl implements AuthRepository {
     final socialToken = await socialAuthDataSource.getKakaoToken();
     final result = await remoteDataSource.loginWithSocialToken(
       provider: 'kakao',
-      socialToken: socialToken,
+      accessToken: socialToken,
     );
     return _saveTokensAndConvert(result);
   }
@@ -47,7 +47,8 @@ class AuthRepositoryImpl implements AuthRepository {
     final socialToken = await socialAuthDataSource.getGoogleToken();
     final result = await remoteDataSource.loginWithSocialToken(
       provider: 'google',
-      socialToken: socialToken,
+      accessToken: socialToken.accessToken,
+      idToken: socialToken.idToken,
     );
     return _saveTokensAndConvert(result);
   }

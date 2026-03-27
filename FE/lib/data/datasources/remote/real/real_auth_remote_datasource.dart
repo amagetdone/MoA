@@ -12,13 +12,20 @@ class RealAuthRemoteDataSource implements AuthRemoteDataSource {
   @override
   Future<SocialLoginResponseDto> loginWithSocialToken({
     required String provider,
-    required String socialToken,
+    String? accessToken,
+    String? idToken,
   }) async {
-    // Web Google sign-in may only expose an access token, so send both
-    // fields and let the backend validate whichever token type is usable.
-    final body = provider == 'google'
-        ? {'idToken': socialToken, 'accessToken': socialToken}
-        : {'accessToken': socialToken};
+    final body = <String, String>{};
+    if (provider == 'google') {
+      if (idToken != null && idToken.isNotEmpty) {
+        body['idToken'] = idToken;
+      }
+      if (accessToken != null && accessToken.isNotEmpty) {
+        body['accessToken'] = accessToken;
+      }
+    } else if (accessToken != null && accessToken.isNotEmpty) {
+      body['accessToken'] = accessToken;
+    }
 
     final response = await _dio.post(
       'v1/auth/social/$provider',

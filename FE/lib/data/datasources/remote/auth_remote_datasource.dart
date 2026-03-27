@@ -6,7 +6,8 @@ abstract class AuthRemoteDataSource {
   /// 소셜 토큰을 백엔드에 전달하여 자체 JWT + 온보딩 상태를 받는다
   Future<SocialLoginResponseDto> loginWithSocialToken({
     required String provider,
-    required String socialToken,
+    String? accessToken,
+    String? idToken,
   });
 
   /// refresh token으로 access token 갱신

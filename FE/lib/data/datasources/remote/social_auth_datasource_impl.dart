@@ -11,7 +11,7 @@ class SocialAuthDataSourceImpl implements SocialAuthDataSource {
       '26025204114-h0lsehum6766elgasajahjtdo79bsrej.apps.googleusercontent.com';
 
   GoogleSignIn? _googleSignIn;
-  Future<String>? _pendingGoogleToken;
+  Future<GoogleSocialTokens>? _pendingGoogleToken;
   Future<String>? _pendingKakaoToken;
 
   GoogleSignIn _resolveGoogleSignIn() {
@@ -22,10 +22,10 @@ class SocialAuthDataSourceImpl implements SocialAuthDataSource {
     );
   }
 
-  Future<String> _runSingleFlight({
-    required Future<String>? currentRequest,
-    required void Function(Future<String>? next) setRequest,
-    required Future<String> Function() action,
+  Future<T> _runSingleFlight<T>({
+    required Future<T>? currentRequest,
+    required void Function(Future<T>? next) setRequest,
+    required Future<T> Function() action,
   }) {
     if (currentRequest != null) {
       return currentRequest;
@@ -75,7 +75,7 @@ class SocialAuthDataSourceImpl implements SocialAuthDataSource {
   }
 
   @override
-  Future<String> getGoogleToken() {
+  Future<GoogleSocialTokens> getGoogleToken() {
     return _runSingleFlight(
       currentRequest: _pendingGoogleToken,
       setRequest: (next) => _pendingGoogleToken = next,
@@ -95,12 +95,15 @@ class SocialAuthDataSourceImpl implements SocialAuthDataSource {
           }
 
           final googleAuth = await googleUser.authentication;
-          final token = googleAuth.idToken ?? googleAuth.accessToken;
-          if (token == null) {
+          final tokens = GoogleSocialTokens(
+            idToken: googleAuth.idToken,
+            accessToken: googleAuth.accessToken,
+          );
+          if (!tokens.hasToken) {
             throw Exception('구글 인증 토큰을 가져올 수 없습니다.');
           }
 
-          return token;
+          return tokens;
         } catch (_) {
           await logoutGoogle();
           rethrow;

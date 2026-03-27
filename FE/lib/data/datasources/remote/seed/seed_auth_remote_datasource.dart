@@ -13,7 +13,8 @@ class SeedAuthRemoteDataSource implements AuthRemoteDataSource {
   @override
   Future<SocialLoginResponseDto> loginWithSocialToken({
     required String provider,
-    required String socialToken,
+    String? accessToken,
+    String? idToken,
   }) async {
     await Future.delayed(const Duration(milliseconds: 500));
 

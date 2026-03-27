@@ -8,9 +8,10 @@ class SeedSocialAuthDataSource implements SocialAuthDataSource {
   }
 
   @override
-  Future<String> getGoogleToken() async {
+  Future<GoogleSocialTokens> getGoogleToken() async {
     await Future.delayed(const Duration(milliseconds: 300));
-    return 'seed_google_token_${DateTime.now().millisecondsSinceEpoch}';
+    final token = 'seed_google_token_${DateTime.now().millisecondsSinceEpoch}';
+    return GoogleSocialTokens(idToken: token, accessToken: token);
   }
 
   @override
