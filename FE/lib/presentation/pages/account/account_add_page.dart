@@ -103,18 +103,22 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               ClipOval(
-                                child: SizedBox(
+                                child: Container(
                                   width: 50.w,
                                   height: 50.w,
-                                  child: Image.asset(
-                                    bank.logoPath ?? '',
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        color: colors.gray50,
-                                        child: Center(child: Text('B', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp, color: colors.textPrimary))),
-                                      );
-                                    },
+                                  color: Colors.white,
+                                  child: Center(
+                                    child: SizedBox(
+                                      width: 28.w,
+                                      height: 28.w,
+                                      child: Image.asset(
+                                        bank.logoPath ?? '',
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Center(child: Text('B', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp, color: colors.textPrimary)));
+                                        },
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
