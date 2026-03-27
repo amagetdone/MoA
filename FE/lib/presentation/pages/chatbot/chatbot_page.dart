@@ -495,28 +495,9 @@ class _ChatBubble extends StatelessWidget {
                     )
                   : message.isStreaming
                   ? _StreamingContent(content: message.content, colors: colors)
-                  : MarkdownBody(
-                      data: message.content,
-                      styleSheet: MarkdownStyleSheet(
-                        p: AppTextStyles.bodySm.copyWith(
-                          color: colors.textPrimary,
-                        ),
-                        h1: AppTextStyles.bodyLg.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: colors.textPrimary,
-                        ),
-                        h2: AppTextStyles.bodyLg.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: colors.textPrimary,
-                        ),
-                        listBullet: AppTextStyles.bodySm.copyWith(
-                          color: colors.textPrimary,
-                        ),
-                        code: AppTextStyles.bodySm.copyWith(
-                          fontFamily: 'monospace',
-                          backgroundColor: colors.bgPrimary,
-                        ),
-                      ),
+                  : _AssistantMarkdownContent(
+                      content: message.content,
+                      colors: colors,
                     ),
             ),
           ),
@@ -527,7 +508,46 @@ class _ChatBubble extends StatelessWidget {
   }
 }
 
-// 스트리밍 중 plain text + 커서 애니메이션
+class _AssistantMarkdownContent extends StatelessWidget {
+  const _AssistantMarkdownContent({
+    required this.content,
+    required this.colors,
+  });
+
+  final String content;
+  final AppColorScheme colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return MarkdownBody(
+      data: content,
+      styleSheet: MarkdownStyleSheet(
+        p: AppTextStyles.bodySm.copyWith(
+          color: colors.textPrimary,
+          height: 1.5,
+        ),
+        h1: AppTextStyles.bodyLg.copyWith(
+          fontWeight: FontWeight.w700,
+          color: colors.textPrimary,
+        ),
+        h2: AppTextStyles.bodyLg.copyWith(
+          fontWeight: FontWeight.w600,
+          color: colors.textPrimary,
+        ),
+        listBullet: AppTextStyles.bodySm.copyWith(
+          color: colors.textPrimary,
+          height: 1.5,
+        ),
+        code: AppTextStyles.bodySm.copyWith(
+          fontFamily: 'monospace',
+          backgroundColor: colors.bgPrimary,
+        ),
+      ),
+    );
+  }
+}
+
+// 스트리밍 중 markdown + 커서 애니메이션
 class _StreamingContent extends StatefulWidget {
   const _StreamingContent({required this.content, required this.colors});
   final String content;
@@ -558,21 +578,22 @@ class _StreamingContentState extends State<_StreamingContent>
 
   @override
   Widget build(BuildContext context) {
+    final markdownContent = widget.content.isEmpty
+        ? null
+        : _AssistantMarkdownContent(
+            content: widget.content,
+            colors: widget.colors,
+          );
+
     return AnimatedBuilder(
       animation: _typingController,
-      builder: (context, _) {
+      child: markdownContent,
+      builder: (context, child) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (widget.content.isNotEmpty)
-              Text(
-                widget.content,
-                style: AppTextStyles.bodySm.copyWith(
-                  color: widget.colors.textPrimary,
-                  height: 1.5,
-                ),
-              ),
+            ...(child != null ? <Widget>[child] : const <Widget>[]),
             SizedBox(height: widget.content.isEmpty ? 0 : 8.h),
             _TypingDotsIndicator(
               progress: _typingController.value,

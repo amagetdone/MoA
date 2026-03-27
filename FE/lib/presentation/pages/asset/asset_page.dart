@@ -132,6 +132,9 @@ class _AssetPageState extends ConsumerState<AssetPage> {
     final colors = AppColors.of(context);
     final accountState = ref.watch(accountViewModelProvider);
     final accounts = accountState.accounts;
+    final isTransactionsLoading =
+        accountState.isTransactionsLoading ||
+        !accountState.hasLoadedTransactions;
 
     var transactions = accountState.transactions;
     // 거래 유형 필터
@@ -182,9 +185,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
           Container(
             height: 120.h,
             width: double.infinity,
-            decoration: BoxDecoration(
-              color: colors.bgAccent,
-            ),
+            decoration: BoxDecoration(color: colors.bgAccent),
           ),
           SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -349,7 +350,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                         ),
                       ),
                       SizedBox(height: 24.h),
-                      if (accountState.isLoading)
+                      if (isTransactionsLoading)
                         const Center(child: CircularProgressIndicator())
                       else if (transactions.isEmpty)
                         Center(
@@ -433,17 +434,28 @@ class _AssetPageState extends ConsumerState<AssetPage> {
     }
   }
 
+  Color _categoryTextColor(String name, AppColorScheme colors) {
+    final chipBackground = Color.alphaBlend(
+      _categoryColor(name).withValues(alpha: 0.35),
+      colors.bgSurface,
+    );
+    return chipBackground.computeLuminance() > 0.5
+        ? colors.textPrimary
+        : Colors.white;
+  }
+
   Widget _buildTransactionItem(Transaction t) {
     final colors = AppColors.of(context);
     final isPlus = t.type == TransactionType.income;
     final showCategoryChip = !isPlus && t.category.trim().isNotEmpty;
+    final showBalanceText = t.balanceAfter > 0;
     final showMemoText =
         t.memo != null &&
         t.memo!.toUpperCase() != 'VARIABLE' &&
         t.memo!.toUpperCase() != 'FIXED';
+    final showMetaRow = showCategoryChip || showMemoText;
     final amountText =
         '${isPlus ? '+' : '-'}${CurrencyFormatter.formatKRW(t.amount)}';
-    final balanceText = CurrencyFormatter.formatKRW(t.balanceAfter);
     final timeText = DateFormat('HH:mm').format(t.dateTime);
 
     return GestureDetector(
@@ -478,7 +490,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                     ],
                   ),
                   SizedBox(height: 4.h),
-                  if (showCategoryChip || showMemoText)
+                  if (showMetaRow)
                     Row(
                       children: [
                         if (showCategoryChip)
@@ -496,7 +508,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                             child: Text(
                               t.category,
                               style: AppTextStyles.caption.copyWith(
-                                color: _categoryColor(t.category),
+                                color: _categoryTextColor(t.category, colors),
                                 fontSize: 10.sp,
                               ),
                             ),
@@ -512,6 +524,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                         ],
                       ],
                     ),
+                  if (!showMetaRow) SizedBox(height: 20.h),
                 ],
               ),
             ),
@@ -525,12 +538,13 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                     color: isPlus ? AppColors.green500 : colors.textPrimary,
                   ),
                 ),
-                Text(
-                  balanceText,
-                  style: AppTextStyles.caption.copyWith(
-                    color: colors.textTertiary,
+                if (showBalanceText)
+                  Text(
+                    CurrencyFormatter.formatKRW(t.balanceAfter),
+                    style: AppTextStyles.caption.copyWith(
+                      color: colors.textTertiary,
+                    ),
                   ),
-                ),
               ],
             ),
           ],

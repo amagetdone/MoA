@@ -9,7 +9,6 @@ import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
 import 'package:more_app/presentation/viewmodels/menu_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/auth_viewmodel.dart';
-import 'package:more_app/presentation/viewmodels/theme_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
@@ -124,8 +123,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final themeMode = ref.watch(themeProvider);
-    final isDark = themeMode == ThemeMode.dark;
     final menuState = ref.watch(menuViewModelProvider);
     final biometricEnabled = ref.watch(biometricPreferenceProvider);
     final appLockAvailability = ref.watch(appLockAvailabilityProvider);
@@ -162,47 +159,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Dark mode toggle
-            MoreCard(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40.w,
-                    height: 40.w,
-                    decoration: BoxDecoration(
-                      color: colors.gray100,
-                      borderRadius: BorderRadius.circular(10.r),
-                      border: Border.all(color: colors.borderDefault),
-                    ),
-                    child: Icon(
-                      isDark
-                          ? Icons.dark_mode_outlined
-                          : Icons.light_mode_outlined,
-                      size: 20.w,
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                  SizedBox(width: 14.w),
-                  Expanded(
-                    child: Text(
-                      '다크 모드',
-                      style: AppTextStyles.bodyMd.copyWith(
-                        color: colors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  Switch(
-                    value: isDark,
-                    onChanged: (_) => ref.read(themeProvider.notifier).toggle(),
-                    activeThumbColor: AppColors.orange500,
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 10.h),
-
             // Notification
             MoreCard(
               padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),

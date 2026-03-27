@@ -193,7 +193,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                               label: '고정지출',
                               description: '매주 고정으로 나가는 비용',
                               amount: setup.fixedExpenseAmount,
-                              color: AppColors.orange500,
+                              color: colors.textSecondary,
                               isExpandable: true,
                               isExpanded: _isFixedExpanded,
                               onToggle: () => setState(() => _isFixedExpanded = !_isFixedExpanded),

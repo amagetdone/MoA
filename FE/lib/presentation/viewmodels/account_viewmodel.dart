@@ -6,6 +6,8 @@ import 'package:more_app/presentation/providers/app_data_providers.dart';
 
 class AccountState {
   final bool isLoading;
+  final bool isTransactionsLoading;
+  final bool hasLoadedTransactions;
   final String? errorMessage;
   final List<String> bankNames;
   final List<Account> accounts;
@@ -14,6 +16,8 @@ class AccountState {
 
   const AccountState({
     this.isLoading = false,
+    this.isTransactionsLoading = false,
+    this.hasLoadedTransactions = false,
     this.errorMessage,
     this.bankNames = const [],
     this.accounts = const [],
@@ -23,6 +27,8 @@ class AccountState {
 
   AccountState copyWith({
     bool? isLoading,
+    bool? isTransactionsLoading,
+    bool? hasLoadedTransactions,
     String? errorMessage,
     bool clearErrorMessage = false,
     List<String>? bankNames,
@@ -32,6 +38,10 @@ class AccountState {
   }) {
     return AccountState(
       isLoading: isLoading ?? this.isLoading,
+      isTransactionsLoading:
+          isTransactionsLoading ?? this.isTransactionsLoading,
+      hasLoadedTransactions:
+          hasLoadedTransactions ?? this.hasLoadedTransactions,
       errorMessage: clearErrorMessage
           ? null
           : errorMessage ?? this.errorMessage,
@@ -100,7 +110,10 @@ class AccountViewModel extends StateNotifier<AccountState> {
     int page = 0,
     int size = 50,
   }) async {
-    state = state.copyWith(isLoading: true, clearErrorMessage: true);
+    state = state.copyWith(
+      isTransactionsLoading: true,
+      clearErrorMessage: true,
+    );
     try {
       final transactions = await _repository.fetchTransactions(
         fromDate: fromDate,
@@ -110,11 +123,16 @@ class AccountViewModel extends StateNotifier<AccountState> {
         size: size,
       );
       state = state.copyWith(
-        isLoading: false,
+        isTransactionsLoading: false,
+        hasLoadedTransactions: true,
         transactions: transactions,
       );
     } catch (error) {
-      state = state.copyWith(isLoading: false, errorMessage: error.toString());
+      state = state.copyWith(
+        isTransactionsLoading: false,
+        hasLoadedTransactions: true,
+        errorMessage: error.toString(),
+      );
     }
   }
 }

@@ -3,6 +3,7 @@ import 'package:more_app/data/datasources/remote/goal_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/home_remote_datasource.dart';
 import 'package:more_app/domain/entities/goal.dart';
 import 'package:more_app/domain/entities/home_dashboard.dart';
+import 'package:more_app/domain/entities/spending.dart';
 import 'package:more_app/domain/repositories/home_repository.dart';
 
 class HomeRepositoryImpl implements HomeRepository {
@@ -27,19 +28,15 @@ class HomeRepositoryImpl implements HomeRepository {
         remoteGoals: dashboard.activeGoals,
         cachedGoals: cachedGoals,
       );
-      activeGoals = await _hydratePrimaryGoalDetail(activeGoals);
+      activeGoals = await _hydrateGoalDetails(activeGoals);
       final metrics = await _resolveGoalBasedMetrics(
         dashboard: dashboard,
         activeGoals: activeGoals,
       );
-      final correctedActiveGoals = _applyHomeMetricsToPrimaryGoal(
-        activeGoals,
-        metrics,
-      );
 
       return HomeDashboard(
         accounts: dashboard.accounts,
-        activeGoals: correctedActiveGoals,
+        activeGoals: activeGoals,
         totalAsset: dashboard.totalAsset,
         weeklyBudget: metrics?.weeklyBudget ?? dashboard.weeklyBudget,
         weeklySpent: dashboard.weeklySpent,
@@ -163,46 +160,50 @@ class HomeRepositoryImpl implements HomeRepository {
     return mergedGoals;
   }
 
-  Future<List<Goal>> _hydratePrimaryGoalDetail(List<Goal> activeGoals) async {
+  Future<List<Goal>> _hydrateGoalDetails(List<Goal> activeGoals) async {
     if (activeGoals.isEmpty) {
       return activeGoals;
     }
 
-    final targetIndex = activeGoals.indexWhere(
-      (goal) =>
+    final targetIndexes = <int>[];
+    for (var index = 0; index < activeGoals.length; index++) {
+      final goal = activeGoals[index];
+      final needsDetail =
           goal.isEffectivelyInProgress &&
           (!goal.hasDetailData ||
               goal.weeklyMission == null ||
-              goal.weeklyBudget == null),
-    );
-
-    if (targetIndex == -1) {
-      return activeGoals;
-    }
-
-    final targetGoal = activeGoals[targetIndex];
-
-    try {
-      final detailedGoal = await _goalRemoteDataSource.findGoalById(
-        targetGoal.id,
-      );
-      if (detailedGoal == null) {
-        return activeGoals;
+              goal.weeklyBudget == null);
+      if (needsDetail) {
+        targetIndexes.add(index);
       }
+    }
 
-      final mergedGoal = _mergeDetailedGoal(
-        targetGoal: targetGoal,
-        detailedGoal: detailedGoal,
-      );
-      await _saveGoalLocally(mergedGoal);
-
-      final updatedGoals = List<Goal>.from(activeGoals);
-      updatedGoals[targetIndex] = mergedGoal;
-      updatedGoals.sort((a, b) => a.priority.compareTo(b.priority));
-      return updatedGoals;
-    } catch (_) {
+    if (targetIndexes.isEmpty) {
       return activeGoals;
     }
+
+    final updatedGoals = List<Goal>.from(activeGoals);
+    for (final targetIndex in targetIndexes) {
+      final targetGoal = updatedGoals[targetIndex];
+      try {
+        final detailedGoal = await _goalRemoteDataSource.findGoalById(
+          targetGoal.id,
+        );
+        if (detailedGoal == null) {
+          continue;
+        }
+
+        final mergedGoal = _mergeDetailedGoal(
+          targetGoal: targetGoal,
+          detailedGoal: detailedGoal,
+        );
+        await _saveGoalLocally(mergedGoal);
+        updatedGoals[targetIndex] = mergedGoal;
+      } catch (_) {}
+    }
+
+    updatedGoals.sort((a, b) => a.priority.compareTo(b.priority));
+    return updatedGoals;
   }
 
   Goal _mergeDetailedGoal({
@@ -248,40 +249,37 @@ class HomeRepositoryImpl implements HomeRepository {
       return null;
     }
 
-    final primaryGoal = activeGoals.firstWhere(
-      (goal) => goal.isEffectivelyInProgress,
-      orElse: () => activeGoals.first,
+    final inProgressGoals = activeGoals
+        .where((goal) => goal.isEffectivelyInProgress)
+        .toList();
+    final goalsForMetrics = inProgressGoals.isNotEmpty
+        ? inProgressGoals
+        : activeGoals;
+    final primaryGoal = goalsForMetrics.first;
+    final resolvedTargets = goalsForMetrics
+        .map(_resolveGoalWeeklyTarget)
+        .whereType<int>()
+        .where((amount) => amount > 0)
+        .toList();
+    final aggregatedTarget = resolvedTargets.fold<int>(
+      0,
+      (sum, amount) => sum + amount,
     );
-
-    final savingTargetAmount =
-        _resolveGoalWeeklyTarget(primaryGoal) ?? dashboard.savingTargetAmount;
+    final savingTargetAmount = aggregatedTarget > 0
+        ? aggregatedTarget
+        : dashboard.savingTargetAmount;
     final plannedFreeAmount = primaryGoal.weeklyBudget?.freeAmount ?? 0;
 
     if (savingTargetAmount <= 0 && plannedFreeAmount <= 0) {
       return null;
     }
 
-    final historyBasedSaving = await _resolveWeeklySavedFromHistory(
-      primaryGoal,
+    final historyBasedSaving = await _resolveWeeklySavedFromHistories(
+      goalsForMetrics,
     );
-    final progressRate = dashboard.savingProgressRate.clamp(0, 100);
-    final progressBasedSaving = savingTargetAmount > 0
-        ? ((savingTargetAmount * progressRate) / 100).round()
-        : 0;
-
     var weeklySaved = historyBasedSaving ?? dashboard.weeklySaved;
-    if (historyBasedSaving == null &&
-        savingTargetAmount > 0 &&
-        (weeklySaved < 0 || weeklySaved > savingTargetAmount)) {
-      weeklySaved = progressBasedSaving;
-    }
-
     if (weeklySaved < 0) {
-      weeklySaved = progressBasedSaving;
-    }
-
-    if (savingTargetAmount > 0 && weeklySaved > savingTargetAmount) {
-      weeklySaved = progressBasedSaving;
+      weeklySaved = 0;
     }
 
     if (savingTargetAmount > 0) {
@@ -314,35 +312,51 @@ class HomeRepositoryImpl implements HomeRepository {
     );
   }
 
-  Future<int?> _resolveWeeklySavedFromHistory(Goal goal) async {
+  Future<int?> _resolveWeeklySavedFromHistories(List<Goal> goals) async {
+    if (goals.isEmpty) {
+      return null;
+    }
+
     try {
-      final history = await _localDataSource.getGoalSavingsHistory(goal.id);
-      if (history.isEmpty) {
-        return null;
+      final historiesByGoalId = await _localDataSource
+          .getGoalSavingsHistoryByGoalId();
+      var totalWeeklySaved = 0;
+
+      for (final goal in goals) {
+        final history = historiesByGoalId[goal.id];
+        if (history == null || history.isEmpty) {
+          return null;
+        }
+
+        totalWeeklySaved += _sumWeeklySavedForGoal(
+          goal: goal,
+          history: history,
+        );
       }
 
-      final weekStart = DateTime(
-        goal.startDate.year,
-        goal.startDate.month,
-        goal.startDate.day,
-      ).add(Duration(days: (goal.currentWeekNumber - 1) * 7));
-      final weekEnd = weekStart.add(const Duration(days: 7));
-
-      final weeklySaved = history.fold<int>(0, (sum, item) {
-        if (_isDateInRange(
-          item.date,
-          start: weekStart,
-          endExclusive: weekEnd,
-        )) {
-          return sum + item.amount;
-        }
-        return sum;
-      });
-
-      return weeklySaved > 0 ? weeklySaved : null;
+      return totalWeeklySaved;
     } catch (_) {
       return null;
     }
+  }
+
+  int _sumWeeklySavedForGoal({
+    required Goal goal,
+    required List<DailySpending> history,
+  }) {
+    final weekStart = DateTime(
+      goal.startDate.year,
+      goal.startDate.month,
+      goal.startDate.day,
+    ).add(Duration(days: (goal.currentWeekNumber - 1) * 7));
+    final weekEnd = weekStart.add(const Duration(days: 7));
+
+    return history.fold<int>(0, (sum, item) {
+      if (_isDateInRange(item.date, start: weekStart, endExclusive: weekEnd)) {
+        return sum + item.amount;
+      }
+      return sum;
+    });
   }
 
   bool _isDateInRange(
@@ -353,31 +367,6 @@ class HomeRepositoryImpl implements HomeRepository {
     final normalizedDate = DateTime(date.year, date.month, date.day);
     return !normalizedDate.isBefore(start) &&
         normalizedDate.isBefore(endExclusive);
-  }
-
-  List<Goal> _applyHomeMetricsToPrimaryGoal(
-    List<Goal> activeGoals,
-    _HomeGoalMetrics? metrics,
-  ) {
-    if (metrics == null || activeGoals.isEmpty) {
-      return activeGoals;
-    }
-
-    final primaryIndex = activeGoals.indexWhere(
-      (goal) => goal.isEffectivelyInProgress,
-    );
-
-    if (primaryIndex == -1) {
-      return activeGoals;
-    }
-
-    final updatedGoals = List<Goal>.from(activeGoals);
-    final primaryGoal = updatedGoals[primaryIndex];
-    updatedGoals[primaryIndex] = primaryGoal.copyWith(
-      weeklySavedAmountOverride: metrics.weeklySaved,
-      weeklyTargetAmountOverride: metrics.savingTargetAmount,
-    );
-    return updatedGoals;
   }
 
   int? _resolveGoalWeeklyTarget(Goal goal) {

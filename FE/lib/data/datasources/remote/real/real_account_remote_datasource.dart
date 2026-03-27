@@ -70,7 +70,10 @@ class RealAccountRemoteDataSource implements AccountRemoteDataSource {
   }
 
   @override
-  Future<bool> checkVerification({required String accountNo, required String authCode}) async {
+  Future<bool> checkVerification({
+    required String accountNo,
+    required String authCode,
+  }) async {
     final response = await _dio.post(
       'v1/accounts/verification/check',
       data: {'accountNo': accountNo, 'authCode': authCode},
@@ -87,13 +90,16 @@ class RealAccountRemoteDataSource implements AccountRemoteDataSource {
     int page = 0,
     int size = 50,
   }) async {
-    final queryParams = <String, dynamic>{
-      'page': page,
-      'size': size,
-    };
-    if (fromDate != null) queryParams['fromDate'] = fromDate;
-    if (toDate != null) queryParams['toDate'] = toDate;
-    if (analysisInclusion != null) queryParams['analysisInclusion'] = analysisInclusion;
+    final queryParams = <String, dynamic>{'page': page, 'size': size};
+    if (fromDate != null) {
+      queryParams['fromDate'] = fromDate;
+    }
+    if (toDate != null) {
+      queryParams['toDate'] = toDate;
+    }
+    if (analysisInclusion != null) {
+      queryParams['analysisInclusion'] = analysisInclusion;
+    }
 
     final response = await _dio.get(
       'transactions',
@@ -107,15 +113,22 @@ class RealAccountRemoteDataSource implements AccountRemoteDataSource {
       final item = json as Map<String, dynamic>;
       final direction = item['direction'] as String? ?? 'OUT';
       final category = item['category'] as Map<String, dynamic>?;
+      final balanceAfter =
+          (item['transactionAfterBalance'] as num?)?.toInt() ??
+          (item['balanceAfter'] as num?)?.toInt() ??
+          (item['afterBalance'] as num?)?.toInt() ??
+          0;
 
       return Transaction(
         id: (item['transactionId'] as num).toString(),
         title: item['merchantText'] as String? ?? '',
         amount: (item['amount'] as num).toInt(),
-        type: direction == 'IN' ? TransactionType.income : TransactionType.expense,
+        type: direction == 'IN'
+            ? TransactionType.income
+            : TransactionType.expense,
         category: category?['name'] as String? ?? '기타',
         dateTime: DateTime.parse(item['occurredAt'] as String),
-        balanceAfter: 0,
+        balanceAfter: balanceAfter,
         memo: item['expenseType'] as String?,
         accountId: item['sourceId'] as String?,
         sourceType: item['sourceType'] as String?,

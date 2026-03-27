@@ -62,7 +62,8 @@ class RealChatbotRemoteDataSource {
     );
 
     final stream = response.data!.stream.map(
-      (chunk) => utf8.decode(chunk, allowMalformed: true).replaceAll('\r\n', '\n'),
+      (chunk) =>
+          utf8.decode(chunk, allowMalformed: true).replaceAll('\r\n', '\n'),
     );
     yield* _parseResponseChunks(stream);
   }
@@ -74,7 +75,9 @@ class RealChatbotRemoteDataSource {
       if (value == null) {
         continue;
       }
-      headers[entry.key] = value is Iterable ? value.join(', ') : value.toString();
+      headers[entry.key] = value is Iterable
+          ? value.join(', ')
+          : value.toString();
     }
 
     final accessToken = await _storage.read(key: 'access_token');
@@ -84,7 +87,9 @@ class RealChatbotRemoteDataSource {
     headers['Accept'] = 'text/event-stream';
     headers['Content-Type'] = 'application/json';
 
-    final uri = Uri.parse(_dio.options.baseUrl).resolve('v1/chatbot/messages/stream');
+    final uri = Uri.parse(
+      _dio.options.baseUrl,
+    ).resolve('v1/chatbot/messages/stream');
     return openChatbotWebStream(
       uri: uri,
       headers: headers,
@@ -112,7 +117,7 @@ class RealChatbotRemoteDataSource {
 
     // 버퍼 잔여 처리
     if (buffer.trim().isNotEmpty) {
-      for (final event in _parseFrameEvents(buffer.trim())) {
+      for (final event in _parseFrameEvents(buffer)) {
         yield event;
       }
     }
@@ -134,7 +139,7 @@ class RealChatbotRemoteDataSource {
       if (line.startsWith('event: ')) {
         eventType = line.substring(7).trim();
       } else if (line.startsWith('data: ')) {
-        dataLines.add(line.substring(6).trimLeft());
+        dataLines.add(line.substring(6));
       }
     }
 
@@ -153,14 +158,16 @@ class RealChatbotRemoteDataSource {
       final payload = Map<String, dynamic>.from(rawPayload);
       final nativeBuffer = payload['nativeBuffer'];
       if (nativeBuffer is String && nativeBuffer.isNotEmpty) {
-        final decoded = utf8.decode(base64Decode(nativeBuffer), allowMalformed: true);
+        final decoded = utf8.decode(
+          base64Decode(nativeBuffer),
+          allowMalformed: true,
+        );
         final nestedEvents = <ChatStreamEvent>[];
         for (final nestedFrame in decoded.split('\n\n')) {
-          final trimmed = nestedFrame.trim();
-          if (trimmed.isEmpty) {
+          if (nestedFrame.trim().isEmpty) {
             continue;
           }
-          nestedEvents.addAll(_parseFrameEvents(trimmed));
+          nestedEvents.addAll(_parseFrameEvents(nestedFrame));
         }
         return nestedEvents;
       }
@@ -174,13 +181,18 @@ class RealChatbotRemoteDataSource {
         case 'token':
           return [
             ChatStreamToken(
-              _readString(data, const ['text', 'token', 'content']) ?? '',
+              _readTokenText(data, const ['text', 'token', 'content']) ?? '',
             ),
           ];
         case 'done':
           return [
             ChatStreamDone(
-              _readString(data, const ['conversation_id', 'conversationId', 'id']) ?? '',
+              _readString(data, const [
+                    'conversation_id',
+                    'conversationId',
+                    'id',
+                  ]) ??
+                  '',
             ),
           ];
         case 'status':
@@ -202,6 +214,16 @@ class RealChatbotRemoteDataSource {
       final value = data[key];
       if (value is String && value.trim().isNotEmpty) {
         return value.trim();
+      }
+    }
+    return null;
+  }
+
+  String? _readTokenText(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key];
+      if (value is String) {
+        return value;
       }
     }
     return null;
