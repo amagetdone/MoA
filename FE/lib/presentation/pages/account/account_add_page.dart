@@ -2,18 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:more_app/core/constants/bank_catalog.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
-
-class BankInfo {
-  final String name;
-  final String logoPath;
-  BankInfo(this.name, this.logoPath);
-}
 
 class AccountAddPage extends ConsumerStatefulWidget {
   final bool isOnboarding;
@@ -34,28 +29,12 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
   final FocusNode _accountFocusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
 
-  final List<BankInfo> allBanks = [
-    BankInfo('국민은행', 'assets/images/logo/KB_logo.png'),
-    BankInfo('신한은행', 'assets/images/logo/shinhan_logo.png'),
-    BankInfo('우리은행', 'assets/images/logo/woori_logo.png'),
-    BankInfo('하나은행', 'assets/images/logo/KEB_hana_logo.png'),
-    BankInfo('기업은행', 'assets/images/logo/ibk_logo.png'),
-    BankInfo('iM뱅크', 'assets/images/logo/iM_logo.png'),
-    BankInfo('카카오뱅크', 'assets/images/logo/kakaobank.png'),
-    BankInfo('농협은행', 'assets/images/logo/nonghyup_logo.png'),
-    BankInfo('새마을금고', 'assets/images/logo/mg_logo.png'),
-    BankInfo('SC제일은행', 'assets/images/logo/sc_jeil_logo.png'),
-    BankInfo('씨티은행', 'assets/images/logo/citi_logo.png'),
-    BankInfo('KDB산업은행', 'assets/images/logo/industry_logo.png'),
-    BankInfo('경남은행', 'assets/images/logo/kyung_nam_logo.png'),
-    BankInfo('전북은행', 'assets/images/logo/gwangju_logo.jpg'),
-    BankInfo('제주은행', 'assets/images/logo/shinhan_logo.png'),
-  ];
+  final List<BankCatalogItem> allBanks = BankCatalog.all;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final List<BankInfo> displayBanks = isExpanded ? allBanks : allBanks.take(9).toList();
+    final List<BankCatalogItem> displayBanks = isExpanded ? allBanks : allBanks.take(9).toList();
 
     return Scaffold(
       backgroundColor: colors.bgPrimary,
@@ -128,7 +107,7 @@ class _AccountAddPageState extends ConsumerState<AccountAddPage> {
                                   width: 50.w,
                                   height: 50.w,
                                   child: Image.asset(
-                                    bank.logoPath,
+                                    bank.logoPath ?? '',
                                     fit: BoxFit.cover,
                                     errorBuilder: (context, error, stackTrace) {
                                       return Container(

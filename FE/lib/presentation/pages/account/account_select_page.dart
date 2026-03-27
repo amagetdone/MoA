@@ -2,19 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:more_app/core/constants/bank_catalog.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
-
-class _BankInfo {
-  final String code;
-  final String name;
-  final String logoPath;
-  _BankInfo(this.code, this.name, this.logoPath);
-}
 
 class AccountSelectPage extends ConsumerStatefulWidget {
   final bool isOnboarding;
@@ -26,33 +20,14 @@ class AccountSelectPage extends ConsumerStatefulWidget {
 }
 
 class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
-  _BankInfo? _selectedBank;
+  BankCatalogItem? _selectedBank;
   final TextEditingController _accountNumberController =
       TextEditingController();
   final FocusNode _accountFocusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
   bool _showAllBanks = false;
 
-  final List<_BankInfo> _allBanks = [
-    _BankInfo('004', '국민은행', 'assets/images/logo/KB_logo.png'),
-    _BankInfo('088', '신한은행', 'assets/images/logo/shinhan_logo.png'),
-    _BankInfo('020', '우리은행', 'assets/images/logo/woori_logo.png'),
-    _BankInfo('081', 'KEB하나은행', 'assets/images/logo/KEB_hana_logo.png'),
-    _BankInfo('003', '기업은행', 'assets/images/logo/ibk_logo.png'),
-    _BankInfo('090', '카카오뱅크', 'assets/images/logo/kakaobank.png'),
-    _BankInfo('011', '농협은행', 'assets/images/logo/nonghyup_logo.png'),
-    _BankInfo('045', '새마을금고', 'assets/images/logo/mg_logo.png'),
-    _BankInfo('023', 'SC제일은행', 'assets/images/logo/sc_jeil_logo.png'),
-    _BankInfo('027', '시티은행', 'assets/images/logo/citi_logo.png'),
-    _BankInfo('002', '산업은행', 'assets/images/logo/industry_logo.png'),
-    _BankInfo('039', '경남은행', 'assets/images/logo/kyung_nam_logo.png'),
-    _BankInfo('037', '전북은행', 'assets/images/logo/gwangju_logo.jpg'),
-    _BankInfo('032', '대구은행', ''),
-    _BankInfo('034', '광주은행', ''),
-    _BankInfo('035', '제주은행', ''),
-    _BankInfo('001', '한국은행', ''),
-    _BankInfo('999', '싸피은행', ''),
-  ];
+  final List<BankCatalogItem> _allBanks = BankCatalog.all;
 
   @override
   void dispose() {
@@ -207,7 +182,7 @@ class _AccountSelectPageState extends ConsumerState<AccountSelectPage> {
                             width: 50.w,
                             height: 50.w,
                             child: Image.asset(
-                              bank.logoPath,
+                              bank.logoPath ?? '',
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
                                 return Container(

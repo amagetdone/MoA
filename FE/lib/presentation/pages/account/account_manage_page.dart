@@ -10,6 +10,7 @@ import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 import 'package:more_app/presentation/viewmodels/account_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
+import 'package:more_app/presentation/widgets/common/bank_icon.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 
 class AccountManagePage extends ConsumerStatefulWidget {
@@ -77,19 +78,9 @@ class _AccountManagePageState extends ConsumerState<AccountManagePage> {
                     padding: EdgeInsets.all(20.w),
                     child: Row(
                       children: [
-                        Container(
-                          width: 48.w,
-                          height: 48.w,
-                          decoration: BoxDecoration(
-                            color: account.verified ? AppColors.orange500 : colors.gray500,
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          child: Center(
-                            child: Text(
-                              account.bankName.isNotEmpty ? account.bankName[0] : 'B',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24.sp, color: colors.white),
-                            ),
-                          ),
+                        Opacity(
+                          opacity: account.verified ? 1.0 : 0.65,
+                          child: BankIcon(bankName: account.bankName, size: 48.w),
                         ),
                         SizedBox(width: 16.w),
                         Expanded(

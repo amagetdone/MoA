@@ -8,6 +8,7 @@ import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
 import 'package:more_app/presentation/viewmodels/account_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
+import 'package:more_app/presentation/widgets/common/bank_icon.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
@@ -57,24 +58,7 @@ class AccountCompletePage extends ConsumerWidget {
               padding: EdgeInsets.all(20.w),
               child: Row(
                 children: [
-                  Container(
-                    width: 48.w,
-                    height: 48.w,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFFE812),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        'B',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 22.sp,
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                    ),
-                  ),
+                  BankIcon(bankName: bankName, size: 48.w),
                   SizedBox(width: 16.w),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
