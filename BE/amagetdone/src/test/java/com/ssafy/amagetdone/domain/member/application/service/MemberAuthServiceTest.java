@@ -173,12 +173,12 @@ class MemberAuthServiceTest {
 			planRepository
 		);
 		TestSocialAuthDto.Request request = new TestSocialAuthDto.Request(3);
-		SocialUserIdentity identity = new SocialUserIdentity(SocialProvider.TEST, "test-social-user-003");
+		SocialUserIdentity identity = new SocialUserIdentity(SocialProvider.TEST, "test-moa-user-003");
 		User user = User.createPendingSocialUser();
 		setUserId(user, 10);
 		user.markProfileEntered("tester3", "test3@test.com", LocalDate.of(1997, 3, 1), true);
 		user.activate();
-		SocialAccount socialAccount = SocialAccount.create(user, SocialProvider.TEST, "test-social-user-003");
+		SocialAccount socialAccount = SocialAccount.create(user, SocialProvider.TEST, "test-moa-user-003");
 		MemberTokenPair tokenPair = new MemberTokenPair("access-token", "refresh-token");
 
 		given(testSocialAuthClient.fetchIdentity(request)).willReturn(identity);

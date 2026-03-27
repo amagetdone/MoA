@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class MockSocialAuthClient implements SocialAuthClient {
 
-	private static final String TEST_PROVIDER_UID_FORMAT = "test-social-user-%03d";
+	private static final String TEST_PROVIDER_UID_FORMAT = "test-moa-user-%03d";
 	public static final int DEFAULT_TEST_USER_ID = 1;
 	public static final String TEST_PROVIDER_UID = providerUidFor(DEFAULT_TEST_USER_ID);
 

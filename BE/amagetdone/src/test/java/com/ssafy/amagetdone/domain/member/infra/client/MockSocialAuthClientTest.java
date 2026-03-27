@@ -17,15 +17,15 @@ class MockSocialAuthClientTest {
 
 		assertTrue(client.supports(SocialProvider.TEST));
 		assertEquals(
-			new SocialUserIdentity(SocialProvider.TEST, "test-social-user-001"),
+			new SocialUserIdentity(SocialProvider.TEST, "test-moa-user-001"),
 			client.fetchIdentity(new SocialAuthDto.Request(null, null))
 		);
 		assertEquals(
-			new SocialUserIdentity(SocialProvider.TEST, "test-social-user-001"),
+			new SocialUserIdentity(SocialProvider.TEST, "test-moa-user-001"),
 			client.fetchIdentity(new TestSocialAuthDto.Request(null))
 		);
 		assertEquals(
-			new SocialUserIdentity(SocialProvider.TEST, "test-social-user-005"),
+			new SocialUserIdentity(SocialProvider.TEST, "test-moa-user-005"),
 			client.fetchIdentity(new TestSocialAuthDto.Request(5))
 		);
 	}

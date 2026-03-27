@@ -135,7 +135,7 @@ class ResetTestSocialUserUseCaseTest {
 		user.markProfileEntered("moa", "moa@example.com", LocalDate.of(1997, 3, 1), true);
 		user.updateUserKey("user-key");
 		user.activate();
-		SocialAccount socialAccount = SocialAccount.create(user, SocialProvider.TEST, "test-social-user-001");
+		SocialAccount socialAccount = SocialAccount.create(user, SocialProvider.TEST, "test-moa-user-001");
 
 		given(socialAccountRepository.findByUser_IdAndProvider(1, SocialProvider.TEST))
 			.willReturn(Optional.of(socialAccount));
