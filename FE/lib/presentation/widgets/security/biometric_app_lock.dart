@@ -19,7 +19,7 @@ class BiometricAppLock extends ConsumerStatefulWidget {
 
 class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
     with WidgetsBindingObserver {
-  static const Duration _resumeLockThreshold = Duration(seconds: 5);
+  static const Duration _resumeLockThreshold = Duration(minutes: 1);
 
   final _pinController = TextEditingController();
 
