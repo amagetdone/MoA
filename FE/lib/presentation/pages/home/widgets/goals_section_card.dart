@@ -218,7 +218,7 @@ class _GoalEmptyBody extends StatelessWidget {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 7.h),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: colors.bgPrimary,
                 borderRadius: BorderRadius.circular(999.r),
               ),
               child: Text(

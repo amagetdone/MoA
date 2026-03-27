@@ -216,7 +216,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                               label: '변동지출',
                               description: '매주 변동되는 비용 (병원비 등)',
                               amount: setup.variableExpenseAmount,
-                              color: const Color(0xFF333333),
+                              color: colors.textSecondary,
                               isExpandable: true,
                               isExpanded: _isVariableExpanded,
                               onToggle: () => setState(() => _isVariableExpanded = !_isVariableExpanded),
@@ -411,7 +411,7 @@ class _EssentialCategoryList extends StatelessWidget {
                           '${CurrencyFormatter.formatKRW(e.plannedAmount)} / ${CurrencyFormatter.formatKRW(totalAmount)}',
                           overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.caption.copyWith(
-                            color: isOver ? Colors.red : colors.textTertiary,
+                            color: isOver ? colors.statusError : colors.textTertiary,
                             fontSize: 11.sp,
                           ),
                         ),

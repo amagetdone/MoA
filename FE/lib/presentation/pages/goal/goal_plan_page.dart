@@ -103,7 +103,7 @@ class GoalPlanPage extends ConsumerWidget {
 
             // 주간 미션 card
             MoreCard(
-              color: const Color(0xFFFFF8E1),
+              color: colors.bgInsight,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

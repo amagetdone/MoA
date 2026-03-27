@@ -101,7 +101,7 @@ class _AccountManagePageState extends ConsumerState<AccountManagePage> {
                                       child: Text(
                                         '연결 해제됨',
                                         style: AppTextStyles.caption.copyWith(
-                                          color: colors.gray500,
+                                          color: colors.textSecondary,
                                           fontSize: 11.sp,
                                         ),
                                       ),

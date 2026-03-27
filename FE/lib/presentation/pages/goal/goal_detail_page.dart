@@ -208,6 +208,7 @@ class _HeroCard extends StatelessWidget {
     final remaining = CurrencyFormatter.formatKRW(goal.remainingAmount);
     final current = CurrencyFormatter.formatKRW(goal.currentAmount);
     final target = CurrencyFormatter.formatKRW(goal.targetAmount);
+    final overallProgress = goal.overallProgressRate.clamp(0.0, 1.0);
 
     return MoreCard(
       padding: EdgeInsets.zero,
@@ -226,7 +227,7 @@ class _HeroCard extends StatelessWidget {
                       ? null
                       : goal.sketchVideoAssetPath,
                   iconName: goal.iconName,
-                  progressRate: goal.progressRate,
+                  progressRate: overallProgress,
                   size: 200.w,
                   borderRadius: 0,
                   fillWidth: true,
@@ -284,7 +285,7 @@ class _HeroCard extends StatelessWidget {
                           child: Text(
                             goal.isAiPending
                                 ? 'AI 스케치 영상을 생성 중입니다.'
-                                : 'AI 영상 생성에 실패했습니다. 수정 기반으로 재시도할 수 있습니다.',
+                                : 'AI 영상 생성에 실패했습니다. 재시도할 수 있습니다.',
                             style: AppTextStyles.bodySm.copyWith(
                               color: goal.isAiPending
                                   ? AppColors.orange500
@@ -379,7 +380,7 @@ class _HeroCard extends StatelessWidget {
                 ),
                 SizedBox(height: 14.h),
                 MoreProgressBar(
-                  progress: goal.progressRate,
+                  progress: overallProgress,
                   color: AppColors.green500,
                   backgroundColor: colors.gray500.withValues(alpha: 0.12),
                   height: 8.h,

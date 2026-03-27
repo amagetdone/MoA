@@ -58,7 +58,7 @@ class AssetDetailPage extends StatelessWidget {
                           Container(
                             padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFFCC91).withValues(alpha: 0.4),
+                              color: colors.bgAccent,
                               borderRadius: BorderRadius.circular(10.r),
                             ),
                             child: Text(

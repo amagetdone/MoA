@@ -12,10 +12,7 @@ import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 
 class GoalPreviewPage extends ConsumerStatefulWidget {
-  const GoalPreviewPage({
-    super.key,
-    required this.goalId,
-  });
+  const GoalPreviewPage({super.key, required this.goalId});
 
   final String goalId;
 
@@ -24,6 +21,8 @@ class GoalPreviewPage extends ConsumerStatefulWidget {
 }
 
 class _GoalPreviewPageState extends ConsumerState<GoalPreviewPage> {
+  bool _isHydratingGoal = true;
+
   @override
   void initState() {
     super.initState();
@@ -32,8 +31,18 @@ class _GoalPreviewPageState extends ConsumerState<GoalPreviewPage> {
         context.go(AppRoutes.goalTab);
         return;
       }
-      ref.read(goalViewModelProvider.notifier).loadGoalDetail(widget.goalId);
+      _hydrateGoalPreview();
     });
+  }
+
+  Future<void> _hydrateGoalPreview() async {
+    setState(() => _isHydratingGoal = true);
+    final notifier = ref.read(goalViewModelProvider.notifier);
+    await notifier.refreshGoalStatus(widget.goalId);
+    await notifier.loadGoalDetail(widget.goalId);
+    if (mounted) {
+      setState(() => _isHydratingGoal = false);
+    }
   }
 
   @override
@@ -42,8 +51,11 @@ class _GoalPreviewPageState extends ConsumerState<GoalPreviewPage> {
     final goalState = ref.watch(goalViewModelProvider);
     final goal = goalState.findGoalById(widget.goalId);
     final isDetailLoading = goalState.isDetailLoading(widget.goalId);
+    final needsGeneratedPreview =
+        goal != null && goal.isAiSucceeded && goal.sketchVideoAssetPath == null;
 
-    if (goal == null && isDetailLoading) {
+    if ((goal == null && (_isHydratingGoal || isDetailLoading)) ||
+        (needsGeneratedPreview && (_isHydratingGoal || isDetailLoading))) {
       return Scaffold(
         backgroundColor: colors.bgPrimary,
         appBar: const MoreAppBar(title: ''),
@@ -66,10 +78,7 @@ class _GoalPreviewPageState extends ConsumerState<GoalPreviewPage> {
 
     return Scaffold(
       backgroundColor: colors.bgPrimary,
-      appBar: const MoreAppBar(
-        title: '',
-        showBack: false,
-      ),
+      appBar: const MoreAppBar(title: '', showBack: false),
       body: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(24.w, 8.h, 24.w, 24.h),
         child: Column(
@@ -101,12 +110,16 @@ class _GoalPreviewPageState extends ConsumerState<GoalPreviewPage> {
                   GoalVideoThumb(
                     key: ValueKey('preview_${goal.id}'),
                     goalId: goal.id,
-                    assetPath: goal.isAiSucceeded ? goal.sketchVideoAssetPath : null,
+                    assetPath: goal.isAiSucceeded
+                        ? goal.sketchVideoAssetPath
+                        : null,
                     iconName: goal.iconName,
                     progressRate: 1,
                     size: 340.h,
                     fillWidth: true,
-                    forceLoading: isDetailLoading && !goal.isAiFailed,
+                    forceLoading:
+                        (isDetailLoading || _isHydratingGoal) &&
+                        !goal.isAiFailed,
                   ),
                   SizedBox(height: 18.h),
                   Text(

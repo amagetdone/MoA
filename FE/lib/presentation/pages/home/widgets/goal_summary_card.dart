@@ -87,7 +87,7 @@ class _GoalHeaderIcon extends StatelessWidget {
       width: 42.w,
       height: 42.w,
       decoration: BoxDecoration(
-        color: colors.gray50,
+        color: colors.gray100,
         borderRadius: BorderRadius.circular(14.r),
       ),
       child: Icon(
@@ -182,10 +182,10 @@ class _GoalIllustration extends StatelessWidget {
         borderRadius: BorderRadius.circular(14.r),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0xFFFFF2E0), Color(0xFFF6FAEF)],
+              colors: [colors.bgAccent, colors.bgInsight],
             ),
             borderRadius: BorderRadius.circular(14.r),
           ),

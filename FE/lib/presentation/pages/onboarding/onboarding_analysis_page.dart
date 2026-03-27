@@ -100,7 +100,7 @@ class OnboardingAnalysisPage extends ConsumerWidget {
                       width: 44.w,
                       height: 44.w,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFF8EF),
+                        color: colors.statusSuccess.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(14.r),
                       ),
                       alignment: Alignment.center,

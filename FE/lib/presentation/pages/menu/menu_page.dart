@@ -150,8 +150,8 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                 _StatBox(
                   label: '진행중 목표',
                   value: '${state.activeGoalCount}개',
-                  backgroundColor: const Color(0xFFFFF8E1),
-                  borderColor: const Color(0xFFFFECB3),
+                  backgroundColor: colors.bgInsight,
+                  borderColor: colors.borderDefault,
                   onTap: () {
                     ref
                         .read(goalViewModelProvider.notifier)
@@ -163,8 +163,8 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                 _StatBox(
                   label: '달성한 목표',
                   value: '${state.achievedGoalCount}개',
-                  backgroundColor: const Color(0xFFFFF0E0),
-                  borderColor: const Color(0xFFFFD9B3),
+                  backgroundColor: colors.bgAccent,
+                  borderColor: colors.borderDefault,
                   onTap: () {
                     ref.read(goalViewModelProvider.notifier).toggleFilter(true);
                     context.go(AppRoutes.goalTab);
@@ -174,8 +174,8 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                 _StatBox(
                   label: '누적 저축액',
                   value: CurrencyFormatter.formatKRW(state.totalSaved),
-                  backgroundColor: const Color(0xFFE8F5E9),
-                  borderColor: const Color(0xFFC8E6C9),
+                  backgroundColor: colors.statusSuccess.withValues(alpha: 0.1),
+                  borderColor: colors.statusSuccess.withValues(alpha: 0.3),
                 ),
               ],
             ),
@@ -248,7 +248,7 @@ class _ProfileAvatar extends StatelessWidget {
     final colors = AppColors.of(context);
 
     Widget fallback() =>
-        Icon(Icons.person_outline, size: 28.w, color: colors.gray500);
+        Icon(Icons.person_outline, size: 28.w, color: colors.textSecondary);
 
     return Container(
       width: 48.w,

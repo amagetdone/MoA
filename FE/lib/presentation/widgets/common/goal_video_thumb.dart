@@ -38,25 +38,56 @@ class _GoalVideoThumbState extends State<GoalVideoThumb> {
   bool _ready = false;
   bool _error = false;
   bool _stopped = false;
+  int _loadVersion = 0;
 
   @override
   void initState() {
     super.initState();
-    _initVideo();
+    _reloadVideo();
   }
 
-  Future<void> _initVideo() async {
+  @override
+  void didUpdateWidget(covariant GoalVideoThumb oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.goalId != widget.goalId ||
+        oldWidget.assetPath != widget.assetPath ||
+        oldWidget.iconName != widget.iconName ||
+        oldWidget.progressRate != widget.progressRate ||
+        oldWidget.playAnimation != widget.playAnimation) {
+      _reloadVideo();
+    }
+  }
+
+  Future<void> _reloadVideo() async {
+    final version = ++_loadVersion;
+    final previousController = _controller;
+    _controller = null;
+    _ready = false;
+    _error = false;
+    _stopped = false;
+    if (mounted) {
+      setState(() {});
+    }
+    await previousController?.dispose();
+    await _initVideo(version);
+  }
+
+  Future<void> _initVideo(int version) async {
     final source = await GoalVideoCache.resolve(
       goalId: widget.goalId,
       sourcePath: widget.assetPath,
       iconName: widget.iconName,
     );
 
+    if (!mounted || version != _loadVersion) {
+      return;
+    }
+
     final ctrl = createGoalVideoController(source);
 
     try {
       await ctrl.initialize();
-      if (!mounted) {
+      if (!mounted || version != _loadVersion) {
         ctrl.dispose();
         return;
       }
@@ -92,7 +123,7 @@ class _GoalVideoThumbState extends State<GoalVideoThumb> {
       }
     } catch (_) {
       ctrl.dispose();
-      if (mounted) {
+      if (mounted && version == _loadVersion) {
         setState(() => _error = true);
       }
     }
