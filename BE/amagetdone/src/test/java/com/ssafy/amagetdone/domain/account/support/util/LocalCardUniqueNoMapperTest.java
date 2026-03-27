@@ -13,12 +13,20 @@ class LocalCardUniqueNoMapperTest {
 	private final LocalCardUniqueNoMapper mapper = new LocalCardUniqueNoMapper();
 
 	@Test
-	void toLocalIdReturnsSameValueForSameRemoteId() {
-		Long first = mapper.toLocalId("1005-992db475fbb944c");
-		Long second = mapper.toLocalId("1005-992db475fbb944c");
+	void toLocalIdReturnsSameValueForSameCardNo() {
+		Long first = mapper.toLocalId("1005518816096479");
+		Long second = mapper.toLocalId("1005518816096479");
 
 		assertThat(first).isEqualTo(second);
 		assertThat(first).isPositive();
+	}
+
+	@Test
+	void toLocalIdReturnsDifferentValueForDifferentCardNumbers() {
+		Long first = mapper.toLocalId("1005518816096479");
+		Long second = mapper.toLocalId("1005518816096480");
+
+		assertThat(first).isNotEqualTo(second);
 	}
 
 	@Test

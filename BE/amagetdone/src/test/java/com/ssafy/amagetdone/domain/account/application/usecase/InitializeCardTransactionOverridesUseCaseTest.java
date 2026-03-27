@@ -153,6 +153,9 @@ class InitializeCardTransactionOverridesUseCaseTest {
 			.extracting(CardTransactionOverride::getId)
 			.containsOnlyNulls();
 		assertThat(captor.getValue())
+			.extracting(CardTransactionOverride::getCard)
+			.containsOnly(card);
+		assertThat(captor.getValue())
 			.extracting(CardTransactionOverride::getTransactionDateTime)
 			.map(YearMonth::from)
 			.contains(YearMonth.of(2025, 12), YearMonth.of(2026, 1), YearMonth.of(2026, 2), YearMonth.of(2026, 3));

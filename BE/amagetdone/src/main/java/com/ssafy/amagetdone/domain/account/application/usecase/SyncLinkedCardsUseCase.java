@@ -98,11 +98,10 @@ public class SyncLinkedCardsUseCase {
 	}
 
 	private void upsertCard(Account linkedAccount, CreditCardQueryDto.CardItem remoteCard) {
-		Long localCardUniqueNo = localCardUniqueNoMapper.toLocalId(remoteCard.cardUniqueNo());
 		LocalDateTime cardExpiryDate = parseCardExpiryDate(remoteCard.cardExpiryDate());
 		String cardDescription = remoteCard.cardDescription() == null ? "" : remoteCard.cardDescription();
 
-		Card card = cardRepository.findById(localCardUniqueNo)
+		Card card = cardRepository.findByCardNo(remoteCard.cardNo())
 			.map(existingCard -> {
 				existingCard.sync(
 					linkedAccount,
@@ -119,20 +118,23 @@ public class SyncLinkedCardsUseCase {
 				);
 				return existingCard;
 			})
-			.orElseGet(() -> Card.create(
-				localCardUniqueNo,
-				linkedAccount,
-				remoteCard.cvc(),
-				remoteCard.cardNo(),
-				remoteCard.cardName(),
-				remoteCard.cardIssuerCode(),
-				remoteCard.cardIssuerName(),
-				cardExpiryDate,
-				cardDescription,
-				remoteCard.withdrawalDate(),
-				remoteCard.baselinePerformance(),
-				remoteCard.maxBenefitLimit()
-			));
+			.orElseGet(() -> {
+				Long localCardUniqueNo = localCardUniqueNoMapper.toLocalId(remoteCard.cardNo());
+				return Card.create(
+					localCardUniqueNo,
+					linkedAccount,
+					remoteCard.cvc(),
+					remoteCard.cardNo(),
+					remoteCard.cardName(),
+					remoteCard.cardIssuerCode(),
+					remoteCard.cardIssuerName(),
+					cardExpiryDate,
+					cardDescription,
+					remoteCard.withdrawalDate(),
+					remoteCard.baselinePerformance(),
+					remoteCard.maxBenefitLimit()
+				);
+			});
 		cardRepository.save(card);
 	}
 

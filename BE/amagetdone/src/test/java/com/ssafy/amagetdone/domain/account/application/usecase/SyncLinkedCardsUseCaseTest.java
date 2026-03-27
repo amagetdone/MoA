@@ -70,8 +70,8 @@ class SyncLinkedCardsUseCaseTest {
 				cardItem("CARD-001", "0011234567890123", "1111222233334444", "123"),
 				cardItem("CARD-OTHER", "0099999999999999", "9999888877776666", "999")
 			)));
-		when(localCardUniqueNoMapper.toLocalId("CARD-001")).thenReturn(101L);
-		when(cardRepository.findById(101L)).thenReturn(Optional.empty());
+		when(cardRepository.findByCardNo("1111222233334444")).thenReturn(Optional.empty());
+		when(localCardUniqueNoMapper.toLocalId("1111222233334444")).thenReturn(101L);
 		when(cardRepository.save(any(Card.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		syncLinkedCardsUseCase.execute(7, "user-key", "0011234567890123");
@@ -112,8 +112,7 @@ class SyncLinkedCardsUseCaseTest {
 			.thenReturn(Optional.of(linkedAccount));
 		when(ssafyCreditCardQueryApiClient.inquireLinkedCards(new CreditCardQueryDto.Request("user-key")))
 			.thenReturn(new CreditCardQueryDto.Response(List.of(cardItem("CARD-001", "0011234567890123", "5555666677778888", "456"))));
-		when(localCardUniqueNoMapper.toLocalId("CARD-001")).thenReturn(101L);
-		when(cardRepository.findById(101L)).thenReturn(Optional.of(existingCard));
+		when(cardRepository.findByCardNo("5555666677778888")).thenReturn(Optional.of(existingCard));
 		when(cardRepository.save(existingCard)).thenReturn(existingCard);
 
 		syncLinkedCardsUseCase.execute(7, "user-key", "0011234567890123");
@@ -128,6 +127,43 @@ class SyncLinkedCardsUseCaseTest {
 		assertThat(existingCard.getBaselinePerformance()).isEqualTo(0L);
 		assertThat(existingCard.getMaxBenefitLimit()).isEqualTo(200000L);
 		verify(cardRepository).save(existingCard);
+	}
+
+	@Test
+	void executeTreatsDifferentCardNumberAsDifferentCardEvenWhenRemoteUniqueNoIsReused() {
+		Account linkedAccount = linkedAccount("0011234567890123");
+		Card existingCard = Card.builder()
+			.cardUniqueNo(101L)
+			.withdrawalAccount(linkedAccount)
+			.cvc("111")
+			.cardNo("1111222233334444")
+			.name("기존 카드")
+			.issuerCode("1001")
+			.cardIssuerName("기존 카드사")
+			.cardExpiryDate(LocalDateTime.of(2027, 1, 1, 0, 0))
+			.cardDescription("old")
+			.withdrawalDate("10")
+			.baselinePerformance(10L)
+			.maxBenefitLimit(20L)
+			.build();
+
+		when(accountRepository.findActiveLinkedAccountByUserIdAndAccountNo(7, "0011234567890123"))
+			.thenReturn(Optional.of(linkedAccount));
+		when(ssafyCreditCardQueryApiClient.inquireLinkedCards(new CreditCardQueryDto.Request("user-key")))
+			.thenReturn(new CreditCardQueryDto.Response(List.of(cardItem("CARD-001", "0011234567890123", "5555666677778888", "456"))));
+		when(cardRepository.findByCardNo("5555666677778888")).thenReturn(Optional.empty());
+		when(localCardUniqueNoMapper.toLocalId("5555666677778888")).thenReturn(202L);
+		when(cardRepository.save(any(Card.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		syncLinkedCardsUseCase.execute(7, "user-key", "0011234567890123");
+
+		ArgumentCaptor<Card> captor = ArgumentCaptor.forClass(Card.class);
+		verify(cardRepository).save(captor.capture());
+		Card saved = captor.getValue();
+		assertThat(saved).isNotSameAs(existingCard);
+		assertThat(saved.getCardUniqueNo()).isEqualTo(202L);
+		assertThat(saved.getCardNo()).isEqualTo("5555666677778888");
+		assertThat(existingCard.getCardNo()).isEqualTo("1111222233334444");
 	}
 
 	@Test
