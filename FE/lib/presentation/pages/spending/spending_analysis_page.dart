@@ -21,7 +21,8 @@ class SpendingAnalysisPage extends ConsumerStatefulWidget {
   const SpendingAnalysisPage({super.key});
 
   @override
-  ConsumerState<SpendingAnalysisPage> createState() => _SpendingAnalysisPageState();
+  ConsumerState<SpendingAnalysisPage> createState() =>
+      _SpendingAnalysisPageState();
 }
 
 class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
@@ -30,6 +31,8 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
   final _keySummary = GlobalKey();
   final _keyChart = GlobalKey();
   final _keyCategory = GlobalKey();
+  bool _showcaseResolved = false;
+  bool _showcaseCheckInFlight = false;
 
   @override
   void initState() {
@@ -37,19 +40,48 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
     Future.microtask(() {
       ref.read(spendingViewModelProvider.notifier).loadData();
     });
+  }
+
+  bool _isShowcaseVisibleRoute() {
+    final route = ModalRoute.of(context);
+    final currentPath = GoRouter.of(context).state.uri.path;
+    return route?.isCurrent == true && currentPath == AppRoutes.spendingTab;
+  }
+
+  void _maybeStartShowcase() {
+    if (_showcaseResolved ||
+        _showcaseCheckInFlight ||
+        _showcaseContext == null) {
+      return;
+    }
+    if (!_isShowcaseVisibleRoute()) {
+      return;
+    }
+
+    _showcaseCheckInFlight = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final shown = await TutorialService.isShown(TutorialService.spendingAnalysis);
-      if (!shown && mounted) {
-        await TutorialService.markShown(TutorialService.spendingAnalysis);
-        if (mounted && _showcaseContext != null) {
-          ShowCaseWidget.of(_showcaseContext!).startShowCase([
-            _keyPeriodChips,
-            _keySummary,
-            _keyChart,
-            _keyCategory,
-          ]);
-        }
+      final shown = await TutorialService.isShown(
+        TutorialService.spendingAnalysis,
+      );
+      if (!mounted) {
+        return;
       }
+      if (shown) {
+        _showcaseResolved = true;
+        _showcaseCheckInFlight = false;
+        return;
+      }
+      if (!_isShowcaseVisibleRoute() || _showcaseContext == null) {
+        _showcaseCheckInFlight = false;
+        return;
+      }
+
+      ShowCaseWidget.of(
+        _showcaseContext!,
+      ).startShowCase([_keyPeriodChips, _keySummary, _keyChart, _keyCategory]);
+      await TutorialService.markShown(TutorialService.spendingAnalysis);
+      _showcaseResolved = true;
+      _showcaseCheckInFlight = false;
     });
   }
 
@@ -62,165 +94,195 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
     return ShowCaseWidget(
       builder: (ctx) {
         _showcaseContext = ctx;
+        _maybeStartShowcase();
         return Scaffold(
-      backgroundColor: colors.bgPrimary,
-      appBar: MoreAppBar(
-        title: '',
-        showBack: false,
-        showLogo: true,
-        showNotification: false,
-      ),
-      body: state.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: () => viewModel.loadData(),
-              child: Scrollbar(
-              thumbVisibility: false,
-              child: SingleChildScrollView(
-              primary: true,
-              physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 20.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('지출 내역', style: AppTextStyles.headingMd.copyWith(fontSize: 20.sp, fontWeight: FontWeight.bold, color: colors.textPrimary)),
-                  SizedBox(height: 4.h),
-                  Text(
-                    '주, 월 단위로 소비 내역을 확인할 수 있어요.',
-                    style: AppTextStyles.caption.copyWith(
-                      color: colors.textTertiary,
-                      fontSize: 12.sp,
-                    ),
-                  ),
-                  SizedBox(height: 16.h),
-                  Showcase(
-                    key: _keyPeriodChips,
-                    title: '주간·월간 탭',
-                    description: '주간 또는 월간 단위로 소비 내역을 볼 수 있어요. 원하는 기간을 선택해서 소비를 분석해보세요.',
-                    child: Row(
-                    children: [
-                      MoreChip(
-                        label: '주간',
-                        selected: state.isWeekly,
-                        onTap: () => viewModel.togglePeriod(true),
-                      ),
-                      SizedBox(width: 8.w),
-                      MoreChip(
-                        label: '월간',
-                        selected: !state.isWeekly,
-                        onTap: () => viewModel.togglePeriod(false),
-                      ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () => context.push(AppRoutes.spendingPattern),
-                        child: Text(
-                          '전월 소비분석 >',
-                          style: AppTextStyles.caption.copyWith(
-                            color: AppColors.orange500,
-                            fontSize: 12.sp,
-                          ),
-                        ),
-                      ),
-                    ],
-                    ),
-                  ),
-                  SizedBox(height: 16.h),
-
-                  Showcase(
-                    key: _keySummary,
-                    title: '기간 이동',
-                    description: '좌우 화살표를 눌러 지난 주/달의 소비 내역을 확인할 수 있어요. 소비 추이를 파악하는 데 도움이 돼요.',
-                    child: _SpendingSummaryCard(state: state),
-                  ),
-                  SizedBox(height: 16.h),
-
-                  if (state.isPeriodLoading)
-                    SizedBox(
-                      height: 300.h,
-                      child: const Center(child: CircularProgressIndicator()),
-                    )
-                  else ...[
-                    Showcase(
-                      key: _keyChart,
-                      title: '지출 그래프',
-                      description: '선택한 기간의 일별/주별 지출을 그래프로 보여줘요. 어느 날 지출이 많았는지 한눈에 파악해보세요.',
-                      child: MoreCard(
-                      padding: EdgeInsets.all(20.w),
+          backgroundColor: colors.bgPrimary,
+          appBar: MoreAppBar(
+            title: '',
+            showBack: false,
+            showLogo: true,
+            showNotification: false,
+          ),
+          body: state.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                  onRefresh: () => viewModel.loadData(),
+                  child: Scrollbar(
+                    thumbVisibility: false,
+                    child: SingleChildScrollView(
+                      primary: true,
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 20.w),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('지출 그래프', style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary)),
-                              GestureDetector(
-                                onTap: () => context.push(AppRoutes.spendingBudget),
-                                child: Text(
-                                  '주간 예산 설정 >',
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: AppColors.orange500,
-                                    fontSize: 12.sp,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 20.h),
-                          SizedBox(
-                            height: 220.h,
-                            child: SpendingLineChart(
-                              data: state.isWeekly
-                                  ? state.dailySpendings
-                                  : state.monthlySpendings,
-                              isWeekly: state.isWeekly,
+                          Text(
+                            '지출 내역',
+                            style: AppTextStyles.headingMd.copyWith(
+                              fontSize: 20.sp,
+                              fontWeight: FontWeight.bold,
+                              color: colors.textPrimary,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    ),
-                    SizedBox(height: 16.h),
-
-                    Showcase(
-                      key: _keyCategory,
-                      title: '카테고리별 지출',
-                      description: '식비, 교통비 등 카테고리별로 얼마나 썼는지 확인할 수 있어요. 주요 지출 항목을 파악해 절약 계획을 세워보세요.',
-                      child: MoreCard(
-                      padding: EdgeInsets.all(20.w),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('카테고리별 지출', style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary)),
                           SizedBox(height: 4.h),
                           Text(
-                            state.isWeekly
-                                ? '이번 주 전체 지출 대비 카테고리별 금액이에요.'
-                                : '이번 달 전체 지출 대비 카테고리별 금액이에요.',
+                            '주, 월 단위로 소비 내역을 확인할 수 있어요.',
                             style: AppTextStyles.caption.copyWith(
                               color: colors.textTertiary,
                               fontSize: 12.sp,
                             ),
                           ),
                           SizedBox(height: 16.h),
-                          CategoryList(
-                            categories: state.categories,
-                            totalAmount: state.isWeekly
-                                ? state.weeklyExpenseAmount
-                                : state.monthlyExpenseAmount,
+                          Showcase(
+                            key: _keyPeriodChips,
+                            title: '주간·월간 탭',
+                            description:
+                                '주간 또는 월간 단위로 소비 내역을 볼 수 있어요. 원하는 기간을 선택해서 소비를 분석해보세요.',
+                            child: Row(
+                              children: [
+                                MoreChip(
+                                  label: '주간',
+                                  selected: state.isWeekly,
+                                  onTap: () => viewModel.togglePeriod(true),
+                                ),
+                                SizedBox(width: 8.w),
+                                MoreChip(
+                                  label: '월간',
+                                  selected: !state.isWeekly,
+                                  onTap: () => viewModel.togglePeriod(false),
+                                ),
+                                const Spacer(),
+                                GestureDetector(
+                                  onTap: () =>
+                                      context.push(AppRoutes.spendingPattern),
+                                  child: Text(
+                                    '전월 소비분석 >',
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: AppColors.orange500,
+                                      fontSize: 12.sp,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                          SizedBox(height: 16.h),
+
+                          Showcase(
+                            key: _keySummary,
+                            title: '기간 이동',
+                            description:
+                                '좌우 화살표를 눌러 지난 주/달의 소비 내역을 확인할 수 있어요. 소비 추이를 파악하는 데 도움이 돼요.',
+                            child: _SpendingSummaryCard(state: state),
+                          ),
+                          SizedBox(height: 16.h),
+
+                          if (state.isPeriodLoading)
+                            SizedBox(
+                              height: 300.h,
+                              child: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            )
+                          else ...[
+                            Showcase(
+                              key: _keyChart,
+                              title: '지출 그래프',
+                              description:
+                                  '선택한 기간의 일별/주별 지출을 그래프로 보여줘요. 어느 날 지출이 많았는지 한눈에 파악해보세요.',
+                              child: MoreCard(
+                                padding: EdgeInsets.all(20.w),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          '지출 그래프',
+                                          style: AppTextStyles.headingMd
+                                              .copyWith(
+                                                color: colors.textPrimary,
+                                              ),
+                                        ),
+                                        GestureDetector(
+                                          onTap: () => context.push(
+                                            AppRoutes.spendingBudget,
+                                          ),
+                                          child: Text(
+                                            '주간 예산 설정 >',
+                                            style: AppTextStyles.caption
+                                                .copyWith(
+                                                  color: AppColors.orange500,
+                                                  fontSize: 12.sp,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 20.h),
+                                    SizedBox(
+                                      height: 220.h,
+                                      child: SpendingLineChart(
+                                        data: state.isWeekly
+                                            ? state.dailySpendings
+                                            : state.monthlySpendings,
+                                        isWeekly: state.isWeekly,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 16.h),
+
+                            Showcase(
+                              key: _keyCategory,
+                              title: '카테고리별 지출',
+                              description:
+                                  '식비, 교통비 등 카테고리별로 얼마나 썼는지 확인할 수 있어요. 주요 지출 항목을 파악해 절약 계획을 세워보세요.',
+                              child: MoreCard(
+                                padding: EdgeInsets.all(20.w),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '카테고리별 지출',
+                                      style: AppTextStyles.headingMd.copyWith(
+                                        color: colors.textPrimary,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4.h),
+                                    Text(
+                                      state.isWeekly
+                                          ? '이번 주 전체 지출 대비 카테고리별 금액이에요.'
+                                          : '이번 달 전체 지출 대비 카테고리별 금액이에요.',
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: colors.textTertiary,
+                                        fontSize: 12.sp,
+                                      ),
+                                    ),
+                                    SizedBox(height: 16.h),
+                                    CategoryList(
+                                      categories: state.categories,
+                                      totalAmount: state.isWeekly
+                                          ? state.weeklyExpenseAmount
+                                          : state.monthlyExpenseAmount,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                          SizedBox(height: 40.h),
                         ],
                       ),
                     ),
-                    ),
-                  ],
-                  SizedBox(height: 40.h),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    },
+                  ),
+                ),
+        );
+      },
     );
   }
 }
@@ -297,22 +359,27 @@ class _SpendingSummaryCard extends ConsumerWidget {
                       fit: BoxFit.scaleDown,
                       child: Text(
                         periodLabel,
-                        style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary),
+                        style: AppTextStyles.headingMd.copyWith(
+                          color: colors.textPrimary,
+                        ),
                       ),
                     ),
                     FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(
                         periodRange,
-                        style: AppTextStyles.caption
-                            .copyWith(color: colors.textTertiary),
+                        style: AppTextStyles.caption.copyWith(
+                          color: colors.textTertiary,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                onPressed: canMoveNext ? () => viewModel.navigatePeriod(1) : null,
+                onPressed: canMoveNext
+                    ? () => viewModel.navigatePeriod(1)
+                    : null,
                 icon: Icon(
                   Icons.arrow_right,
                   size: 32,
@@ -333,13 +400,20 @@ class _SpendingSummaryCard extends ConsumerWidget {
               children: [
                 Text(
                   '총 지출  ',
-                  style: AppTextStyles.bodyMd.copyWith(color: colors.textSecondary),
+                  style: AppTextStyles.bodyMd.copyWith(
+                    color: colors.textSecondary,
+                  ),
                 ),
                 Text(
                   CurrencyFormatter.formatKRW(
-                    state.isWeekly ? state.weeklyExpenseAmount : state.monthlyExpenseAmount,
+                    state.isWeekly
+                        ? state.weeklyExpenseAmount
+                        : state.monthlyExpenseAmount,
                   ),
-                  style: AppTextStyles.headingMd.copyWith(fontSize: 22.sp, color: colors.textPrimary),
+                  style: AppTextStyles.headingMd.copyWith(
+                    fontSize: 22.sp,
+                    color: colors.textPrimary,
+                  ),
                 ),
               ],
             ),
