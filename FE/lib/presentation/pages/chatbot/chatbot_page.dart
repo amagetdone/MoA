@@ -331,95 +331,106 @@ class _EmptyState extends StatelessWidget {
         : (infoMessage ?? 'AI 코치에게 물어보세요');
     final description = errorMessage ?? '예산, 소비 패턴, 목표 달성에 대해\n무엇이든 물어보세요.';
 
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20.w),
-        child: Container(
-          width: double.infinity,
-          padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 20.h),
-          decoration: BoxDecoration(
-            color: colors.bgSurface,
-            borderRadius: BorderRadius.circular(24.r),
-            boxShadow: [
-              BoxShadow(
-                color: colors.cardShadow,
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 72.w,
-                height: 72.w,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: math.max(0, constraints.maxHeight - 24.h),
+            ),
+            child: Center(
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 20.h),
                 decoration: BoxDecoration(
-                  color: AppColors.orange500.withValues(alpha: 0.1),
+                  color: colors.bgSurface,
                   borderRadius: BorderRadius.circular(24.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors.cardShadow,
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: Icon(
-                  Icons.smart_toy_outlined,
-                  size: 36.w,
-                  color: AppColors.orange500,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 72.w,
+                      height: 72.w,
+                      decoration: BoxDecoration(
+                        color: AppColors.orange500.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(24.r),
+                      ),
+                      child: Icon(
+                        Icons.smart_toy_outlined,
+                        size: 36.w,
+                        color: AppColors.orange500,
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+                    Text(
+                      title,
+                      style: AppTextStyles.bodyLg.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colors.textPrimary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      description,
+                      style: AppTextStyles.bodySm.copyWith(
+                        color: colors.textTertiary,
+                        height: 1.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (errorMessage == null) ...[
+                      SizedBox(height: 18.h),
+                      Wrap(
+                        spacing: 8.w,
+                        runSpacing: 8.h,
+                        alignment: WrapAlignment.center,
+                        children: suggestions
+                            .map(
+                              (suggestion) => ActionChip(
+                                label: Text(suggestion),
+                                onPressed: () => onSuggestionTap(suggestion),
+                                labelStyle: AppTextStyles.caption.copyWith(
+                                  color: AppColors.orange500,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                side: BorderSide(
+                                  color: AppColors.orange500.withValues(
+                                    alpha: 0.24,
+                                  ),
+                                ),
+                                backgroundColor: AppColors.orange500.withValues(
+                                  alpha: 0.06,
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ],
+                    if (errorMessage != null) ...[
+                      SizedBox(height: 16.h),
+                      OutlinedButton.icon(
+                        onPressed: onRetry,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('다시 불러오기'),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              SizedBox(height: 16.h),
-              Text(
-                title,
-                style: AppTextStyles.bodyLg.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: colors.textPrimary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 8.h),
-              Text(
-                description,
-                style: AppTextStyles.bodySm.copyWith(
-                  color: colors.textTertiary,
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              if (errorMessage == null) ...[
-                SizedBox(height: 18.h),
-                Wrap(
-                  spacing: 8.w,
-                  runSpacing: 8.h,
-                  alignment: WrapAlignment.center,
-                  children: suggestions
-                      .map(
-                        (suggestion) => ActionChip(
-                          label: Text(suggestion),
-                          onPressed: () => onSuggestionTap(suggestion),
-                          labelStyle: AppTextStyles.caption.copyWith(
-                            color: AppColors.orange500,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          side: BorderSide(
-                            color: AppColors.orange500.withValues(alpha: 0.24),
-                          ),
-                          backgroundColor: AppColors.orange500.withValues(
-                            alpha: 0.06,
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-              ],
-              if (errorMessage != null) ...[
-                SizedBox(height: 16.h),
-                OutlinedButton.icon(
-                  onPressed: onRetry,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('다시 불러오기'),
-                ),
-              ],
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -575,10 +586,7 @@ class _StreamingContentState extends State<_StreamingContent>
 }
 
 class _TypingDotsIndicator extends StatelessWidget {
-  const _TypingDotsIndicator({
-    required this.progress,
-    required this.colors,
-  });
+  const _TypingDotsIndicator({required this.progress, required this.colors});
 
   final double progress;
   final AppColorScheme colors;
@@ -609,10 +617,7 @@ class _TypingDotsIndicator extends StatelessWidget {
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [
-                        AppColors.orange300,
-                        AppColors.orange500,
-                      ],
+                      colors: [AppColors.orange300, AppColors.orange500],
                     ),
                     boxShadow: [
                       BoxShadow(
