@@ -1,28 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:more_app/presentation/viewmodels/spending_pattern_viewmodel.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
-import 'package:more_app/presentation/viewmodels/spending_viewmodel.dart';
+import 'package:more_app/presentation/pages/home/widgets/spending_rose_chart.dart';
+import 'package:more_app/presentation/pages/spending/widgets/category_list.dart';
+import 'package:more_app/presentation/viewmodels/spending_pattern_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
-import 'package:more_app/presentation/pages/spending/widgets/category_list.dart';
-
-const _sectionColors = [
-  Color(0xFFE57373),
-  Color(0xFFFFB74D),
-  Color(0xFF81C784),
-];
-const _sectionLabels = ['고정지출', '변동지출', '여유 자금'];
 
 class SpendingPatternPage extends ConsumerStatefulWidget {
   const SpendingPatternPage({super.key});
 
   @override
-  ConsumerState<SpendingPatternPage> createState() => _SpendingPatternPageState();
+  ConsumerState<SpendingPatternPage> createState() =>
+      _SpendingPatternPageState();
 }
 
 class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
@@ -38,24 +31,20 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final patternState = ref.watch(spendingPatternViewModelProvider);
-    final touchedIndex = ref.watch(spendingViewModelProvider).touchedPieIndex;
-    final spendingViewModel = ref.read(spendingViewModelProvider.notifier);
 
     if (patternState.isLoading) {
       return Scaffold(
         backgroundColor: colors.bgPrimary,
-        appBar: const MoreAppBar(title: '', showBack: true, showNotification: false),
+        appBar: const MoreAppBar(
+          title: '',
+          showBack: true,
+          showNotification: false,
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     final result = patternState.result;
-    final sectionAmounts = [
-      result.fixedAmount,
-      result.variableAmount,
-      result.freeAmount,
-    ];
-    final total = result.totalExpense;
 
     return Scaffold(
       backgroundColor: colors.bgPrimary,
@@ -72,7 +61,14 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('소비 패턴 분석', style: AppTextStyles.headingMd.copyWith(fontSize: 20.sp, fontWeight: FontWeight.bold, color: colors.textPrimary)),
+              Text(
+                '소비 패턴 분석',
+                style: AppTextStyles.headingMd.copyWith(
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.bold,
+                  color: colors.textPrimary,
+                ),
+              ),
               SizedBox(height: 4.h),
               Text(
                 '지난 달 소비내역을 기반으로 분석된 내용이에요.',
@@ -82,121 +78,133 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
                 ),
               ),
               SizedBox(height: 24.h),
-
-              // 1. 요약 카드
               MoreCard(
                 padding: EdgeInsets.all(24.w),
                 child: Column(
                   children: [
-                    _SummaryRow(label: '총 수입', value: result.totalIncome, color: colors.textPrimary),
+                    _SummaryRow(
+                      label: '총 수입',
+                      value: result.totalIncome,
+                      color: colors.textPrimary,
+                    ),
                     SizedBox(height: 16.h),
-                    _SummaryRow(label: '총 지출', value: result.totalExpense, color: AppColors.orange500),
+                    _SummaryRow(
+                      label: '총 지출',
+                      value: result.totalExpense,
+                      color: AppColors.orange500,
+                    ),
                   ],
                 ),
               ),
               SizedBox(height: 20.h),
-
-              // 2. 패턴 분석 상세 카드 (도넛 차트)
+              MoreCard(
+                padding: EdgeInsets.all(24.w),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 44.w,
+                      height: 44.w,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF8EF),
+                        borderRadius: BorderRadius.circular(14.r),
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.account_balance_wallet_rounded,
+                        color: const Color(0xFF53A65A),
+                        size: 22.w,
+                      ),
+                    ),
+                    SizedBox(width: 14.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '여유 자금',
+                            style: AppTextStyles.bodyMd.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16.sp,
+                              color: colors.textPrimary,
+                            ),
+                          ),
+                          SizedBox(height: 4.h),
+                          Text(
+                            '지난 달 총 수입에서 총 지출을 제외한 금액이에요.',
+                            style: AppTextStyles.caption.copyWith(
+                              color: colors.textTertiary,
+                              fontSize: 12.sp,
+                            ),
+                          ),
+                          SizedBox(height: 12.h),
+                          Text(
+                            CurrencyFormatter.formatKRW(result.freeAmount),
+                            style: AppTextStyles.headingMd.copyWith(
+                              color: const Color(0xFF53A65A),
+                              fontWeight: FontWeight.w800,
+                              fontSize: 20.sp,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 20.h),
+              if (result.categories.isNotEmpty)
+                SpendingRoseChart(
+                  categories: result.categories,
+                  title: '카테고리별 지출 분석',
+                  subtitle: '지난 달 총 지출 기준',
+                ),
+              if (result.categories.isEmpty)
+                MoreCard(
+                  padding: EdgeInsets.all(24.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '카테고리별 지출 분석',
+                        style: AppTextStyles.bodyMd.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16.sp,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        '분석할 카테고리 지출 데이터가 아직 없어요.',
+                        style: AppTextStyles.caption.copyWith(
+                          color: colors.textTertiary,
+                          fontSize: 12.sp,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              SizedBox(height: 20.h),
               MoreCard(
                 padding: EdgeInsets.all(24.w),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(
-                      height: 220.h,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          PieChart(
-                            PieChartData(
-                              sectionsSpace: 4,
-                              centerSpaceRadius: 65.r,
-                              pieTouchData: PieTouchData(
-                                touchCallback: (event, response) {
-                                  if (!event.isInterestedForInteractions ||
-                                      response == null ||
-                                      response.touchedSection == null) {
-                                    spendingViewModel.setTouchedPieIndex(null);
-                                    return;
-                                  }
-                                  final idx = response.touchedSection!.touchedSectionIndex;
-                                  spendingViewModel.setTouchedPieIndex(idx >= 0 ? idx : null);
-                                },
-                              ),
-                              sections: _buildSections(touchedIndex, sectionAmounts, total),
-                            ),
-                          ),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                touchedIndex != null
-                                    ? CurrencyFormatter.formatKRW(sectionAmounts[touchedIndex])
-                                    : CurrencyFormatter.formatKRW(result.totalExpense),
-                                style: AppTextStyles.bodyMd.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16.sp,
-                                  color: touchedIndex != null
-                                      ? _sectionColors[touchedIndex]
-                                      : colors.textPrimary,
-                                ),
-                              ),
-                              Text(
-                                touchedIndex != null ? _sectionLabels[touchedIndex] : '총지출',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: colors.textTertiary,
-                                  fontSize: 12.sp,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                    Text(
+                      '카테고리별 지출',
+                      style: AppTextStyles.bodyMd.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16.sp,
+                        color: colors.textPrimary,
                       ),
                     ),
-                    SizedBox(height: 24.h),
-
-                    // 범례
-                    Column(
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(child: _LegendItem(label: '고정지출', amount: result.fixedAmount, color: _sectionColors[0])),
-                            Expanded(child: _LegendItem(label: '변동지출', amount: result.variableAmount, color: _sectionColors[1])),
-                          ],
-                        ),
-                        SizedBox(height: 12.h),
-                        Row(
-                          children: [
-                            Expanded(child: _LegendItem(label: '여유 자금', amount: result.freeAmount, color: _sectionColors[2])),
-                          ],
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 24.h),
-
-                    SizedBox(height: 8.h),
-
-                    // 카테고리별 지출
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '카테고리별 지출',
-                          style: AppTextStyles.bodyMd.copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16.sp,
-                            color: colors.textPrimary,
-                          ),
-                        ),
-                        SizedBox(height: 4.h),
-                        Text(
-                          '이전 달 전체 지출 대비 카테고리별 금액이에요.',
-                          style: AppTextStyles.caption.copyWith(
-                            color: colors.textTertiary,
-                            fontSize: 12.sp,
-                          ),
-                        ),
-                      ],
+                    SizedBox(height: 4.h),
+                    Text(
+                      '이전 달 전체 지출 대비 카테고리별 금액이에요.',
+                      style: AppTextStyles.caption.copyWith(
+                        color: colors.textTertiary,
+                        fontSize: 12.sp,
+                      ),
                     ),
                     SizedBox(height: 24.h),
                     CategoryList(
@@ -213,43 +221,18 @@ class _SpendingPatternPageState extends ConsumerState<SpendingPatternPage> {
       ),
     );
   }
-
-  List<PieChartSectionData> _buildSections(
-    int? touchedIndex,
-    List<int> amounts,
-    int total,
-  ) {
-    if (total == 0) {
-      return List.generate(
-        _sectionColors.length,
-        (i) => PieChartSectionData(
-          value: 25,
-          color: _sectionColors[i].withValues(alpha: 0.3),
-          radius: 28.r,
-          showTitle: false,
-        ),
-      );
-    }
-    return List.generate(_sectionColors.length, (i) {
-      final isTouched = touchedIndex == i;
-      final rawValue = amounts[i] / total * 100;
-      // 0이 아닌 슬라이스는 최소 2% 보장해서 보이게 함
-      final value = amounts[i] > 0 ? rawValue.clamp(2.0, 100.0) : 0.0;
-      return PieChartSectionData(
-        value: value,
-        color: _sectionColors[i],
-        radius: isTouched ? 36.r : 28.r,
-        showTitle: false,
-      );
-    });
-  }
 }
 
 class _SummaryRow extends StatelessWidget {
   final String label;
   final int value;
   final Color color;
-  const _SummaryRow({required this.label, required this.value, required this.color});
+
+  const _SummaryRow({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -270,53 +253,6 @@ class _SummaryRow extends StatelessWidget {
             color: color,
             fontWeight: FontWeight.bold,
             fontSize: 17.sp,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _LegendItem extends StatelessWidget {
-  final String label;
-  final int amount;
-  final Color color;
-  const _LegendItem({required this.label, required this.amount, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 8.w,
-          height: 8.w,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        SizedBox(width: 8.w),
-        Flexible(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.caption.copyWith(
-                  color: colors.textSecondary,
-                  fontSize: 12.sp,
-                ),
-              ),
-              Text(
-                CurrencyFormatter.formatKRW(amount),
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.caption.copyWith(
-                  color: colors.textTertiary,
-                  fontSize: 11.sp,
-                ),
-              ),
-            ],
           ),
         ),
       ],
