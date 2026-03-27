@@ -26,7 +26,8 @@ class ChatbotMessageRequest(BaseModel):
 
 class ChatbotToolSummary(BaseModel):
     tool_name: str
-    as_of: str
+    as_of: str | None = None
+    status: str | None = None
 
 
 class ChatbotConversationMessage(BaseModel):

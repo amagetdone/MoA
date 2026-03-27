@@ -204,12 +204,14 @@ def _build_recent_spending_anomalies_runner(
     *,
     repository: ChatbotRepository,
     user_id: int,
+    today_factory: Callable[[], date],
 ) -> Callable[..., dict[str, Any]]:
     def _run(*, lookback_days: int = 14, limit: int = 5) -> dict[str, Any]:
         return repository.get_recent_spending_anomalies(
             user_id=user_id,
             lookback_days=lookback_days,
             limit=limit,
+            base_date=today_factory(),
         )
 
     return _run
@@ -355,10 +357,15 @@ def build_recent_spending_anomalies_tool(
     *,
     repository: ChatbotRepository,
     user_id: int,
+    today_factory: Callable[[], date] | None = None,
 ) -> StructuredTool:
     return StructuredTool(
         name="get_recent_spending_anomalies",
         description="Get the authenticated user's recent spending anomalies.",
         args_schema=_RecentSpendingAnomaliesToolInput,
-        func=_build_recent_spending_anomalies_runner(repository=repository, user_id=user_id),
+        func=_build_recent_spending_anomalies_runner(
+            repository=repository,
+            user_id=user_id,
+            today_factory=today_factory or date.today,
+        ),
     )

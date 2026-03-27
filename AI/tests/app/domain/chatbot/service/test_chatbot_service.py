@@ -179,6 +179,7 @@ def _build_settings() -> Settings:
 class _ToolBundleRepository:
     def __init__(self) -> None:
         self.calls: list[dict[str, object]] = []
+        self.runner = self
 
     def get_weekly_budget_status(self, *, user_id: int, base_date):
         self.calls.append(
@@ -241,6 +242,16 @@ class _ToolBundleRepository:
             }
         )
         return {"summary": {}, "evidence": [], "warnings": []}
+
+    def execute_select(self, sql: str, *, parameters=None):
+        self.calls.append(
+            {
+                "method": "execute_select",
+                "sql": sql,
+                "parameters": parameters or {},
+            }
+        )
+        return [{"metric": 1}]
 
 
 def test_reply_uses_user_scoped_thread_id_and_caches_graph_per_user() -> None:
@@ -321,6 +332,19 @@ def test_build_tool_bundle_uses_explicit_today_for_relative_spending_windows() -
             "include_comparison": False,
         }
     ]
+
+
+def test_build_tool_bundle_includes_sql_tool() -> None:
+    repository = _ToolBundleRepository()
+
+    tool_bundle = _build_tool_bundle(
+        repository=repository,
+        user_id=7,
+        today_factory=lambda: date(2026, 3, 27),
+    )
+
+    assert len(tool_bundle.sql) == 1
+    assert tool_bundle.sql[0].name == "run_guarded_sql_query"
 
 
 def test_reply_generates_conversation_id_when_missing() -> None:
@@ -431,6 +455,47 @@ def test_reply_ignores_non_supervisor_messages_when_final_answer_missing() -> No
     result = anyio.run(run)
 
     assert result["answer"] == "Weekly budget is healthy."
+
+
+def test_reply_builds_graph_input_from_sanitized_conversation_history() -> None:
+    store = ConversationMemoryStore(
+        ttl=timedelta(days=3),
+        now_factory=lambda: datetime(2026, 3, 26, 9, 0, tzinfo=UTC),
+    )
+    store.append_user_message(user_id=7, conversation_id="conv-1", content="older user")
+    store.append_assistant_message(
+        user_id=7,
+        conversation_id="conv-1",
+        content="older assistant",
+    )
+    graph = _FakeGraph(reply_final_answer="latest answer")
+    service = ChatbotService(
+        settings=_build_settings(),
+        graph_factory=lambda _user_id: graph,
+        tracer=_FakeTracer(),
+        conversation_store=store,
+    )
+
+    async def run() -> None:
+        await service.reply(
+            user_id=7,
+            message="latest user",
+            conversation_id="conv-1",
+        )
+
+    anyio.run(run)
+
+    input_messages = graph.reply_calls[0]["input"]["messages"]
+    assert [message.content for message in input_messages] == [
+        "older user",
+        "older assistant",
+        "latest user",
+    ]
+    assert [type(message).__name__ for message in input_messages] == [
+        "HumanMessage",
+        "AIMessage",
+        "HumanMessage",
+    ]
 
 
 def test_reply_rejects_non_positive_user_id() -> None:

@@ -236,6 +236,65 @@ def test_chatbot_message_endpoint_preserves_provided_conversation_id() -> None:
     ]
 
 
+def test_chatbot_message_endpoint_accepts_status_based_tool_summaries() -> None:
+    class _StatusToolSummaryService(_FakeChatbotService):
+        async def reply(
+            self,
+            *,
+            user_id: int,
+            message: str,
+            conversation_id: str | None,
+        ) -> dict[str, object]:
+            self.reply_calls.append(
+                {
+                    "user_id": user_id,
+                    "message": message,
+                    "conversation_id": conversation_id,
+                }
+            )
+            return {
+                "conversation_id": conversation_id or "generated-id",
+                "answer": "이번 주 소비를 분석했어요.",
+                "warnings": [],
+                "tool_summaries": [
+                    {
+                        "tool_name": "get_spending_summary",
+                        "status": "completed",
+                    },
+                    {
+                        "tool_name": "get_spending_by_category",
+                        "status": "completed",
+                    },
+                ],
+            }
+
+    service = _StatusToolSummaryService()
+    app = create_app(
+        classifier=object(),
+        image_generation_service=object(),
+        chatbot_service=service,
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/v1/chatbot/messages",
+            headers={"X-User-Id": "7"},
+            json={"message": "이번 주 소비 피드백 해줘"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["tool_summaries"] == [
+        {
+            "tool_name": "get_spending_summary",
+            "status": "completed",
+        },
+        {
+            "tool_name": "get_spending_by_category",
+            "status": "completed",
+        },
+    ]
+
+
 def test_chatbot_message_endpoint_rejects_blank_conversation_id() -> None:
     app = create_app(
         classifier=object(),

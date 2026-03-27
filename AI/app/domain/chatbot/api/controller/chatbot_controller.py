@@ -23,7 +23,11 @@ router = APIRouter(prefix="/v1/chatbot", tags=["chatbot"])
 TrustedUserId = Annotated[int, Header(alias="X-User-Id", ge=1)]
 
 
-@router.post("/messages", response_model=ChatbotMessageResponse)
+@router.post(
+    "/messages",
+    response_model=ChatbotMessageResponse,
+    response_model_exclude_none=True,
+)
 async def create_chatbot_message(
     request: ChatbotMessageRequest,
     user_id: TrustedUserId,

@@ -91,6 +91,7 @@ class _FakeRepository:
         user_id: int,
         lookback_days,
         limit,
+        base_date,
     ):
         self.calls.append(
             {
@@ -98,6 +99,7 @@ class _FakeRepository:
                 "user_id": user_id,
                 "lookback_days": lookback_days,
                 "limit": limit,
+                "base_date": base_date,
             }
         )
         return {
@@ -334,7 +336,11 @@ def test_build_spending_by_category_tool_rejects_caller_supplied_user_id() -> No
 
 def test_build_recent_spending_anomalies_tool_binds_trusted_user_id() -> None:
     repository = _FakeRepository()
-    tool = build_recent_spending_anomalies_tool(repository=repository, user_id=7)
+    tool = build_recent_spending_anomalies_tool(
+        repository=repository,
+        user_id=7,
+        today_factory=lambda: date(2026, 3, 27),
+    )
 
     assert isinstance(tool, StructuredTool)
     assert "user_id" not in tool.args_schema.model_fields
@@ -348,13 +354,18 @@ def test_build_recent_spending_anomalies_tool_binds_trusted_user_id() -> None:
             "user_id": 7,
             "lookback_days": 14,
             "limit": 3,
+            "base_date": date(2026, 3, 27),
         }
     ]
 
 
 def test_build_recent_spending_anomalies_tool_rejects_caller_supplied_user_id() -> None:
     repository = _FakeRepository()
-    tool = build_recent_spending_anomalies_tool(repository=repository, user_id=7)
+    tool = build_recent_spending_anomalies_tool(
+        repository=repository,
+        user_id=7,
+        today_factory=lambda: date(2026, 3, 27),
+    )
 
     with pytest.raises(Exception):
         tool.invoke({"lookback_days": 14, "limit": 3, "user_id": 99})

@@ -7,8 +7,6 @@ from typing import Any
 from uuid import uuid4
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from langgraph.checkpoint.memory import InMemorySaver
-
 from app.core.config import Settings
 from app.core.time import current_date_in_timezone
 from app.core.database import ReadOnlyDatabase, build_thread_id, validate_user_id
@@ -21,6 +19,10 @@ from app.domain.chatbot.agents.tools.finance_tools import (
     build_recent_spending_anomalies_tool,
     build_spending_by_category_tool,
     build_spending_summary_tool,
+)
+from app.domain.chatbot.agents.tools.sql_tools import (
+    build_sql_query_tool,
+    build_sql_tool_middleware,
 )
 from app.domain.chatbot.repository.conversation_memory_store import (
     ConversationMemoryStore,
@@ -108,7 +110,12 @@ class ChatbotService:
                 },
             ) as span:
                 result = await graph.ainvoke(
-                    {"messages": [HumanMessage(content=message)]},
+                    {
+                        "messages": self._build_graph_input_messages(
+                            user_id=validated_user_id,
+                            conversation_id=resolved_conversation_id,
+                        )
+                    },
                     config={"configurable": {"thread_id": thread_id}},
                 )
                 answer = self._extract_answer(result)
@@ -177,7 +184,12 @@ class ChatbotService:
                     yield {"event": "status", "data": {"message": "routing"}}
 
                     async for event in graph.astream(
-                        {"messages": [HumanMessage(content=message)]},
+                        {
+                            "messages": self._build_graph_input_messages(
+                                user_id=validated_user_id,
+                                conversation_id=resolved_conversation_id,
+                            )
+                        },
                         config={"configurable": {"thread_id": thread_id}},
                         stream_mode=["updates", "messages"],
                         subgraphs=True,
@@ -280,6 +292,32 @@ class ChatbotService:
             conversation_id_factory=self._conversation_id_factory,
         )
         return str(latest_conversation["conversation_id"])
+
+    def _build_graph_input_messages(
+        self,
+        *,
+        user_id: int,
+        conversation_id: str,
+    ) -> list[BaseMessage]:
+        conversation = self._conversation_store.get_conversation(
+            user_id=user_id,
+            conversation_id=conversation_id,
+        )
+        graph_messages: list[BaseMessage] = []
+        for message in conversation["messages"]:
+            role = str(message.get("role") or "").strip()
+            content = str(message.get("content") or "")
+            if role == "user":
+                graph_messages.append(HumanMessage(content=content))
+                continue
+            if role == "assistant":
+                graph_messages.append(
+                    AIMessage(
+                        content=content,
+                        name=SUPERVISOR_NODE_NAME,
+                    )
+                )
+        return graph_messages
 
     @staticmethod
     def _extract_answer(result: dict[str, Any]) -> str:
@@ -517,6 +555,7 @@ def _build_user_graph_factory(
         return build_chatbot_graph(
             settings=settings,
             tools=tool_bundle,
+            checkpointer=None,
             today=today_factory(),
         )
 
@@ -528,7 +567,6 @@ def _build_request_scoped_graph_factory(
     settings: Settings,
     tracer: LangfuseTraceLogger,
 ) -> Callable[[int, Any], Any]:
-    checkpointer = InMemorySaver()
     model_factory = _build_cached_model_factory(
         settings=settings,
         tracer=tracer,
@@ -546,7 +584,7 @@ def _build_request_scoped_graph_factory(
             settings=settings,
             model_factory=model_factory,
             tools=tool_bundle,
-            checkpointer=checkpointer,
+            checkpointer=None,
             today=today_factory(),
         )
 
@@ -602,7 +640,14 @@ def _build_tool_bundle(
             build_recent_spending_anomalies_tool(
                 repository=repository,
                 user_id=user_id,
+                today_factory=resolved_today_factory,
             ),
+        ],
+        sql=[
+            build_sql_query_tool(database=repository.runner),
+        ],
+        sql_middleware=[
+            build_sql_tool_middleware(user_id=user_id),
         ],
     )
 

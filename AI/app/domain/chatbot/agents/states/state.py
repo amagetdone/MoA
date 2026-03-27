@@ -12,3 +12,10 @@ class ChatbotGraphState(TypedDict, total=False):
     warnings: list[str]
     tool_summaries: list[dict[str, Any]]
     final_answer: str | None
+    active_route: str | None
+    specialist_answer: str | None
+    candidate_sql: str | None
+    validator_decision: str | None
+    validator_feedback: str | None
+    validated_sql: str | None
+    sql_result: str | None
