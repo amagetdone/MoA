@@ -110,6 +110,7 @@ public class ExecuteAdminCardPaymentUseCase {
 			"CARD",
 			String.valueOf(override.getTransactionUniqueNo()),
 			override.getTransactionBalance(),
+			null,
 			override.getMerchant() == null ? override.getTransactionMemo() : override.getMerchant().getName(),
 			override.getTransactionDateTime()
 		));
