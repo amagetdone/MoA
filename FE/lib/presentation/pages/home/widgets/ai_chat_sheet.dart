@@ -180,7 +180,7 @@ class _AiChatSheetState extends ConsumerState<AiChatSheet> {
                               decoration: BoxDecoration(
                                 color: isUser
                                     ? AppColors.orange500
-                                    : colors.gray50,
+                                    : colors.gray100,
                                 borderRadius: BorderRadius.only(
                                   topLeft: Radius.circular(18.r),
                                   topRight: Radius.circular(18.r),
@@ -218,7 +218,7 @@ class _AiChatSheetState extends ConsumerState<AiChatSheet> {
                               vertical: 12.h,
                             ),
                             decoration: BoxDecoration(
-                              color: colors.gray50,
+                              color: colors.gray100,
                               borderRadius: BorderRadius.circular(18.r),
                             ),
                             child: Row(

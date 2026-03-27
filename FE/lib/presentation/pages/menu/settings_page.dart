@@ -171,7 +171,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     width: 40.w,
                     height: 40.w,
                     decoration: BoxDecoration(
-                      color: colors.gray50,
+                      color: colors.gray100,
                       borderRadius: BorderRadius.circular(10.r),
                       border: Border.all(color: colors.borderDefault),
                     ),
@@ -180,7 +180,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           ? Icons.dark_mode_outlined
                           : Icons.light_mode_outlined,
                       size: 20.w,
-                      color: colors.gray500,
+                      color: colors.textSecondary,
                     ),
                   ),
                   SizedBox(width: 14.w),
@@ -212,14 +212,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     width: 40.w,
                     height: 40.w,
                     decoration: BoxDecoration(
-                      color: colors.gray50,
+                      color: colors.gray100,
                       borderRadius: BorderRadius.circular(10.r),
                       border: Border.all(color: colors.borderDefault),
                     ),
                     child: Icon(
                       Icons.notifications_outlined,
                       size: 20.w,
-                      color: colors.gray500,
+                      color: colors.textSecondary,
                     ),
                   ),
                   SizedBox(width: 14.w),

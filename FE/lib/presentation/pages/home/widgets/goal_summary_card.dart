@@ -87,7 +87,7 @@ class _GoalHeaderIcon extends StatelessWidget {
       width: 42.w,
       height: 42.w,
       decoration: BoxDecoration(
-        color: colors.gray50,
+        color: colors.gray100,
         borderRadius: BorderRadius.circular(14.r),
       ),
       child: Icon(

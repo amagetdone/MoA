@@ -248,7 +248,7 @@ class _ProfileAvatar extends StatelessWidget {
     final colors = AppColors.of(context);
 
     Widget fallback() =>
-        Icon(Icons.person_outline, size: 28.w, color: colors.gray500);
+        Icon(Icons.person_outline, size: 28.w, color: colors.textSecondary);
 
     return Container(
       width: 48.w,

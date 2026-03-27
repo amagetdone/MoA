@@ -478,6 +478,7 @@ class _LineChartCardState extends State<_LineChartCard> {
                           lineTouchData: LineTouchData(
                             enabled: true,
                             handleBuiltInTouches: false,
+                            touchSpotThreshold: 24,
                             touchTooltipData: LineTouchTooltipData(
                               fitInsideHorizontally: true,
                               fitInsideVertically: true,
@@ -503,12 +504,20 @@ class _LineChartCardState extends State<_LineChartCard> {
                                   .toList(),
                             ),
                             touchCallback: (event, response) {
+                              final touchedIndex =
+                                  response?.lineBarSpots?.isEmpty ?? true
+                                  ? null
+                                  : response!.lineBarSpots!.first.spotIndex;
                               if (event is FlTapUpEvent) {
                                 setState(() {
-                                  _selectedIndex =
-                                      response?.lineBarSpots?.isEmpty ?? true
-                                      ? null
-                                      : response!.lineBarSpots!.first.spotIndex;
+                                  _selectedIndex = touchedIndex;
+                                });
+                              } else if (touchedIndex != null &&
+                                  event is! FlPanEndEvent &&
+                                  event is! FlLongPressEnd &&
+                                  event is! FlPointerExitEvent) {
+                                setState(() {
+                                  _selectedIndex = touchedIndex;
                                 });
                               }
                             },
@@ -910,11 +919,14 @@ class _MetricRow extends StatelessWidget {
             color: leftColor,
           ),
         ),
+        SizedBox(width: 12.w),
         Expanded(
           child: _MetricBlock(
             label: rightLabel,
             value: rightValue,
             color: rightColor,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            textAlign: TextAlign.end,
           ),
         ),
       ],
@@ -927,36 +939,39 @@ class _MetricBlock extends StatelessWidget {
     required this.label,
     required this.value,
     required this.color,
+    this.crossAxisAlignment = CrossAxisAlignment.start,
+    this.textAlign = TextAlign.start,
   });
 
   final String label;
   final String value;
   final Color color;
+  final CrossAxisAlignment crossAxisAlignment;
+  final TextAlign textAlign;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    return Padding(
-      padding: EdgeInsets.only(right: 8.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: AppTextStyles.caption.copyWith(color: colors.textTertiary),
+    return Column(
+      crossAxisAlignment: crossAxisAlignment,
+      children: [
+        Text(
+          label,
+          textAlign: textAlign,
+          style: AppTextStyles.caption.copyWith(color: colors.textTertiary),
+        ),
+        SizedBox(height: 4.h),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: textAlign,
+          style: AppTextStyles.bodySm.copyWith(
+            color: color,
+            fontWeight: FontWeight.w700,
           ),
-          SizedBox(height: 4.h),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.bodySm.copyWith(
-              color: color,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -996,7 +1011,7 @@ class _ZoomButton extends StatelessWidget {
         width: 28.w,
         height: 28.w,
         decoration: BoxDecoration(
-          color: colors.gray50,
+          color: colors.gray100,
           borderRadius: BorderRadius.circular(999.r),
         ),
         child: Icon(icon, size: 18.w, color: colors.textPrimary),

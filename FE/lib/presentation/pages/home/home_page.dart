@@ -508,7 +508,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                                 : Icon(
                                                     Icons.pie_chart_outline,
                                                     size: 48.w,
-                                                    color: colors.gray100,
+                                                    color: colors.textTertiary,
                                                   ),
                                           ),
                                           SizedBox(height: 12.h),
