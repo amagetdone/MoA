@@ -94,11 +94,13 @@ class BankCatalog {
     BankCatalogItem(
       code: '037',
       name: '전북은행',
+      logoPath: 'assets/images/logo/gwangju_logo.jpg',
       aliases: ['JB전북은행'],
     ),
     BankCatalogItem(
       code: '035',
       name: '제주은행',
+      logoPath: 'assets/images/logo/shinhan_logo.png',
     ),
     BankCatalogItem(
       code: '007',
