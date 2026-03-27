@@ -56,22 +56,22 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
 
     for (int i = 0; i < sorted.length; i++) {
       if (i < 4) {
-        entries.add(_DonutEntry(
-          name: sorted[i].key,
-          amount: sorted[i].value,
-          color: _donutColors[i],
-        ));
+        entries.add(
+          _DonutEntry(
+            name: sorted[i].key,
+            amount: sorted[i].value,
+            color: _donutColors[i],
+          ),
+        );
       } else {
         othersAmount += sorted[i].value;
       }
     }
 
     if (othersAmount > 0) {
-      entries.add(_DonutEntry(
-        name: '기타',
-        amount: othersAmount,
-        color: _donutColors[4],
-      ));
+      entries.add(
+        _DonutEntry(name: '기타', amount: othersAmount, color: _donutColors[4]),
+      );
     }
 
     return entries;
@@ -89,15 +89,17 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
 
     final centerEntry =
         _selectedIndex != null && _selectedIndex! < entries.length
-            ? entries[_selectedIndex!]
-            : null;
+        ? entries[_selectedIndex!]
+        : null;
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final isCompact = constraints.maxWidth < 340;
+        final hasBoundedHeight = constraints.maxHeight.isFinite;
         final hasSelection =
             _selectedIndex != null && _selectedIndex! < entries.length;
         final cardPadding = isCompact ? 14.w : 16.w;
+        final contentWidth = constraints.maxWidth - (cardPadding * 2);
         final centerSpaceRadius = isCompact ? 48.w : 55.w;
         final baseRadius = isCompact ? 28.w : 32.w;
         final selectedRadius = isCompact ? 34.w : 38.w;
@@ -105,10 +107,79 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
         final legendFontSize = hasSelection
             ? (isCompact ? 8.sp : 9.sp)
             : (isCompact ? 9.sp : 10.sp);
+        final chartHeight = (contentWidth * 0.72)
+            .clamp(180.w, 240.w)
+            .toDouble();
+
+        final chart = Stack(
+          alignment: Alignment.center,
+          children: [
+            PieChart(
+              PieChartData(
+                sectionsSpace: 2,
+                centerSpaceRadius: centerSpaceRadius,
+                startDegreeOffset: -90,
+                pieTouchData: PieTouchData(
+                  touchCallback: (event, response) {
+                    if (response == null || response.touchedSection == null) {
+                      return;
+                    }
+                    if (event is FlTapUpEvent) {
+                      final idx = response.touchedSection!.touchedSectionIndex;
+                      if (idx >= 0 && idx < entries.length) {
+                        setState(() {
+                          _selectedIndex = _selectedIndex == idx ? null : idx;
+                        });
+                      }
+                    }
+                  },
+                ),
+                sections: entries.asMap().entries.map((e) {
+                  final idx = e.key;
+                  final entry = e.value;
+                  final isSelected = _selectedIndex == idx;
+                  return PieChartSectionData(
+                    value: entry.amount.toDouble(),
+                    color: entry.color,
+                    radius: isSelected ? selectedRadius : baseRadius,
+                    title: '',
+                  );
+                }).toList(),
+              ),
+            ),
+            IgnorePointer(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    centerEntry?.name ?? '총 소비',
+                    style: AppTextStyles.caption.copyWith(
+                      color: colors.textTertiary,
+                      fontSize: titleFontSize,
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    CurrencyFormatter.formatCompact(
+                      centerEntry?.amount ?? total,
+                    ),
+                    style: AppTextStyles.headingMd.copyWith(
+                      color: colors.textPrimary,
+                      fontSize: isCompact ? 14.sp : 15.sp,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
 
         return MoreCard(
           padding: EdgeInsets.all(cardPadding),
           child: Column(
+            mainAxisSize: hasBoundedHeight
+                ? MainAxisSize.max
+                : MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
@@ -140,74 +211,11 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
                 ],
               ),
               SizedBox(height: hasSelection ? 8.h : (isCompact ? 10.h : 14.h)),
-              Expanded(
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    PieChart(
-                      PieChartData(
-                        sectionsSpace: 2,
-                        centerSpaceRadius: centerSpaceRadius,
-                        startDegreeOffset: -90,
-                        pieTouchData: PieTouchData(
-                          touchCallback: (event, response) {
-                            if (response == null ||
-                                response.touchedSection == null) {
-                              return;
-                            }
-                            if (event is FlTapUpEvent) {
-                              final idx =
-                                  response.touchedSection!.touchedSectionIndex;
-                              if (idx >= 0 && idx < entries.length) {
-                                setState(() {
-                                  _selectedIndex =
-                                      _selectedIndex == idx ? null : idx;
-                                });
-                              }
-                            }
-                          },
-                        ),
-                        sections: entries.asMap().entries.map((e) {
-                          final idx = e.key;
-                          final entry = e.value;
-                          final isSelected = _selectedIndex == idx;
-                          return PieChartSectionData(
-                            value: entry.amount.toDouble(),
-                            color: entry.color,
-                            radius: isSelected ? selectedRadius : baseRadius,
-                            title: '',
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                    IgnorePointer(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            centerEntry?.name ?? '총 소비',
-                            style: AppTextStyles.caption.copyWith(
-                              color: colors.textTertiary,
-                              fontSize: titleFontSize,
-                            ),
-                          ),
-                          SizedBox(height: 2.h),
-                          Text(
-                            CurrencyFormatter.formatCompact(
-                              centerEntry?.amount ?? total,
-                            ),
-                            style: AppTextStyles.headingMd.copyWith(
-                              color: colors.textPrimary,
-                              fontSize: isCompact ? 14.sp : 15.sp,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (_selectedIndex != null && _selectedIndex! < entries.length) ...[
+              if (hasBoundedHeight) Expanded(child: chart),
+              if (!hasBoundedHeight)
+                SizedBox(height: chartHeight, child: chart),
+              if (_selectedIndex != null &&
+                  _selectedIndex! < entries.length) ...[
                 SizedBox(height: isCompact ? 4.h : 6.h),
                 _SelectedInfo(
                   entry: entries[_selectedIndex!],
@@ -219,7 +227,9 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
               Center(
                 child: Wrap(
                   alignment: WrapAlignment.center,
-                  spacing: hasSelection ? (isCompact ? 8.w : 12.w) : (isCompact ? 10.w : 14.w),
+                  spacing: hasSelection
+                      ? (isCompact ? 8.w : 12.w)
+                      : (isCompact ? 10.w : 14.w),
                   runSpacing: hasSelection ? 4.h : 6.h,
                   children: entries.map((e) {
                     final percent = total > 0
