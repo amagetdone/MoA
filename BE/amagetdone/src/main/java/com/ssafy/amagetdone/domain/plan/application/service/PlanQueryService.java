@@ -74,7 +74,7 @@ public class PlanQueryService {
 			displayAllocations.stream()
 				.map(displayAllocation -> new PlanDetailResponse.WeeklyPlan(
 					displayAllocation.displayWeek(),
-					zero(displayAllocation.allocation().getPlannedAmount())
+					displayAllocation.actualAmount()
 				))
 				.toList(),
 			resolveCurrentWeek(plan.getUser(), displayAllocations),
@@ -97,7 +97,7 @@ public class PlanQueryService {
 		List<PlanWeeklyPlansPageResponse.WeeklyPlan> weeklyPlans = displayAllocations.subList(fromIndex, toIndex).stream()
 			.map(displayAllocation -> new PlanWeeklyPlansPageResponse.WeeklyPlan(
 				displayAllocation.displayWeek(),
-				zero(displayAllocation.allocation().getPlannedAmount())
+				displayAllocation.actualAmount()
 			))
 			.toList();
 		int totalPages = displayAllocations.isEmpty() ? 0 : (int)Math.ceil((double)displayAllocations.size() / resolvedSize);
