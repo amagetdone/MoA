@@ -9,9 +9,12 @@ public class TestSocialUserProperties {
 
 	private static final LocalDate DEFAULT_BIRTH_DATE = LocalDate.of(1997, 3, 1);
 	private static final boolean DEFAULT_HAS_FIXED_INCOME = true;
+	private static final String DEFAULT_EMAIL_PREFIX = "moa";
+	private static final String DEFAULT_EMAIL_DOMAIN = "tester.com";
 
 	private String nickname;
-	private String email;
+	private String emailPrefix = DEFAULT_EMAIL_PREFIX;
+	private String emailDomain = DEFAULT_EMAIL_DOMAIN;
 	private String userApiKey;
 	private LocalDate birthDate = DEFAULT_BIRTH_DATE;
 	private Boolean hasFixedIncome = DEFAULT_HAS_FIXED_INCOME;
@@ -24,12 +27,20 @@ public class TestSocialUserProperties {
 		this.nickname = nickname;
 	}
 
-	public String getEmail() {
-		return email;
+	public String getEmailPrefix() {
+		return emailPrefix;
 	}
 
-	public void setEmail(String email) {
-		this.email = email;
+	public void setEmailPrefix(String emailPrefix) {
+		this.emailPrefix = emailPrefix;
+	}
+
+	public String getEmailDomain() {
+		return emailDomain;
+	}
+
+	public void setEmailDomain(String emailDomain) {
+		this.emailDomain = emailDomain;
 	}
 
 	public String getUserApiKey() {
@@ -61,7 +72,9 @@ public class TestSocialUserProperties {
 	}
 
 	public String resolveEmail(int testUserId) {
-		return "test" + testUserId + "@tester.com";
+		String prefix = isBlank(emailPrefix) ? DEFAULT_EMAIL_PREFIX : emailPrefix;
+		String domain = isBlank(emailDomain) ? DEFAULT_EMAIL_DOMAIN : emailDomain;
+		return prefix + testUserId + "@" + domain;
 	}
 
 	public LocalDate resolveBirthDate(int testUserId) {
@@ -74,5 +87,9 @@ public class TestSocialUserProperties {
 
 	private String suffix(int testUserId) {
 		return testUserId == 1 ? "" : String.valueOf(testUserId);
+	}
+
+	private boolean isBlank(String value) {
+		return value == null || value.isBlank();
 	}
 }
