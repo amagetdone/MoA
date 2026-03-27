@@ -7,6 +7,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:more_app/core/notifications/firebase_web_push_config.dart';
+import 'package:more_app/core/notifications/local_notification_service.dart';
 import 'package:more_app/core/notifications/notification_inbox_persistence.dart';
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
 import 'package:more_app/data/datasources/local/auth_local_datasource.dart';
@@ -24,11 +25,13 @@ class PushNotificationSyncService {
     required AuthLocalDataSource authLocalDataSource,
     required AppLocalDataSource appLocalDataSource,
     required NotificationInboxRepository notificationInboxRepository,
+    required LocalNotificationService localNotificationService,
     FlutterSecureStorage? secureStorage,
   }) : _remoteDataSource = remoteDataSource,
        _authLocalDataSource = authLocalDataSource,
        _appLocalDataSource = appLocalDataSource,
        _notificationInboxRepository = notificationInboxRepository,
+       _localNotificationService = localNotificationService,
        _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   static const _installationIdKey = 'push_installation_id';
@@ -37,6 +40,7 @@ class PushNotificationSyncService {
   final AuthLocalDataSource _authLocalDataSource;
   final AppLocalDataSource _appLocalDataSource;
   final NotificationInboxRepository _notificationInboxRepository;
+  final LocalNotificationService _localNotificationService;
   final FlutterSecureStorage _secureStorage;
 
   StreamSubscription<String>? _tokenRefreshSubscription;
@@ -78,6 +82,7 @@ class PushNotificationSyncService {
 
     await _notificationInboxRepository.initialize();
     await _restoreInboxFromLaunchPayload();
+    await _localNotificationService.initialize();
 
     if (!await _ensureFirebaseReady()) {
       return;
@@ -98,7 +103,7 @@ class PushNotificationSyncService {
     _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen((
       message,
     ) {
-      unawaited(_notificationInboxRepository.saveRemoteMessage(message));
+      unawaited(_handleForegroundMessage(message));
     });
 
     _messageOpenedSubscription = FirebaseMessaging.onMessageOpenedApp.listen((
@@ -404,6 +409,11 @@ class PushNotificationSyncService {
     Future<void>.delayed(const Duration(milliseconds: 250), () {
       appRouter.go(route);
     });
+  }
+
+  Future<void> _handleForegroundMessage(RemoteMessage message) async {
+    await _notificationInboxRepository.saveRemoteMessage(message);
+    await _localNotificationService.showRemoteMessage(message);
   }
 
   Future<String> _getOrCreateInstallationId() async {

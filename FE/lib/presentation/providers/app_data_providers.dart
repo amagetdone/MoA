@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:more_app/core/security/biometric_auth_service.dart';
+import 'package:more_app/core/notifications/local_notification_service.dart';
 import 'package:more_app/core/notifications/push_notification_sync_service.dart';
 import 'package:more_app/core/network/api_client.dart';
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
@@ -90,10 +91,17 @@ final pushNotificationSyncServiceProvider =
         notificationInboxRepository: ref.read(
           notificationInboxRepositoryProvider,
         ),
+        localNotificationService: ref.read(localNotificationServiceProvider),
       );
       ref.onDispose(service.dispose);
       return service;
     });
+
+final localNotificationServiceProvider = Provider<LocalNotificationService>((
+  ref,
+) {
+  return LocalNotificationService();
+});
 
 final notificationInboxRepositoryProvider =
     Provider<NotificationInboxRepository>((ref) {
