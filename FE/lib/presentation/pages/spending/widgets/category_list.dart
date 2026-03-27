@@ -10,11 +10,7 @@ class CategoryList extends StatefulWidget {
   final List<SpendingCategory> categories;
   final int? totalAmount;
 
-  const CategoryList({
-    super.key,
-    required this.categories,
-    this.totalAmount,
-  });
+  const CategoryList({super.key, required this.categories, this.totalAmount});
 
   @override
   State<CategoryList> createState() => _CategoryListState();
@@ -26,6 +22,7 @@ class _CategoryListState extends State<CategoryList> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final textScaler = MediaQuery.textScalerOf(context);
     final labelStyle = AppTextStyles.bodyMd.copyWith(
       color: colors.textSecondary,
       fontWeight: FontWeight.w600,
@@ -35,18 +32,22 @@ class _CategoryListState extends State<CategoryList> {
     final sortedCategories = [...widget.categories]
       ..sort((a, b) => b.amount.compareTo(a.amount));
 
-    final displayItems = _isExpanded ? sortedCategories : sortedCategories.take(3).toList();
+    final displayItems = _isExpanded
+        ? sortedCategories
+        : sortedCategories.take(3).toList();
     final labelWidth = _measureLabelWidth(
       context: context,
       labels: sortedCategories.map((category) => category.name),
       style: labelStyle,
+      textScaler: textScaler,
     );
     final contentGap = 12.w;
 
     return Column(
       children: [
         ...displayItems.map((category) {
-          final bool useTotalRatio = widget.totalAmount != null && widget.totalAmount! > 0;
+          final bool useTotalRatio =
+              widget.totalAmount != null && widget.totalAmount! > 0;
           final backendRatio = category.ratio; // 백엔드에서 % 단위로 옴 (예: 25.5)
           final bool useBackendRatio = backendRatio != null && backendRatio > 0;
 
@@ -54,10 +55,10 @@ class _CategoryListState extends State<CategoryList> {
           final displayPercent = useBackendRatio
               ? backendRatio
               : useTotalRatio
-                  ? (category.amount / widget.totalAmount! * 100)
-                  : category.budget > 0
-                      ? (category.amount / category.budget * 100)
-                      : 0.0;
+              ? (category.amount / widget.totalAmount! * 100)
+              : category.budget > 0
+              ? (category.amount / category.budget * 100)
+              : 0.0;
           // 프로그레스 바용 0.0~1.0
           final barRatio = (displayPercent / 100).clamp(0.0, 1.0);
 
@@ -108,15 +109,24 @@ class _CategoryListState extends State<CategoryList> {
                         category.name,
                         textAlign: TextAlign.center,
                         style: labelStyle,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     SizedBox(width: contentGap),
                     Expanded(
-                      child: MoreProgressBar(
-                        progress: barRatio,
-                        color: AppColors.orange500,
-                        backgroundColor: colors.gray50,
-                        height: 14.h,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: FractionallySizedBox(
+                          widthFactor: 0.9,
+                          child: MoreProgressBar(
+                            progress: barRatio,
+                            color: AppColors.orange500,
+                            backgroundColor: colors.gray50,
+                            height: 14.h,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -144,6 +154,7 @@ class _CategoryListState extends State<CategoryList> {
     required BuildContext context,
     required Iterable<String> labels,
     required TextStyle style,
+    required TextScaler textScaler,
   }) {
     final textDirection = Directionality.of(context);
     var maxWidth = 0.0;
@@ -152,6 +163,7 @@ class _CategoryListState extends State<CategoryList> {
       final painter = TextPainter(
         text: TextSpan(text: label, style: style),
         textDirection: textDirection,
+        textScaler: textScaler,
         maxLines: 1,
       )..layout();
       if (painter.width > maxWidth) {
@@ -159,6 +171,6 @@ class _CategoryListState extends State<CategoryList> {
       }
     }
 
-    return maxWidth + 8.w;
+    return maxWidth + 16.w;
   }
 }

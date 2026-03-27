@@ -34,8 +34,14 @@ class GoalVideoThumb extends StatefulWidget {
 }
 
 class _GoalVideoThumbState extends State<GoalVideoThumb> {
+  static const Duration _endFrameEpsilon = Duration(milliseconds: 50);
+  static const Duration _frameWarmupDelay = Duration(milliseconds: 180);
+  static const Duration _firstFrameTimeout = Duration(milliseconds: 900);
+  static const Duration _firstFramePollInterval = Duration(milliseconds: 40);
+  static const Duration _minimumVisiblePlayback = Duration(milliseconds: 50);
   VideoPlayerController? _controller;
   bool _ready = false;
+  bool _displayReady = false;
   bool _error = false;
   bool _stopped = false;
   int _loadVersion = 0;
@@ -63,6 +69,7 @@ class _GoalVideoThumbState extends State<GoalVideoThumb> {
     final previousController = _controller;
     _controller = null;
     _ready = false;
+    _displayReady = false;
     _error = false;
     _stopped = false;
     if (mounted) {
@@ -92,11 +99,12 @@ class _GoalVideoThumbState extends State<GoalVideoThumb> {
         return;
       }
 
-      final target = ctrl.value.duration * widget.progressRate.clamp(0.0, 1.0);
+      await ctrl.setLooping(false);
 
-      if (widget.playAnimation &&
-          widget.progressRate > 0.0 &&
-          widget.progressRate < 1.0) {
+      final target = _resolveTargetPosition(ctrl.value.duration);
+      final shouldAnimate = widget.playAnimation && target > Duration.zero;
+
+      if (shouldAnimate) {
         ctrl.addListener(() {
           if (_stopped) {
             return;
@@ -107,19 +115,41 @@ class _GoalVideoThumbState extends State<GoalVideoThumb> {
             ctrl.seekTo(target);
           }
         });
-        setState(() {
-          _controller = ctrl;
-          _ready = true;
-        });
+
         await ctrl.seekTo(Duration.zero);
-        await ctrl.play();
-      } else {
-        await ctrl.seekTo(target);
-        await ctrl.pause();
+        if (!mounted || version != _loadVersion) {
+          ctrl.dispose();
+          return;
+        }
+
         setState(() {
           _controller = ctrl;
           _ready = true;
+          _displayReady = false;
         });
+        await ctrl.play();
+        if (!await _waitForFirstFrame(
+          ctrl,
+          version,
+          minimumPosition: _minimumVisiblePlayback,
+        )) {
+          return;
+        }
+        await Future<void>.delayed(_frameWarmupDelay);
+        if (!mounted || version != _loadVersion || _controller != ctrl) {
+          return;
+        }
+        setState(() => _displayReady = true);
+      } else {
+        setState(() {
+          _controller = ctrl;
+          _ready = true;
+          _displayReady = false;
+        });
+        if (!await _warmUpStaticFrame(ctrl, version, target: target)) {
+          return;
+        }
+        setState(() => _displayReady = true);
       }
     } catch (_) {
       ctrl.dispose();
@@ -127,6 +157,76 @@ class _GoalVideoThumbState extends State<GoalVideoThumb> {
         setState(() => _error = true);
       }
     }
+  }
+
+  Future<bool> _warmUpStaticFrame(
+    VideoPlayerController ctrl,
+    int version, {
+    required Duration target,
+  }) async {
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || version != _loadVersion || _controller != ctrl) {
+      return false;
+    }
+
+    final warmupStart = target > const Duration(milliseconds: 180)
+        ? target - const Duration(milliseconds: 180)
+        : Duration.zero;
+
+    await ctrl.seekTo(warmupStart);
+    await ctrl.play();
+    if (!await _waitForFirstFrame(
+      ctrl,
+      version,
+      minimumPosition: warmupStart + _minimumVisiblePlayback,
+    )) {
+      return false;
+    }
+    await ctrl.pause();
+    await ctrl.seekTo(target);
+    await Future<void>.delayed(_frameWarmupDelay);
+
+    return mounted && version == _loadVersion && _controller == ctrl;
+  }
+
+  Future<bool> _waitForFirstFrame(
+    VideoPlayerController ctrl,
+    int version, {
+    required Duration minimumPosition,
+  }) async {
+    final deadline = DateTime.now().add(_firstFrameTimeout);
+
+    while (DateTime.now().isBefore(deadline)) {
+      if (!mounted || version != _loadVersion || _controller != ctrl) {
+        return false;
+      }
+
+      if (ctrl.value.position >= minimumPosition && !ctrl.value.isBuffering) {
+        return true;
+      }
+
+      await Future<void>.delayed(_firstFramePollInterval);
+    }
+
+    return mounted && version == _loadVersion && _controller == ctrl;
+  }
+
+  Duration _resolveTargetPosition(Duration duration) {
+    if (duration <= Duration.zero) {
+      return Duration.zero;
+    }
+
+    final clampedProgress = widget.progressRate.clamp(0.0, 1.0);
+    final totalMilliseconds = duration.inMilliseconds;
+    var targetMilliseconds = (totalMilliseconds * clampedProgress).round();
+
+    if (clampedProgress >= 1.0 &&
+        totalMilliseconds > _endFrameEpsilon.inMilliseconds) {
+      targetMilliseconds = totalMilliseconds - _endFrameEpsilon.inMilliseconds;
+    }
+
+    targetMilliseconds = targetMilliseconds.clamp(0, totalMilliseconds);
+    return Duration(milliseconds: targetMilliseconds);
   }
 
   @override
@@ -175,19 +275,54 @@ class _GoalVideoThumbState extends State<GoalVideoThumb> {
       );
     }
 
+    final colors = AppColors.of(context);
+    final loadingOverlay = Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFFF2E0), Color(0xFFF6FAEF)],
+        ),
+        border: Border.all(color: colors.gray500.withValues(alpha: 0.15)),
+      ),
+      child: Center(
+        child: SizedBox(
+          width: height * 0.24,
+          height: height * 0.24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.4,
+            color: AppColors.orange500,
+            backgroundColor: colors.gray500.withValues(alpha: 0.2),
+          ),
+        ),
+      ),
+    );
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: SizedBox(
         width: width,
         height: height,
-        child: FittedBox(
-          fit: BoxFit.cover,
-          clipBehavior: Clip.hardEdge,
-          child: SizedBox(
-            width: _controller!.value.size.width,
-            height: _controller!.value.size.height,
-            child: VideoPlayer(_controller!),
-          ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Opacity(
+              opacity: _displayReady ? 1 : 0,
+              child: FittedBox(
+                fit: BoxFit.cover,
+                clipBehavior: Clip.hardEdge,
+                child: SizedBox(
+                  width: _controller!.value.size.width,
+                  height: _controller!.value.size.height,
+                  child: VideoPlayer(_controller!),
+                ),
+              ),
+            ),
+            if (!_displayReady) loadingOverlay,
+          ],
         ),
       ),
     );
