@@ -19,6 +19,8 @@ class BiometricAppLock extends ConsumerStatefulWidget {
 
 class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
     with WidgetsBindingObserver {
+  static const Duration _resumeLockThreshold = Duration(seconds: 5);
+
   final _pinController = TextEditingController();
 
   bool _isLockVisible = false;
@@ -29,6 +31,7 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
   String? _availabilityNotice;
   String? _message;
   String? _pinError;
+  DateTime? _backgroundedAt;
 
   @override
   void initState() {
@@ -53,14 +56,21 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
       return;
     }
 
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
+    if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
       _shouldLockOnResume = true;
+      _backgroundedAt = DateTime.now();
       return;
     }
 
     if (state == AppLifecycleState.resumed && _shouldLockOnResume) {
+      final backgroundedAt = _backgroundedAt;
+      _backgroundedAt = null;
+      if (backgroundedAt == null ||
+          DateTime.now().difference(backgroundedAt) < _resumeLockThreshold) {
+        _shouldLockOnResume = false;
+        return;
+      }
       _startUnlockFlow();
     }
   }
@@ -112,6 +122,7 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
         _isLockVisible = false;
         _isAuthenticating = false;
         _shouldLockOnResume = false;
+        _backgroundedAt = null;
         _canUseDeviceAuth = false;
         _availabilityNotice = '앱 PIN이 설정되어 있지 않아 앱 잠금을 해제했어요.';
         _message = null;
@@ -202,6 +213,7 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
       _isLockVisible = false;
       _isAuthenticating = false;
       _shouldLockOnResume = false;
+      _backgroundedAt = null;
       _canUseDeviceAuth = false;
       _availabilityNotice = null;
       _message = null;
@@ -230,6 +242,7 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
           _isLockVisible = false;
           _isAuthenticating = false;
           _shouldLockOnResume = false;
+          _backgroundedAt = null;
           _didAttemptInitialUnlock = false;
           _canUseDeviceAuth = false;
           _availabilityNotice = null;
@@ -256,6 +269,7 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
           _isLockVisible = false;
           _isAuthenticating = false;
           _shouldLockOnResume = false;
+          _backgroundedAt = null;
           _didAttemptInitialUnlock = false;
           _canUseDeviceAuth = false;
           _availabilityNotice = null;
