@@ -23,5 +23,7 @@ public interface BudgetAdjustmentRepository extends JpaRepository<BudgetAdjustme
 
 	List<BudgetAdjustment> findAllByBudgetWeekIn(List<BudgetWeek> budgetWeeks);
 
+	void deleteAllByBudgetWeekIn(List<BudgetWeek> budgetWeeks);
+
 	void deleteAllByBudgetWeekInAndAdjustmentType(List<BudgetWeek> budgetWeeks, BudgetAdjustmentType adjustmentType);
 }

@@ -15,12 +15,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import com.ssafy.amagetdone.domain.account.model.repository.PocketRepository;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetMonth;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseMonth;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialWeekAllocation;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetAdjustmentRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetMonthRepository;
+import com.ssafy.amagetdone.domain.budget.model.repository.BudgetRolloverRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseMonthRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.EssentialWeekAllocationRepository;
@@ -51,6 +53,8 @@ public class BudgetAllocationService {
 	private final EssentialExpenseMonthRepository essentialExpenseMonthRepository;
 	private final EssentialWeekAllocationRepository essentialWeekAllocationRepository;
 	private final PlanWeekAllocationRepository planWeekAllocationRepository;
+	private final BudgetRolloverRepository budgetRolloverRepository;
+	private final PocketRepository pocketRepository;
 
 	public AllocationResult allocateBudget(
 		User user,
@@ -347,6 +351,10 @@ public class BudgetAllocationService {
 			.filter(budgetWeek -> !retainedIds.contains(budgetWeek.getId()))
 			.toList();
 		if (!obsoleteBudgetWeeks.isEmpty()) {
+			budgetAdjustmentRepository.deleteAllByBudgetWeekIn(obsoleteBudgetWeeks);
+			budgetRolloverRepository.deleteAllBySourceBudgetWeekIn(obsoleteBudgetWeeks);
+			budgetRolloverRepository.deleteAllByTargetBudgetWeekIn(obsoleteBudgetWeeks);
+			pocketRepository.deleteAllByBudgetWeekIn(obsoleteBudgetWeeks);
 			budgetWeekRepository.deleteAll(obsoleteBudgetWeeks);
 		}
 	}

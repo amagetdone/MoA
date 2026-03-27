@@ -16,6 +16,13 @@ export TZ="Asia/Seoul"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+INPUT_BASE="${BASE:-}"
+INPUT_ACCESS_TOKEN="${ACCESS_TOKEN:-}"
+INPUT_ACCOUNT_NO="${ACCOUNT_NO:-}"
+INPUT_CARD_NO="${CARD_NO:-}"
+INPUT_USER_KEY="${USER_KEY:-}"
+INPUT_FIN_BASE="${FIN_BASE:-}"
+INPUT_FIN_API_KEY="${FIN_API_KEY:-}"
 
 if [[ -f "$ROOT_DIR/.env" ]]; then
   set -a
@@ -24,10 +31,13 @@ if [[ -f "$ROOT_DIR/.env" ]]; then
   set +a
 fi
 
-BASE="${BASE:-https://j14d101.p.ssafy.io/api}"
-ACCESS_TOKEN="${ACCESS_TOKEN:-}"
-ACCOUNT_NO="${ACCOUNT_NO:-}"
-CARD_NO="${CARD_NO:-}"
+BASE="${INPUT_BASE:-${BASE:-https://j14d101.p.ssafy.io/api}}"
+ACCESS_TOKEN="${INPUT_ACCESS_TOKEN:-${ACCESS_TOKEN:-}}"
+ACCOUNT_NO="${INPUT_ACCOUNT_NO:-${ACCOUNT_NO:-}}"
+CARD_NO="${INPUT_CARD_NO:-${CARD_NO:-}}"
+USER_KEY="${INPUT_USER_KEY:-${USER_KEY:-}}"
+FIN_BASE="${INPUT_FIN_BASE:-${FIN_BASE:-https://finopenapi.ssafy.io/ssafy/api/v1}}"
+FIN_API_KEY="${INPUT_FIN_API_KEY:-${FIN_API_KEY:-3eba20d5b7a4430bb53c505cce0c4f18}}"
 
 DO_RESET=false
 if [[ "${1:-}" == "--reset" ]]; then
@@ -53,6 +63,40 @@ fail() {
   exit 1
 }
 
+gen_unique_no() {
+  date +"%Y%m%d%H%M%S"$(printf "%06d" $((RANDOM % 1000000)))
+}
+
+fin_header() {
+  local api_name="$1"
+  local user_key="${2:-}"
+  local unique_no
+  unique_no=$(gen_unique_no)
+  local now_date
+  now_date=$(date +"%Y%m%d")
+  local now_time
+  now_time=$(date +"%H%M%S")
+
+  local header
+  header=$(cat <<HEADER_EOF
+{
+  "apiName": "${api_name}",
+  "transmissionDate": "${now_date}",
+  "transmissionTime": "${now_time}",
+  "institutionCode": "00100",
+  "fintechAppNo": "001",
+  "apiServiceCode": "${api_name}",
+  "institutionTransactionUniqueNo": "${unique_no}",
+  "apiKey": "${FIN_API_KEY}"
+HEADER_EOF
+)
+  if [[ -n "$user_key" ]]; then
+    header="${header}, \"userKey\": \"${user_key}\""
+  fi
+  header="${header} }"
+  echo "$header"
+}
+
 jq_r() {
   local json="$1"
   local path="$2"
@@ -72,6 +116,8 @@ for t in tokens:
         cur = cur[t]
 if cur is None:
     print('null')
+elif isinstance(cur, bool):
+    print('true' if cur else 'false')
 else:
     print(cur)
 " 2>/dev/null || echo ""
@@ -115,27 +161,112 @@ fi
 
 step "내 계좌 조회"
 ACCOUNTS_RES=$(curl -sk "$BASE/v1/accounts/me" -H "$AUTH")
+HAS_ACCOUNT=true
 if [[ -z "$ACCOUNT_NO" ]]; then
   ACCOUNT_NO=$(jq_r "$ACCOUNTS_RES" '.data[0].accountNo')
 fi
 if [[ -z "$ACCOUNT_NO" || "$ACCOUNT_NO" == "null" ]]; then
-  fail "계좌 조회 실패 또는 계좌 없음" "$ACCOUNTS_RES"
+  HAS_ACCOUNT=false
+  ACCOUNT_NO=""
+  echo "  -> 연결 계좌 없음: 자동 계좌 연결을 시도합니다."
+else
+  export ACCOUNT_NO
+  echo "  -> 계좌 선택: $ACCOUNT_NO"
 fi
-export ACCOUNT_NO
-echo "  -> 계좌 선택: $ACCOUNT_NO"
 
-step "내 카드 조회"
-CARDS_RES=$(curl -sk "$BASE/v1/accounts/me/cards" -H "$AUTH")
-if [[ -z "$CARD_NO" ]]; then
-  CARD_NO=$(printf '%s' "$CARDS_RES" | python3 - <<'PY'
+if [[ "$HAS_ACCOUNT" != "true" ]]; then
+  step "계정계 계좌 조회"
+  BANK_RES=$(curl -sk "$BASE/v1/accounts/bank" -H "$AUTH")
+  ACCOUNT_NO=$(jq_r "$BANK_RES" '.data[0].accountNo')
+  if [[ -z "$ACCOUNT_NO" || "$ACCOUNT_NO" == "null" ]]; then
+    fail "계정계 계좌 조회 실패 또는 계좌 없음" "$BANK_RES"
+  fi
+  export ACCOUNT_NO
+  echo "  -> 계정계 계좌 선택: $ACCOUNT_NO"
+
+  step "계좌 실소유 확인"
+  CONFIRM_RES=$(curl -sk -X POST "$BASE/v1/accounts/confirm" \
+    -H "$AUTH" -H "Content-Type: application/json" \
+    -d "{\"accountNo\": \"$ACCOUNT_NO\"}")
+  CONFIRMED=$(jq_r "$CONFIRM_RES" '.data.confirmed')
+  if [[ "$CONFIRMED" != "true" ]]; then
+    fail "계좌 실소유 확인 실패" "$CONFIRM_RES"
+  fi
+  echo "  -> 실소유 확인 완료"
+
+  step "1원 인증 요청"
+  VERIFY_REQ_RES=$(curl -sk -X POST "$BASE/v1/accounts/verification/requests" \
+    -H "$AUTH" -H "Content-Type: application/json" \
+    -d "{\"accountNo\": \"$ACCOUNT_NO\"}")
+  VERIFY_REQ_ID=$(jq_r "$VERIFY_REQ_RES" '.data.verificationId')
+  if [[ -z "$VERIFY_REQ_ID" || "$VERIFY_REQ_ID" == "null" ]]; then
+    fail "1원 인증 요청 실패" "$VERIFY_REQ_RES"
+  fi
+  echo "  -> verificationId=$VERIFY_REQ_ID"
+
+  if [[ -z "$USER_KEY" || -z "$FIN_API_KEY" ]]; then
+    fail "1원 인증 코드 조회에 필요한 USER_KEY 또는 FIN_API_KEY가 없음" \
+      "{\"USER_KEY\":\"${USER_KEY:-}\",\"FIN_API_KEY\":\"${FIN_API_KEY:+SET}\"}"
+  fi
+
+  step "1원 인증 코드 조회"
+  START_DATE=$(date -d "7 days ago" +%Y%m%d 2>/dev/null || date -v-7d +%Y%m%d)
+  END_DATE=$(date +%Y%m%d)
+  VERIFY_TX_RES=$(curl -sk -X POST "$FIN_BASE/edu/demandDeposit/inquireTransactionHistoryList" \
+    -H "Content-Type: application/json" \
+    -d "{\"Header\": $(fin_header inquireTransactionHistoryList "$USER_KEY"), \"accountNo\": \"$ACCOUNT_NO\", \"startDate\": \"$START_DATE\", \"endDate\": \"$END_DATE\", \"transactionType\": \"A\", \"orderByType\": \"DESC\"}")
+  AUTH_CODE=$(printf '%s' "$VERIFY_TX_RES" | python3 -c '
 import json
+import re
+import sys
+
+try:
+    payload = json.load(sys.stdin).get("REC", {})
+    records = payload.get("list", []) if isinstance(payload, dict) else payload
+    for record in records:
+        text = " ".join([
+            str(record.get("transactionSummary", "") or ""),
+            str(record.get("transactionMemo", "") or ""),
+        ]).strip()
+        match = re.search(r"(\d{4,})", text)
+        if match:
+            print(match.group(1))
+            break
+    else:
+        print("")
+except Exception:
+    print("")
+')
+  if [[ -z "$AUTH_CODE" ]]; then
+    fail "1원 인증 코드 조회 실패" "$VERIFY_TX_RES"
+  fi
+  echo "  -> authCode=$AUTH_CODE"
+
+  step "1원 인증 확인"
+  VERIFY_CHECK_RES=$(curl -sk -X POST "$BASE/v1/accounts/verification/check" \
+    -H "$AUTH" -H "Content-Type: application/json" \
+    -d "{\"accountNo\": \"$ACCOUNT_NO\", \"authCode\": \"$AUTH_CODE\"}")
+  VERIFIED=$(jq_r "$VERIFY_CHECK_RES" '.data.verified')
+  if [[ "$VERIFIED" != "true" ]]; then
+    fail "1원 인증 확인 실패" "$VERIFY_CHECK_RES"
+  fi
+  echo "  -> 계좌 연결 완료"
+fi
+
+if [[ "$HAS_ACCOUNT" == "true" ]]; then
+  step "내 카드 조회"
+  CARDS_RES=$(curl -sk "$BASE/v1/accounts/me/cards" -H "$AUTH")
+  if [[ -z "$CARD_NO" ]]; then
+    CARD_NO=$(printf '%s' "$CARDS_RES" | python3 -c '
+import json
+import os
 import sys
 
 try:
     data = json.load(sys.stdin).get("data", [])
     selected = ""
     for card in data:
-        if card.get("linkedAccountNo") == __import__("os").environ.get("ACCOUNT_NO"):
+        if card.get("linkedAccountNo") == os.environ.get("ACCOUNT_NO"):
             selected = card.get("cardNo", "")
             break
     if not selected and data:
@@ -143,29 +274,75 @@ try:
     print(selected)
 except Exception:
     print("")
-PY
-)
-fi
-if [[ -z "$CARD_NO" || "$CARD_NO" == "null" ]]; then
-  echo "  -> 연결 카드 없음: 카드 거래내역 초기화는 건너뜁니다."
-else
-  echo "  -> 카드 선택: $CARD_NO"
-fi
+')
+  fi
+  if [[ -z "$CARD_NO" || "$CARD_NO" == "null" ]]; then
+    echo "  -> 연결 카드 없음: 카드 거래내역 초기화는 건너뜁니다."
+  else
+    echo "  -> 카드 선택: $CARD_NO"
+  fi
 
-step "계좌 거래내역 초기화 (admin/data-init/account)"
-INIT_ACCT_RES=$(curl -sk -X POST "$BASE/admin/data-init/account" \
-  -H "$AUTH" -H "Content-Type: application/json" \
-  -d "{\"accountNo\": \"$ACCOUNT_NO\"}")
-INIT_ACCT_COUNT=$(jq_r "$INIT_ACCT_RES" '.data.transactionCount')
-echo "  -> 계좌 거래내역 ${INIT_ACCT_COUNT}건 초기화"
-
-if [[ -n "$CARD_NO" && "$CARD_NO" != "null" ]]; then
-  step "카드 거래내역 초기화 (admin/data-init/card)"
-  INIT_CARD_RES=$(curl -sk -X POST "$BASE/admin/data-init/card" \
+  step "계좌 거래내역 초기화 (admin/data-init/account)"
+  INIT_ACCT_RES=$(curl -sk -X POST "$BASE/admin/data-init/account" \
     -H "$AUTH" -H "Content-Type: application/json" \
-    -d "{\"cardNo\": \"$CARD_NO\"}")
-  INIT_CARD_COUNT=$(jq_r "$INIT_CARD_RES" '.data.transactionCount')
-  echo "  -> 카드 거래내역 ${INIT_CARD_COUNT}건 초기화"
+    -d "{\"accountNo\": \"$ACCOUNT_NO\"}")
+  INIT_ACCT_COUNT=$(jq_r "$INIT_ACCT_RES" '.data.transactionCount')
+  echo "  -> 계좌 거래내역 ${INIT_ACCT_COUNT}건 초기화"
+
+  if [[ -n "$CARD_NO" && "$CARD_NO" != "null" ]]; then
+    step "카드 거래내역 초기화 (admin/data-init/card)"
+    INIT_CARD_RES=$(curl -sk -X POST "$BASE/admin/data-init/card" \
+      -H "$AUTH" -H "Content-Type: application/json" \
+      -d "{\"cardNo\": \"$CARD_NO\"}")
+    INIT_CARD_COUNT=$(jq_r "$INIT_CARD_RES" '.data.transactionCount')
+    echo "  -> 카드 거래내역 ${INIT_CARD_COUNT}건 초기화"
+  fi
+fi
+
+if [[ "$HAS_ACCOUNT" != "true" ]]; then
+  step "내 카드 조회"
+  CARDS_RES=$(curl -sk "$BASE/v1/accounts/me/cards" -H "$AUTH")
+  if [[ -z "$CARD_NO" ]]; then
+    CARD_NO=$(printf '%s' "$CARDS_RES" | python3 -c '
+import json
+import os
+import sys
+
+try:
+    data = json.load(sys.stdin).get("data", [])
+    selected = ""
+    for card in data:
+        if card.get("linkedAccountNo") == os.environ.get("ACCOUNT_NO"):
+            selected = card.get("cardNo", "")
+            break
+    if not selected and data:
+        selected = data[0].get("cardNo", "")
+    print(selected)
+except Exception:
+    print("")
+')
+  fi
+  if [[ -z "$CARD_NO" || "$CARD_NO" == "null" ]]; then
+    echo "  -> 연결 카드 없음: 카드 거래내역 초기화는 건너뜁니다."
+  else
+    echo "  -> 카드 선택: $CARD_NO"
+  fi
+
+  step "계좌 거래내역 초기화 (admin/data-init/account)"
+  INIT_ACCT_RES=$(curl -sk -X POST "$BASE/admin/data-init/account" \
+    -H "$AUTH" -H "Content-Type: application/json" \
+    -d "{\"accountNo\": \"$ACCOUNT_NO\"}")
+  INIT_ACCT_COUNT=$(jq_r "$INIT_ACCT_RES" '.data.transactionCount')
+  echo "  -> 계좌 거래내역 ${INIT_ACCT_COUNT}건 초기화"
+
+  if [[ -n "$CARD_NO" && "$CARD_NO" != "null" ]]; then
+    step "카드 거래내역 초기화 (admin/data-init/card)"
+    INIT_CARD_RES=$(curl -sk -X POST "$BASE/admin/data-init/card" \
+      -H "$AUTH" -H "Content-Type: application/json" \
+      -d "{\"cardNo\": \"$CARD_NO\"}")
+    INIT_CARD_COUNT=$(jq_r "$INIT_CARD_RES" '.data.transactionCount')
+    echo "  -> 카드 거래내역 ${INIT_CARD_COUNT}건 초기화"
+  fi
 fi
 
 step "거래 분석"
