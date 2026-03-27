@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from uuid import uuid4
 from typing import Any, Annotated, Callable, Sequence, TypedDict
 
 from langchain.agents import create_agent
-from langchain.agents.middleware import AgentMiddleware
+from langchain.agents.middleware import AgentMiddleware, ModelRequest, ModelResponse
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, AnyMessage, RemoveMessage, ToolMessage
 from langchain_core.tools import BaseTool
@@ -195,9 +196,279 @@ def _build_agent(
         model=model,
         tools=list(tools),
         system_prompt=prompt,
-        middleware=list(middleware),
+        middleware=[_ToolCallIdSanitizerMiddleware(), *list(middleware)],
         state_schema=_AgentNodeState,
         name=name,
+    )
+
+
+class _ToolCallIdSanitizerMiddleware(AgentMiddleware):
+    def wrap_model_call(
+        self,
+        request: ModelRequest[Any],
+        handler: Callable[[ModelRequest[Any]], ModelResponse[Any]],
+    ) -> ModelResponse[Any]:
+        sanitized_request = _sanitize_model_request(request)
+        response = handler(sanitized_request)
+        return _sanitize_model_response(response)
+
+    async def awrap_model_call(
+        self,
+        request: ModelRequest[Any],
+        handler: Callable[[ModelRequest[Any]], Any],
+    ) -> ModelResponse[Any]:
+        sanitized_request = _sanitize_model_request(request)
+        response = await handler(sanitized_request)
+        return _sanitize_model_response(response)
+
+
+def _sanitize_model_request(request: ModelRequest[Any]) -> ModelRequest[Any]:
+    sanitized_messages, changed = _normalize_tool_call_ids_in_messages(request.messages)
+    if not changed:
+        return request
+    return request.override(messages=sanitized_messages)
+
+
+def _sanitize_model_response(response: ModelResponse[Any]) -> ModelResponse[Any]:
+    sanitized_messages, changed = _normalize_tool_call_ids_in_messages(response.result)
+    if not changed:
+        return response
+    return ModelResponse(
+        result=sanitized_messages,
+        structured_response=response.structured_response,
+    )
+
+
+def _normalize_tool_call_ids_in_messages(
+    messages: Sequence[AnyMessage],
+) -> tuple[list[AnyMessage], bool]:
+    normalized_messages: list[AnyMessage] = []
+    pending_tool_call_ids: list[str] = []
+    changed = False
+
+    for message in messages:
+        normalized_message = message
+
+        if isinstance(message, AIMessage):
+            normalized_message, ai_changed, pending_tool_call_ids = _normalize_ai_message(
+                message
+            )
+            changed = changed or ai_changed
+            normalized_messages.append(normalized_message)
+            continue
+
+        if isinstance(message, ToolMessage):
+            normalized_message, tool_changed, pending_tool_call_ids = (
+                _normalize_tool_message(
+                    message=message,
+                    pending_tool_call_ids=pending_tool_call_ids,
+                )
+            )
+            changed = changed or tool_changed
+            normalized_messages.append(normalized_message)
+            continue
+
+        pending_tool_call_ids = []
+        normalized_messages.append(normalized_message)
+
+    return normalized_messages, changed
+
+
+def _normalize_ai_message(message: AIMessage) -> tuple[AIMessage, bool, list[str]]:
+    pending_tool_call_ids: list[str] = []
+    changed = False
+
+    normalized_tool_calls: list[dict[str, Any]] = []
+    for tool_call in message.tool_calls:
+        normalized_tool_call, tool_call_changed = _normalize_tool_call_dict(tool_call)
+        if normalized_tool_call is None:
+            changed = True
+            continue
+        normalized_tool_calls.append(normalized_tool_call)
+        pending_tool_call_ids.append(normalized_tool_call["id"])
+        changed = changed or tool_call_changed
+
+    normalized_invalid_tool_calls: list[dict[str, Any]] = []
+    for invalid_tool_call in message.invalid_tool_calls:
+        normalized_invalid_tool_call, invalid_changed = _normalize_invalid_tool_call_dict(
+            invalid_tool_call
+        )
+        if normalized_invalid_tool_call is None:
+            changed = True
+            continue
+        normalized_invalid_tool_calls.append(normalized_invalid_tool_call)
+        changed = changed or invalid_changed
+
+    normalized_additional_kwargs, additional_kwargs_changed = (
+        _normalize_additional_tool_calls(message.additional_kwargs)
+    )
+    changed = changed or additional_kwargs_changed
+
+    if not changed:
+        return message, False, pending_tool_call_ids
+
+    return (
+        message.model_copy(
+            update={
+                "tool_calls": normalized_tool_calls,
+                "invalid_tool_calls": normalized_invalid_tool_calls,
+                "additional_kwargs": normalized_additional_kwargs,
+            }
+        ),
+        True,
+        pending_tool_call_ids,
+    )
+
+
+def _normalize_tool_call_dict(
+    tool_call: dict[str, Any],
+) -> tuple[dict[str, Any] | None, bool]:
+    current_name = tool_call.get("name")
+    normalized_name = current_name.strip() if isinstance(current_name, str) else ""
+    if not normalized_name:
+        return None, True
+
+    normalized_args = tool_call.get("args")
+    if not isinstance(normalized_args, dict):
+        normalized_args = {}
+        args_changed = True
+    else:
+        args_changed = False
+
+    current_id = tool_call.get("id")
+    normalized_id = current_id.strip() if isinstance(current_id, str) else ""
+    needs_id = not normalized_id
+    resolved_id = normalized_id or f"call_{uuid4().hex}"
+
+    normalized_tool_call = {
+        **tool_call,
+        "name": normalized_name,
+        "args": normalized_args,
+        "id": resolved_id,
+    }
+    return normalized_tool_call, bool(needs_id or args_changed)
+
+
+def _normalize_invalid_tool_call_dict(
+    invalid_tool_call: dict[str, Any],
+) -> tuple[dict[str, Any] | None, bool]:
+    current_name = invalid_tool_call.get("name")
+    normalized_name = current_name.strip() if isinstance(current_name, str) else ""
+    if not normalized_name:
+        return None, True
+
+    current_args = invalid_tool_call.get("args")
+    if current_args is None:
+        normalized_args = ""
+        args_changed = True
+    elif isinstance(current_args, str):
+        normalized_args = current_args
+        args_changed = False
+    else:
+        normalized_args = str(current_args)
+        args_changed = True
+
+    current_id = invalid_tool_call.get("id")
+    normalized_id = current_id.strip() if isinstance(current_id, str) else ""
+    needs_id = not normalized_id
+    resolved_id = normalized_id or f"call_{uuid4().hex}"
+
+    normalized_invalid_tool_call = {
+        **invalid_tool_call,
+        "name": normalized_name,
+        "args": normalized_args,
+        "id": resolved_id,
+    }
+    return normalized_invalid_tool_call, bool(needs_id or args_changed)
+
+
+def _normalize_additional_tool_calls(
+    additional_kwargs: dict[str, Any],
+) -> tuple[dict[str, Any], bool]:
+    raw_tool_calls = additional_kwargs.get("tool_calls")
+    if not isinstance(raw_tool_calls, list):
+        return dict(additional_kwargs), False
+
+    changed = False
+    normalized_tool_calls: list[dict[str, Any]] = []
+    for raw_tool_call in raw_tool_calls:
+        if not isinstance(raw_tool_call, dict):
+            changed = True
+            continue
+
+        function_payload = raw_tool_call.get("function")
+        if not isinstance(function_payload, dict):
+            changed = True
+            continue
+
+        function_name = function_payload.get("name")
+        normalized_name = function_name.strip() if isinstance(function_name, str) else ""
+        if not normalized_name:
+            changed = True
+            continue
+
+        function_arguments = function_payload.get("arguments")
+        if function_arguments is None:
+            normalized_arguments = "{}"
+            arguments_changed = True
+        elif isinstance(function_arguments, str):
+            normalized_arguments = function_arguments
+            arguments_changed = False
+        else:
+            normalized_arguments = str(function_arguments)
+            arguments_changed = True
+
+        normalized_tool_call = {
+            **raw_tool_call,
+            "id": (
+                raw_tool_call["id"].strip()
+                if isinstance(raw_tool_call.get("id"), str)
+                and raw_tool_call["id"].strip()
+                else f"call_{uuid4().hex}"
+            ),
+            "function": {
+                **function_payload,
+                "name": normalized_name,
+                "arguments": normalized_arguments,
+            },
+        }
+        normalized_tool_calls.append(normalized_tool_call)
+        changed = changed or arguments_changed or normalized_tool_call["id"] != raw_tool_call.get("id")
+
+    if not changed:
+        return dict(additional_kwargs), False
+
+    return (
+        {
+            **additional_kwargs,
+            "tool_calls": normalized_tool_calls,
+        },
+        True,
+    )
+
+
+def _normalize_tool_message(
+    *,
+    message: ToolMessage,
+    pending_tool_call_ids: list[str],
+) -> tuple[ToolMessage, bool, list[str]]:
+    current_tool_call_id = getattr(message, "tool_call_id", None)
+    if isinstance(current_tool_call_id, str) and current_tool_call_id.strip():
+        remaining_tool_call_ids = [
+            tool_call_id
+            for tool_call_id in pending_tool_call_ids
+            if tool_call_id != current_tool_call_id
+        ]
+        return message, False, remaining_tool_call_ids
+
+    if not pending_tool_call_ids:
+        return message, False, []
+
+    resolved_tool_call_id = pending_tool_call_ids[0]
+    return (
+        message.model_copy(update={"tool_call_id": resolved_tool_call_id}),
+        True,
+        pending_tool_call_ids[1:],
     )
 
 

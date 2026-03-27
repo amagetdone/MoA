@@ -393,6 +393,128 @@ def test_spending_specialist_tool_calls_are_recorded_in_tool_summaries() -> None
     ]
 
 
+def test_spending_specialist_normalizes_missing_tool_call_ids_before_follow_up_model_call() -> None:
+    models = _build_models(route="spending")
+    models["spending"] = _RecordingFakeChatModel(
+        responses=[
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "get_spending_summary",
+                        "args": {"period": "this_week"},
+                        "id": None,
+                    },
+                    {
+                        "name": "get_spending_by_category",
+                        "args": {
+                            "period": "this_week",
+                            "include_comparison": False,
+                        },
+                        "id": None,
+                    },
+                ],
+            ),
+            AIMessage(content="spending specialist reply"),
+        ],
+        name="spending_specialist",
+    )
+
+    graph = build_chatbot_graph(
+        model_factory=models.__getitem__,
+        tools=ChatbotToolBundle(
+            spending=[
+                _build_named_tool(name="get_spending_summary"),
+                _build_named_tool(name="get_spending_by_category"),
+            ]
+        ),
+    )
+
+    anyio.run(
+        lambda: graph.ainvoke(
+            {"messages": [HumanMessage(content="give me this week's spending feedback")]},
+            config={"configurable": {"thread_id": "moa:7:conv-1"}},
+        )
+    )
+
+    follow_up_input = models["spending"].seen_messages[1]
+    tool_call_message = next(
+        message
+        for message in follow_up_input
+        if isinstance(message, AIMessage)
+        and getattr(message, "tool_calls", None)
+    )
+    tool_call_ids = [tool_call["id"] for tool_call in tool_call_message.tool_calls]
+    assert all(isinstance(tool_call_id, str) and tool_call_id for tool_call_id in tool_call_ids)
+    assert [
+        message.tool_call_id
+        for message in follow_up_input
+        if isinstance(message, ToolMessage)
+    ] == tool_call_ids
+
+
+def test_spending_specialist_removes_invalid_tool_calls_before_follow_up_model_call() -> None:
+    models = _build_models(route="spending")
+    models["spending"] = _RecordingFakeChatModel(
+        responses=[
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "get_spending_summary",
+                        "args": {"period": "this_week"},
+                        "id": "spending-call-1",
+                    }
+                ],
+                invalid_tool_calls=[
+                    {
+                        "name": None,
+                        "args": None,
+                        "id": None,
+                        "error": "tool name missing",
+                        "type": "invalid_tool_call",
+                    }
+                ],
+            ),
+            AIMessage(content="spending specialist reply"),
+        ],
+        name="spending_specialist",
+    )
+
+    graph = build_chatbot_graph(
+        model_factory=models.__getitem__,
+        tools=ChatbotToolBundle(
+            spending=[
+                _build_named_tool(name="get_spending_summary"),
+            ]
+        ),
+    )
+
+    anyio.run(
+        lambda: graph.ainvoke(
+            {"messages": [HumanMessage(content="give me this week's spending feedback")]},
+            config={"configurable": {"thread_id": "moa:7:conv-1"}},
+        )
+    )
+
+    follow_up_input = models["spending"].seen_messages[1]
+    tool_call_message = next(
+        message
+        for message in follow_up_input
+        if isinstance(message, AIMessage)
+        and getattr(message, "tool_calls", None)
+    )
+    assert tool_call_message.tool_calls == [
+        {
+            "name": "get_spending_summary",
+            "args": {"period": "this_week"},
+            "id": "spending-call-1",
+            "type": "tool_call",
+        }
+    ]
+    assert tool_call_message.invalid_tool_calls == []
+
+
 def test_supervisor_receives_clean_sql_execution_evidence_message() -> None:
     models = _build_models(route="sql")
 
