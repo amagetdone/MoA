@@ -20,6 +20,7 @@ import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
+import com.ssafy.amagetdone.domain.transaction.model.repository.CardTransactionOverrideRepository;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,9 @@ class BudgetHomeQueryServiceTest {
 	@Mock
 	private InquireAccountBalanceUseCase inquireAccountBalanceUseCase;
 
+	@Mock
+	private CardTransactionOverrideRepository cardTransactionOverrideRepository;
+
 	private BudgetHomeQueryService service;
 
 	@BeforeEach
@@ -55,7 +59,8 @@ class BudgetHomeQueryServiceTest {
 			planRepository,
 			planWeekAllocationRepository,
 			listAccountsUseCase,
-			inquireAccountBalanceUseCase
+			inquireAccountBalanceUseCase,
+			cardTransactionOverrideRepository
 		);
 	}
 
