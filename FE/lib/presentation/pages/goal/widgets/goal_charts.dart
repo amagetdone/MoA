@@ -125,16 +125,18 @@ class GoalBarChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (goal.weeklyPlans.isNotEmpty) {
-      final sortedPlans = [...goal.weeklyPlans]
-        ..sort((a, b) => a.week.compareTo(b.week));
+      final normalizedPlans = _buildNormalizedWeeklyPlans(
+        goal: goal,
+        history: history,
+      );
       final currentWeek = goal.currentWeekNumber;
-      final highlightedIndex = sortedPlans.indexWhere(
+      final highlightedIndex = normalizedPlans.indexWhere(
         (plan) => plan.week == currentWeek,
       );
       final safeHighlightedIndex = highlightedIndex >= 0
           ? highlightedIndex
-          : sortedPlans.length - 1;
-      final highlightedPlan = sortedPlans[safeHighlightedIndex];
+          : (currentWeek - 1).clamp(0, normalizedPlans.length - 1);
+      final highlightedPlan = normalizedPlans[safeHighlightedIndex];
       final weeklyTarget = goal.weeklyMission?.weeklySavingsAmount.toDouble();
 
       return _BarChartCard(
@@ -147,7 +149,7 @@ class GoalBarChart extends StatelessWidget {
           weeklyTarget?.round() ?? 0,
         ),
         bars: [
-          for (final plan in sortedPlans)
+          for (final plan in normalizedPlans)
             _ChartDatum(
               x: (plan.week - 1).toDouble(),
               label: '${plan.week}주차',
@@ -340,9 +342,7 @@ class _LineChartCardState extends State<_LineChartCard> {
           SizedBox(height: 8.h),
           Text(
             widget.helperText,
-            style: AppTextStyles.caption.copyWith(
-              color: colors.textTertiary,
-            ),
+            style: AppTextStyles.caption.copyWith(color: colors.textTertiary),
           ),
           SizedBox(height: 12.h),
           SizedBox(
@@ -825,9 +825,7 @@ class _MetricBlock extends StatelessWidget {
         children: [
           Text(
             label,
-            style: AppTextStyles.caption.copyWith(
-              color: colors.textTertiary,
-            ),
+            style: AppTextStyles.caption.copyWith(color: colors.textTertiary),
           ),
           SizedBox(height: 4.h),
           Text(
@@ -864,9 +862,7 @@ class _ChartControlRow extends StatelessWidget {
         Expanded(
           child: Text(
             helperText,
-            style: AppTextStyles.caption.copyWith(
-              color: colors.textTertiary,
-            ),
+            style: AppTextStyles.caption.copyWith(color: colors.textTertiary),
           ),
         ),
         _ZoomButton(icon: Icons.remove_rounded, onTap: onZoomOut),
@@ -965,6 +961,52 @@ class _BarChartBounds {
   final double minY;
   final double maxY;
   final double interval;
+}
+
+List<GoalWeeklyPlan> _buildNormalizedWeeklyPlans({
+  required Goal goal,
+  required List<DailySpending> history,
+}) {
+  final historyByWeek = <int, int>{};
+  for (final item in history) {
+    final week = (item.date.difference(goal.startDate).inDays ~/ 7) + 1;
+    if (week <= 0) {
+      continue;
+    }
+    historyByWeek[week] = (historyByWeek[week] ?? 0) + item.amount;
+  }
+
+  final planByWeek = <int, int>{};
+  for (final plan in goal.weeklyPlans) {
+    if (plan.week <= 0) {
+      continue;
+    }
+    planByWeek[plan.week] = plan.amount;
+  }
+
+  final maxPlanWeek = planByWeek.keys.isEmpty
+      ? 0
+      : planByWeek.keys.reduce(math.max);
+  final maxHistoryWeek = historyByWeek.keys.isEmpty
+      ? 0
+      : historyByWeek.keys.reduce(math.max);
+  final lastWeek = math.max(
+    1,
+    math.max(
+      goal.totalWeeks,
+      math.max(goal.currentWeekNumber, math.max(maxPlanWeek, maxHistoryWeek)),
+    ),
+  );
+
+  return [
+    for (var week = 1; week <= lastWeek; week++)
+      GoalWeeklyPlan(
+        week: week,
+        amount: week < goal.currentWeekNumber
+            ? (historyByWeek[week] ?? planByWeek[week] ?? 0)
+            : (planByWeek[week] ?? historyByWeek[week] ?? 0),
+      ),
+  ];
 }
 
 List<double> _buildCumulativeSeries({

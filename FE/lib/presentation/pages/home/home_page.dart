@@ -168,6 +168,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         tooltipPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
         disableMovingAnimation: true,
         child: FloatingActionButton(
+          heroTag: 'home_ai_coach_fab',
           onPressed: () => showChatbotSheet(context),
           backgroundColor: AppColors.orange500,
           foregroundColor: Colors.white,
