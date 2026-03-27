@@ -1,4 +1,3 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -8,44 +7,24 @@ import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:more_app/domain/entities/spending.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/pages/home/widgets/spending_rose_chart.dart';
 import 'package:more_app/presentation/pages/spending/widgets/category_list.dart';
 import 'package:more_app/presentation/viewmodels/onboarding_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 
-const _sectionColors = [
-  Color(0xFFE57373),
-  Color(0xFFFFB74D),
-  Color(0xFF81C784),
-];
-const _sectionLabels = ['고정지출', '변동지출', '여유 자금'];
-
-class OnboardingAnalysisPage extends ConsumerStatefulWidget {
+class OnboardingAnalysisPage extends ConsumerWidget {
   const OnboardingAnalysisPage({super.key});
 
   @override
-  ConsumerState<OnboardingAnalysisPage> createState() =>
-      _OnboardingAnalysisPageState();
-}
-
-class _OnboardingAnalysisPageState extends ConsumerState<OnboardingAnalysisPage> {
-  int? _touchedIndex;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors.of(context);
     final analysis = ref.watch(onboardingViewModelProvider).analysisResult;
 
     final averageIncome = analysis?.averageIncome ?? 0;
     final averageExpense = analysis?.averageExpense ?? 0;
     final freeAmount = analysis?.remainingAmount ?? 0;
-    final fixedAmount =
-        (averageExpense * ((analysis?.fixedExpenseRatio ?? 0) / 100)).round();
-    final variableAmount =
-        (averageExpense * ((analysis?.variableExpenseRatio ?? 0) / 100)).round();
-    final sectionAmounts = [fixedAmount, variableAmount, freeAmount];
-    final sectionTotal = sectionAmounts.fold<int>(0, (sum, amount) => sum + amount);
     final categories = analysis?.categoryExpenses ?? const <CategoryExpense>[];
     final categoryItems = categories
         .map(
@@ -114,127 +93,112 @@ class _OnboardingAnalysisPageState extends ConsumerState<OnboardingAnalysisPage>
               SizedBox(height: 20.h),
               MoreCard(
                 padding: EdgeInsets.all(24.w),
-                child: Column(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(
-                      height: 220.h,
-                      child: Stack(
-                        alignment: Alignment.center,
+                    Container(
+                      width: 44.w,
+                      height: 44.w,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF8EF),
+                        borderRadius: BorderRadius.circular(14.r),
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.account_balance_wallet_rounded,
+                        color: const Color(0xFF53A65A),
+                        size: 22.w,
+                      ),
+                    ),
+                    SizedBox(width: 14.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          PieChart(
-                            PieChartData(
-                              sectionsSpace: 4,
-                              centerSpaceRadius: 65.r,
-                              pieTouchData: PieTouchData(
-                                touchCallback: (event, response) {
-                                  if (!event.isInterestedForInteractions ||
-                                      response == null ||
-                                      response.touchedSection == null) {
-                                    setState(() => _touchedIndex = null);
-                                    return;
-                                  }
-                                  final idx =
-                                      response.touchedSection!.touchedSectionIndex;
-                                  setState(() {
-                                    _touchedIndex = idx >= 0 ? idx : null;
-                                  });
-                                },
-                              ),
-                              sections: _buildSections(
-                                touchedIndex: _touchedIndex,
-                                amounts: sectionAmounts,
-                                total: sectionTotal,
-                              ),
+                          Text(
+                            '여유 자금',
+                            style: AppTextStyles.bodyMd.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16.sp,
+                              color: colors.textPrimary,
                             ),
                           ),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                _touchedIndex != null
-                                    ? CurrencyFormatter.formatKRW(
-                                        sectionAmounts[_touchedIndex!],
-                                      )
-                                    : CurrencyFormatter.formatKRW(averageExpense),
-                                style: AppTextStyles.bodyMd.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16.sp,
-                                  color: _touchedIndex != null
-                                      ? _sectionColors[_touchedIndex!]
-                                      : colors.textPrimary,
-                                ),
-                              ),
-                              Text(
-                                _touchedIndex != null
-                                    ? _sectionLabels[_touchedIndex!]
-                                    : '평균 지출',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: colors.textTertiary,
-                                  fontSize: 12.sp,
-                                ),
-                              ),
-                            ],
+                          SizedBox(height: 4.h),
+                          Text(
+                            '최근 3개월 평균 수입에서 평균 지출을 제외한 금액이에요.',
+                            style: AppTextStyles.caption.copyWith(
+                              color: colors.textTertiary,
+                              fontSize: 12.sp,
+                            ),
+                          ),
+                          SizedBox(height: 12.h),
+                          Text(
+                            CurrencyFormatter.formatKRW(freeAmount),
+                            style: AppTextStyles.headingMd.copyWith(
+                              color: const Color(0xFF53A65A),
+                              fontWeight: FontWeight.w800,
+                              fontSize: 20.sp,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    SizedBox(height: 24.h),
-                    Column(
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _LegendItem(
-                                label: '고정지출',
-                                amount: fixedAmount,
-                                color: _sectionColors[0],
-                              ),
-                            ),
-                            Expanded(
-                              child: _LegendItem(
-                                label: '변동지출',
-                                amount: variableAmount,
-                                color: _sectionColors[1],
-                              ),
-                            ),
-                          ],
+                  ],
+                ),
+              ),
+              SizedBox(height: 20.h),
+              if (categoryItems.isNotEmpty)
+                SpendingRoseChart(
+                  categories: categoryItems,
+                  title: '카테고리별 지출 분석',
+                  subtitle: '최근 3개월 평균 지출 기준',
+                ),
+              if (categoryItems.isEmpty)
+                MoreCard(
+                  padding: EdgeInsets.all(24.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '카테고리별 지출 분석',
+                        style: AppTextStyles.bodyMd.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16.sp,
+                          color: colors.textPrimary,
                         ),
-                        SizedBox(height: 12.h),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _LegendItem(
-                                label: '여유 자금',
-                                amount: freeAmount,
-                                color: _sectionColors[2],
-                              ),
-                            ),
-                          ],
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        '분석할 카테고리 지출 데이터가 아직 없어요.',
+                        style: AppTextStyles.caption.copyWith(
+                          color: colors.textTertiary,
+                          fontSize: 12.sp,
                         ),
-                      ],
+                      ),
+                    ],
+                  ),
+                ),
+              SizedBox(height: 20.h),
+              MoreCard(
+                padding: EdgeInsets.all(24.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '카테고리별 지출',
+                      style: AppTextStyles.bodyMd.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16.sp,
+                        color: colors.textPrimary,
+                      ),
                     ),
-                    SizedBox(height: 32.h),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '카테고리별 지출',
-                          style: AppTextStyles.bodyMd.copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16.sp,
-                            color: colors.textPrimary,
-                          ),
-                        ),
-                        SizedBox(height: 4.h),
-                        Text(
-                          '최근 3개월 평균 지출 대비 카테고리별 금액이에요.',
-                          style: AppTextStyles.caption.copyWith(
-                            color: colors.textTertiary,
-                            fontSize: 12.sp,
-                          ),
-                        ),
-                      ],
+                    SizedBox(height: 4.h),
+                    Text(
+                      '최근 3개월 평균 지출 대비 카테고리별 금액이에요.',
+                      style: AppTextStyles.caption.copyWith(
+                        color: colors.textTertiary,
+                        fontSize: 12.sp,
+                      ),
                     ),
                     SizedBox(height: 24.h),
                     CategoryList(
@@ -254,36 +218,6 @@ class _OnboardingAnalysisPageState extends ConsumerState<OnboardingAnalysisPage>
         ),
       ),
     );
-  }
-
-  List<PieChartSectionData> _buildSections({
-    required int? touchedIndex,
-    required List<int> amounts,
-    required int total,
-  }) {
-    if (total == 0) {
-      return List.generate(
-        _sectionColors.length,
-        (i) => PieChartSectionData(
-          value: 25,
-          color: _sectionColors[i].withValues(alpha: 0.3),
-          radius: 28.r,
-          showTitle: false,
-        ),
-      );
-    }
-
-    return List.generate(_sectionColors.length, (i) {
-      final isTouched = touchedIndex == i;
-      final rawValue = amounts[i] / total * 100;
-      final value = amounts[i] > 0 ? rawValue.clamp(2.0, 100.0) : 0.0;
-      return PieChartSectionData(
-        value: value,
-        color: _sectionColors[i],
-        radius: isTouched ? 36.r : 28.r,
-        showTitle: false,
-      );
-    });
   }
 }
 
@@ -317,61 +251,6 @@ class _SummaryRow extends StatelessWidget {
             color: color,
             fontWeight: FontWeight.bold,
             fontSize: 17.sp,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _LegendItem extends StatelessWidget {
-  const _LegendItem({
-    required this.label,
-    required this.amount,
-    required this.color,
-  });
-
-  final String label;
-  final int amount;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 8.w,
-          height: 8.w,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        SizedBox(width: 8.w),
-        Flexible(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.caption.copyWith(
-                  color: colors.textSecondary,
-                  fontSize: 12.sp,
-                ),
-              ),
-              Text(
-                CurrencyFormatter.formatKRW(amount),
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.caption.copyWith(
-                  color: colors.textTertiary,
-                  fontSize: 11.sp,
-                ),
-              ),
-            ],
           ),
         ),
       ],
