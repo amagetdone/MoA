@@ -434,9 +434,9 @@ class _AssetPageState extends ConsumerState<AssetPage> {
     }
   }
 
-  Color _categoryTextColor(String name, AppColorScheme colors) {
+  Color _chipTextColor(Color chipColor, AppColorScheme colors) {
     final chipBackground = Color.alphaBlend(
-      _categoryColor(name).withValues(alpha: 0.35),
+      chipColor.withValues(alpha: 0.35),
       colors.bgSurface,
     );
     return chipBackground.computeLuminance() > 0.5
@@ -444,16 +444,34 @@ class _AssetPageState extends ConsumerState<AssetPage> {
         : Colors.white;
   }
 
+  String? _sourceChipLabel(String? sourceType) {
+    final normalized = sourceType?.trim().toUpperCase();
+    if (normalized == null || normalized.isEmpty) {
+      return null;
+    }
+    return normalized == 'CARD' ? '카드' : '계좌';
+  }
+
+  Color _sourceChipColor(String? sourceType) {
+    final normalized = sourceType?.trim().toUpperCase();
+    if (normalized == 'CARD') {
+      return const Color(0xFF5C6BC0);
+    }
+    return const Color(0xFF26A69A);
+  }
+
   Widget _buildTransactionItem(Transaction t) {
     final colors = AppColors.of(context);
     final isPlus = t.type == TransactionType.income;
     final showCategoryChip = !isPlus && t.category.trim().isNotEmpty;
+    final sourceChipLabel = _sourceChipLabel(t.sourceType);
+    final showSourceChip = sourceChipLabel != null;
     final showBalanceText = t.balanceAfter > 0;
     final showMemoText =
         t.memo != null &&
         t.memo!.toUpperCase() != 'VARIABLE' &&
         t.memo!.toUpperCase() != 'FIXED';
-    final showMetaRow = showCategoryChip || showMemoText;
+    final showMetaRow = showCategoryChip || showSourceChip || showMemoText;
     final amountText =
         '${isPlus ? '+' : '-'}${CurrencyFormatter.formatKRW(t.amount)}';
     final timeText = DateFormat('HH:mm').format(t.dateTime);
@@ -508,13 +526,42 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                             child: Text(
                               t.category,
                               style: AppTextStyles.caption.copyWith(
-                                color: _categoryTextColor(t.category, colors),
+                                color: _chipTextColor(
+                                  _categoryColor(t.category),
+                                  colors,
+                                ),
                                 fontSize: 10.sp,
                               ),
                             ),
                           ),
-                        if (showMemoText) ...[
+                        if (showSourceChip) ...[
                           if (showCategoryChip) SizedBox(width: 6.w),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 6.w,
+                              vertical: 2.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _sourceChipColor(
+                                t.sourceType,
+                              ).withValues(alpha: 0.35),
+                              borderRadius: BorderRadius.circular(10.r),
+                            ),
+                            child: Text(
+                              sourceChipLabel,
+                              style: AppTextStyles.caption.copyWith(
+                                color: _chipTextColor(
+                                  _sourceChipColor(t.sourceType),
+                                  colors,
+                                ),
+                                fontSize: 10.sp,
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (showMemoText) ...[
+                          if (showCategoryChip || showSourceChip)
+                            SizedBox(width: 6.w),
                           Text(
                             t.memo!,
                             style: AppTextStyles.caption.copyWith(

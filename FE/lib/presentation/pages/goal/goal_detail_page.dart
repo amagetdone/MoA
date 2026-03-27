@@ -242,8 +242,12 @@ class _HeroCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _Badge(
-                      label: '우선순위 ${goal.priority}',
-                      bgColor: AppColors.orange500,
+                      label: goal.isEffectivelyAchieved
+                          ? '목표 완료'
+                          : '우선순위 ${goal.priority}',
+                      bgColor: goal.isEffectivelyAchieved
+                          ? AppColors.green500
+                          : AppColors.orange500,
                       textColor: Colors.white,
                     ),
                   ],
