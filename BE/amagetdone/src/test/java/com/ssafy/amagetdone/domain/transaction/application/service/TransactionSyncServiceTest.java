@@ -138,13 +138,7 @@ class TransactionSyncServiceTest {
 		assertEquals(1001L, saved.getTransactionUniqueNo());
 		assertEquals(LocalDateTime.of(2026, 3, 12, 10, 30), saved.getTransactionDateTime());
 		assertEquals(15000L, saved.getTransactionBalance());
-		verify(applicationEventPublisher).publishEvent(org.mockito.ArgumentMatchers.argThat((Object event) ->
-			event instanceof TransactionSyncedEvent syncedEvent
-				&& syncedEvent.userId().equals(1)
-				&& "ACCOUNT".equals(syncedEvent.sourceType())
-				&& "1001".equals(syncedEvent.transactionId())
-				&& syncedEvent.amount().equals(15000L)
-		));
+		verify(applicationEventPublisher, never()).publishEvent(any(TransactionSyncedEvent.class));
 	}
 
 	@Test
