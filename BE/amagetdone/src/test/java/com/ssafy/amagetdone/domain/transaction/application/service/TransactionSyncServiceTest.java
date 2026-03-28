@@ -333,6 +333,52 @@ class TransactionSyncServiceTest {
 	}
 
 	@Test
+	void syncRangeBackfillsMissingHistoricalAccountTransactionsWithinTheRequestedWindow() {
+		TransactionSyncService service = newService();
+		User user = user(1, "user-key-1");
+		Account account = account(user, "ACC-1", "111-222-333");
+		Category defaultCategory = Category.create(DEFAULT_CATEGORY_ID, "Other");
+		TransactionDateRangeFactory.DateRange window = new TransactionDateRangeFactory.DateRange(
+			LocalDate.of(2025, 12, 27),
+			LocalDate.of(2026, 3, 27)
+		);
+
+		given(userRepository.findByIdForUpdate(1)).willReturn(Optional.of(user));
+		given(accountRepository.findAllLinkedAccountsByUserId(1)).willReturn(List.of(account));
+		given(cardRepository.findAllByWithdrawalAccount_User_IdAndWithdrawalAccount_VerifiedTrueAndWithdrawalAccount_ActiveTrue(1))
+			.willReturn(List.of());
+		given(dateRangeFactory.resolve(LocalDate.of(2025, 12, 27), LocalDate.of(2026, 3, 27))).willReturn(window);
+		given(demandDepositTransactionApiClient.inquireTransactions(any())).willReturn(
+			new DemandDepositTransactionDto.Response(
+				2,
+				List.of(
+					accountItem(1002L, "20260320", "090000", "2", "OUT", "444-555", 15000L, 50000L, "Recent", ""),
+					accountItem(1001L, "20260115", "103000", "2", "OUT", "444-555", 23000L, 77000L, "Historical", "")
+				)
+			)
+		);
+		given(accountTransactionOverrideRepository.existsByAccount_IdAndTransactionUniqueNo("ACC-1", 1002L)).willReturn(true);
+		given(accountTransactionOverrideRepository.existsByAccount_IdAndTransactionUniqueNo("ACC-1", 1001L)).willReturn(false);
+		given(transactionCategoryAssignmentService.assignCategories(anyList()))
+			.willReturn(Map.of("Recent", defaultCategory, "Historical", defaultCategory));
+		given(categoryRepository.getReferenceById(DEFAULT_CATEGORY_ID)).willReturn(defaultCategory);
+
+		service.syncRange(1, LocalDate.of(2025, 12, 27), LocalDate.of(2026, 3, 27));
+
+		ArgumentCaptor<DemandDepositTransactionDto.Request> requestCaptor = ArgumentCaptor.forClass(
+			DemandDepositTransactionDto.Request.class
+		);
+		verify(demandDepositTransactionApiClient).inquireTransactions(requestCaptor.capture());
+		assertEquals("20251227", requestCaptor.getValue().startDate());
+		assertEquals("20260327", requestCaptor.getValue().endDate());
+
+		ArgumentCaptor<List<AccountTransactionOverride>> saveCaptor = listCaptor();
+		verify(accountTransactionOverrideRepository).saveAll(saveCaptor.capture());
+		assertEquals(1, saveCaptor.getValue().size());
+		assertEquals(1001L, saveCaptor.getValue().get(0).getTransactionUniqueNo());
+	}
+
+	@Test
 	void syncPersistsOnlyMissingCardTransactionsForEachCardSource() {
 		TransactionSyncService service = newService();
 		User user = user(1, "user-key-1");

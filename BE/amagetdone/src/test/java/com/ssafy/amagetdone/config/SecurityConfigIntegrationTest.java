@@ -17,7 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.ssafy.amagetdone.domain.account.application.usecase.SyncTestUserAssetsUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.SyncUserAssetsUseCase;
 import com.ssafy.amagetdone.domain.member.api.controller.AuthController;
 import com.ssafy.amagetdone.domain.member.api.controller.MemberProfileController;
 import com.ssafy.amagetdone.domain.member.api.dto.LogoutDto;
@@ -53,7 +53,10 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 	GlobalHealthCheckController.class
 })
 @Import(SecurityConfig.class)
-@TestPropertySource(properties = "app.cors.allowed-origins=https://j14d101.p.ssafy.io")
+@TestPropertySource(properties = {
+	"app.cors.allowed-origins=https://j14d101.p.ssafy.io",
+	"mcp.finance.enabled=true"
+})
 class SecurityConfigIntegrationTest {
 
 	private static final String INVALID_BEARER = "Bearer invalid-token";
@@ -80,7 +83,7 @@ class SecurityConfigIntegrationTest {
 	private JwtAccessTokenReader jwtAccessTokenReader;
 
 	@MockitoBean
-	private SyncTestUserAssetsUseCase syncTestUserAssetsUseCase;
+	private SyncUserAssetsUseCase syncUserAssetsUseCase;
 
 	@Test
 	void socialTestIgnoresInvalidAuthorizationHeader() throws Exception {
@@ -225,6 +228,12 @@ class SecurityConfigIntegrationTest {
 	void swaggerDocsMatcherRemainsPublic() {
 		assertTrue(publicEndpoints.matches(apiGet("/v3/api-docs")));
 		assertTrue(publicEndpoints.matches(apiGet("/swagger-ui/index.html")));
+	}
+
+	@Test
+	void mcpEndpointIsNotHandledByPublicEndpointMatcher() {
+		org.junit.jupiter.api.Assertions.assertFalse(publicEndpoints.matches(apiGet("/mcp")));
+		org.junit.jupiter.api.Assertions.assertFalse(publicEndpoints.matches(apiGet("/mcp/messages")));
 	}
 
 	private MockHttpServletRequestBuilder apiPost(String path) {

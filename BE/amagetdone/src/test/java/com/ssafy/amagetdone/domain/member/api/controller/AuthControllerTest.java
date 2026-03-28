@@ -15,7 +15,7 @@ import com.ssafy.amagetdone.domain.member.api.dto.LogoutDto;
 import com.ssafy.amagetdone.domain.member.api.dto.RefreshTokenDto;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
 import com.ssafy.amagetdone.domain.member.api.dto.TestSocialAuthDto;
-import com.ssafy.amagetdone.domain.account.application.usecase.SyncTestUserAssetsUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.SyncUserAssetsUseCase;
 import com.ssafy.amagetdone.domain.member.application.service.MemberAuthService;
 import com.ssafy.amagetdone.domain.member.application.service.MemberTokenService;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
@@ -48,7 +48,7 @@ class AuthControllerTest {
 	private JwtAccessTokenReader jwtAccessTokenReader;
 
 	@MockitoBean
-	private SyncTestUserAssetsUseCase syncTestUserAssetsUseCase;
+	private SyncUserAssetsUseCase syncUserAssetsUseCase;
 
 	@Test
 	void socialAuthReturnsJwtPayloadForKakao() throws Exception {
@@ -162,7 +162,7 @@ class AuthControllerTest {
 	@Test
 	void socialTestSyncAssetsReturnsSuccess() throws Exception {
 		given(jwtAccessTokenReader.readUserId("Bearer access-token")).willReturn(7);
-		willDoNothing().given(syncTestUserAssetsUseCase).execute(7);
+		willDoNothing().given(syncUserAssetsUseCase).execute(7);
 
 		mockMvc.perform(apiPost("/v1/auth/social/test/sync-assets")
 				.header("Authorization", "Bearer access-token"))
@@ -173,7 +173,7 @@ class AuthControllerTest {
 			.andExpect(jsonPath("$.data.success").value(true));
 
 		verify(jwtAccessTokenReader).readUserId("Bearer access-token");
-		verify(syncTestUserAssetsUseCase).execute(7);
+		verify(syncUserAssetsUseCase).execute(7);
 	}
 
 	@Test

@@ -14,11 +14,11 @@ import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -84,7 +84,7 @@ public class SecurityConfig {
 	}
 
 	@Bean
-	public RequestMatcher publicEndpoints(Environment environment) {
+	public RequestMatcher publicEndpoints() {
 		return request -> {
 			String path = normalizePath(request);
 			if ("/health".equals(path) || isPublicSwaggerPath(path)) {
@@ -98,6 +98,18 @@ public class SecurityConfig {
 			return path.startsWith("/v1/auth/social/")
 				|| "/v1/auth/refresh".equals(path)
 				|| "/v1/auth/logout".equals(path);
+		};
+	}
+
+	@Bean
+	public WebSecurityCustomizer webSecurityCustomizer(
+		@Value("${mcp.finance.enabled:false}") boolean mcpFinanceEnabled
+	) {
+		return web -> {
+			if (!mcpFinanceEnabled) {
+				return;
+			}
+			web.ignoring().requestMatchers("/mcp", "/mcp/**");
 		};
 	}
 

@@ -181,6 +181,8 @@ class TransactionQueryServiceTest {
 	@Test
 	void listTransactionsUsesVisibleAccountMerchantText() {
 		TransactionQueryService queryService = transactionQueryService();
+		LocalDate fromDate = LocalDate.of(2025, 12, 1);
+		LocalDate toDate = LocalDate.of(2025, 12, 31);
 
 		User user = User.builder()
 			.id(1)
@@ -204,7 +206,7 @@ class TransactionQueryServiceTest {
 			.transactionSummary("타이짬뽕인동점")
 			.build();
 
-		given(syncLatestTransactionsUseCase.execute(1, 1, false))
+		given(syncLatestTransactionsUseCase.execute(1, fromDate, toDate))
 			.willReturn(new com.ssafy.amagetdone.domain.transaction.application.service.TransactionSyncService.SyncResult(0, 0));
 		given(accountTransactionOverrideRepository
 			.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
@@ -217,8 +219,8 @@ class TransactionQueryServiceTest {
 		TransactionListDto.Response response = queryService.listTransactions(
 			1,
 			new TransactionListDto.Query(
-				java.time.LocalDate.of(2025, 12, 1),
-				java.time.LocalDate.of(2025, 12, 31),
+				fromDate,
+				toDate,
 				"ALL",
 				0,
 				20
@@ -226,6 +228,30 @@ class TransactionQueryServiceTest {
 		);
 
 		assertEquals("타이짬뽕인동점", response.items().get(0).merchantText());
+	}
+
+	@Test
+	void listTransactionsRequestsSyncForTheExplicitDateWindow() {
+		TransactionQueryService queryService = transactionQueryService();
+		LocalDate fromDate = LocalDate.of(2025, 12, 27);
+		LocalDate toDate = LocalDate.of(2026, 3, 27);
+
+		given(syncLatestTransactionsUseCase.execute(1, fromDate, toDate))
+			.willReturn(new com.ssafy.amagetdone.domain.transaction.application.service.TransactionSyncService.SyncResult(0, 0));
+		given(accountTransactionOverrideRepository
+			.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of());
+		given(cardTransactionOverrideRepository
+			.findAllByCard_WithdrawalAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of());
+
+		TransactionListDto.Response response = queryService.listTransactions(
+			1,
+			new TransactionListDto.Query(fromDate, toDate, "ALL", 0, 20)
+		);
+
+		verify(syncLatestTransactionsUseCase).execute(1, fromDate, toDate);
+		assertEquals(0L, response.totalElements());
 	}
 
 	@Test

@@ -78,6 +78,8 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 
 	boolean existsByUserIdAndDeletedFalse(Integer userId);
 
+	boolean existsByUserIdAndTitleAndDeletedFalse(Integer userId, String title);
+
 	void deleteByUserId(Integer userId);
 
 	@Modifying

@@ -13,7 +13,8 @@ public enum PlanErrorCode implements ErrorCode {
 	INVALID_PRIORITY_UPDATE_REQUEST(HttpStatus.BAD_REQUEST, "PLAN_006", "Invalid priority update request"),
 	PLAN_VIDEO_NOT_READY(HttpStatus.CONFLICT, "PLAN_007", "Plan video is not ready"),
 	PLAN_VIDEO_GENERATION_FAILED(HttpStatus.CONFLICT, "PLAN_008", "Plan video generation failed"),
-	PLAN_UPDATE_NOT_ALLOWED(HttpStatus.CONFLICT, "PLAN_009", "Plan update is not allowed while AI generation is processing");
+	PLAN_UPDATE_NOT_ALLOWED(HttpStatus.CONFLICT, "PLAN_009", "Plan update is not allowed while AI generation is processing"),
+	INVALID_PLAN_DATA_INIT_REQUEST(HttpStatus.BAD_REQUEST, "PLAN_010", "Invalid plan data init request");
 
 	private final HttpStatus httpStatus;
 	private final String code;
