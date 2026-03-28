@@ -34,11 +34,10 @@ public class NoopPushNotificationService implements PushNotificationService {
 	}
 
 	@Override
-	public SendResult sendVerificationAlarmDemoNotification(TransactionSyncedEvent event) {
+	public SendResult sendVerificationAlarmDemoNotification(String verificationText) {
 		log.warn(
-			"Skipping verification demo push. userId={}, transactionId={}, reason=no FirebaseMessaging bean",
-			event.userId(),
-			event.transactionId()
+			"Skipping verification demo push. verificationText={}, reason=no FirebaseMessaging bean",
+			verificationText
 		);
 		return SendResult.SKIPPED;
 	}

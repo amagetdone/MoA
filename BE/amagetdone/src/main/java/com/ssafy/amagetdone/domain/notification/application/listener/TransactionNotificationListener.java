@@ -36,7 +36,7 @@ public class TransactionNotificationListener {
 		);
 		if (isVerificationAlarmTarget(event)) {
 			PushNotificationService.SendResult demoResult =
-				pushNotificationService.sendVerificationAlarmDemoNotification(event);
+				pushNotificationService.sendVerificationAlarmDemoNotification(event.merchantOrMemo());
 			log.info(
 				"Verification demo push result. userId={}, transactionId={}, result={}",
 				event.userId(),

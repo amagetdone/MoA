@@ -88,6 +88,7 @@ public class TransactionSyncService {
 		Optional<AccountTransactionOverride> latestLocal = forceFullSync
 			? Optional.empty()
 			: accountTransactionOverrideRepository.findTopByAccount_IdOrderByTransactionDateTimeDesc(account.getId());
+		boolean shouldPublishEvents = !forceFullSync && latestLocal.isPresent();
 		DateRange dateRange = dateRangeFactory.resolve(
 			months,
 			latestLocal.map(transaction -> transaction.getTransactionDateTime().toLocalDate()).orElse(null),
@@ -134,7 +135,9 @@ public class TransactionSyncService {
 			.toList();
 
 		accountTransactionOverrideRepository.saveAll(transactions);
-		publishAccountTransactionEvents(account.getUser().getId(), transactions);
+		if (shouldPublishEvents) {
+			publishAccountTransactionEvents(account.getUser().getId(), transactions);
+		}
 		return transactions.size();
 	}
 
@@ -142,6 +145,7 @@ public class TransactionSyncService {
 		Optional<CardTransactionOverride> latestLocal = forceFullSync
 			? Optional.empty()
 			: cardTransactionOverrideRepository.findTopByCard_CardUniqueNoOrderByTransactionDateTimeDesc(card.getCardUniqueNo());
+		boolean shouldPublishEvents = !forceFullSync && latestLocal.isPresent();
 		DateRange dateRange = dateRangeFactory.resolve(
 			months,
 			latestLocal.map(transaction -> transaction.getTransactionDateTime().toLocalDate()).orElse(null),
@@ -187,7 +191,9 @@ public class TransactionSyncService {
 			.toList();
 
 		cardTransactionOverrideRepository.saveAll(transactions);
-		publishCardTransactionEvents(card.getWithdrawalAccount().getUser().getId(), transactions);
+		if (shouldPublishEvents) {
+			publishCardTransactionEvents(card.getWithdrawalAccount().getUser().getId(), transactions);
+		}
 		return transactions.size();
 	}
 

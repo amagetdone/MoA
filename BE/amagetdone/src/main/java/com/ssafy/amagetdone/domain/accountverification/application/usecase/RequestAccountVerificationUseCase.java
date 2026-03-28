@@ -3,6 +3,7 @@ package com.ssafy.amagetdone.domain.accountverification.application.usecase;
 import java.time.LocalDateTime;
 
 import com.ssafy.amagetdone.domain.account.application.usecase.FindAccountUserUseCase;
+import com.ssafy.amagetdone.domain.accountverification.application.event.VerificationRequestedEvent;
 import com.ssafy.amagetdone.domain.accountverification.api.dto.AccountVerificationDto;
 import com.ssafy.amagetdone.domain.accountverification.infra.client.SsafyAccountVerificationApiClient;
 import com.ssafy.amagetdone.domain.accountverification.infra.client.dto.AccountVerificationClientDto;
@@ -10,6 +11,7 @@ import com.ssafy.amagetdone.domain.accountverification.model.entity.AccountVerif
 import com.ssafy.amagetdone.domain.accountverification.model.repository.AccountVerificationRepository;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,15 +24,18 @@ public class RequestAccountVerificationUseCase {
 	private final FindAccountUserUseCase findAccountUserUseCase;
 	private final AccountVerificationRepository accountVerificationRepository;
 	private final SsafyAccountVerificationApiClient ssafyAccountVerificationApiClient;
+	private final ApplicationEventPublisher applicationEventPublisher;
 
 	public RequestAccountVerificationUseCase(
 		FindAccountUserUseCase findAccountUserUseCase,
 		AccountVerificationRepository accountVerificationRepository,
-		SsafyAccountVerificationApiClient ssafyAccountVerificationApiClient
+		SsafyAccountVerificationApiClient ssafyAccountVerificationApiClient,
+		ApplicationEventPublisher applicationEventPublisher
 	) {
 		this.findAccountUserUseCase = findAccountUserUseCase;
 		this.accountVerificationRepository = accountVerificationRepository;
 		this.ssafyAccountVerificationApiClient = ssafyAccountVerificationApiClient;
+		this.applicationEventPublisher = applicationEventPublisher;
 	}
 
 	@Transactional
@@ -57,6 +62,14 @@ public class RequestAccountVerificationUseCase {
 				LocalDateTime.now()
 			)
 		);
+
+		applicationEventPublisher.publishEvent(new VerificationRequestedEvent(
+			user.getId(),
+			user.getUserKey(),
+			request.accountNo(),
+			AUTH_TEXT,
+			savedVerification.getRequestedAt()
+		));
 
 		return new AccountVerificationDto.RequestVerificationResponse(
 			savedVerification.getId(),

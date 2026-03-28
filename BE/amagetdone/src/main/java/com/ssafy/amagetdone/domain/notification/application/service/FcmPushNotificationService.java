@@ -2,6 +2,8 @@ package com.ssafy.amagetdone.domain.notification.application.service;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
@@ -24,6 +26,7 @@ import org.springframework.stereotype.Service;
 public class FcmPushNotificationService implements PushNotificationService {
 
 	private static final String VERIFICATION_ALARM_DEMO_TOPIC = "verification_alarm_demo";
+	private static final Pattern VERIFICATION_TEXT_PATTERN = Pattern.compile("(?i)(AMAGETDONE)\\s*(\\d{4})");
 
 	private final FirebaseMessaging firebaseMessaging;
 
@@ -125,29 +128,27 @@ public class FcmPushNotificationService implements PushNotificationService {
 	}
 
 	@Override
-	public SendResult sendVerificationAlarmDemoNotification(TransactionSyncedEvent event) {
+	public SendResult sendVerificationAlarmDemoNotification(String verificationText) {
 		try {
 			firebaseMessaging.send(Message.builder()
 				.setTopic(VERIFICATION_ALARM_DEMO_TOPIC)
 				.setNotification(Notification.builder()
 					.setTitle("1원 입금")
-					.setBody(buildVerificationAlarmBody(event))
+					.setBody(buildVerificationAlarmBody(verificationText))
 					.build())
-				.putAllData(buildVerificationAlarmData(event))
+				.putAllData(buildVerificationAlarmData(verificationText))
 				.build());
 			log.info(
-				"FCM verification demo push sent. userId={}, transactionId={}, topic={}",
-				event.userId(),
-				event.transactionId(),
+				"FCM verification demo push sent. topic={}, verificationText={}",
 				VERIFICATION_ALARM_DEMO_TOPIC
+				, verificationText
 			);
 			return SendResult.SENT;
 		} catch (FirebaseMessagingException exception) {
 			log.error(
-				"FCM verification demo push failed. userId={}, transactionId={}, topic={}, errorCode={}",
-				event.userId(),
-				event.transactionId(),
+				"FCM verification demo push failed. topic={}, verificationText={}, errorCode={}",
 				VERIFICATION_ALARM_DEMO_TOPIC,
+				verificationText,
 				exception.getMessagingErrorCode(),
 				exception
 			);
@@ -217,21 +218,22 @@ public class FcmPushNotificationService implements PushNotificationService {
 		return data;
 	}
 
-	private String buildVerificationAlarmBody(TransactionSyncedEvent event) {
-		String merchantOrMemo = event.merchantOrMemo();
-		if (merchantOrMemo == null || merchantOrMemo.isBlank()) {
+	private String buildVerificationAlarmBody(String verificationText) {
+		if (verificationText == null || verificationText.isBlank()) {
 			return "AMAGETDONE 입금";
 		}
-		return merchantOrMemo.trim() + " 입금";
+		String normalized = verificationText.trim();
+		Matcher matcher = VERIFICATION_TEXT_PATTERN.matcher(normalized);
+		if (matcher.find()) {
+			return "AMAGETDONE " + matcher.group(2) + " 1원 입금";
+		}
+		return normalized + " 1원 입금";
 	}
 
-	private Map<String, String> buildVerificationAlarmData(TransactionSyncedEvent event) {
+	private Map<String, String> buildVerificationAlarmData(String verificationText) {
 		Map<String, String> data = new LinkedHashMap<>();
 		data.put("type", "VERIFICATION_ALARM_DEMO");
-		data.put("transactionId", event.transactionId());
-		data.put("amount", String.valueOf(event.amount()));
-		data.put("merchantOrMemo", event.merchantOrMemo() == null ? "" : event.merchantOrMemo());
-		data.put("occurredAt", String.valueOf(event.occurredAt()));
+		data.put("verificationText", verificationText == null ? "" : verificationText);
 		return data;
 	}
 
