@@ -147,6 +147,8 @@ class ChatbotService:
             conversation_id=resolved_conversation_id,
             content=message,
         )
+        graph = self._get_graph(validated_user_id)
+        await _ensure_graph_ready(graph)
         async def _event_stream() -> AsyncIterator[dict[str, object]]:
             with self._tracer.start_as_current_span(
                 name="chatbot.stream_reply",
@@ -162,7 +164,7 @@ class ChatbotService:
                 yielded_text: list[str] = []
                 yield {"event": "status", "data": {"message": "routing"}}
 
-                async for event in self._get_graph(validated_user_id).astream(
+                async for event in graph.astream(
                     {
                         "messages": self._build_graph_input_messages(
                             user_id=validated_user_id,
@@ -660,6 +662,12 @@ def _has_chatbot_llm_config(settings: Settings) -> bool:
             bool(settings.openai_base_url.strip()),
         ]
     )
+
+
+async def _ensure_graph_ready(graph: Any) -> None:
+    ensure_ready = getattr(graph, "aensure_ready", None)
+    if callable(ensure_ready):
+        await ensure_ready()
 
 
 async def _close_resource(resource: Any) -> None:

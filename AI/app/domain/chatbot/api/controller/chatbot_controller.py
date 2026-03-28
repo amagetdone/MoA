@@ -14,6 +14,7 @@ from app.domain.chatbot.api.dto.detail_dto import (
     ChatbotMessageRequest,
     ChatbotMessageResponse,
 )
+from app.domain.chatbot.errors import ChatbotUpstreamUnavailableError
 from app.domain.chatbot.repository.conversation_memory_store import (
     ConversationExpiredError,
     ConversationNotFoundError,
@@ -33,11 +34,14 @@ async def create_chatbot_message(
     user_id: TrustedUserId,
     service=Depends(get_chatbot_service),
 ) -> dict[str, object]:
-    return await service.reply(
-        user_id=user_id,
-        message=request.message,
-        conversation_id=request.conversation_id,
-    )
+    try:
+        return await service.reply(
+            user_id=user_id,
+            message=request.message,
+            conversation_id=request.conversation_id,
+        )
+    except ChatbotUpstreamUnavailableError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
 
 
 @router.post("/messages/stream")
@@ -54,6 +58,8 @@ async def stream_chatbot_message(
         )
     except ConversationExpiredError as error:
         raise HTTPException(status_code=410, detail=str(error)) from error
+    except ChatbotUpstreamUnavailableError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
 
     async def event_stream() -> AsyncIterator[str]:
         async for event in stream:

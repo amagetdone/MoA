@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from app.domain.chatbot.errors import ChatbotUpstreamUnavailableError
 from app.domain.chatbot.repository.conversation_memory_store import (
     ConversationExpiredError,
     ConversationNotFoundError,
@@ -16,6 +17,7 @@ class _FakeChatbotService:
         self.latest_conversation_calls: list[dict[str, object]] = []
         self.history_error: str | None = None
         self.latest_error: str | None = None
+        self.reply_error: str | None = None
         self.conversation_result = {
             "conversation_id": "conv-1",
             "created_at": "2026-03-26T09:00:00+00:00",
@@ -43,6 +45,11 @@ class _FakeChatbotService:
         message: str,
         conversation_id: str | None,
     ) -> dict[str, object]:
+        if self.reply_error == "upstream_unavailable":
+            raise ChatbotUpstreamUnavailableError(
+                "Chatbot coaching backend is temporarily unavailable. Upstream MCP responded with HTTP 401.",
+                upstream_status_code=401,
+            )
         self.reply_calls.append(
             {
                 "user_id": user_id,
@@ -101,6 +108,11 @@ class _FakeStreamingChatbotService(_FakeChatbotService):
     ):
         if self.stream_error == "expired":
             raise ConversationExpiredError("expired")
+        if self.stream_error == "upstream_unavailable":
+            raise ChatbotUpstreamUnavailableError(
+                "Chatbot coaching backend is temporarily unavailable. Upstream MCP responded with HTTP 401.",
+                upstream_status_code=401,
+            )
 
         self.stream_calls.append(
             {
@@ -155,6 +167,26 @@ def test_chatbot_message_endpoint_returns_json_response() -> None:
             "conversation_id": None,
         }
     ]
+
+
+def test_chatbot_message_endpoint_returns_503_when_chatbot_backend_is_unavailable() -> None:
+    service = _FakeChatbotService()
+    service.reply_error = "upstream_unavailable"
+    app = create_app(
+        classifier=object(),
+        image_generation_service=object(),
+        chatbot_service=service,
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/v1/chatbot/messages",
+            headers={"X-User-Id": "7"},
+            json={"message": "Is my budget okay this week?"},
+        )
+
+    assert response.status_code == 503
+    assert "temporarily unavailable" in response.json()["detail"]
 
 
 def test_chatbot_message_endpoint_requires_user_id_header() -> None:
@@ -532,3 +564,23 @@ def test_chatbot_stream_endpoint_returns_410_for_expired_conversation() -> None:
         )
 
     assert response.status_code == 410
+
+
+def test_chatbot_stream_endpoint_returns_503_when_chatbot_backend_is_unavailable() -> None:
+    service = _FakeStreamingChatbotService()
+    service.stream_error = "upstream_unavailable"
+    app = create_app(
+        classifier=object(),
+        image_generation_service=object(),
+        chatbot_service=service,
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/v1/chatbot/messages/stream",
+            headers={"X-User-Id": "7"},
+            json={"message": "hello", "conversation_id": "conv-1"},
+        )
+
+    assert response.status_code == 503
+    assert "temporarily unavailable" in response.json()["detail"]

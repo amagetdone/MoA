@@ -8,6 +8,7 @@ import pytest
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
 
 from app.core.config import Settings
+from app.domain.chatbot.errors import ChatbotUpstreamUnavailableError
 from app.domain.chatbot.repository.conversation_memory_store import (
     ConversationExpiredError,
     ConversationMemoryStore,
@@ -238,6 +239,34 @@ def test_build_chatbot_service_returns_none_without_mcp_url_even_with_database_s
     )
 
     assert build_chatbot_service(settings=settings, tracer=_FakeTracer()) is None
+
+
+def test_stream_reply_raises_runtime_unavailable_before_opening_stream() -> None:
+    class _UnavailableGraph:
+        async def aensure_ready(self) -> None:
+            raise ChatbotUpstreamUnavailableError(
+                "Chatbot coaching backend is temporarily unavailable. Upstream MCP responded with HTTP 401.",
+                upstream_status_code=401,
+            )
+
+    service = ChatbotService(
+        settings=_build_settings(),
+        graph_factory=lambda _user_id: _UnavailableGraph(),
+        tracer=_FakeTracer(),
+    )
+
+    async def run() -> None:
+        await service.stream_reply(
+            user_id=7,
+            message="How is my budget?",
+            conversation_id="conv-1",
+        )
+
+    with pytest.raises(
+        ChatbotUpstreamUnavailableError,
+        match="temporarily unavailable.*401",
+    ):
+        anyio.run(run)
 
 
 def test_reply_uses_user_scoped_thread_id_and_caches_graph_per_user() -> None:

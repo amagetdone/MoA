@@ -6,18 +6,21 @@ import re
 from dataclasses import dataclass
 from datetime import date
 from typing import Any, Callable, Sequence
+from uuid import uuid4
 
+import httpx
 from langchain.agents import create_agent
 from langchain.agents.middleware import AgentMiddleware
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, AIMessageChunk, AnyMessage, BaseMessage, HumanMessage, ToolMessage
-from langchain_core.tools import BaseTool
+from langchain_core.tools import BaseTool, ToolException
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.graph import END, START, StateGraph
 
 from app.core.config import Settings
 from app.core.llm import build_chat_model
 from app.core.logging import LangfuseTraceLogger
+from app.domain.chatbot.errors import ChatbotUpstreamUnavailableError
 from app.domain.chatbot.agents.prompts.chatbot_prompts import (
     build_queryguard_prompt,
     build_querysmith_prompt,
@@ -43,6 +46,12 @@ _FORBIDDEN_RESPONSE_PATTERNS = [
         r"\b(i|we)\s+(used|called|asked)\b.*\bsupervisor\b",
     )
 ]
+_BUDGET_STATUS_TOOL_NAMES = frozenset({"get_budget_home", "get_budget_dashboard"})
+_WEEKLY_SPENDING_FALLBACK_TOOLS = (
+    "get_weekly_spending_analysis",
+    "get_weekly_expense_graph",
+    "get_transaction_list",
+)
 
 
 @dataclass(slots=True)
@@ -71,20 +80,19 @@ class _TrustedUserContextMiddleware(AgentMiddleware):
         return await handler(self._inject_user_id(request))
 
     def _inject_user_id(self, request):
+        tool_call = _normalized_tool_call(getattr(request, "tool_call", None))
+        if tool_call is None:
+            return request
+
         tool = getattr(request, "tool", None)
-        if not _tool_accepts_user_id(tool):
-            return request
-
-        runtime = getattr(request, "runtime", None)
-        context = getattr(runtime, "context", None)
-        user_id = getattr(context, "user_id", None)
-        if not isinstance(user_id, int):
-            return request
-
-        tool_call = dict(request.tool_call)
-        args = dict(tool_call.get("args") or {})
-        args["user_id"] = user_id
-        tool_call["args"] = args
+        if _tool_accepts_user_id(tool):
+            runtime = getattr(request, "runtime", None)
+            context = getattr(runtime, "context", None)
+            user_id = getattr(context, "user_id", None)
+            if isinstance(user_id, int):
+                args = dict(tool_call.get("args") or {})
+                args["user_id"] = user_id
+                tool_call["args"] = args
         return request.override(tool_call=tool_call)
 
 
@@ -94,14 +102,41 @@ class _ToolTraceMiddleware(AgentMiddleware):
 
     def wrap_tool_call(self, request, handler):
         if not self._tracer.enabled:
-            return handler(request)
+            try:
+                return handler(request)
+            except Exception as error:
+                recovered_message = _build_recoverable_tool_error_message(request, error)
+                if recovered_message is not None:
+                    return recovered_message
+                _raise_translated_tool_error(error)
 
         with self._tracer.start_as_current_span(**self._span_kwargs(request)) as span:
             try:
                 response = handler(request)
-            except Exception:
-                span.update(metadata={"status": "error"})
-                raise
+            except Exception as error:
+                recovered_message = _build_recoverable_tool_error_message(request, error)
+                if recovered_message is not None:
+                    span.update(
+                        metadata={
+                            "status": "recovered_no_data",
+                            "result_type": type(recovered_message).__name__,
+                            "error_type": error.__class__.__name__,
+                            "error_message": str(error),
+                        }
+                    )
+                    return recovered_message
+                translated_error = _translate_tool_runtime_error(error)
+                span.update(
+                    metadata={
+                        "status": "error",
+                        "error_type": translated_error.__class__.__name__,
+                        "error_message": str(translated_error),
+                        "upstream_error_message": str(error),
+                    }
+                )
+                if translated_error is error:
+                    raise
+                raise translated_error from error
             span.update(
                 metadata={
                     "status": "completed",
@@ -112,14 +147,41 @@ class _ToolTraceMiddleware(AgentMiddleware):
 
     async def awrap_tool_call(self, request, handler):
         if not self._tracer.enabled:
-            return await handler(request)
+            try:
+                return await handler(request)
+            except Exception as error:
+                recovered_message = _build_recoverable_tool_error_message(request, error)
+                if recovered_message is not None:
+                    return recovered_message
+                _raise_translated_tool_error(error)
 
         with self._tracer.start_as_current_span(**self._span_kwargs(request)) as span:
             try:
                 response = await handler(request)
-            except Exception:
-                span.update(metadata={"status": "error"})
-                raise
+            except Exception as error:
+                recovered_message = _build_recoverable_tool_error_message(request, error)
+                if recovered_message is not None:
+                    span.update(
+                        metadata={
+                            "status": "recovered_no_data",
+                            "result_type": type(recovered_message).__name__,
+                            "error_type": error.__class__.__name__,
+                            "error_message": str(error),
+                        }
+                    )
+                    return recovered_message
+                translated_error = _translate_tool_runtime_error(error)
+                span.update(
+                    metadata={
+                        "status": "error",
+                        "error_type": translated_error.__class__.__name__,
+                        "error_message": str(translated_error),
+                        "upstream_error_message": str(error),
+                    }
+                )
+                if translated_error is error:
+                    raise
+                raise translated_error from error
             span.update(
                 metadata={
                     "status": "completed",
@@ -215,6 +277,9 @@ class _ChatbotAgentRuntime:
         ):
             yield event
 
+    async def aensure_ready(self) -> None:
+        await self._ensure_agent()
+
     def get_graph(self, xray: bool = False):
         if self._agent is not None:
             return self._agent.get_graph(xray=xray)
@@ -269,7 +334,10 @@ class _ChatbotAgentRuntime:
                 }
             }
         )
-        return list(await client.get_tools())
+        try:
+            return list(await client.get_tools())
+        except Exception as error:
+            raise _translate_mcp_error(error) from error
 
     def _local_tools(self) -> Sequence[BaseTool]:
         return [*self._tool_bundle.schema, *self._tool_bundle.sql]
@@ -485,8 +553,187 @@ def _tool_accepts_user_id(tool: BaseTool | None) -> bool:
     if tool is None:
         return False
     args_schema = getattr(tool, "args_schema", None)
+    if isinstance(args_schema, dict):
+        properties = args_schema.get("properties")
+        return isinstance(properties, dict) and "user_id" in properties
     model_fields = getattr(args_schema, "model_fields", None)
     return isinstance(model_fields, dict) and "user_id" in model_fields
+
+
+def _normalized_tool_call(tool_call: Any) -> dict[str, Any] | None:
+    if not isinstance(tool_call, dict):
+        return None
+
+    normalized = dict(tool_call)
+    tool_call_id = str(normalized.get("id") or "").strip()
+    if not tool_call_id:
+        normalized["id"] = f"server-tool-call-{uuid4().hex}"
+    return normalized
+
+
+def _translate_mcp_error(error: Exception) -> ChatbotUpstreamUnavailableError:
+    status_error = _find_http_status_error(error)
+    if status_error is None:
+        return ChatbotUpstreamUnavailableError(
+            "Chatbot coaching backend is temporarily unavailable."
+        )
+
+    return ChatbotUpstreamUnavailableError(
+        "Chatbot coaching backend is temporarily unavailable. "
+        f"Upstream MCP responded with HTTP {status_error.response.status_code}.",
+        upstream_status_code=status_error.response.status_code,
+    )
+
+
+def _translate_tool_runtime_error(error: Exception) -> Exception:
+    if isinstance(error, ChatbotUpstreamUnavailableError):
+        return error
+
+    if isinstance(error, ToolException):
+        error_message = str(error).strip()
+        return ChatbotUpstreamUnavailableError(
+            "Chatbot coaching backend tool execution failed. "
+            f"Upstream tool reported: {error_message}"
+        )
+
+    return error
+
+
+def _build_recoverable_tool_error_message(
+    request: Any,
+    error: Exception,
+) -> ToolMessage | None:
+    if not isinstance(error, ToolException):
+        return None
+
+    error_message = str(error).strip()
+    if "user not found" not in error_message.casefold():
+        return None
+
+    tool_name = _request_tool_name(request) or "unknown_tool"
+    tool_call = getattr(request, "tool_call", {}) or {}
+    tool_call_id = str(tool_call.get("id") or "").strip()
+    suggested_next_tools = _suggested_no_data_fallback_tools(
+        request=request,
+        tool_name=tool_name,
+    )
+    payload = {
+        "tool_name": tool_name,
+        "status": "no_data",
+        "warnings": [
+            "Current finance records were not available for this user context."
+        ],
+        "observation": _build_no_data_observation(
+            request=request,
+            tool_name=tool_name,
+            suggested_next_tools=suggested_next_tools,
+        ),
+    }
+    if suggested_next_tools:
+        payload["suggested_next_tools"] = list(suggested_next_tools)
+    return ToolMessage(
+        content=json.dumps(payload, ensure_ascii=False),
+        name=tool_name,
+        tool_call_id=tool_call_id,
+        status="error",
+    )
+
+
+def _raise_translated_tool_error(error: Exception) -> None:
+    translated_error = _translate_tool_runtime_error(error)
+    if translated_error is error:
+        raise error
+    raise translated_error from error
+
+
+def _build_no_data_observation(
+    *,
+    request: Any,
+    tool_name: str,
+    suggested_next_tools: Sequence[str],
+) -> str:
+    if suggested_next_tools:
+        primary_tool = suggested_next_tools[0]
+        secondary_tools = ", ".join(suggested_next_tools[1:])
+        return (
+            "No current finance records were available from the budget-status snapshot "
+            "for this user context. This user asked for weekly spending feedback. "
+            f"Before giving general coaching, try {primary_tool}. "
+            f"If that is unavailable, try {secondary_tools} for this week's spending evidence. "
+            "Only continue with general coaching without tool evidence if those tools are also unavailable. "
+            "Tell the user that current financial records could not be fully loaded, "
+            "avoid blaming the user, and avoid unsupported numeric claims."
+        )
+
+    return (
+        "No current finance records were available for this user context. "
+        "Continue with general coaching without tool evidence. "
+        "Tell the user that current financial records could not be loaded, "
+        "avoid blaming the user, and avoid unsupported numeric claims."
+    )
+
+
+def _suggested_no_data_fallback_tools(
+    *,
+    request: Any,
+    tool_name: str,
+) -> tuple[str, ...]:
+    if tool_name not in _BUDGET_STATUS_TOOL_NAMES:
+        return ()
+
+    runtime = getattr(request, "runtime", None)
+    context = getattr(runtime, "context", None)
+    user_query = str(getattr(context, "user_query", "") or "").strip()
+    if not _looks_like_weekly_spending_feedback_query(user_query):
+        return ()
+
+    return _WEEKLY_SPENDING_FALLBACK_TOOLS
+
+
+def _looks_like_weekly_spending_feedback_query(user_query: str) -> bool:
+    normalized_query = user_query.casefold()
+    if not normalized_query:
+        return False
+
+    has_week_signal = any(
+        token in normalized_query
+        for token in ("이번주", "이번 주", "this week", "weekly")
+    )
+    has_spending_signal = any(
+        token in normalized_query
+        for token in (
+            "소비",
+            "지출",
+            "내역",
+            "피드백",
+            "리뷰",
+            "분석",
+            "spending",
+            "expense",
+            "expenses",
+            "feedback",
+            "review",
+            "summary",
+        )
+    )
+    return has_week_signal and has_spending_signal
+
+
+def _find_http_status_error(error: BaseException) -> httpx.HTTPStatusError | None:
+    if isinstance(error, httpx.HTTPStatusError):
+        return error
+
+    nested = getattr(error, "exceptions", None)
+    if not isinstance(nested, (list, tuple)):
+        return None
+
+    for item in nested:
+        if not isinstance(item, BaseException):
+            continue
+        resolved = _find_http_status_error(item)
+        if resolved is not None:
+            return resolved
+    return None
 
 
 def _request_tool_name(request: Any) -> str:
