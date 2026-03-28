@@ -101,6 +101,18 @@ public class User extends BaseEntity {
 		this.email = email;
 	}
 
+	public void applySocialProfileIfAbsent(String nickname, String email, String profileUrl) {
+		if (hasText(nickname) && !hasText(this.nickname)) {
+			this.nickname = nickname;
+		}
+		if (hasText(email) && !hasText(this.email)) {
+			this.email = email;
+		}
+		if (hasText(profileUrl) && !hasText(this.profileUrl)) {
+			this.profileUrl = profileUrl;
+		}
+	}
+
 	public void updateProfileUrl(String profileUrl) {
 		this.profileUrl = profileUrl;
 	}
