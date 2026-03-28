@@ -25,7 +25,9 @@ class GoalCard extends ConsumerWidget {
 
   String get _weekLabel {
     final d = goal.remainingDays;
-    final dLabel = d >= 0 ? 'D-$d' : 'D+${-d}';
+    final dLabel = goal.status == GoalStatus.achieved
+        ? '완료'
+        : d >= 0 ? 'D-$d' : 'D+${-d}';
     return '$_currentWeek주차 ($dLabel)';
   }
 

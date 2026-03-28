@@ -19,9 +19,11 @@ class GoalSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dDayText = goal.remainingDays >= 0
-        ? 'D-${goal.remainingDays}'
-        : 'D+${-goal.remainingDays}';
+    final dDayText = goal.status == GoalStatus.achieved
+        ? '완료'
+        : goal.remainingDays >= 0
+            ? 'D-${goal.remainingDays}'
+            : 'D+${-goal.remainingDays}';
     final weekText = '${_currentWeek(goal)}주차 ($dDayText)';
     final percentText = (goal.progressRate * 100).toStringAsFixed(1);
 

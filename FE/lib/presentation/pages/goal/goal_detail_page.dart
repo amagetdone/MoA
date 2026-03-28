@@ -74,6 +74,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
                   ),
                   Expanded(
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Flexible(
                           child: Text(
@@ -87,15 +88,26 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
                           ),
                         ),
                         SizedBox(width: 10.w),
-                        _Badge(
-                          label: goal.remainingDays >= 0
-                              ? 'D-${goal.remainingDays}'
-                              : 'D+${-goal.remainingDays}',
-                          bgColor: goal.remainingDays < 0
-                              ? AppColors.red500
-                              : AppColors.orange500,
-                          textColor: Colors.white,
-                        ),
+                        if (goal.status == GoalStatus.achieved) ...[
+                          Text(
+                            '${goal.currentWeekNumber}주차',
+                            style: AppTextStyles.caption.copyWith(
+                              color: colors.textPrimary,
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ] else ...[
+                          _Badge(
+                            label: goal.remainingDays >= 0
+                                ? 'D-${goal.remainingDays}'
+                                : 'D+${-goal.remainingDays}',
+                            bgColor: goal.remainingDays < 0
+                                ? AppColors.red500
+                                : AppColors.orange500,
+                            textColor: Colors.white,
+                          ),
+                        ],
                       ],
                     ),
                   ),

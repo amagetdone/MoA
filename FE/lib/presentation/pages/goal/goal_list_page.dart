@@ -74,13 +74,46 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            '나의 목표',
-                            style: AppTextStyles.headingMd.copyWith(
-                              color: colors.textPrimary,
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          Row(
+                            children: [
+                              Text(
+                                '나의 목표',
+                                style: AppTextStyles.headingMd.copyWith(
+                                  color: colors.textPrimary,
+                                  fontSize: 20.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const Spacer(),
+                              GestureDetector(
+                                onTap: () {
+                                  if (_showcaseContext != null) {
+                                    ShowCaseWidget.of(_showcaseContext!).startShowCase(
+                                      [_keyFilterChips, _keyPriority, _keyFab],
+                                    );
+                                  }
+                                },
+                                child: Container(
+                                  width: 26.w,
+                                  height: 26.w,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: colors.borderDefault,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '?',
+                                      style: TextStyle(
+                                        color: colors.textSecondary,
+                                        fontSize: 13.sp,
+                                        fontWeight: FontWeight.w800,
+                                        height: 1,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           SizedBox(height: 4.h),
                           Text(
@@ -104,8 +137,13 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
                           Showcase(
                             key: _keyFilterChips,
                             title: '목표 필터',
+                            titleTextStyle: AppTextStyles.bodyMd.copyWith(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 18.sp,
+                              color: AppColors.orange500,
+                            ),
                             description:
-                                '진행 중인 목표와 달성한 목표를 구분해서 볼 수 있어요. 원하는 탭을 눌러 목표를 관리해보세요.',
+                                '진행 중인 목표와 달성한 목표를 구분해서 볼 수 있어요.\n원하는 탭을 눌러 목표를 관리해보세요.',
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -127,8 +165,13 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
                           Showcase(
                             key: _keyPriority,
                             title: '우선순위 설정',
+                            titleTextStyle: AppTextStyles.bodyMd.copyWith(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 18.sp,
+                              color: AppColors.orange500,
+                            ),
                             description:
-                                '목표의 저축 우선순위를 직접 정할 수 있어요. 중요한 목표부터 저축되도록 순서를 설정해보세요.',
+                                '목표의 저축 우선순위를 직접 정할 수 있어요.\n중요한 목표부터 저축되도록 순서를 설정해보세요.',
                             child: GestureDetector(
                               onTap: () => context.push(AppRoutes.goalPriority),
                               child: Text(
@@ -169,8 +212,13 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
           floatingActionButton: Showcase(
             key: _keyFab,
             title: '목표 추가',
+            titleTextStyle: AppTextStyles.bodyMd.copyWith(
+              fontWeight: FontWeight.w800,
+              fontSize: 18.sp,
+              color: AppColors.orange500,
+            ),
             description:
-                '새로운 목표를 추가할 수 있어요. 여행, 가전제품 등 원하는 것을 목표로 등록하고 저축을 시작해보세요!',
+                '새로운 목표를 추가할 수 있어요.\n여행, 가전제품 등 원하는 것을 목표로 등록하고 저축을 시작해보세요!',
             child: FloatingActionButton(
               heroTag: 'goal_list_add_fab',
               backgroundColor: AppColors.orange500,

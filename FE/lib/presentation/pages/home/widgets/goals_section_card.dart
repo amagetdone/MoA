@@ -89,8 +89,9 @@ class _GoalsSectionCardState extends State<GoalsSectionCard> {
                     Text(
                       '이번 주 목표',
                       style: AppTextStyles.bodyMd.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15.sp,
+                        color: AppColors.orange500,
                       ),
                     ),
                     const Spacer(),

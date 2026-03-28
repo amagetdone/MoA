@@ -140,13 +140,11 @@ class GoalBarChart extends StatelessWidget {
 
       return _BarChartCard(
         title: '저축 이력',
-        leftMetricLabel: '현재 주차 계획',
-        leftMetricValue: CurrencyFormatter.formatKRW(highlightedPlan.amount),
-        leftMetricColor: AppColors.orange500,
-        rightMetricLabel: '주간 목표',
-        rightMetricValue: CurrencyFormatter.formatKRW(
-          weeklyTarget?.round() ?? 0,
-        ),
+        leftMetricLabel: goal.status == GoalStatus.achieved ? null : '현재 주차 계획',
+        leftMetricValue: goal.status == GoalStatus.achieved ? null : CurrencyFormatter.formatKRW(highlightedPlan.amount),
+        leftMetricColor: goal.status == GoalStatus.achieved ? null : AppColors.orange500,
+        rightMetricLabel: goal.status == GoalStatus.achieved ? null : '주간 목표',
+        rightMetricValue: goal.status == GoalStatus.achieved ? null : CurrencyFormatter.formatKRW(weeklyTarget?.round() ?? 0),
         bars: [
           for (final plan in normalizedPlans)
             _ChartDatum(
@@ -184,11 +182,11 @@ class GoalBarChart extends StatelessWidget {
 
     return _BarChartCard(
       title: '저축 이력',
-      leftMetricLabel: '최근 주 저축',
-      leftMetricValue: CurrencyFormatter.formatKRW(latestWeekAmount),
-      leftMetricColor: AppColors.green500,
-      rightMetricLabel: '주간 목표',
-      rightMetricValue: CurrencyFormatter.formatKRW(weeklyTarget.round()),
+      leftMetricLabel: goal.status == GoalStatus.achieved ? null : '최근 주 저축',
+      leftMetricValue: goal.status == GoalStatus.achieved ? null : CurrencyFormatter.formatKRW(latestWeekAmount),
+      leftMetricColor: goal.status == GoalStatus.achieved ? null : AppColors.green500,
+      rightMetricLabel: goal.status == GoalStatus.achieved ? null : '주간 목표',
+      rightMetricValue: goal.status == GoalStatus.achieved ? null : CurrencyFormatter.formatKRW(weeklyTarget.round()),
       bars: [
         for (var i = 0; i <= latestWeekIndex; i++)
           _ChartDatum(
@@ -557,11 +555,11 @@ class _LineChartCardState extends State<_LineChartCard> {
 class _BarChartCard extends StatefulWidget {
   const _BarChartCard({
     required this.title,
-    required this.leftMetricLabel,
-    required this.leftMetricValue,
-    required this.leftMetricColor,
-    required this.rightMetricLabel,
-    required this.rightMetricValue,
+    this.leftMetricLabel,
+    this.leftMetricValue,
+    this.leftMetricColor,
+    this.rightMetricLabel,
+    this.rightMetricValue,
     required this.bars,
     required this.baseColor,
     required this.highlightedColor,
@@ -571,11 +569,11 @@ class _BarChartCard extends StatefulWidget {
   });
 
   final String title;
-  final String leftMetricLabel;
-  final String leftMetricValue;
-  final Color leftMetricColor;
-  final String rightMetricLabel;
-  final String rightMetricValue;
+  final String? leftMetricLabel;
+  final String? leftMetricValue;
+  final Color? leftMetricColor;
+  final String? rightMetricLabel;
+  final String? rightMetricValue;
   final List<_ChartDatum> bars;
   final double? referenceLineY;
   final int? highlightedIndex;
@@ -670,15 +668,17 @@ class _BarChartCardState extends State<_BarChartCard> {
               fontWeight: FontWeight.w700,
             ),
           ),
-          SizedBox(height: 10.h),
-          _MetricRow(
-            leftLabel: widget.leftMetricLabel,
-            leftValue: widget.leftMetricValue,
-            leftColor: widget.leftMetricColor,
-            rightLabel: widget.rightMetricLabel,
-            rightValue: widget.rightMetricValue,
-            rightColor: colors.textPrimary,
-          ),
+          if (widget.leftMetricLabel != null && widget.rightMetricLabel != null) ...[
+            SizedBox(height: 10.h),
+            _MetricRow(
+              leftLabel: widget.leftMetricLabel!,
+              leftValue: widget.leftMetricValue!,
+              leftColor: widget.leftMetricColor!,
+              rightLabel: widget.rightMetricLabel!,
+              rightValue: widget.rightMetricValue!,
+              rightColor: colors.textPrimary,
+            ),
+          ],
           SizedBox(height: 10.h),
           _ChartControlRow(onZoomIn: _zoomIn, onZoomOut: _zoomOut),
           SizedBox(height: 8.h),
@@ -706,12 +706,11 @@ class _BarChartCardState extends State<_BarChartCard> {
                   count - 1,
                   clampedStart + visibleCount - 1,
                 );
-                final visibleValues = <double>[
-                  for (var i = clampedStart; i <= endIndex; i++)
-                    widget.bars[i].value,
+                final allValues = <double>[
+                  for (final bar in widget.bars) bar.value,
                   if (widget.referenceLineY != null) widget.referenceLineY!,
                 ];
-                final bounds = _resolveBarChartBounds(visibleValues);
+                final bounds = _resolveBarChartBounds(allValues);
                 final titleInterval = math.max(1, (visibleCount / 4).ceil());
                 final barWidth = math.min(stepWidth * 0.48, 28.w).toDouble();
 

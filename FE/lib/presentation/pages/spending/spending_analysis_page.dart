@@ -116,13 +116,46 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            '지출 내역',
-                            style: AppTextStyles.headingMd.copyWith(
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
-                              color: colors.textPrimary,
-                            ),
+                          Row(
+                            children: [
+                              Text(
+                                '지출 내역',
+                                style: AppTextStyles.headingMd.copyWith(
+                                  fontSize: 20.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.textPrimary,
+                                ),
+                              ),
+                              const Spacer(),
+                              GestureDetector(
+                                onTap: () {
+                                  if (_showcaseContext != null) {
+                                    ShowCaseWidget.of(_showcaseContext!).startShowCase(
+                                      [_keyPeriodChips, _keySummary, _keyChart, _keyCategory],
+                                    );
+                                  }
+                                },
+                                child: Container(
+                                  width: 26.w,
+                                  height: 26.w,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: colors.borderDefault,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '?',
+                                      style: TextStyle(
+                                        color: colors.textSecondary,
+                                        fontSize: 13.sp,
+                                        fontWeight: FontWeight.w800,
+                                        height: 1,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           SizedBox(height: 4.h),
                           Text(
@@ -135,9 +168,14 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
                           SizedBox(height: 16.h),
                           Showcase(
                             key: _keyPeriodChips,
-                            title: '주간·월간 탭',
+                            title: '주간·월간 지출 내역',
+                            titleTextStyle: AppTextStyles.bodyMd.copyWith(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 18.sp,
+                              color: AppColors.orange500,
+                            ),
                             description:
-                                '주간 또는 월간 단위로 소비 내역을 볼 수 있어요. 원하는 기간을 선택해서 소비를 분석해보세요.',
+                                '주간 또는 월간 단위로 지출 내역을 볼 수 있어요.\n원하는 기간을 선택해서 소비를 분석해보세요.',
                             child: Row(
                               children: [
                                 MoreChip(
@@ -171,8 +209,13 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
                           Showcase(
                             key: _keySummary,
                             title: '기간 이동',
+                            titleTextStyle: AppTextStyles.bodyMd.copyWith(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 18.sp,
+                              color: AppColors.orange500,
+                            ),
                             description:
-                                '좌우 화살표를 눌러 지난 주/달의 소비 내역을 확인할 수 있어요. 소비 추이를 파악하는 데 도움이 돼요.',
+                                '좌우 화살표를 눌러 지난 주/달의 지출 내역을 확인할 수 있어요.\n소비 추이를 파악하는 데 도움이 돼요.',
                             child: _SpendingSummaryCard(state: state),
                           ),
                           SizedBox(height: 16.h),
@@ -188,8 +231,13 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
                             Showcase(
                               key: _keyChart,
                               title: '지출 그래프',
+                              titleTextStyle: AppTextStyles.bodyMd.copyWith(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 18.sp,
+                                color: AppColors.orange500,
+                              ),
                               description:
-                                  '선택한 기간의 일별/주별 지출을 그래프로 보여줘요. 어느 날 지출이 많았는지 한눈에 파악해보세요.',
+                                  '선택한 기간의 일별/주별 지출을 그래프로 보여줘요.\n어느 날 지출이 많았는지 한눈에 파악해보세요.',
                               child: MoreCard(
                                 padding: EdgeInsets.all(20.w),
                                 child: Column(
@@ -240,8 +288,13 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
                             Showcase(
                               key: _keyCategory,
                               title: '카테고리별 지출',
+                              titleTextStyle: AppTextStyles.bodyMd.copyWith(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 18.sp,
+                                color: AppColors.orange500,
+                              ),
                               description:
-                                  '식비, 교통비 등 카테고리별로 얼마나 썼는지 확인할 수 있어요. 주요 지출 항목을 파악해 절약 계획을 세워보세요.',
+                                  '식비, 교통비 등 카테고리별로 얼마나 썼는지 확인할 수 있어요.\n주요 지출 항목을 파악해 절약 계획을 세워보세요.',
                               child: MoreCard(
                                 padding: EdgeInsets.all(20.w),
                                 child: Column(
