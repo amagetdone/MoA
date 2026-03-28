@@ -14,11 +14,7 @@ import com.ssafy.amagetdone.domain.account.infra.client.SsafyDemandDepositAccoun
 import com.ssafy.amagetdone.domain.account.infra.client.dto.DemandDepositAccountDto;
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
-import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
-import com.ssafy.amagetdone.domain.member.exception.MemberException;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
-import com.ssafy.amagetdone.domain.member.model.repository.SocialAccountRepository;
-import com.ssafy.amagetdone.domain.member.model.vo.SocialProvider;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,24 +22,21 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
-public class SyncTestUserAssetsUseCase {
+public class SyncUserAssetsUseCase {
 
-	private static final Logger log = LoggerFactory.getLogger(SyncTestUserAssetsUseCase.class);
+	private static final Logger log = LoggerFactory.getLogger(SyncUserAssetsUseCase.class);
 
-	private final SocialAccountRepository socialAccountRepository;
 	private final FindAccountUserUseCase findAccountUserUseCase;
 	private final AccountRepository accountRepository;
 	private final SsafyDemandDepositAccountApiClient ssafyDemandDepositAccountApiClient;
 	private final SyncLinkedCardsUseCase syncLinkedCardsUseCase;
 
-	public SyncTestUserAssetsUseCase(
-		SocialAccountRepository socialAccountRepository,
+	public SyncUserAssetsUseCase(
 		FindAccountUserUseCase findAccountUserUseCase,
 		AccountRepository accountRepository,
 		SsafyDemandDepositAccountApiClient ssafyDemandDepositAccountApiClient,
 		SyncLinkedCardsUseCase syncLinkedCardsUseCase
 	) {
-		this.socialAccountRepository = socialAccountRepository;
 		this.findAccountUserUseCase = findAccountUserUseCase;
 		this.accountRepository = accountRepository;
 		this.ssafyDemandDepositAccountApiClient = ssafyDemandDepositAccountApiClient;
@@ -52,7 +45,6 @@ public class SyncTestUserAssetsUseCase {
 
 	@Transactional
 	public void execute(Integer userId) {
-		validateTestUser(userId);
 		User user = findAccountUserUseCase.execute(userId);
 		String userKey = requireUserKey(user);
 
@@ -81,12 +73,6 @@ public class SyncTestUserAssetsUseCase {
 
 		for (Account account : activeLinkedAccounts) {
 			syncCardsSafely(userId, userKey, account);
-		}
-	}
-
-	private void validateTestUser(Integer userId) {
-		if (userId == null || !socialAccountRepository.existsByUser_IdAndProvider(userId, SocialProvider.TEST)) {
-			throw new MemberException(MemberErrorCode.TEST_SOCIAL_USER_REQUIRED);
 		}
 	}
 

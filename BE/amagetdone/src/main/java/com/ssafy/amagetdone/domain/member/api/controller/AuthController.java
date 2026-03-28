@@ -1,6 +1,6 @@
 package com.ssafy.amagetdone.domain.member.api.controller;
 
-import com.ssafy.amagetdone.domain.account.application.usecase.SyncTestUserAssetsUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.SyncUserAssetsUseCase;
 import com.ssafy.amagetdone.domain.member.api.dto.LogoutDto;
 import com.ssafy.amagetdone.domain.member.api.dto.RefreshTokenDto;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
@@ -36,7 +36,7 @@ public class AuthController implements AuthDocsController {
 	private final MemberAuthService memberAuthService;
 	private final MemberTokenService memberTokenService;
 	private final JwtAccessTokenReader jwtAccessTokenReader;
-	private final SyncTestUserAssetsUseCase syncTestUserAssetsUseCase;
+	private final SyncUserAssetsUseCase syncUserAssetsUseCase;
 
 	@PostMapping("/social/{provider}")
 	public ApiResponse<SocialAuthDto.Response> socialAuth(
@@ -79,7 +79,7 @@ public class AuthController implements AuthDocsController {
 		@RequestHeader(name = "Authorization", required = false) String authorization
 	) {
 		int userId = jwtAccessTokenReader.readUserId(authorization);
-		syncTestUserAssetsUseCase.execute(userId);
+		syncUserAssetsUseCase.execute(userId);
 		return ApiResponse.ok("테스트 금융 자산 동기화에 성공했습니다.", new TestSocialSyncDto.Response(true));
 	}
 
