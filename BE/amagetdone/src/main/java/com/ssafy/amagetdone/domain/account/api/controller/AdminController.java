@@ -65,6 +65,17 @@ public class AdminController {
 		);
 	}
 
+	@Operation(summary = "플랜 초기 데이터 세팅")
+	@PostMapping("/data-init/plan")
+	public ApiResponse<AccountAdminDto.PlanDataInitResponse> initializePlanData(
+		@RequestBody AccountAdminDto.PlanDataInitRequest request
+	) {
+		return ApiResponse.ok(
+			"플랜 초기 데이터를 세팅했습니다.",
+			accountAdminService.initializePlanData(request)
+		);
+	}
+
 	@Operation(summary = "관리자 계좌 이체 결제 실행")
 	@PostMapping("/payments/account")
 	public ApiResponse<AccountAdminDto.PaymentResponse> executeAccountPayment(

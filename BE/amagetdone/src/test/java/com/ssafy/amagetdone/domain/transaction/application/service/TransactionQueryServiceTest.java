@@ -229,6 +229,30 @@ class TransactionQueryServiceTest {
 	}
 
 	@Test
+	void listTransactionsRequestsSyncForTheExplicitDateWindow() {
+		TransactionQueryService queryService = transactionQueryService();
+		LocalDate fromDate = LocalDate.of(2025, 12, 27);
+		LocalDate toDate = LocalDate.of(2026, 3, 27);
+
+		given(syncLatestTransactionsUseCase.execute(1, fromDate, toDate))
+			.willReturn(new com.ssafy.amagetdone.domain.transaction.application.service.TransactionSyncService.SyncResult(0, 0));
+		given(accountTransactionOverrideRepository
+			.findAllByAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of());
+		given(cardTransactionOverrideRepository
+			.findAllByCard_WithdrawalAccount_User_IdAndTransactionDateTimeBetweenOrderByTransactionDateTimeDesc(any(), any(), any()))
+			.willReturn(List.of());
+
+		TransactionListDto.Response response = queryService.listTransactions(
+			1,
+			new TransactionListDto.Query(fromDate, toDate, "ALL", 0, 20)
+		);
+
+		verify(syncLatestTransactionsUseCase).execute(1, fromDate, toDate);
+		assertEquals(0L, response.totalElements());
+	}
+
+	@Test
 	void getWeeklyExpenseGraphReturnsSevenDailyPointsIncludingZeroDays() {
 		TransactionQueryService queryService = transactionQueryService();
 

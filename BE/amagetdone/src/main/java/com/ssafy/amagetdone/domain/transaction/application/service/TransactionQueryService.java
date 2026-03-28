@@ -235,9 +235,11 @@ public class TransactionQueryService {
 	public TransactionListDto.Response listTransactions(Integer userId, TransactionListDto.Query query) {
 		LocalDate resolvedToDate = query.toDate() == null ? LocalDate.now() : query.toDate();
 		LocalDate resolvedFromDate = query.fromDate() == null ? resolvedToDate.minusMonths(1) : query.fromDate();
-		int requestedMonths = Math.max(1, (resolvedToDate.getYear() - resolvedFromDate.getYear()) * 12
-			+ resolvedToDate.getMonthValue() - resolvedFromDate.getMonthValue() + 1);
-		TransactionSyncService.SyncResult syncResult = syncLatestTransactionsUseCase.execute(userId, requestedMonths, false);
+		TransactionSyncService.SyncResult syncResult = syncLatestTransactionsUseCase.execute(
+			userId,
+			resolvedFromDate,
+			resolvedToDate
+		);
 
 		List<Projection> filteredProjections = loadProjections(
 			userId,

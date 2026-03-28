@@ -1,5 +1,7 @@
 package com.ssafy.amagetdone.domain.account.api.dto;
 
+import java.util.List;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 public final class AccountAdminDto {
@@ -74,6 +76,30 @@ public final class AccountAdminDto {
 		String targetNo,
 		@Schema(description = "생성된 거래 건수", example = "109")
 		int transactionCount
+	) {
+	}
+
+	@Schema(name = "PlanDataInitRequest")
+	public record PlanDataInitRequest(
+		@Schema(description = "초기화 대상 사용자 ID", example = "13")
+		Integer userId
+	) {
+	}
+
+	@Schema(name = "PlanDataInitResponse")
+	public record PlanDataInitResponse(
+		@Schema(description = "초기화 대상 타입", example = "plan")
+		String targetType,
+		@Schema(description = "초기화 대상 사용자 ID", example = "13")
+		Integer userId,
+		@Schema(description = "새로 생성된 플랜 수", example = "2")
+		int createdCount,
+		@Schema(description = "이미 존재해서 건너뛴 플랜 수", example = "1")
+		int skippedCount,
+		@Schema(description = "새로 생성된 플랜 제목 목록")
+		List<String> createdTitles,
+		@Schema(description = "건너뛴 플랜 제목 목록")
+		List<String> skippedTitles
 	) {
 	}
 

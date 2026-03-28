@@ -17,7 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.ssafy.amagetdone.domain.account.application.usecase.SyncTestUserAssetsUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.SyncUserAssetsUseCase;
 import com.ssafy.amagetdone.domain.member.api.controller.AuthController;
 import com.ssafy.amagetdone.domain.member.api.controller.MemberProfileController;
 import com.ssafy.amagetdone.domain.member.api.dto.LogoutDto;
@@ -80,7 +80,7 @@ class SecurityConfigIntegrationTest {
 	private JwtAccessTokenReader jwtAccessTokenReader;
 
 	@MockitoBean
-	private SyncTestUserAssetsUseCase syncTestUserAssetsUseCase;
+	private SyncUserAssetsUseCase syncUserAssetsUseCase;
 
 	@Test
 	void socialTestIgnoresInvalidAuthorizationHeader() throws Exception {

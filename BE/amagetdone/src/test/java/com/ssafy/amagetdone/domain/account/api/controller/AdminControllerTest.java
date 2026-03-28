@@ -85,6 +85,30 @@ class AdminControllerTest {
 	}
 
 	@Test
+	void initializePlanDataReturnsWrappedResponse() {
+		AccountAdminService accountAdminService = mock(AccountAdminService.class);
+		AdminPaymentService adminPaymentService = mock(AdminPaymentService.class);
+		AdminController controller = new AdminController(accountAdminService, adminPaymentService);
+		AccountAdminDto.PlanDataInitRequest request = new AccountAdminDto.PlanDataInitRequest(13);
+		AccountAdminDto.PlanDataInitResponse response = new AccountAdminDto.PlanDataInitResponse(
+			"plan",
+			13,
+			2,
+			1,
+			java.util.List.of("여행 자금 모으기", "자격증 교재 구매"),
+			java.util.List.of("맥북 프로 구매")
+		);
+		when(accountAdminService.initializePlanData(request)).thenReturn(response);
+
+		ApiResponse<AccountAdminDto.PlanDataInitResponse> result =
+			controller.initializePlanData(request);
+
+		assertThat(result.status()).isEqualTo("ok");
+		assertThat(result.data()).isEqualTo(response);
+		verify(accountAdminService).initializePlanData(request);
+	}
+
+	@Test
 	void executeAccountPaymentReturnsWrappedResponse() {
 		AccountAdminService accountAdminService = mock(AccountAdminService.class);
 		AdminPaymentService adminPaymentService = mock(AdminPaymentService.class);

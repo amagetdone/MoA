@@ -77,6 +77,24 @@ public class TransactionSyncService {
 		return new SyncResult(insertedAccountCount, insertedCardCount);
 	}
 
+	public SyncResult syncRange(Integer userId, LocalDate fromDate, LocalDate toDate) {
+		acquireUserSyncLock(userId);
+
+		DateRange dateRange = dateRangeFactory.resolve(fromDate, toDate);
+		List<Account> linkedAccounts = accountRepository.findAllLinkedAccountsByUserId(userId).stream()
+			.filter(Account::isActive)
+			.toList();
+		int insertedAccountCount = linkedAccounts.stream()
+			.mapToInt(account -> syncAccount(account, dateRange))
+			.sum();
+		int insertedCardCount = cardRepository
+			.findAllByWithdrawalAccount_User_IdAndWithdrawalAccount_VerifiedTrueAndWithdrawalAccount_ActiveTrue(userId)
+			.stream()
+			.mapToInt(card -> syncCard(card, dateRange))
+			.sum();
+		return new SyncResult(insertedAccountCount, insertedCardCount);
+	}
+
 	private void acquireUserSyncLock(Integer userId) {
 		if (userId == null) {
 			return;
@@ -138,6 +156,49 @@ public class TransactionSyncService {
 		return transactions.size();
 	}
 
+	private int syncAccount(Account account, DateRange dateRange) {
+		DemandDepositTransactionDto.Response response = demandDepositTransactionApiClient.inquireTransactions(
+			new DemandDepositTransactionDto.Request(
+				account.getUser().getUserKey(),
+				account.getAccountNo(),
+				dateRange.startDateText(),
+				dateRange.endDateText(),
+				DEMAND_DEPOSIT_TRANSACTION_TYPE,
+				DESCENDING_ORDER
+			)
+		);
+		if (response.transactions().isEmpty()) {
+			return 0;
+		}
+
+		List<DemandDepositTransactionDto.Item> newItems = response.transactions().stream()
+			.filter(item -> !accountTransactionOverrideRepository.existsByAccount_IdAndTransactionUniqueNo(
+				account.getId(),
+				item.transactionUniqueNo()
+			))
+			.toList();
+		if (newItems.isEmpty()) {
+			return 0;
+		}
+		Map<String, Category> assignedCategories = transactionCategoryAssignmentService.assignCategories(
+			newItems.stream()
+				.map(TransactionMerchantTextResolver::resolve)
+				.toList()
+		);
+		Category defaultCategory = categoryRepository.getReferenceById(DEFAULT_CATEGORY_ID);
+		List<AccountTransactionOverride> transactions = newItems.stream()
+			.map(item -> toAccountTransaction(
+				account,
+				resolveCategory(assignedCategories, TransactionMerchantTextResolver.resolve(item), defaultCategory),
+				item
+			))
+			.toList();
+
+		accountTransactionOverrideRepository.saveAll(transactions);
+		publishAccountTransactionEvents(account.getUser().getId(), transactions);
+		return transactions.size();
+	}
+
 	private int syncCard(Card card, int months, boolean forceFullSync) {
 		Optional<CardTransactionOverride> latestLocal = forceFullSync
 			? Optional.empty()
@@ -160,6 +221,48 @@ public class TransactionSyncService {
 			return 0;
 		}
 		if (latestLocal.isPresent() && matchesLatestCard(latestLocal.get(), response.transactions().get(0))) {
+			return 0;
+		}
+
+		List<CardTransactionDto.Item> newItems = response.transactions().stream()
+			.filter(item -> !cardTransactionOverrideRepository.existsByCard_CardUniqueNoAndTransactionUniqueNo(
+				card.getCardUniqueNo(),
+				item.transactionUniqueNo()
+			))
+			.toList();
+		if (newItems.isEmpty()) {
+			return 0;
+		}
+		Map<String, Category> assignedCategories = transactionCategoryAssignmentService.assignCategories(
+			newItems.stream()
+				.map(TransactionMerchantTextResolver::resolve)
+				.toList()
+		);
+		Category defaultCategory = categoryRepository.getReferenceById(DEFAULT_CATEGORY_ID);
+		List<CardTransactionOverride> transactions = newItems.stream()
+			.map(item -> toCardTransaction(
+				card,
+				resolveCategory(assignedCategories, TransactionMerchantTextResolver.resolve(item), defaultCategory),
+				item
+			))
+			.toList();
+
+		cardTransactionOverrideRepository.saveAll(transactions);
+		publishCardTransactionEvents(card.getWithdrawalAccount().getUser().getId(), transactions);
+		return transactions.size();
+	}
+
+	private int syncCard(Card card, DateRange dateRange) {
+		CardTransactionDto.Response response = cardTransactionApiClient.inquireTransactions(
+			new CardTransactionDto.Request(
+				card.getWithdrawalAccount().getUser().getUserKey(),
+				card.getCardNo(),
+				card.getCvc(),
+				dateRange.startDateText(),
+				dateRange.endDateText()
+			)
+		);
+		if (response.transactions().isEmpty()) {
 			return 0;
 		}
 

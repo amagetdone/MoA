@@ -25,10 +25,17 @@ public class TransactionDateRangeFactory {
 	public DateRange resolve(int months, LocalDate latestLocalDate, boolean forceFullSync) {
 		LocalDate endDate = LocalDate.now(clock);
 		int normalizedMonths = months > 0 ? months : DEFAULT_MONTHS;
+		LocalDate historicalStartDate = endDate.minusMonths(normalizedMonths);
 		LocalDate startDate = forceFullSync || latestLocalDate == null
-			? endDate.minusMonths(normalizedMonths)
-			: latestLocalDate;
+			? historicalStartDate
+			: latestLocalDate.isAfter(historicalStartDate) ? historicalStartDate : latestLocalDate;
 		return new DateRange(startDate, endDate);
+	}
+
+	public DateRange resolve(LocalDate startDate, LocalDate endDate) {
+		LocalDate resolvedEndDate = endDate == null ? LocalDate.now(clock) : endDate;
+		LocalDate resolvedStartDate = startDate == null ? resolvedEndDate.minusMonths(1) : startDate;
+		return new DateRange(resolvedStartDate, resolvedEndDate);
 	}
 
 	public record DateRange(LocalDate startDate, LocalDate endDate) {
