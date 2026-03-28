@@ -23,6 +23,20 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
   List<Goal> _reorderedGoals = [];
   bool _hasChanges = false;
 
+  Future<void> _savePriority(List<Goal> displayGoals) async {
+    await ref.read(goalViewModelProvider.notifier).reorderGoals(displayGoals);
+    await ref.read(homeViewModelProvider.notifier).loadData();
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('우선순위를 저장했어요. 변경 내용은 다음 주 저축 계획부터 반영됩니다.'),
+      ),
+    );
+    context.pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
@@ -38,9 +52,36 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
         children: [
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            child: Text(
-              '드래그하여 우선순위를 변경하세요',
-              style: AppTextStyles.bodySm.copyWith(color: colors.textTertiary),
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+              decoration: BoxDecoration(
+                color: AppColors.orange50.withValues(alpha: 0.75),
+                borderRadius: BorderRadius.circular(14.r),
+                border: Border.all(
+                  color: AppColors.orange300.withValues(alpha: 0.45),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '드래그하여 우선순위를 변경하세요',
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    '저장한 우선순위는 이번 주가 아니라 다음 주 저축 계획부터 적용돼요.',
+                    style: AppTextStyles.caption.copyWith(
+                      color: colors.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           Expanded(
@@ -153,14 +194,7 @@ class _GoalPriorityPageState extends ConsumerState<GoalPriorityPage> {
               padding: EdgeInsets.all(16.w),
               child: MoreBottomButton(
                 text: '저장',
-                onPressed: () async {
-                  await ref
-                      .read(goalViewModelProvider.notifier)
-                      .reorderGoals(displayGoals);
-                  await ref.read(homeViewModelProvider.notifier).loadData();
-                  if (!context.mounted) return;
-                  context.pop();
-                },
+                onPressed: () => _savePriority(displayGoals),
                 enabled: _hasChanges,
               ),
             ),

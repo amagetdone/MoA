@@ -25,7 +25,7 @@ class GoalCard extends ConsumerWidget {
 
   String get _weekLabel {
     final d = goal.remainingDays;
-    final dLabel = goal.status == GoalStatus.achieved
+    final dLabel = goal.isEffectivelyAchieved
         ? '완료'
         : d >= 0 ? 'D-$d' : 'D+${-d}';
     return '$_currentWeek주차 ($dLabel)';
@@ -35,7 +35,8 @@ class GoalCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors.of(context);
     final percent = (goal.progressRate * 100).toInt().toString();
-    final isExpired = goal.remainingDays < 0;
+    final isAchieved = goal.isEffectivelyAchieved;
+    final isExpired = goal.remainingDays < 0 && !isAchieved;
 
     return MoreCard(
       onTap: onTap ?? () => context.push(AppRoutes.goalDetailLocation(goal.id)),
@@ -95,7 +96,9 @@ class GoalCard extends ConsumerWidget {
                         child: Text(
                           _weekLabel,
                           style: AppTextStyles.bodySm.copyWith(
-                            color: isExpired
+                            color: isAchieved
+                                ? AppColors.green500
+                                : isExpired
                                 ? AppColors.red500
                                 : colors.textTertiary,
                             fontWeight: FontWeight.w500,
@@ -141,6 +144,37 @@ class GoalCard extends ConsumerWidget {
                       height: 1.1,
                     ),
                   ),
+                  if (isAchieved) ...[
+                    SizedBox(height: 6.h),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10.w,
+                        vertical: 6.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.green500.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(999.r),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.celebration_rounded,
+                            size: 14.w,
+                            color: AppColors.green500,
+                          ),
+                          SizedBox(width: 4.w),
+                          Text(
+                            '축하해요! 목표를 달성했어요',
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.green500,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
 
                   SizedBox(height: 5.h),
 

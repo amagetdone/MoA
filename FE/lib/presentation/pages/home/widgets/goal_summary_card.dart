@@ -19,7 +19,8 @@ class GoalSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dDayText = goal.status == GoalStatus.achieved
+    final isAchieved = goal.isEffectivelyAchieved;
+    final dDayText = isAchieved
         ? '완료'
         : goal.remainingDays >= 0
             ? 'D-${goal.remainingDays}'
@@ -53,6 +54,7 @@ class GoalSummaryCard extends StatelessWidget {
                   amountText:
                       '${CurrencyFormatter.formatKRW(goal.currentAmount)} / ${CurrencyFormatter.formatKRW(goal.targetAmount)} ($percentText%)',
                   progressRate: goal.progressRate,
+                  isAchieved: isAchieved,
                 ),
               ),
             ],
@@ -203,11 +205,13 @@ class _GoalProgressContent extends StatelessWidget {
     required this.weekText,
     required this.amountText,
     required this.progressRate,
+    required this.isAchieved,
   });
 
   final String weekText;
   final String amountText;
   final double progressRate;
+  final bool isAchieved;
 
   @override
   Widget build(BuildContext context) {
@@ -218,10 +222,20 @@ class _GoalProgressContent extends StatelessWidget {
         Text(
           weekText,
           style: AppTextStyles.bodyLg.copyWith(
-            color: colors.textSecondary,
+            color: isAchieved ? AppColors.green500 : colors.textSecondary,
             fontWeight: FontWeight.w600,
           ),
         ),
+        if (isAchieved) ...[
+          SizedBox(height: 6.h),
+          Text(
+            '축하해요! 목표 금액을 모두 모았어요.',
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.green500,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
         SizedBox(height: 4.h),
         FittedBox(
           fit: BoxFit.scaleDown,

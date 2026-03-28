@@ -7,6 +7,7 @@ import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/viewmodels/onboarding_viewmodel.dart';
+import 'package:more_app/presentation/widgets/common/more_loading_bars.dart';
 import 'package:more_app/presentation/widgets/common/more_text_field.dart';
 
 class OnboardingLoadingPage extends ConsumerStatefulWidget {
@@ -208,35 +209,9 @@ class _OnboardingLoadingPageState extends ConsumerState<OnboardingLoadingPage>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      SizedBox(
-                        width: 80.w,
-                        height: 48.h,
-                        child: AnimatedBuilder(
-                          animation: _animController,
-                          builder: (context, child) {
-                            return Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: List.generate(5, (index) {
-                                final delay = index * 0.15;
-                                final value =
-                                    (_animController.value + delay) % 1.0;
-                                final height =
-                                    12.h + 24.h * _barHeight(value);
-                                return Container(
-                                  width: 6.w,
-                                  height: height,
-                                  margin:
-                                      EdgeInsets.symmetric(horizontal: 3.w),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.orange500,
-                                    borderRadius:
-                                        BorderRadius.circular(3.r),
-                                  ),
-                                );
-                              }),
-                            );
-                          },
-                        ),
+                      MoreLoadingBars(
+                        animation: _animController,
+                        color: AppColors.orange500,
                       ),
                       SizedBox(height: 32.h),
                       Text(
@@ -299,7 +274,4 @@ class _OnboardingLoadingPageState extends ConsumerState<OnboardingLoadingPage>
     );
   }
 
-  double _barHeight(double value) {
-    return (1 - (2 * value - 1).abs());
-  }
 }

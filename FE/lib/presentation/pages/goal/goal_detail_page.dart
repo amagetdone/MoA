@@ -88,7 +88,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
                           ),
                         ),
                         SizedBox(width: 10.w),
-                        if (goal.status == GoalStatus.achieved) ...[
+                        if (goal.isEffectivelyAchieved) ...[
                           Text(
                             '${goal.currentWeekNumber}주차',
                             style: AppTextStyles.caption.copyWith(
@@ -403,9 +403,16 @@ class _HeroCard extends StatelessWidget {
                 ),
                 SizedBox(height: 8.h),
                 Text(
-                  '목표까지 $remaining 남음',
+                  goal.isEffectivelyAchieved
+                      ? '축하해요! 목표 금액을 모두 달성했어요.'
+                      : '목표까지 $remaining 남음',
                   style: AppTextStyles.bodySm.copyWith(
-                    color: colors.textTertiary,
+                    color: goal.isEffectivelyAchieved
+                        ? AppColors.green500
+                        : colors.textTertiary,
+                    fontWeight: goal.isEffectivelyAchieved
+                        ? FontWeight.w700
+                        : FontWeight.w400,
                   ),
                 ),
               ],
