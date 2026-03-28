@@ -129,10 +129,13 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: AppRoutes.onboardingProfile,
-      pageBuilder: (context, state) => _fadeTransitionPage(
-        state,
-        const ProfileSetupPage(isOnboarding: true),
-      ),
+      pageBuilder: (context, state) {
+        final extra = state.extra as Map<String, String>?;
+        return _fadeTransitionPage(
+          state,
+          ProfileSetupPage(isOnboarding: true, initialData: extra),
+        );
+      },
     ),
     GoRoute(
       path: AppRoutes.onboardingAccount,

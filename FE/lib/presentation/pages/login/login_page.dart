@@ -25,11 +25,15 @@ class LoginPage extends ConsumerStatefulWidget {
 class _LoginPageState extends ConsumerState<LoginPage>
     with WidgetsBindingObserver {
   static const _webLoginRecoveryTimeout = Duration(seconds: 3);
+  static const _hiddenTestLoginTapThreshold = 5;
+  static const _hiddenTestLoginTapWindow = Duration(seconds: 2);
 
   Timer? _interruptedLoginTimer;
+  Timer? _hiddenTestLoginResetTimer;
   bool _backgroundedDuringLogin = false;
   WebWindowFocusListener? _webWindowFocusListener;
   bool _sessionExpiredDialogShown = false;
+  int _hiddenLogoTapCount = 0;
 
   @override
   void initState() {
@@ -62,9 +66,48 @@ class _LoginPageState extends ConsumerState<LoginPage>
   @override
   void dispose() {
     _interruptedLoginTimer?.cancel();
+    _hiddenTestLoginResetTimer?.cancel();
     _webWindowFocusListener?.detach();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  Future<void> _showTestLoginDialog() async {
+    final id = await showDialog<int>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('테스트 계정 선택'),
+        children: List.generate(5, (i) {
+          final num = i + 1;
+          return SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, num),
+            child: Text('계정 $num'),
+          );
+        }),
+      ),
+    );
+    if (id != null && mounted) {
+      ref.read(authViewModelProvider.notifier).loginWithTest(id: id);
+    }
+  }
+
+  void _onLogoTapped(bool isLoading) {
+    if (isLoading) {
+      return;
+    }
+
+    _hiddenTestLoginResetTimer?.cancel();
+    _hiddenLogoTapCount += 1;
+
+    if (_hiddenLogoTapCount >= _hiddenTestLoginTapThreshold) {
+      _hiddenLogoTapCount = 0;
+      unawaited(_showTestLoginDialog());
+      return;
+    }
+
+    _hiddenTestLoginResetTimer = Timer(_hiddenTestLoginTapWindow, () {
+      _hiddenLogoTapCount = 0;
+    });
   }
 
   void _maybeShowSessionExpiredDialog() {
@@ -192,6 +235,29 @@ class _LoginPageState extends ConsumerState<LoginPage>
     _scheduleInterruptedLoginReset();
   }
 
+  Map<String, String>? _buildOnboardingProfileInitialData(AuthState next) {
+    if (next is! AuthAuthenticated) {
+      return null;
+    }
+
+    final result = next.authResult;
+    if (result.status != 'TEMP') {
+      return null;
+    }
+
+    final data = <String, String>{};
+    if (result.nickname != null && result.nickname!.isNotEmpty) {
+      data['nickname'] = result.nickname!;
+    }
+    if (result.email != null && result.email!.isNotEmpty) {
+      data['email'] = result.email!;
+    }
+    if (result.profileImageUrl != null && result.profileImageUrl!.isNotEmpty) {
+      data['profileImageUrl'] = result.profileImageUrl!;
+    }
+    return data.isEmpty ? null : data;
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!kIsWeb) {
@@ -237,7 +303,13 @@ class _LoginPageState extends ConsumerState<LoginPage>
       }
 
       if (next is AuthAuthenticated) {
-        context.go(resolvePostAuthRoute(next.authResult, isTest: next.isTest));
+        final route = resolvePostAuthRoute(next.authResult, isTest: next.isTest);
+        final initialData = _buildOnboardingProfileInitialData(next);
+        if (route == AppRoutes.onboardingProfile && initialData != null) {
+          context.go(route, extra: initialData);
+          return;
+        }
+        context.go(route);
       }
     });
 
@@ -252,10 +324,14 @@ class _LoginPageState extends ConsumerState<LoginPage>
           child: Column(
             children: [
               const Spacer(flex: 3),
-              Image.asset(
-                'assets/images/logo/applogo.png',
-                width: 80.w,
-                height: 80.w,
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _onLogoTapped(isLoading),
+                child: Image.asset(
+                  'assets/images/logo/applogo.png',
+                  width: 80.w,
+                  height: 80.w,
+                ),
               ),
               SizedBox(height: 16.h),
               Text(
@@ -289,38 +365,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
                 text: '구글로 시작하기',
                 iconPath: 'assets/images/logo/googlelogo.png',
                 borderColor: colors.borderDefault,
-              ),
-              SizedBox(height: 12.h),
-              GestureDetector(
-                onTap: isLoading
-                    ? null
-                    : () async {
-                        final id = await showDialog<int>(
-                          context: context,
-                          builder: (ctx) => SimpleDialog(
-                            title: const Text('테스트 계정 선택'),
-                            children: List.generate(5, (i) {
-                              final num = i + 1;
-                              return SimpleDialogOption(
-                                onPressed: () => Navigator.pop(ctx, num),
-                                child: Text('계정 $num'),
-                              );
-                            }),
-                          ),
-                        );
-                        if (id != null) {
-                          ref
-                              .read(authViewModelProvider.notifier)
-                              .loginWithTest(id: id);
-                        }
-                      },
-                child: Text(
-                  '테스트 계정으로 로그인',
-                  style: AppTextStyles.bodySm.copyWith(
-                    color: colors.textTertiary,
-                    decoration: TextDecoration.underline,
-                  ),
-                ),
               ),
               Spacer(flex: 3),
             ],

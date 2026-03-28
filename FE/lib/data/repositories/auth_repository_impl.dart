@@ -23,6 +23,9 @@ class AuthRepositoryImpl implements AuthRepository {
       status: response.status,
       account: response.account,
       plan: response.plan,
+      nickname: response.nickname,
+      email: response.email,
+      profileImageUrl: response.profileImageUrl,
     );
   }
 
