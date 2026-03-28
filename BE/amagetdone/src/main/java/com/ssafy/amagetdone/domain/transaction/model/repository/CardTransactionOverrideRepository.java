@@ -31,4 +31,12 @@ public interface CardTransactionOverrideRepository extends JpaRepository<CardTra
 			LocalDateTime fromDateTime,
 			LocalDateTime toDateTime
 		);
+
+	@Query("""
+		SELECT COALESCE(SUM(o.transactionBalance), 0)
+		FROM CardTransactionOverride o
+		WHERE o.card.withdrawalAccount.user.id = :userId
+			AND o.billStatementsStatus = 'BILLED'
+		""")
+	long sumBilledTransactionBalanceByUserId(@Param("userId") Integer userId);
 }

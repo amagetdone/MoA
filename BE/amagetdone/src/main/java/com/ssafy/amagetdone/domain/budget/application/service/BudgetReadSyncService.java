@@ -2,6 +2,7 @@ package com.ssafy.amagetdone.domain.budget.application.service;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -44,6 +45,8 @@ public class BudgetReadSyncService {
 		LocalDate today = LocalDate.now(clock);
 		ensureCurrentWeekAllocation(userId, today);
 
+		Long preservedFinalFreeAmount = preserveCurrentWeekFreeAmount(userId, today);
+
 		TransactionSyncService.SyncResult syncResult = syncLatestTransactionsUseCase.execute(userId, READ_SYNC_MONTHS, false);
 		if (!hasNewTransactions(syncResult)) {
 			applyDailyGoalSavingAccrualUseCase.execute(userId);
@@ -51,10 +54,29 @@ public class BudgetReadSyncService {
 		}
 
 		runTransactionAnalysisUseCase.execute(userId, READ_SYNC_MONTHS);
+		runTransactionAnalysisUseCase.execute(userId, YearMonth.from(today));
 		triggerBudgetAllocationUseCase.execute(userId);
 		budgetActualSpentRefreshService.refresh(userId, today);
 		budgetRolloverResyncService.resync(userId);
 		applyDailyGoalSavingAccrualUseCase.execute(userId);
+
+		restoreCurrentWeekFreeAmount(userId, today, preservedFinalFreeAmount);
+	}
+
+	private Long preserveCurrentWeekFreeAmount(Integer userId, LocalDate today) {
+		return budgetWeekRepository
+			.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(userId, today, today)
+			.map(BudgetWeek::getFinalFreeAmount)
+			.orElse(null);
+	}
+
+	private void restoreCurrentWeekFreeAmount(Integer userId, LocalDate today, Long preservedAmount) {
+		if (preservedAmount == null) {
+			return;
+		}
+		budgetWeekRepository
+			.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(userId, today, today)
+			.ifPresent(currentWeek -> currentWeek.setFinalFreeAmount(preservedAmount));
 	}
 
 	private void ensureCurrentWeekAllocation(Integer userId, LocalDate today) {
