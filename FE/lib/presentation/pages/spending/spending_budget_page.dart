@@ -16,6 +16,7 @@ import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 import 'package:more_app/presentation/widgets/common/more_progress_bar.dart';
+import 'package:more_app/presentation/widgets/common/more_showcase.dart';
 import 'package:showcaseview/showcaseview.dart';
 
 class SpendingBudgetPage extends ConsumerStatefulWidget {
@@ -73,6 +74,24 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
   ) {
     return showcasePreviewMode &&
         (state.isLoading || _isBudgetSetupEmpty(state.setup));
+  }
+
+  void _startShowcase() {
+    if (_showcaseContext == null) {
+      return;
+    }
+    ref.read(showcasePreviewModeProvider.notifier).state = true;
+    ShowCaseWidget.of(_showcaseContext!).startShowCase([
+      _keyIncome,
+      _keySavings,
+      _keyFixed,
+      _keyVariable,
+      _keyFreedom,
+    ]);
+  }
+
+  void _stopShowcasePreview() {
+    ref.read(showcasePreviewModeProvider.notifier).state = false;
   }
 
   Future<void> _showEditBudgetDialog(int currentIncome) async {
@@ -136,38 +155,9 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                     Row(
                       children: [
                         Text('월 수입 · 주간 예산 설정', style: AppTextStyles.headingLg.copyWith(color: colors.textPrimary)),
+                        SizedBox(width: 8.w),
+                        ShowcaseHelpButton(onTap: _startShowcase),
                         const Spacer(),
-                        GestureDetector(
-                          onTap: () {
-                            if (_showcaseContext != null) {
-                              ref
-                                  .read(showcasePreviewModeProvider.notifier)
-                                  .state = true;
-                              ShowCaseWidget.of(_showcaseContext!).startShowCase(
-                                [_keyIncome, _keySavings, _keyFixed, _keyVariable, _keyFreedom],
-                              );
-                            }
-                          },
-                          child: Container(
-                            width: 26.w,
-                            height: 26.w,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: colors.borderDefault,
-                            ),
-                            child: Center(
-                              child: Text(
-                                '?',
-                                style: TextStyle(
-                                  color: colors.textSecondary,
-                                  fontSize: 13.sp,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                     SizedBox(height: 12.h),
@@ -186,15 +176,11 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Showcase(
-                            key: _keyIncome,
+                          MoreShowcase(
+                            showcaseKey: _keyIncome,
                             title: '월 수입',
-                            titleTextStyle: AppTextStyles.bodyMd.copyWith(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 18.sp,
-                              color: AppColors.orange500,
-                            ),
                             description: '월에 정기적으로 들어오는 금액을 입력해줘요.\n월 수입이 변경되면 연필 버튼을 눌러 수정해주세요.',
+                            onSkip: _stopShowcasePreview,
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -248,15 +234,11 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           ),
                           SizedBox(height: 24.h),
 
-                          Showcase(
-                            key: _keySavings,
+                          MoreShowcase(
+                            showcaseKey: _keySavings,
                             title: '저축액',
-                            titleTextStyle: AppTextStyles.bodyMd.copyWith(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 18.sp,
-                              color: AppColors.orange500,
-                            ),
                             description: '목표 설정했던 금액을 목표 기간에 따라 배분해 주별 저축되는 금액을 알려줘요.',
+                            onSkip: _stopShowcasePreview,
                             child: _BudgetSectionHeader(
                               label: '저축액',
                               description: '목표를 위해 저축하는 금액',
@@ -266,15 +248,11 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           ),
                           SizedBox(height: 40.h),
 
-                          Showcase(
-                            key: _keyFixed,
+                          MoreShowcase(
+                            showcaseKey: _keyFixed,
                             title: '고정지출',
-                            titleTextStyle: AppTextStyles.bodyMd.copyWith(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 18.sp,
-                              color: AppColors.orange500,
-                            ),
                             description: '구독비 등 고정적으로 지출되는 것에 대한 금액을 주별로 배분해줘요.',
+                            onSkip: _stopShowcasePreview,
                             child: _BudgetSectionHeader(
                               label: '고정지출',
                               description: '매주 고정으로 나가는 비용',
@@ -294,15 +272,11 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           ],
                           SizedBox(height: 40.h),
 
-                          Showcase(
-                            key: _keyVariable,
+                          MoreShowcase(
+                            showcaseKey: _keyVariable,
                             title: '변동지출',
-                            titleTextStyle: AppTextStyles.bodyMd.copyWith(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 18.sp,
-                              color: AppColors.orange500,
-                            ),
                             description: '교통비, 식비 등 변동적으로 지출되는 것에 대한 금액을 주별로 배분해줘요.',
+                            onSkip: _stopShowcasePreview,
                             child: _BudgetSectionHeader(
                               label: '변동지출',
                               description: '매주 변동되는 비용 (병원비 등)',
@@ -325,15 +299,11 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           Divider(color: colors.textPrimary, thickness: 1.5),
                           SizedBox(height: 32.h),
 
-                          Showcase(
-                            key: _keyFreedom,
+                          MoreShowcase(
+                            showcaseKey: _keyFreedom,
                             title: '주간 여유 자금',
-                            titleTextStyle: AppTextStyles.bodyMd.copyWith(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 18.sp,
-                              color: AppColors.orange500,
-                            ),
                             description: '월 수입에서 저축액, 고정지출, 변동지출을 모두 빼고, 주에 자유롭게 사용 가능한 금액이에요.',
+                            onSkip: _stopShowcasePreview,
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [

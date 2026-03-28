@@ -24,6 +24,51 @@ class SettingsPage extends ConsumerStatefulWidget {
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _isUpdatingBiometric = false;
 
+  Future<AppLockMethod?> _showAppLockMethodDialog() {
+    return showDialog<AppLockMethod>(
+      context: context,
+      builder: (dialogContext) {
+        final colors = AppColors.of(dialogContext);
+        return AlertDialog(
+          backgroundColor: colors.bgSurface,
+          title: Text(
+            '앱 잠금 방식 선택',
+            style: AppTextStyles.bodyMd.copyWith(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          content: Text(
+            '어떤 방식으로 앱 잠금을 해제할지 선택해주세요.',
+            style: AppTextStyles.bodySm.copyWith(
+              color: colors.textSecondary,
+              height: 1.5,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('취소'),
+            ),
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(AppLockMethod.pin),
+              child: const Text('앱 PIN'),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(AppLockMethod.biometric),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.orange500,
+              ),
+              child: const Text('생체인증'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<String?> _showAppPinDialog({required bool isReset}) {
     return showDialog<String>(
       context: context,
@@ -83,6 +128,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     setState(() => _isUpdatingBiometric = true);
     try {
       await ref.read(biometricAuthServiceProvider).saveAppPin(pin);
+      await ref.read(biometricAuthServiceProvider).saveAppLockMethod(
+        AppLockMethod.pin,
+      );
       ref.invalidate(appLockPinConfiguredProvider);
       await _showMessage('앱 PIN을 다시 설정했어요.');
     } finally {
@@ -111,6 +159,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       setState(() => _isUpdatingBiometric = true);
       try {
         await service.clearAppPin();
+        await service.clearAppLockMethod();
         await ref.read(menuViewModelProvider.notifier).toggleBiometric(false);
         await ref.read(biometricPreferenceProvider.notifier).setEnabled(false);
         ref.invalidate(appLockPinConfiguredProvider);
@@ -122,6 +171,23 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       return;
     }
 
+    final deviceAuthAvailable = await service.isDeviceAuthAvailable();
+    if (!mounted) {
+      return;
+    }
+
+    final selectedMethod = deviceAuthAvailable
+        ? await _showAppLockMethodDialog()
+        : AppLockMethod.pin;
+    if (!mounted) {
+      return;
+    }
+
+    if (selectedMethod == null) {
+      await _showMessage('앱 잠금 설정이 취소되었습니다.');
+      return;
+    }
+
     final authenticated = await _reauthenticateForAppLockChange(
       reason: '앱 잠금을 설정하려면 본인 확인을 진행해주세요.',
       failureMessage: '본인 확인이 완료되지 않아 앱 잠금을 켜지 않았습니다.',
@@ -130,32 +196,37 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       return;
     }
 
-    final pin = await _showAppPinDialog(isReset: false);
-    if (!mounted) {
-      return;
-    }
-
-    if (pin == null) {
-      await _showMessage('앱 PIN 설정이 취소되어 앱 잠금을 켜지 않았습니다.');
-      return;
-    }
-
     try {
       setState(() => _isUpdatingBiometric = true);
-      await service.saveAppPin(pin);
+      if (selectedMethod == AppLockMethod.pin) {
+        final pin = await _showAppPinDialog(isReset: false);
+        if (!mounted) {
+          return;
+        }
+
+        if (pin == null) {
+          await _showMessage('앱 PIN 설정이 취소되어 앱 잠금을 켜지 않았습니다.');
+          return;
+        }
+
+        await service.saveAppPin(pin);
+        await service.saveAppLockMethod(AppLockMethod.pin);
+      } else {
+        await service.clearAppPin();
+        await service.saveAppLockMethod(AppLockMethod.biometric);
+      }
       await ref.read(menuViewModelProvider.notifier).toggleBiometric(true);
       await ref.read(biometricPreferenceProvider.notifier).setEnabled(true);
       ref.invalidate(appLockPinConfiguredProvider);
 
-      final deviceAuthAvailable = await service.isDeviceAuthAvailable();
       if (!mounted) {
         return;
       }
 
       await _showMessage(
-        deviceAuthAvailable
-            ? '앱 잠금이 켜졌어요. 4자리 앱 PIN이나 생체인증으로 잠금을 해제할 수 있습니다.'
-            : '앱 잠금이 켜졌어요. 자동로그인 후 4자리 앱 PIN을 입력해야 합니다.',
+        selectedMethod == AppLockMethod.biometric
+            ? '앱 잠금이 켜졌어요. 생체인증으로 잠금을 해제할 수 있습니다.'
+            : '앱 잠금이 켜졌어요. 4자리 앱 PIN으로 잠금을 해제할 수 있습니다.',
       );
     } finally {
       if (mounted) {
@@ -290,11 +361,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           ),
                           SizedBox(height: 2.h),
                           Text(
-                            biometricEnabled && appPinConfigured
-                                ? deviceAuthAvailable
-                                      ? '자동로그인 후 4자리 앱 PIN이나 생체인증으로 잠금을 해제해요'
-                                      : '자동로그인 후 4자리 앱 PIN으로 잠금을 해제해요'
-                                : '4자리 앱 PIN을 설정하면 자동로그인 뒤 한 번 더 확인해요',
+                            biometricEnabled
+                                ? '자동로그인 뒤 설정한 방식으로 한 번 더 확인해요'
+                                : deviceAuthAvailable
+                                ? '생체인증 또는 4자리 앱 PIN으로 앱 잠금을 설정할 수 있어요'
+                                : '4자리 앱 PIN으로 앱 잠금을 설정할 수 있어요',
                             style: AppTextStyles.caption.copyWith(
                               color: colors.textTertiary,
                               fontSize: 11.sp,

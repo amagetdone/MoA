@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 
+enum AppLockMethod { biometric, pin }
+
 class BiometricAuthService {
   BiometricAuthService({
     LocalAuthentication? localAuth,
@@ -19,6 +21,7 @@ class BiometricAuthService {
   static const int appPinLength = 4;
   static const _appPinHashKey = 'app_lock_pin_hash';
   static const _appPinSaltKey = 'app_lock_pin_salt';
+  static const _appLockMethodKey = 'app_lock_method';
 
   bool get isAndroidOnlySupported =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
@@ -70,6 +73,19 @@ class BiometricAuthService {
     await _secureStorage.write(key: _appPinHashKey, value: hash);
   }
 
+  Future<void> saveAppLockMethod(AppLockMethod method) async {
+    await _secureStorage.write(key: _appLockMethodKey, value: method.name);
+  }
+
+  Future<AppLockMethod?> getAppLockMethod() async {
+    final raw = await _secureStorage.read(key: _appLockMethodKey);
+    return switch (raw) {
+      'biometric' => AppLockMethod.biometric,
+      'pin' => AppLockMethod.pin,
+      _ => null,
+    };
+  }
+
   Future<bool> verifyAppPin(String pin) async {
     if (!_isValidPin(pin)) {
       return false;
@@ -88,6 +104,10 @@ class BiometricAuthService {
   Future<void> clearAppPin() async {
     await _secureStorage.delete(key: _appPinSaltKey);
     await _secureStorage.delete(key: _appPinHashKey);
+  }
+
+  Future<void> clearAppLockMethod() async {
+    await _secureStorage.delete(key: _appLockMethodKey);
   }
 
   String _generateSalt() {

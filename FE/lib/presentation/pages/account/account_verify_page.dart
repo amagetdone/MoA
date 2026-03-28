@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -31,7 +32,12 @@ class _AccountVerifyPageState extends ConsumerState<AccountVerifyPage> {
     4,
     (_) => TextEditingController(),
   );
-  final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
+  late final List<FocusNode> _focusNodes = List.generate(
+    4,
+    (index) => FocusNode(
+      onKeyEvent: (node, event) => _handleDigitKeyEvent(index, event),
+    ),
+  );
 
   late Timer _timer;
   int _remainingSeconds = 292; // 4:52
@@ -70,6 +76,29 @@ class _AccountVerifyPageState extends ConsumerState<AccountVerifyPage> {
 
   bool get _isCodeComplete =>
       _digitControllers.every((controller) => controller.text.isNotEmpty);
+
+  KeyEventResult _handleDigitKeyEvent(int index, KeyEvent event) {
+    if (event is! KeyDownEvent ||
+        event.logicalKey != LogicalKeyboardKey.backspace) {
+      return KeyEventResult.ignored;
+    }
+
+    if (_digitControllers[index].text.isNotEmpty) {
+      return KeyEventResult.ignored;
+    }
+
+    if (index == 0) {
+      return KeyEventResult.handled;
+    }
+
+    final previousController = _digitControllers[index - 1];
+    if (previousController.text.isNotEmpty) {
+      previousController.clear();
+    }
+    _focusNodes[index - 1].requestFocus();
+    setState(() {});
+    return KeyEventResult.handled;
+  }
 
   Future<void> _onVerify() async {
     if (!_isCodeComplete || _isVerifying) return;

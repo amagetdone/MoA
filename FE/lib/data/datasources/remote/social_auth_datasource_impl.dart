@@ -17,7 +17,7 @@ class SocialAuthDataSourceImpl implements SocialAuthDataSource {
   GoogleSignIn _resolveGoogleSignIn() {
     return _googleSignIn ??= GoogleSignIn(
       clientId: kIsWeb ? _webGoogleClientId : null,
-      serverClientId: kIsWeb ? null : AppEnv.optional('GOOGLE_CLIENT_ID'),
+      serverClientId: kIsWeb ? AppEnv.optional('GOOGLE_CLIENT_ID') : null,
       scopes: const ['email', 'openid', 'profile'],
     );
   }
