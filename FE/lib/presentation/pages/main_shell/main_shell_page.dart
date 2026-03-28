@@ -7,6 +7,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
+import 'package:more_app/presentation/providers/showcase_preview_provider.dart';
 import 'package:more_app/presentation/viewmodels/spending_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/goal_viewmodel.dart';
@@ -25,26 +26,38 @@ class MainShellPage extends ConsumerStatefulWidget {
 class _MainShellPageState extends ConsumerState<MainShellPage> {
   DateTime? _lastBackPressedAt;
 
+  Future<void> _refreshHomeTabData() async {
+    try {
+      await ref.read(spendingRepositoryProvider).syncTransactions(months: 3);
+    } catch (_) {}
+
+    if (!mounted) {
+      return;
+    }
+
+    await ref.read(homeViewModelProvider.notifier).loadData();
+  }
+
   void _onTabSelected(int index) {
     // 탭 전환 시 해당 탭 데이터 갱신
     switch (index) {
       case 0:
-        unawaited(
-          ref.read(spendingRepositoryProvider).syncTransactions(months: 3),
-        );
-        ref.read(homeViewModelProvider.notifier).loadData();
+        widget.navigationShell.goBranch(index, initialLocation: true);
+        unawaited(_refreshHomeTabData());
         break;
       case 1:
         ref.read(spendingViewModelProvider.notifier).loadData();
+        widget.navigationShell.goBranch(index, initialLocation: true);
         break;
       case 2:
         ref.read(goalViewModelProvider.notifier).loadGoals();
+        widget.navigationShell.goBranch(index, initialLocation: true);
         break;
       case 3:
         ref.read(menuViewModelProvider.notifier).loadData();
+        widget.navigationShell.goBranch(index, initialLocation: true);
         break;
     }
-    widget.navigationShell.goBranch(index, initialLocation: true);
   }
 
   Future<void> _handleBackNavigation() async {
@@ -90,6 +103,14 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
     final unreadCount = ref.watch(unreadNotificationCountProvider);
 
     return ShowCaseWidget(
+      enableAutoScroll: true,
+      scrollDuration: const Duration(milliseconds: 450),
+      onStart: (index, key) {
+        ref.read(showcasePreviewModeProvider.notifier).state = true;
+      },
+      onFinish: () {
+        ref.read(showcasePreviewModeProvider.notifier).state = false;
+      },
       builder: (_) => PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, result) {

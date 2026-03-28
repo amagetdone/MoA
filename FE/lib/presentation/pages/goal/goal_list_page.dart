@@ -6,8 +6,10 @@ import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/tutorial_service.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
-import 'package:more_app/presentation/viewmodels/goal_viewmodel.dart';
 import 'package:more_app/presentation/pages/goal/widgets/goal_card.dart';
+import 'package:more_app/presentation/providers/showcase_preview_provider.dart';
+import 'package:more_app/presentation/showcase/showcase_mock_data.dart';
+import 'package:more_app/presentation/viewmodels/goal_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:showcaseview/showcaseview.dart';
 
@@ -35,6 +37,7 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
       if (!shown && mounted) {
         await TutorialService.markShown(TutorialService.goalList);
         if (mounted && _showcaseContext != null) {
+          ref.read(showcasePreviewModeProvider.notifier).state = true;
           ShowCaseWidget.of(
             _showcaseContext!,
           ).startShowCase([_keyFilterChips, _keyPriority, _keyFab]);
@@ -43,15 +46,35 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
     });
   }
 
+  bool _shouldUseShowcaseMock(bool showcasePreviewMode, GoalState state) {
+    return showcasePreviewMode && (state.isLoading || state.goals.isEmpty);
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final goalState = ref.watch(goalViewModelProvider);
+    final showcasePreviewMode = ref.watch(showcasePreviewModeProvider);
+    final useShowcaseMock = _shouldUseShowcaseMock(
+      showcasePreviewMode,
+      goalState,
+    );
+    final effectiveGoalState = useShowcaseMock
+        ? ShowcaseMockData.goalState(showAchieved: goalState.showAchieved)
+        : goalState;
     final viewModel = ref.read(goalViewModelProvider.notifier);
-    final filteredGoals = goalState.filteredGoals;
-    final totalCount = goalState.goals.length;
+    final filteredGoals = effectiveGoalState.filteredGoals;
+    final totalCount = effectiveGoalState.goals.length;
 
     return ShowCaseWidget(
+      enableAutoScroll: true,
+      scrollDuration: const Duration(milliseconds: 450),
+      onStart: (index, key) {
+        ref.read(showcasePreviewModeProvider.notifier).state = true;
+      },
+      onFinish: () {
+        ref.read(showcasePreviewModeProvider.notifier).state = false;
+      },
       builder: (ctx) {
         _showcaseContext = ctx;
         return Scaffold(
@@ -61,10 +84,10 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
             showLogo: true,
             showNotification: false,
           ),
-          body: goalState.isLoading
+          body: effectiveGoalState.isLoading && !useShowcaseMock
               ? const SizedBox.shrink()
-              : goalState.errorMessage != null
-              ? _buildError(context, goalState.errorMessage!, viewModel)
+              : effectiveGoalState.errorMessage != null && !useShowcaseMock
+              ? _buildError(context, effectiveGoalState.errorMessage!, viewModel)
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -88,6 +111,11 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
                               GestureDetector(
                                 onTap: () {
                                   if (_showcaseContext != null) {
+                                    ref
+                                        .read(
+                                          showcasePreviewModeProvider.notifier,
+                                        )
+                                        .state = true;
                                     ShowCaseWidget.of(_showcaseContext!).startShowCase(
                                       [_keyFilterChips, _keyPriority, _keyFab],
                                     );
@@ -149,13 +177,13 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
                               children: [
                                 _FilterChip(
                                   label: '진행중인 목표',
-                                  selected: !goalState.showAchieved,
+                                  selected: !effectiveGoalState.showAchieved,
                                   onTap: () => viewModel.toggleFilter(false),
                                 ),
                                 SizedBox(width: 8.w),
                                 _FilterChip(
                                   label: '달성한 목표',
-                                  selected: goalState.showAchieved,
+                                  selected: effectiveGoalState.showAchieved,
                                   onTap: () => viewModel.toggleFilter(true),
                                 ),
                               ],
@@ -192,7 +220,7 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
                     // ── 목표 리스트 ────────────────────────────────
                     Expanded(
                       child: filteredGoals.isEmpty
-                          ? _buildEmpty(goalState.showAchieved)
+                          ? _buildEmpty(effectiveGoalState.showAchieved)
                           : ListView.separated(
                               padding: EdgeInsets.fromLTRB(
                                 20.w,

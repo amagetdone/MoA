@@ -11,6 +11,8 @@ import 'package:more_app/core/utils/tutorial_service.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/pages/spending/widgets/category_list.dart';
 import 'package:more_app/presentation/pages/spending/widgets/spending_line_chart.dart';
+import 'package:more_app/presentation/providers/showcase_preview_provider.dart';
+import 'package:more_app/presentation/showcase/showcase_mock_data.dart';
 import 'package:more_app/presentation/viewmodels/spending_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
@@ -76,6 +78,7 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
         return;
       }
 
+      ref.read(showcasePreviewModeProvider.notifier).state = true;
       ShowCaseWidget.of(
         _showcaseContext!,
       ).startShowCase([_keyPeriodChips, _keySummary, _keyChart, _keyCategory]);
@@ -85,13 +88,41 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
     });
   }
 
+  bool _shouldUseShowcaseMock(bool showcasePreviewMode, SpendingState state) {
+    if (!showcasePreviewMode) {
+      return false;
+    }
+
+    final hasSeries = state.isWeekly
+        ? state.dailySpendings.isNotEmpty
+        : state.monthlySpendings.isNotEmpty;
+
+    return state.isLoading ||
+        state.isPeriodLoading ||
+        state.categories.isEmpty ||
+        !hasSeries;
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final state = ref.watch(spendingViewModelProvider);
+    final showcasePreviewMode = ref.watch(showcasePreviewModeProvider);
+    final useShowcaseMock = _shouldUseShowcaseMock(showcasePreviewMode, state);
+    final effectiveState = useShowcaseMock
+        ? ShowcaseMockData.spendingState(base: state)
+        : state;
     final viewModel = ref.read(spendingViewModelProvider.notifier);
 
     return ShowCaseWidget(
+      enableAutoScroll: true,
+      scrollDuration: const Duration(milliseconds: 450),
+      onStart: (index, key) {
+        ref.read(showcasePreviewModeProvider.notifier).state = true;
+      },
+      onFinish: () {
+        ref.read(showcasePreviewModeProvider.notifier).state = false;
+      },
       builder: (ctx) {
         _showcaseContext = ctx;
         _maybeStartShowcase();
@@ -103,7 +134,7 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
             showLogo: true,
             showNotification: false,
           ),
-          body: state.isLoading
+          body: state.isLoading && !useShowcaseMock
               ? const Center(child: CircularProgressIndicator())
               : RefreshIndicator(
                   onRefresh: () => viewModel.loadData(),
@@ -130,6 +161,11 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
                               GestureDetector(
                                 onTap: () {
                                   if (_showcaseContext != null) {
+                                    ref
+                                        .read(
+                                          showcasePreviewModeProvider.notifier,
+                                        )
+                                        .state = true;
                                     ShowCaseWidget.of(_showcaseContext!).startShowCase(
                                       [_keyPeriodChips, _keySummary, _keyChart, _keyCategory],
                                     );
@@ -180,13 +216,13 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
                               children: [
                                 MoreChip(
                                   label: '주간',
-                                  selected: state.isWeekly,
+                                  selected: effectiveState.isWeekly,
                                   onTap: () => viewModel.togglePeriod(true),
                                 ),
                                 SizedBox(width: 8.w),
                                 MoreChip(
                                   label: '월간',
-                                  selected: !state.isWeekly,
+                                  selected: !effectiveState.isWeekly,
                                   onTap: () => viewModel.togglePeriod(false),
                                 ),
                                 const Spacer(),
@@ -216,11 +252,11 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
                             ),
                             description:
                                 '좌우 화살표를 눌러 지난 주/달의 지출 내역을 확인할 수 있어요.\n소비 추이를 파악하는 데 도움이 돼요.',
-                            child: _SpendingSummaryCard(state: state),
+                            child: _SpendingSummaryCard(state: effectiveState),
                           ),
                           SizedBox(height: 16.h),
 
-                          if (state.isPeriodLoading)
+                          if (effectiveState.isPeriodLoading && !useShowcaseMock)
                             SizedBox(
                               height: 300.h,
                               child: const Center(
@@ -273,10 +309,10 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
                                     SizedBox(
                                       height: 220.h,
                                       child: SpendingLineChart(
-                                        data: state.isWeekly
-                                            ? state.dailySpendings
-                                            : state.monthlySpendings,
-                                        isWeekly: state.isWeekly,
+                                        data: effectiveState.isWeekly
+                                            ? effectiveState.dailySpendings
+                                            : effectiveState.monthlySpendings,
+                                        isWeekly: effectiveState.isWeekly,
                                       ),
                                     ),
                                   ],
@@ -308,7 +344,7 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
                                     ),
                                     SizedBox(height: 4.h),
                                     Text(
-                                      state.isWeekly
+                                      effectiveState.isWeekly
                                           ? '이번 주 전체 지출 대비 카테고리별 금액이에요.'
                                           : '이번 달 전체 지출 대비 카테고리별 금액이에요.',
                                       style: AppTextStyles.caption.copyWith(
@@ -318,10 +354,10 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
                                     ),
                                     SizedBox(height: 16.h),
                                     CategoryList(
-                                      categories: state.categories,
-                                      totalAmount: state.isWeekly
-                                          ? state.weeklyExpenseAmount
-                                          : state.monthlyExpenseAmount,
+                                      categories: effectiveState.categories,
+                                      totalAmount: effectiveState.isWeekly
+                                          ? effectiveState.weeklyExpenseAmount
+                                          : effectiveState.monthlyExpenseAmount,
                                     ),
                                   ],
                                 ),

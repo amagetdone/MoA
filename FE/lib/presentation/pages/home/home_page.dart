@@ -18,6 +18,8 @@ import 'package:more_app/presentation/pages/home/widgets/savings_card.dart';
 import 'package:more_app/presentation/pages/home/widgets/spending_card.dart';
 import 'package:more_app/presentation/pages/home/widgets/spending_rose_chart.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
+import 'package:more_app/presentation/providers/showcase_preview_provider.dart';
+import 'package:more_app/presentation/showcase/showcase_mock_data.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:showcaseview/showcaseview.dart';
 
@@ -58,6 +60,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (!shown && mounted) {
         await TutorialService.markShown(TutorialService.home);
         if (mounted && _showcaseContext != null) {
+          ref.read(showcasePreviewModeProvider.notifier).state = true;
           ShowCaseWidget.of(
             _showcaseContext!,
           ).startShowCase([_keyGoals, _keySavings, _keyChart, _keyFab]);
@@ -71,14 +74,10 @@ class _HomePageState extends ConsumerState<HomePage> {
       viewportFraction: 1,
     );
     Future.microtask(() {
-      unawaited(
-        ref.read(spendingRepositoryProvider).syncTransactions(months: 3),
-      );
       ref
           .read(pushNotificationSyncServiceProvider)
           .promptPermissionIfNeededOnLaunch();
-      ref.read(homeViewModelProvider.notifier).loadData();
-      _loadHomeSpending();
+      unawaited(_refreshHomeData());
     });
   }
 
@@ -117,6 +116,48 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
 
     return periods;
+  }
+
+  bool _shouldUseShowcaseMock(bool showcasePreviewMode, HomeState state) {
+    if (!showcasePreviewMode) {
+      return false;
+    }
+
+    final hasSpendingData = _homeSpendingCategoryMap.values.any(
+      (categories) => categories.isNotEmpty,
+    );
+
+    return state.isLoading ||
+        state.accounts.isEmpty ||
+        state.activeGoals.isEmpty ||
+        state.savingTargetAmount <= 0 ||
+        !hasSpendingData;
+  }
+
+  Map<int, List<SpendingCategory>> _showcaseCategoryMap() {
+    return {
+      for (final period in _homeSpendingPeriods)
+        period.offset: ShowcaseMockData.homeSpendingCategoriesForOffset(
+          period.offset,
+        ),
+    };
+  }
+
+  Future<void> _refreshHomeData() async {
+    try {
+      await ref.read(spendingRepositoryProvider).syncTransactions(months: 3);
+    } catch (_) {}
+
+    if (!mounted) {
+      return;
+    }
+
+    await ref.read(homeViewModelProvider.notifier).loadData();
+    if (!mounted) {
+      return;
+    }
+
+    await _loadHomeSpending();
   }
 
   Future<void> _loadHomeSpending() async {
@@ -233,6 +274,11 @@ class _HomePageState extends ConsumerState<HomePage> {
                             GestureDetector(
                               onTap: () {
                                 if (_showcaseContext != null) {
+                                  ref
+                                      .read(
+                                        showcasePreviewModeProvider.notifier,
+                                      )
+                                      .state = true;
                                   ShowCaseWidget.of(_showcaseContext!).startShowCase(
                                     [_keyGoals, _keySavings, _keyChart, _keyFab],
                                   );
@@ -329,11 +375,15 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   Widget _buildBody(BuildContext context, WidgetRef ref, HomeState state) {
     final colors = AppColors.of(context);
-    if (state.isLoading) {
+    final showcasePreviewMode = ref.watch(showcasePreviewModeProvider);
+    final useShowcaseMock = _shouldUseShowcaseMock(showcasePreviewMode, state);
+    final effectiveState = useShowcaseMock ? ShowcaseMockData.homeState() : state;
+
+    if (state.isLoading && !useShowcaseMock) {
       return const SizedBox.shrink();
     }
 
-    if (state.errorMessage != null) {
+    if (state.errorMessage != null && !useShowcaseMock) {
       return Center(
         child: Padding(
           padding: EdgeInsets.all(24.w),
@@ -368,20 +418,28 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     return _buildDashboard(
       context,
-      state,
-      showGoalEmptyState: state.activeGoals.isEmpty,
-      showAccountEmptyState: state.accounts.isEmpty,
+      effectiveState,
+      useShowcaseMock: useShowcaseMock,
+      showGoalEmptyState: effectiveState.activeGoals.isEmpty,
+      showAccountEmptyState: effectiveState.accounts.isEmpty,
     );
   }
 
   Widget _buildDashboard(
     BuildContext context,
     HomeState state, {
+    required bool useShowcaseMock,
     required bool showGoalEmptyState,
     required bool showAccountEmptyState,
   }) {
     final orderedAccounts = _orderedAccounts(state.accounts);
     final topGoals = _sortedGoals(state.activeGoals).take(3).toList();
+    final effectiveCategoryMap = useShowcaseMock
+        ? _showcaseCategoryMap()
+        : _homeSpendingCategoryMap;
+    final isHomeSpendingLoading = useShowcaseMock
+        ? false
+        : _isHomeSpendingLoading;
     final screenWidth = MediaQuery.sizeOf(context).width;
     final homeSpendingCarouselHeight = screenWidth <= 390 ? 452.h : 424.h;
 
@@ -489,10 +547,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                           itemBuilder: (context, index) {
                             final period = _homeSpendingPeriods[index];
                             final categories =
-                                _homeSpendingCategoryMap[period.offset] ??
+                                effectiveCategoryMap[period.offset] ??
                                 const [];
 
-                            if (!_isHomeSpendingLoading &&
+                            if (!isHomeSpendingLoading &&
                                 categories.isNotEmpty) {
                               return Padding(
                                 padding: EdgeInsets.zero,
@@ -545,7 +603,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                             MainAxisAlignment.center,
                                         children: [
                                           Center(
-                                            child: _isHomeSpendingLoading
+                                            child: isHomeSpendingLoading
                                                 ? SizedBox(
                                                     width: 32.w,
                                                     height: 32.w,

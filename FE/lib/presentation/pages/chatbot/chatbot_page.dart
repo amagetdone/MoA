@@ -8,6 +8,7 @@ import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/domain/entities/chat_message.dart';
 import 'package:more_app/presentation/viewmodels/chatbot_viewmodel.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ChatbotPage extends ConsumerStatefulWidget {
   const ChatbotPage({super.key, this.embedded = false});
@@ -517,15 +518,32 @@ class _AssistantMarkdownContent extends StatelessWidget {
   final String content;
   final AppColorScheme colors;
 
+  void _handleLinkTap(String? href) {
+    final uri = href == null ? null : Uri.tryParse(href);
+    if (uri == null) return;
+    launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final baseTextStyle = AppTextStyles.bodySm.copyWith(
+      color: colors.textPrimary,
+      height: 1.5,
+    );
+
     return MarkdownBody(
       data: content,
+      selectable: true,
+      softLineBreak: true,
+      onTapLink: (text, href, title) => _handleLinkTap(href),
       styleSheet: MarkdownStyleSheet(
-        p: AppTextStyles.bodySm.copyWith(
-          color: colors.textPrimary,
-          height: 1.5,
+        a: baseTextStyle.copyWith(
+          color: colors.textAccent,
+          decoration: TextDecoration.underline,
+          decorationColor: colors.textAccent,
+          fontWeight: FontWeight.w600,
         ),
+        p: baseTextStyle,
         h1: AppTextStyles.bodyLg.copyWith(
           fontWeight: FontWeight.w700,
           color: colors.textPrimary,
@@ -534,13 +552,66 @@ class _AssistantMarkdownContent extends StatelessWidget {
           fontWeight: FontWeight.w600,
           color: colors.textPrimary,
         ),
-        listBullet: AppTextStyles.bodySm.copyWith(
+        h3: AppTextStyles.bodyMd.copyWith(
+          fontWeight: FontWeight.w700,
           color: colors.textPrimary,
-          height: 1.5,
         ),
+        h4: AppTextStyles.bodyMd.copyWith(
+          fontWeight: FontWeight.w600,
+          color: colors.textPrimary,
+        ),
+        strong: baseTextStyle.copyWith(fontWeight: FontWeight.w700),
+        em: baseTextStyle.copyWith(fontStyle: FontStyle.italic),
+        listBullet: baseTextStyle,
         code: AppTextStyles.bodySm.copyWith(
           fontFamily: 'monospace',
+          color: colors.textPrimary,
           backgroundColor: colors.bgPrimary,
+        ),
+        blockquote: baseTextStyle.copyWith(
+          color: colors.textSecondary,
+          height: 1.6,
+        ),
+        blockquotePadding: EdgeInsets.symmetric(
+          horizontal: 12.w,
+          vertical: 10.h,
+        ),
+        blockquoteDecoration: BoxDecoration(
+          color: colors.bgAccent,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border(
+            left: BorderSide(
+              color: AppColors.orange500.withValues(alpha: 0.75),
+              width: 4,
+            ),
+          ),
+        ),
+        codeblockPadding: EdgeInsets.all(12.w),
+        codeblockDecoration: BoxDecoration(
+          color: colors.bgPrimary,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: colors.borderDefault),
+        ),
+        horizontalRuleDecoration: BoxDecoration(
+          border: Border(top: BorderSide(color: colors.borderDefault)),
+        ),
+        tableHead: baseTextStyle.copyWith(fontWeight: FontWeight.w700),
+        tableBody: baseTextStyle,
+        tableBorder: TableBorder.all(
+          color: colors.borderDefault,
+          borderRadius: BorderRadius.circular(10.r),
+        ),
+        // Use intrinsic widths so wide tables scroll horizontally instead of
+        // squeezing each column into the chat bubble width.
+        tableColumnWidth: const IntrinsicColumnWidth(),
+        tableScrollbarThumbVisibility: true,
+        tablePadding: EdgeInsets.symmetric(vertical: 6.h),
+        tableCellsPadding: EdgeInsets.symmetric(
+          horizontal: 12.w,
+          vertical: 10.h,
+        ),
+        tableCellsDecoration: BoxDecoration(
+          color: colors.bgPrimary,
         ),
       ),
     );

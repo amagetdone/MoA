@@ -8,6 +8,8 @@ import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:more_app/core/utils/tutorial_service.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
+import 'package:more_app/presentation/providers/showcase_preview_provider.dart';
+import 'package:more_app/presentation/showcase/showcase_mock_data.dart';
 import 'package:more_app/presentation/viewmodels/spending_budget_viewmodel.dart';
 import 'package:more_app/domain/entities/budget.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
@@ -42,6 +44,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
       if (!shown && mounted) {
         await TutorialService.markShown(TutorialService.spendingBudget);
         if (mounted && _showcaseContext != null) {
+          ref.read(showcasePreviewModeProvider.notifier).state = true;
           ShowCaseWidget.of(_showcaseContext!).startShowCase([
             _keyIncome,
             _keySavings,
@@ -52,6 +55,24 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
         }
       }
     });
+  }
+
+  bool _isBudgetSetupEmpty(BudgetSetup setup) {
+    return setup.monthlyIncome <= 0 &&
+        setup.savingsAmount <= 0 &&
+        setup.fixedExpenseAmount <= 0 &&
+        setup.variableExpenseAmount <= 0 &&
+        setup.remainingFreeAmount <= 0 &&
+        setup.fixedEssentials.isEmpty &&
+        setup.variableEssentials.isEmpty;
+  }
+
+  bool _shouldUseShowcaseMock(
+    bool showcasePreviewMode,
+    SpendingBudgetState state,
+  ) {
+    return showcasePreviewMode &&
+        (state.isLoading || _isBudgetSetupEmpty(state.setup));
   }
 
   Future<void> _showEditBudgetDialog(int currentIncome) async {
@@ -77,16 +98,29 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final state = ref.watch(spendingBudgetViewModelProvider);
-    final setup = state.setup;
+    final showcasePreviewMode = ref.watch(showcasePreviewModeProvider);
+    final useShowcaseMock = _shouldUseShowcaseMock(showcasePreviewMode, state);
+    final effectiveState = useShowcaseMock
+        ? ShowcaseMockData.spendingBudgetState()
+        : state;
+    final setup = effectiveState.setup;
     final extraFunds = setup.remainingFreeAmount;
 
     return ShowCaseWidget(
+      enableAutoScroll: true,
+      scrollDuration: const Duration(milliseconds: 450),
+      onStart: (index, key) {
+        ref.read(showcasePreviewModeProvider.notifier).state = true;
+      },
+      onFinish: () {
+        ref.read(showcasePreviewModeProvider.notifier).state = false;
+      },
       builder: (ctx) {
         _showcaseContext = ctx;
         return Scaffold(
       backgroundColor: colors.bgPrimary,
       appBar: const MoreAppBar(title: '', showBack: true, showNotification: false),
-      body: state.isLoading
+      body: effectiveState.isLoading && !useShowcaseMock
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
@@ -106,6 +140,9 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                         GestureDetector(
                           onTap: () {
                             if (_showcaseContext != null) {
+                              ref
+                                  .read(showcasePreviewModeProvider.notifier)
+                                  .state = true;
                               ShowCaseWidget.of(_showcaseContext!).startShowCase(
                                 [_keyIncome, _keySavings, _keyFixed, _keyVariable, _keyFreedom],
                               );
@@ -340,8 +377,8 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
             ),
           ),
           MoreBottomButton(
-            text: state.isSaving ? '저장 중...' : '확인',
-            onPressed: state.isSaving
+            text: effectiveState.isSaving ? '저장 중...' : '확인',
+            onPressed: effectiveState.isSaving
                 ? null
                 : () async {
                     await ref.read(homeViewModelProvider.notifier).loadData();

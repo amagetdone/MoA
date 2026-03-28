@@ -204,6 +204,132 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
     });
   }
 
+  void _showAgreementSheet(_AgreementDocument document) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final colors = AppColors.of(ctx);
+        return Container(
+          height: 620.h,
+          decoration: BoxDecoration(
+            color: colors.bgSurface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(24.w, 16.h, 24.w, 24.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44.w,
+                      height: 4.h,
+                      decoration: BoxDecoration(
+                        color: colors.gray100,
+                        borderRadius: BorderRadius.circular(999.r),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 20.h),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          document.title,
+                          style: AppTextStyles.headingMd.copyWith(
+                            color: colors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        icon: Icon(
+                          Icons.close,
+                          color: colors.textTertiary,
+                          size: 22.w,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    document.summary,
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: colors.textSecondary,
+                      height: 1.5,
+                    ),
+                  ),
+                  SizedBox(height: 20.h),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: document.sections
+                            .map(
+                              (section) => Padding(
+                                padding: EdgeInsets.only(bottom: 20.h),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      section.title,
+                                      style: AppTextStyles.bodyMd.copyWith(
+                                        color: colors.textPrimary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    SizedBox(height: 8.h),
+                                    Text(
+                                      section.body,
+                                      style: AppTextStyles.bodySm.copyWith(
+                                        color: colors.textSecondary,
+                                        height: 1.65,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.orange500,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 16.h),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16.r),
+                        ),
+                      ),
+                      child: Text(
+                        '확인했어요',
+                        style: AppTextStyles.bodyMd.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _onSubmit() async {
     if (_isSubmitting) return;
     if (!_validateAll() || !_isFormValid) return;
@@ -678,6 +804,8 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                         });
                         _updateAgreeAll();
                       },
+                      onDetailTap: () =>
+                          _showAgreementSheet(_AgreementDocument.terms()),
                       showArrow: true,
                     ),
                     SizedBox(height: 8.h),
@@ -691,6 +819,8 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                         });
                         _updateAgreeAll();
                       },
+                      onDetailTap: () =>
+                          _showAgreementSheet(_AgreementDocument.privacy()),
                       showArrow: true,
                     ),
                     SizedBox(height: 8.h),
@@ -704,6 +834,8 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                         });
                         _updateAgreeAll();
                       },
+                      onDetailTap: () =>
+                          _showAgreementSheet(_AgreementDocument.marketing()),
                       showArrow: true,
                     ),
                   ],
@@ -731,6 +863,7 @@ class _AgreementCheckbox extends StatelessWidget {
   final ValueChanged<bool?> onChanged;
   final bool isBold;
   final bool showArrow;
+  final VoidCallback? onDetailTap;
 
   const _AgreementCheckbox({
     required this.text,
@@ -738,16 +871,17 @@ class _AgreementCheckbox extends StatelessWidget {
     required this.onChanged,
     this.isBold = false,
     this.showArrow = false,
+    this.onDetailTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    return GestureDetector(
-      onTap: () => onChanged(!value),
-      child: Row(
-        children: [
-          SizedBox(
+    return Row(
+      children: [
+        GestureDetector(
+          onTap: () => onChanged(!value),
+          child: SizedBox(
             width: 24.w,
             height: 24.w,
             child: Checkbox(
@@ -763,23 +897,151 @@ class _AgreementCheckbox extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Text(
-              text,
-              style: AppTextStyles.bodySm.copyWith(
-                color: colors.gray900,
-                fontWeight: isBold ? FontWeight.w700 : FontWeight.w400,
-                fontSize: 13.sp,
+        ),
+        SizedBox(width: 12.w),
+        Expanded(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: showArrow ? onDetailTap : () => onChanged(!value),
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.h),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      text,
+                      style: AppTextStyles.bodySm.copyWith(
+                        color: colors.gray900,
+                        fontWeight: isBold ? FontWeight.w700 : FontWeight.w400,
+                        fontSize: 13.sp,
+                        decoration: showArrow
+                            ? TextDecoration.underline
+                            : TextDecoration.none,
+                        decorationColor: colors.textTertiary,
+                      ),
+                    ),
+                  ),
+                  if (showArrow)
+                    Icon(
+                      Icons.chevron_right,
+                      size: 20.w,
+                      color: colors.gray500,
+                    ),
+                ],
               ),
             ),
           ),
-          if (showArrow)
-            Icon(Icons.chevron_right, size: 20.w, color: colors.gray500),
-        ],
-      ),
+        ),
+      ],
     );
   }
+}
+
+class _AgreementDocument {
+  final String title;
+  final String summary;
+  final List<_AgreementSection> sections;
+
+  const _AgreementDocument({
+    required this.title,
+    required this.summary,
+    required this.sections,
+  });
+
+  factory _AgreementDocument.terms() {
+    return const _AgreementDocument(
+      title: '서비스 이용약관',
+      summary:
+          '모아 서비스 이용을 위한 기본 약관입니다. 계좌 연동, 소비 분석, 목표 관리, 알림, AI 코칭 기능 사용 시 적용됩니다.',
+      sections: [
+        _AgreementSection(
+          title: '1. 서비스 제공 범위',
+          body:
+              '모아는 사용자의 금융 데이터를 기반으로 소비 현황, 예산 관리, 목표 저축 현황, 알림 및 AI 코칭 기능을 제공합니다. 서비스 세부 기능은 운영 정책에 따라 변경되거나 추가될 수 있습니다.',
+        ),
+        _AgreementSection(
+          title: '2. 회원의 의무',
+          body:
+              '회원은 본인 명의의 정보를 정확하게 입력해야 하며, 타인의 정보를 무단으로 사용하거나 서비스 운영을 방해하는 행위를 해서는 안 됩니다. 부정 사용이 확인될 경우 서비스 이용이 제한될 수 있습니다.',
+        ),
+        _AgreementSection(
+          title: '3. 연동 정보의 활용',
+          body:
+              '회원이 연결한 계좌 및 거래 정보는 소비 분석, 예산 추천, 목표 저축 추적, 맞춤형 피드백 제공을 위해 활용됩니다. 서비스는 회원이 동의한 범위에서만 정보를 처리합니다.',
+        ),
+        _AgreementSection(
+          title: '4. 책임 및 제한',
+          body:
+              '모아가 제공하는 분석 및 추천 결과는 참고 정보이며, 실제 금융 의사결정에 대한 최종 책임은 회원 본인에게 있습니다. 시스템 점검, 외부 연동 장애 등으로 일시적으로 서비스 이용이 제한될 수 있습니다.',
+        ),
+      ],
+    );
+  }
+
+  factory _AgreementDocument.privacy() {
+    return const _AgreementDocument(
+      title: '개인정보 처리방침',
+      summary:
+          '모아는 회원가입과 서비스 제공에 필요한 최소한의 개인정보를 수집하며, 관련 법령과 내부 정책에 따라 안전하게 관리합니다.',
+      sections: [
+        _AgreementSection(
+          title: '1. 수집 항목',
+          body:
+              '회원가입 및 서비스 이용 과정에서 닉네임, 이메일, 생년월일, 프로필 이미지, 계좌 및 거래 정보, 목표 및 예산 설정 정보가 수집될 수 있습니다.',
+        ),
+        _AgreementSection(
+          title: '2. 이용 목적',
+          body:
+              '수집한 정보는 회원 식별, 프로필 관리, 금융 데이터 분석, 맞춤형 예산 및 목표 관리, 알림 발송, AI 코칭 제공, 서비스 품질 향상을 위해 사용됩니다.',
+        ),
+        _AgreementSection(
+          title: '3. 보관 및 파기',
+          body:
+              '회원 탈퇴 또는 목적 달성 후에는 관련 법령에 따라 일정 기간 보관이 필요한 경우를 제외하고 지체 없이 파기합니다. 파기 전까지는 접근 권한을 최소화하여 안전하게 보호합니다.',
+        ),
+        _AgreementSection(
+          title: '4. 이용자 권리',
+          body:
+              '회원은 언제든지 본인의 개인정보를 열람, 수정, 삭제 요청할 수 있으며, 수집 및 이용 동의를 철회할 수 있습니다. 관련 요청은 서비스 내 문의 또는 운영 채널을 통해 접수할 수 있습니다.',
+        ),
+      ],
+    );
+  }
+
+  factory _AgreementDocument.marketing() {
+    return const _AgreementDocument(
+      title: '마케팅 정보 수신 동의',
+      summary:
+          '선택 동의 시 서비스 업데이트, 이벤트, 맞춤형 추천 등 안내 메시지를 수신할 수 있습니다. 동의하지 않아도 기본 서비스 이용에는 제한이 없습니다.',
+      sections: [
+        _AgreementSection(
+          title: '1. 수신 항목',
+          body:
+              '앱 푸시, 문자, 이메일 등으로 이벤트, 신규 기능, 프로모션, 개인화 추천 혜택과 같은 마케팅 정보를 전달할 수 있습니다.',
+        ),
+        _AgreementSection(
+          title: '2. 활용 범위',
+          body:
+              '회원의 소비 패턴, 목표 설정 여부, 서비스 이용 이력 등을 바탕으로 관심도가 높을 것으로 예상되는 정보가 선별적으로 발송될 수 있습니다.',
+        ),
+        _AgreementSection(
+          title: '3. 동의 철회',
+          body:
+              '마케팅 수신 동의는 언제든지 설정 화면 또는 고객 문의를 통해 철회할 수 있으며, 철회 이후에는 홍보성 메시지 발송이 중단됩니다.',
+        ),
+      ],
+    );
+  }
+}
+
+class _AgreementSection {
+  final String title;
+  final String body;
+
+  const _AgreementSection({
+    required this.title,
+    required this.body,
+  });
 }
 
 class _ToggleOption extends StatelessWidget {
