@@ -38,7 +38,7 @@ public class FindOrCreateSocialUserUseCase {
 
 	private Result create(SocialUserIdentity identity) {
 		User user = User.createPendingSocialUser();
-		applyConfiguredTestSocialProfile(identity, user);
+		applyInitialSocialProfile(identity, user);
 		User savedUser = userRepository.save(user);
 		SocialAccount socialAccount = socialAccountRepository.save(
 			SocialAccount.create(savedUser, identity.provider(), identity.providerUid())
@@ -48,22 +48,28 @@ public class FindOrCreateSocialUserUseCase {
 
 	private Result updateIfTestUser(SocialUserIdentity identity, SocialAccount existing) {
 		User user = existing.getUser();
-		applyConfiguredTestSocialProfile(identity, user);
+		applyInitialSocialProfile(identity, user);
 		return new Result(user, existing, false);
 	}
 
-	private void applyConfiguredTestSocialProfile(SocialUserIdentity identity, User user) {
-		if (identity.provider() != SocialProvider.TEST) {
+	private void applyInitialSocialProfile(SocialUserIdentity identity, User user) {
+		if (identity.provider() == SocialProvider.TEST) {
+			int testUserId = MockSocialAuthClient.resolveTestUserId(identity.providerUid());
+			user.markProfileEntered(
+				testSocialUserProperties.resolveNickname(testUserId),
+				testSocialUserProperties.resolveEmail(testUserId),
+				testSocialUserProperties.resolveBirthDate(testUserId),
+				testSocialUserProperties.resolveHasFixedIncome(testUserId)
+			);
+			user.activate();
 			return;
 		}
-		int testUserId = MockSocialAuthClient.resolveTestUserId(identity.providerUid());
-		user.markProfileEntered(
-			testSocialUserProperties.resolveNickname(testUserId),
-			testSocialUserProperties.resolveEmail(testUserId),
-			testSocialUserProperties.resolveBirthDate(testUserId),
-			testSocialUserProperties.resolveHasFixedIncome(testUserId)
+
+		user.applySocialProfileIfAbsent(
+			identity.nickname(),
+			identity.email(),
+			identity.profileImageUrl()
 		);
-		user.activate();
 	}
 
 	public record Result(

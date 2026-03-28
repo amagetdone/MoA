@@ -58,7 +58,10 @@ class AuthControllerTest {
 				false,
 				false,
 				"access-token",
-				"refresh-token"
+				"refresh-token",
+				"모아",
+				"moa@example.com",
+				"https://example.com/profile.png"
 			));
 
 		mockMvc.perform(apiPost("/v1/auth/social/kakao")
@@ -74,6 +77,9 @@ class AuthControllerTest {
 			.andExpect(jsonPath("$.message").value("\uC18C\uC15C \uB85C\uADF8\uC778\uC5D0 \uC131\uACF5\uD588\uC2B5\uB2C8\uB2E4."))
 			.andExpect(jsonPath("$.data.status").value("TEMP"))
 			.andExpect(jsonPath("$.data.profile").doesNotExist())
+			.andExpect(jsonPath("$.data.nickname").value("모아"))
+			.andExpect(jsonPath("$.data.email").value("moa@example.com"))
+			.andExpect(jsonPath("$.data.profileImageUrl").value("https://example.com/profile.png"))
 			.andExpect(jsonPath("$.data.account").value(false))
 			.andExpect(jsonPath("$.data.plan").value(false))
 			.andExpect(jsonPath("$.data.accessToken").value("access-token"))
@@ -88,7 +94,10 @@ class AuthControllerTest {
 				false,
 				false,
 				"access-token",
-				"refresh-token"
+				"refresh-token",
+				null,
+				null,
+				null
 			));
 
 		mockMvc.perform(apiPost("/v1/auth/social/test")
@@ -119,7 +128,10 @@ class AuthControllerTest {
 				false,
 				false,
 				"access-token",
-				"refresh-token"
+				"refresh-token",
+				null,
+				null,
+				null
 			));
 
 		mockMvc.perform(apiPost("/v1/auth/social/test"))

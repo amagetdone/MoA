@@ -143,7 +143,10 @@ public class MemberAuthService {
 				hasAccount,
 				hasPlan,
 				tokenPair.accessToken(),
-				tokenPair.refreshToken()
+				tokenPair.refreshToken(),
+				user.getNickname(),
+				user.getEmail(),
+				user.getProfileUrl()
 			);
 		} catch (RuntimeException exception) {
 			if (!socialAuthSucceeded) {

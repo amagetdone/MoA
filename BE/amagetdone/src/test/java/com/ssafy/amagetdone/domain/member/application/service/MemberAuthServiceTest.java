@@ -105,6 +105,9 @@ class MemberAuthServiceTest {
 		assertFalse(response.plan());
 		assertEquals("access-token", response.accessToken());
 		assertEquals("refresh-token", response.refreshToken());
+		assertEquals(null, response.nickname());
+		assertEquals(null, response.email());
+		assertEquals(null, response.profileImageUrl());
 		assertTrue(containsLog(appender, "event=SOCIAL_AUTH_SUCCESS"));
 		assertTrue(containsLog(appender, "event=MEMBER_LOGIN_SUCCESS"));
 		verify(findOrCreateSocialUserUseCase).execute(identity);
@@ -146,6 +149,9 @@ class MemberAuthServiceTest {
 		assertTrue(response.plan());
 		assertEquals("access-token", response.accessToken());
 		assertEquals("refresh-token", response.refreshToken());
+		assertEquals("moa", response.nickname());
+		assertEquals("moa@example.com", response.email());
+		assertEquals(null, response.profileImageUrl());
 		assertTrue(containsLog(appender, "event=SOCIAL_AUTH_SUCCESS"));
 		assertTrue(containsLog(appender, "event=MEMBER_LOGIN_SUCCESS"));
 		verify(findOrCreateSocialUserUseCase).execute(identity);
@@ -193,6 +199,8 @@ class MemberAuthServiceTest {
 
 		assertEquals("ACTIVE", response.status());
 		assertEquals("access-token", response.accessToken());
+		assertEquals("tester3", response.nickname());
+		assertEquals("test3@test.com", response.email());
 		assertEquals("test3@test.com", user.getEmail());
 		assertTrue(user.isProfileCompleted());
 		assertEquals("ssafy-user-key", user.getUserKey());

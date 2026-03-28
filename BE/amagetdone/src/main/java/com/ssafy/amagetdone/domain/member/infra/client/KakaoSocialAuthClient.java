@@ -1,5 +1,6 @@
 package com.ssafy.amagetdone.domain.member.infra.client;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ssafy.amagetdone.global.config.SocialAuthProperties;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
@@ -44,14 +45,52 @@ public class KakaoSocialAuthClient implements SocialAuthClient {
 				throw new MemberException(MemberErrorCode.INVALID_KAKAO_ACCESS_TOKEN);
 			}
 
-			return new SocialUserIdentity(SocialProvider.KAKAO, String.valueOf(response.id()));
+			KakaoAccount kakaoAccount = response.kakaoAccount();
+			Profile profile = kakaoAccount != null ? kakaoAccount.profile() : null;
+
+			return new SocialUserIdentity(
+				SocialProvider.KAKAO,
+				String.valueOf(response.id()),
+				profile != null ? profile.nickname() : null,
+				resolveEmail(kakaoAccount),
+				profile != null ? profile.profileImageUrl() : null
+			);
 		} catch (RestClientException exception) {
 			throw new MemberException(MemberErrorCode.INVALID_KAKAO_ACCESS_TOKEN, exception);
 		}
 	}
 
+	private String resolveEmail(KakaoAccount kakaoAccount) {
+		if (kakaoAccount == null || kakaoAccount.email() == null || kakaoAccount.email().isBlank()) {
+			return null;
+		}
+		if (Boolean.FALSE.equals(kakaoAccount.isEmailValid()) || Boolean.FALSE.equals(kakaoAccount.isEmailVerified())) {
+			return null;
+		}
+		return kakaoAccount.email();
+	}
+
 	private record KakaoUserResponse(
-		Long id
+		Long id,
+		@JsonProperty("kakao_account")
+		KakaoAccount kakaoAccount
+	) {
+	}
+
+	private record KakaoAccount(
+		String email,
+		@JsonProperty("is_email_valid")
+		Boolean isEmailValid,
+		@JsonProperty("is_email_verified")
+		Boolean isEmailVerified,
+		Profile profile
+	) {
+	}
+
+	private record Profile(
+		String nickname,
+		@JsonProperty("profile_image_url")
+		String profileImageUrl
 	) {
 	}
 }
