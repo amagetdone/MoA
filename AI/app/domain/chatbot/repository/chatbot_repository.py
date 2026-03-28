@@ -637,7 +637,7 @@ class ChatbotRepository:
         user_id: int,
         lookback_days: int,
         limit: int,
-        base_date: date,
+        base_date: date | None = None,
     ) -> dict[str, Any]:
         validate_user_id(user_id)
         if lookback_days <= 0:
@@ -645,7 +645,7 @@ class ChatbotRepository:
         if limit <= 0:
             raise ValueError("limit must be a positive integer")
 
-        date_to = base_date
+        date_to = base_date or date.today()
         date_from = date_to - timedelta(days=lookback_days - 1)
 
         rows = self.runner.execute_select(

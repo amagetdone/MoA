@@ -179,3 +179,62 @@ def test_store_get_or_create_latest_recreates_expired_conversation() -> None:
     )
 
     assert latest["conversation_id"] == "new-conv"
+
+
+def test_store_can_persist_internal_summary_state_for_prompt_compaction() -> None:
+    now = datetime(2026, 3, 26, 9, 0, tzinfo=UTC)
+    store = ConversationMemoryStore(
+        ttl=timedelta(days=3),
+        now_factory=lambda: now,
+    )
+    store.append_user_message(user_id=7, conversation_id="conv-1", content="u1")
+    store.append_assistant_message(user_id=7, conversation_id="conv-1", content="a1")
+    store.append_user_message(user_id=7, conversation_id="conv-1", content="u2")
+
+    store.save_summary_state(
+        user_id=7,
+        conversation_id="conv-1",
+        summary_text="summary of prior turns",
+        summarized_message_count=2,
+    )
+
+    prompt_context = store.get_prompt_context(user_id=7, conversation_id="conv-1")
+
+    assert prompt_context == {
+        "summary_text": "summary of prior turns",
+        "summarized_message_count": 2,
+        "messages": [
+            {
+                "role": "user",
+                "content": "u2",
+                "created_at": "2026-03-26T09:00:00+00:00",
+            }
+        ],
+    }
+
+
+def test_store_keeps_external_conversation_payload_unchanged_when_summary_exists() -> None:
+    now = datetime(2026, 3, 26, 9, 0, tzinfo=UTC)
+    store = ConversationMemoryStore(
+        ttl=timedelta(days=3),
+        now_factory=lambda: now,
+    )
+    store.append_user_message(user_id=7, conversation_id="conv-1", content="u1")
+    store.append_assistant_message(user_id=7, conversation_id="conv-1", content="a1")
+    store.append_user_message(user_id=7, conversation_id="conv-1", content="u2")
+    store.save_summary_state(
+        user_id=7,
+        conversation_id="conv-1",
+        summary_text="summary of prior turns",
+        summarized_message_count=2,
+    )
+
+    conversation = store.get_conversation(user_id=7, conversation_id="conv-1")
+
+    assert "summary_text" not in conversation
+    assert "summarized_message_count" not in conversation
+    assert [message["content"] for message in conversation["messages"]] == [
+        "u1",
+        "a1",
+        "u2",
+    ]

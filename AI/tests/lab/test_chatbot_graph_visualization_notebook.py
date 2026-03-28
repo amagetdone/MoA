@@ -23,4 +23,8 @@ def test_chatbot_graph_visualization_notebook_exists_and_references_app_graph() 
     assert "ChatbotToolBundle.empty" in notebook_text
     assert "draw_mermaid" in notebook_text
     assert "draw_mermaid_png" in notebook_text
+    assert "get_graph(xray=True)" in notebook_text
     assert "sys.path" in notebook_text
+    assert "single-agent" in notebook_text.casefold()
+    assert "sql team" not in notebook_text.casefold()
+    assert "coaching team" not in notebook_text.casefold()

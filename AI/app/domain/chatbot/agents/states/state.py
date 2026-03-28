@@ -1,21 +1,21 @@
 from __future__ import annotations
 
-from typing import Any, Annotated, TypedDict
+from typing import TypedDict
 
-from langchain_core.messages import AnyMessage
-from langgraph.graph.message import add_messages
+from langchain_core.messages import BaseMessage
+
+
+class ToolSummary(TypedDict):
+    tool_name: str
+    status: str
 
 
 class ChatbotGraphState(TypedDict, total=False):
-    messages: Annotated[list[AnyMessage], add_messages]
-    remaining_steps: int
+    messages: list[BaseMessage]
+    user_id: int
+    session_id: str
+    user_query: str
     warnings: list[str]
-    tool_summaries: list[dict[str, Any]]
+    tool_summaries: list[ToolSummary]
+    final_response: str | None
     final_answer: str | None
-    active_route: str | None
-    specialist_answer: str | None
-    candidate_sql: str | None
-    validator_decision: str | None
-    validator_feedback: str | None
-    validated_sql: str | None
-    sql_result: str | None

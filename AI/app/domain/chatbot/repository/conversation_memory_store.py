@@ -30,6 +30,8 @@ class _ConversationRecord:
     last_activity_at: datetime
     expires_at: datetime
     messages: list[_ConversationMessage] = field(default_factory=list)
+    summary_text: str = ""
+    summarized_message_count: int = 0
 
 
 class ConversationMemoryStore:
@@ -139,6 +141,49 @@ class ConversationMemoryStore:
             conversation_id=conversation_id_factory(),
         )
         return self._serialize_record_summary(record)
+
+    def get_prompt_context(
+        self,
+        *,
+        user_id: int,
+        conversation_id: str,
+    ) -> dict[str, object]:
+        record = self._get_active_record(
+            user_id=user_id,
+            conversation_id=conversation_id,
+        )
+        return {
+            "summary_text": record.summary_text,
+            "summarized_message_count": record.summarized_message_count,
+            "messages": [
+                {
+                    "role": message.role,
+                    "content": message.content,
+                    "created_at": message.created_at.isoformat(),
+                }
+                for message in record.messages[record.summarized_message_count :]
+            ],
+        }
+
+    def save_summary_state(
+        self,
+        *,
+        user_id: int,
+        conversation_id: str,
+        summary_text: str,
+        summarized_message_count: int,
+    ) -> None:
+        record = self._get_active_record(
+            user_id=user_id,
+            conversation_id=conversation_id,
+        )
+        if summarized_message_count < 0:
+            raise ValueError("summarized_message_count must not be negative")
+        if summarized_message_count > len(record.messages):
+            raise ValueError("summarized_message_count exceeds message count")
+
+        record.summary_text = summary_text
+        record.summarized_message_count = summarized_message_count
 
     def _get_or_create_record(
         self,

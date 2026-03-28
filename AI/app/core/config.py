@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     openai_base_url: str = Field(default="", alias="OPENAI_BASE_URL")
     google_ai_base_url: str = Field(default="", alias="GOOGLE_AI_BASE_URL")
     chat_model: str = Field(default="gpt-5-mini", alias="CHAT_MODEL")
+    more_finance_mcp_url: str = Field(default="", alias="MORE_FINANCE_MCP_URL")
     db_url: str = Field(default="", alias="DB_URL")
     db_username: str = Field(default="", alias="DB_USERNAME")
     db_password: str = Field(default="", alias="DB_PASSWORD")

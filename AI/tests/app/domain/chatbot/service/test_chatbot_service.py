@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import anyio
@@ -13,7 +13,10 @@ from app.domain.chatbot.repository.conversation_memory_store import (
     ConversationMemoryStore,
     ConversationNotFoundError,
 )
-from app.domain.chatbot.service.chatbot_service import ChatbotService, _build_tool_bundle
+from app.domain.chatbot.service.chatbot_service import (
+    ChatbotService,
+    build_chatbot_service,
+)
 
 
 class _FakeSpan:
@@ -51,6 +54,7 @@ class _FakeGraph:
         *,
         reply_messages: list[object] | None = None,
         reply_final_answer: str | None = None,
+        reply_final_response: str | None = None,
         stream_chunks: list[tuple[str, object]] | None = None,
     ) -> None:
         self.reply_messages = reply_messages or [
@@ -58,6 +62,7 @@ class _FakeGraph:
             AIMessage(content="Weekly budget is healthy.", name="supervisor"),
         ]
         self.reply_final_answer = reply_final_answer
+        self.reply_final_response = reply_final_response
         self.stream_chunks = stream_chunks or [
             (
                 "messages",
@@ -95,11 +100,12 @@ class _FakeGraph:
             "warnings": ["watch budget"],
             "tool_summaries": [
                 {
-                    "tool_name": "get_weekly_budget_status",
-                    "as_of": "2026-03-26",
+                    "tool_name": "sql_team",
+                    "status": "completed",
                 }
             ],
             "final_answer": self.reply_final_answer,
+            "final_response": self.reply_final_response,
         }
 
     async def astream(
@@ -135,36 +141,24 @@ class _FakeGraphFactory:
         return graph
 
 
-class _FakeCloseable:
-    def __init__(self) -> None:
-        self.close_calls = 0
+class _FakeConversationSummarizer:
+    def __init__(self, result: str = "updated summary") -> None:
+        self.result = result
+        self.calls: list[dict[str, object]] = []
 
-    def close(self) -> None:
-        self.close_calls += 1
-
-
-class _FakeRequestDatabaseFactory:
-    def __init__(self) -> None:
-        self.calls = 0
-        self.instances: list[_FakeCloseable] = []
-
-    def __call__(self) -> _FakeCloseable:
-        self.calls += 1
-        instance = _FakeCloseable()
-        self.instances.append(instance)
-        return instance
-
-
-class _FakeRequestGraphFactory:
-    def __init__(self) -> None:
-        self.calls: list[tuple[int, _FakeCloseable]] = []
-        self.graphs: list[_FakeGraph] = []
-
-    def __call__(self, user_id: int, request_database: _FakeCloseable) -> _FakeGraph:
-        self.calls.append((user_id, request_database))
-        graph = _FakeGraph(reply_final_answer="request scoped answer")
-        self.graphs.append(graph)
-        return graph
+    async def summarize_turns(
+        self,
+        *,
+        existing_summary: str,
+        messages: list[object],
+    ) -> str:
+        self.calls.append(
+            {
+                "existing_summary": existing_summary,
+                "messages": messages,
+            }
+        )
+        return self.result
 
 
 def _build_settings() -> Settings:
@@ -176,82 +170,74 @@ def _build_settings() -> Settings:
     )
 
 
-class _ToolBundleRepository:
-    def __init__(self) -> None:
-        self.calls: list[dict[str, object]] = []
-        self.runner = self
+def test_build_chatbot_service_uses_mcp_url_to_activate_the_chatbot_runtime() -> None:
+    settings = Settings(
+        _env_file=None,
+        AI_API_KEY="relay-key",
+        OPENAI_BASE_URL="https://example.com/v1",
+        CHAT_MODEL="gpt-4.1-mini",
+        MORE_FINANCE_MCP_URL="http://backend:8080/api/mcp",
+    )
 
-    def get_weekly_budget_status(self, *, user_id: int, base_date):
-        self.calls.append(
-            {
-                "method": "get_weekly_budget_status",
-                "user_id": user_id,
-                "base_date": base_date,
-            }
-        )
-        return {"summary": {}, "evidence": [], "warnings": []}
+    service = build_chatbot_service(settings=settings, tracer=_FakeTracer())
 
-    def get_goal_progress_overview(self, *, user_id: int, status_filter=None, limit=5):
-        self.calls.append(
-            {
-                "method": "get_goal_progress_overview",
-                "user_id": user_id,
-                "status_filter": status_filter,
-                "limit": limit,
-            }
-        )
-        return {"summary": {}, "evidence": [], "warnings": []}
+    assert service is not None
 
-    def get_spending_summary(self, *, user_id: int, date_from, date_to):
-        self.calls.append(
-            {
-                "method": "get_spending_summary",
-                "user_id": user_id,
-                "date_from": date_from,
-                "date_to": date_to,
-            }
-        )
-        return {"summary": {}, "evidence": [], "warnings": []}
 
-    def get_spending_by_category(
-        self,
-        *,
-        user_id: int,
-        date_from,
-        date_to,
-        include_comparison,
-    ):
-        self.calls.append(
-            {
-                "method": "get_spending_by_category",
-                "user_id": user_id,
-                "date_from": date_from,
-                "date_to": date_to,
-                "include_comparison": include_comparison,
-            }
-        )
-        return {"summary": {}, "evidence": [], "warnings": []}
+def test_build_chatbot_service_passes_tracer_into_graph_runtime(monkeypatch) -> None:
+    settings = Settings(
+        _env_file=None,
+        AI_API_KEY="relay-key",
+        OPENAI_BASE_URL="https://example.com/v1",
+        CHAT_MODEL="gpt-4.1-mini",
+        MORE_FINANCE_MCP_URL="http://backend:8080/api/mcp",
+    )
+    tracer = _FakeTracer()
+    captured: dict[str, object] = {}
 
-    def get_recent_spending_anomalies(self, *, user_id: int, lookback_days, limit):
-        self.calls.append(
-            {
-                "method": "get_recent_spending_anomalies",
-                "user_id": user_id,
-                "lookback_days": lookback_days,
-                "limit": limit,
-            }
-        )
-        return {"summary": {}, "evidence": [], "warnings": []}
+    class _StubGraph:
+        pass
 
-    def execute_select(self, sql: str, *, parameters=None):
-        self.calls.append(
-            {
-                "method": "execute_select",
-                "sql": sql,
-                "parameters": parameters or {},
-            }
-        )
-        return [{"metric": 1}]
+    def fake_build_chatbot_graph(**kwargs):
+        captured.update(kwargs)
+        return _StubGraph()
+
+    monkeypatch.setattr(
+        "app.domain.chatbot.service.chatbot_service.build_chatbot_graph",
+        fake_build_chatbot_graph,
+    )
+
+    service = build_chatbot_service(settings=settings, tracer=tracer)
+
+    assert service is not None
+    graph = service._get_graph(7)
+    assert isinstance(graph, _StubGraph)
+    assert captured["tracer"] is tracer
+
+
+def test_build_chatbot_service_returns_none_without_mcp_url_even_with_llm_settings() -> None:
+    settings = Settings(
+        _env_file=None,
+        AI_API_KEY="relay-key",
+        OPENAI_BASE_URL="https://example.com/v1",
+        CHAT_MODEL="gpt-4.1-mini",
+    )
+
+    assert build_chatbot_service(settings=settings, tracer=_FakeTracer()) is None
+
+
+def test_build_chatbot_service_returns_none_without_mcp_url_even_with_database_settings() -> None:
+    settings = Settings(
+        _env_file=None,
+        AI_API_KEY="relay-key",
+        OPENAI_BASE_URL="https://example.com/v1",
+        CHAT_MODEL="gpt-4.1-mini",
+        DB_URL="postgresql://db:5432/moa",
+        DB_USERNAME="readonly",
+        DB_PASSWORD="secret",
+    )
+
+    assert build_chatbot_service(settings=settings, tracer=_FakeTracer()) is None
 
 
 def test_reply_uses_user_scoped_thread_id_and_caches_graph_per_user() -> None:
@@ -300,52 +286,11 @@ def test_reply_uses_user_scoped_thread_id_and_caches_graph_per_user() -> None:
     assert first["warnings"] == ["watch budget"]
     assert first["tool_summaries"] == [
         {
-            "tool_name": "get_weekly_budget_status",
-            "as_of": "2026-03-26",
+            "tool_name": "sql_team",
+            "status": "completed",
         }
     ]
     assert tracer.calls[0]["name"] == "chatbot.reply"
-
-
-def test_build_tool_bundle_uses_explicit_today_for_relative_spending_windows() -> None:
-    repository = _ToolBundleRepository()
-
-    tool_bundle = _build_tool_bundle(
-        repository=repository,
-        user_id=7,
-        today_factory=lambda: date(2026, 3, 27),
-    )
-
-    tool_bundle.spending[1].invoke(
-        {
-            "period": "this_week",
-            "include_comparison": False,
-        }
-    )
-
-    assert repository.calls == [
-        {
-            "method": "get_spending_by_category",
-            "user_id": 7,
-            "date_from": date(2026, 3, 23),
-            "date_to": date(2026, 3, 27),
-            "include_comparison": False,
-        }
-    ]
-
-
-def test_build_tool_bundle_includes_sql_tool() -> None:
-    repository = _ToolBundleRepository()
-
-    tool_bundle = _build_tool_bundle(
-        repository=repository,
-        user_id=7,
-        today_factory=lambda: date(2026, 3, 27),
-    )
-
-    assert len(tool_bundle.sql) == 1
-    assert tool_bundle.sql[0].name == "run_guarded_sql_query"
-
 
 def test_reply_generates_conversation_id_when_missing() -> None:
     factory = _FakeGraphFactory()
@@ -457,6 +402,33 @@ def test_reply_ignores_non_supervisor_messages_when_final_answer_missing() -> No
     assert result["answer"] == "Weekly budget is healthy."
 
 
+def test_reply_does_not_echo_user_message_or_summary_when_final_answer_is_blank() -> None:
+    graph = _FakeGraph(
+        reply_messages=[
+            AIMessage(content="Previous conversation summary:\nprior coaching recap"),
+            HumanMessage(content="How is my budget?"),
+        ],
+        reply_final_answer="",
+        reply_final_response="",
+    )
+    service = ChatbotService(
+        settings=_build_settings(),
+        graph_factory=lambda _user_id: graph,
+        tracer=_FakeTracer(),
+    )
+
+    async def run() -> dict[str, object]:
+        return await service.reply(
+            user_id=7,
+            message="How is my budget?",
+            conversation_id="conv-1",
+        )
+
+    result = anyio.run(run)
+
+    assert result["answer"] == ""
+
+
 def test_reply_builds_graph_input_from_sanitized_conversation_history() -> None:
     store = ConversationMemoryStore(
         ttl=timedelta(days=3),
@@ -496,6 +468,127 @@ def test_reply_builds_graph_input_from_sanitized_conversation_history() -> None:
         "AIMessage",
         "HumanMessage",
     ]
+    assert graph.reply_calls[0]["input"]["user_id"] == 7
+    assert graph.reply_calls[0]["input"]["session_id"] == "conv-1"
+    assert graph.reply_calls[0]["input"]["user_query"] == "latest user"
+
+
+def test_reply_prefers_final_response_when_present() -> None:
+    graph = _FakeGraph(
+        reply_messages=[
+            HumanMessage(content="How is my budget?"),
+            AIMessage(content="legacy final answer", name="supervisor"),
+        ],
+        reply_final_answer=None,
+        reply_final_response="# 이번 소비 요약\n- 새 최종 응답",
+    )
+    service = ChatbotService(
+        settings=_build_settings(),
+        graph_factory=lambda _user_id: graph,
+        tracer=_FakeTracer(),
+    )
+
+    async def run() -> dict[str, object]:
+        return await service.reply(
+            user_id=7,
+            message="How is my budget?",
+            conversation_id="conv-1",
+        )
+
+    result = anyio.run(run)
+
+    assert result["answer"] == "# 이번 소비 요약\n- 새 최종 응답"
+
+
+def test_reply_uses_summary_plus_unsummarized_tail_when_summarizer_is_configured() -> None:
+    store = ConversationMemoryStore(
+        ttl=timedelta(days=3),
+        now_factory=lambda: datetime(2026, 3, 26, 9, 0, tzinfo=UTC),
+    )
+    store.append_user_message(user_id=7, conversation_id="conv-1", content="older user")
+    store.append_assistant_message(
+        user_id=7,
+        conversation_id="conv-1",
+        content="older assistant",
+    )
+    store.save_summary_state(
+        user_id=7,
+        conversation_id="conv-1",
+        summary_text="summary of prior turns",
+        summarized_message_count=2,
+    )
+    graph = _FakeGraph(reply_final_answer="latest answer")
+    summarizer = _FakeConversationSummarizer(result="summary after latest turn")
+    service = ChatbotService(
+        settings=_build_settings(),
+        graph_factory=lambda _user_id: graph,
+        tracer=_FakeTracer(),
+        conversation_store=store,
+        conversation_summarizer=summarizer,
+    )
+
+    async def run() -> None:
+        await service.reply(
+            user_id=7,
+            message="latest user",
+            conversation_id="conv-1",
+        )
+
+    anyio.run(run)
+
+    input_messages = graph.reply_calls[0]["input"]["messages"]
+    assert [message.content for message in input_messages] == [
+        "Previous conversation summary:\nsummary of prior turns",
+        "latest user",
+    ]
+    assert [type(message).__name__ for message in input_messages] == [
+        "AIMessage",
+        "HumanMessage",
+    ]
+    assert summarizer.calls[0]["existing_summary"] == "summary of prior turns"
+    assert [message.content for message in summarizer.calls[0]["messages"]] == [
+        "latest user",
+        "latest answer",
+    ]
+    prompt_context = store.get_prompt_context(user_id=7, conversation_id="conv-1")
+    assert prompt_context["summary_text"] == "summary after latest turn"
+    assert prompt_context["summarized_message_count"] == 4
+    assert prompt_context["messages"] == []
+
+
+def test_stream_reply_updates_summary_after_final_assistant_output() -> None:
+    store = ConversationMemoryStore(
+        ttl=timedelta(days=3),
+        now_factory=lambda: datetime(2026, 3, 26, 9, 0, tzinfo=UTC),
+    )
+    summarizer = _FakeConversationSummarizer(result="summary after stream turn")
+    service = ChatbotService(
+        settings=_build_settings(),
+        graph_factory=lambda _user_id: _FakeGraph(),
+        tracer=_FakeTracer(),
+        conversation_store=store,
+        conversation_summarizer=summarizer,
+    )
+
+    async def run() -> None:
+        stream = await service.stream_reply(
+            user_id=7,
+            message="hello",
+            conversation_id="conv-1",
+        )
+        async for _ in stream:
+            pass
+
+    anyio.run(run)
+
+    assert [message.content for message in summarizer.calls[0]["messages"]] == [
+        "hello",
+        "Budget is healthy.",
+    ]
+    prompt_context = store.get_prompt_context(user_id=7, conversation_id="conv-1")
+    assert prompt_context["summary_text"] == "summary after stream turn"
+    assert prompt_context["summarized_message_count"] == 2
+    assert prompt_context["messages"] == []
 
 
 def test_reply_rejects_non_positive_user_id() -> None:
@@ -817,62 +910,3 @@ def test_get_latest_conversation_returns_latest_metadata() -> None:
         "last_activity_at": "2026-03-26T10:00:00+00:00",
         "expires_at": "2026-03-29T10:00:00+00:00",
     }
-
-
-def test_reply_uses_and_closes_request_scoped_database() -> None:
-    request_database_factory = _FakeRequestDatabaseFactory()
-    request_graph_factory = _FakeRequestGraphFactory()
-    service = ChatbotService(
-        settings=_build_settings(),
-        tracer=_FakeTracer(),
-        request_database_factory=request_database_factory,
-        request_graph_factory=request_graph_factory,
-    )
-
-    async def run() -> dict[str, object]:
-        return await service.reply(
-            user_id=7,
-            message="hello",
-            conversation_id="conv-1",
-        )
-
-    result = anyio.run(run)
-
-    assert result["answer"] == "request scoped answer"
-    assert request_database_factory.calls == 1
-    assert len(request_database_factory.instances) == 1
-    assert request_graph_factory.calls == [(7, request_database_factory.instances[0])]
-    assert request_database_factory.instances[0].close_calls == 1
-
-
-def test_stream_reply_uses_and_closes_request_scoped_database() -> None:
-    request_database_factory = _FakeRequestDatabaseFactory()
-    request_graph_factory = _FakeRequestGraphFactory()
-    service = ChatbotService(
-        settings=_build_settings(),
-        tracer=_FakeTracer(),
-        request_database_factory=request_database_factory,
-        request_graph_factory=request_graph_factory,
-    )
-
-    async def run() -> list[dict[str, object]]:
-        events: list[dict[str, object]] = []
-        stream = await service.stream_reply(
-            user_id=7,
-            message="hello",
-            conversation_id="conv-1",
-        )
-        async for event in stream:
-            events.append(event)
-        return events
-
-    events = anyio.run(run)
-
-    assert events[-1] == {
-        "event": "done",
-        "data": {"conversation_id": "conv-1"},
-    }
-    assert request_database_factory.calls == 1
-    assert len(request_database_factory.instances) == 1
-    assert request_graph_factory.calls == [(7, request_database_factory.instances[0])]
-    assert request_database_factory.instances[0].close_calls == 1
