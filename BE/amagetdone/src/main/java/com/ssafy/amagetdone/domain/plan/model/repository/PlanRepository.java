@@ -221,4 +221,13 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 		@Param("planId") Integer planId,
 		@Param("delta") Long delta
 	);
+
+	@Modifying(flushAutomatically = true)
+	@Query("""
+		update Plan p
+		set p.savedAmount = 0,
+			p.version = p.version + 1
+		where p.id = :planId
+		""")
+	int resetSavedAmount(@Param("planId") Integer planId);
 }

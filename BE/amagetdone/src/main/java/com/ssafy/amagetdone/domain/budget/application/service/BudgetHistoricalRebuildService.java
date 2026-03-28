@@ -92,6 +92,7 @@ public class BudgetHistoricalRebuildService {
 		List<BudgetAdjustment> adjustments = affectedWeeks.isEmpty()
 			? List.of()
 			: budgetAdjustmentRepository.findAllByBudgetWeekIn(affectedWeeks);
+		planRepository.resetSavedAmount(planId);
 		resetPlanSavedAmounts(adjustments);
 
 		if (!adjustments.isEmpty()) {
