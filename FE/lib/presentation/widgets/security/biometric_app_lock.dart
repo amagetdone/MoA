@@ -1,12 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:more_app/core/security/biometric_auth_service.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
 import 'package:more_app/presentation/viewmodels/auth_viewmodel.dart';
+import 'package:more_app/presentation/widgets/security/app_pin_keypad.dart';
 
 class BiometricAppLock extends ConsumerStatefulWidget {
   const BiometricAppLock({super.key, required this.child});
@@ -21,8 +24,6 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
     with WidgetsBindingObserver {
   static const Duration _resumeLockThreshold = Duration(minutes: 1);
 
-  final _pinController = TextEditingController();
-
   bool _isLockVisible = false;
   bool _isAuthenticating = false;
   bool _didAttemptInitialUnlock = false;
@@ -32,6 +33,8 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
   String? _message;
   String? _pinError;
   DateTime? _backgroundedAt;
+  String _enteredPin = '';
+  int _pinShuffleSeed = 0;
 
   @override
   void initState() {
@@ -41,7 +44,6 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
 
   @override
   void dispose() {
-    _pinController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -132,7 +134,8 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
         _availabilityNotice = '앱 PIN이 설정되어 있지 않아 앱 잠금을 해제했어요.';
         _message = null;
         _pinError = null;
-        _pinController.clear();
+        _enteredPin = '';
+        _pinShuffleSeed++;
       });
       return;
     }
@@ -172,18 +175,20 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
       _message = canUseDeviceAuth
           ? '생체인증 대신 앱 PIN으로도 잠금을 해제할 수 있어요.'
           : '앱 PIN을 입력해 잠금을 해제해주세요.';
+      _enteredPin = '';
+      _pinShuffleSeed++;
     });
   }
 
-  Future<void> _unlockWithPin() async {
+  Future<void> _unlockWithPin([String? pin]) async {
     if (_isAuthenticating) {
       return;
     }
 
-    final pin = _pinController.text.trim();
-    if (pin.length != 6) {
+    final resolvedPin = (pin ?? _enteredPin).trim();
+    if (resolvedPin.length != BiometricAuthService.appPinLength) {
       setState(() {
-        _pinError = '앱 PIN 6자리를 입력해주세요.';
+        _pinError = '앱 PIN 4자리를 입력해주세요.';
       });
       return;
     }
@@ -195,7 +200,7 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
 
     final unlocked = await ref
         .read(biometricAuthServiceProvider)
-        .verifyAppPin(pin);
+        .verifyAppPin(resolvedPin);
     if (!mounted) {
       return;
     }
@@ -209,7 +214,35 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
       _isAuthenticating = false;
       _pinError = '앱 PIN이 올바르지 않습니다.';
       _message = null;
-      _pinController.clear();
+      _enteredPin = '';
+      _pinShuffleSeed++;
+    });
+  }
+
+  void _handlePinDigitPressed(String digit) {
+    if (_isAuthenticating || _enteredPin.length >= BiometricAuthService.appPinLength) {
+      return;
+    }
+
+    final nextPin = '$_enteredPin$digit';
+    setState(() {
+      _enteredPin = nextPin;
+      _pinError = null;
+    });
+
+    if (nextPin.length == BiometricAuthService.appPinLength) {
+      unawaited(_unlockWithPin(nextPin));
+    }
+  }
+
+  void _handlePinBackspace() {
+    if (_isAuthenticating || _enteredPin.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _enteredPin = _enteredPin.substring(0, _enteredPin.length - 1);
+      _pinError = null;
     });
   }
 
@@ -223,7 +256,8 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
       _availabilityNotice = null;
       _message = null;
       _pinError = null;
-      _pinController.clear();
+      _enteredPin = '';
+      _pinShuffleSeed++;
     });
   }
 
@@ -253,7 +287,8 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
           _availabilityNotice = null;
           _message = null;
           _pinError = null;
-          _pinController.clear();
+          _enteredPin = '';
+          _pinShuffleSeed++;
         });
         return;
       }
@@ -280,7 +315,8 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
           _availabilityNotice = null;
           _message = null;
           _pinError = null;
-          _pinController.clear();
+          _enteredPin = '';
+          _pinShuffleSeed++;
         });
         return;
       }
@@ -356,7 +392,7 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
                             ),
                             SizedBox(height: 10.h),
                             Text(
-                              '설정 페이지에서 앱 잠금을 다시 켜고 6자리 앱 PIN을 새로 설정해주세요.',
+                              '설정 페이지에서 앱 잠금을 다시 켜고 4자리 앱 PIN을 새로 설정해주세요.',
                               textAlign: TextAlign.center,
                               style: AppTextStyles.caption.copyWith(
                                 color: colors.textTertiary,
@@ -446,117 +482,89 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
                               ),
                             ),
                             SizedBox(height: 10.h),
-                            Text(
-                              _isAuthenticating
-                                  ? '생체인증을 확인하고 있어요.'
-                                  : _canUseDeviceAuth
-                                  ? '앱 PIN을 입력하거나 생체인증으로 앱 잠금을 해제해주세요.'
-                                  : '앱 PIN을 입력해 앱 잠금을 해제해주세요.',
-                              textAlign: TextAlign.center,
-                              style: AppTextStyles.bodyMd.copyWith(
-                                color: colors.textSecondary,
-                                height: 1.5,
-                              ),
-                            ),
-                            SizedBox(height: 20.h),
-                            TextField(
-                              controller: _pinController,
-                              obscureText: true,
-                              keyboardType: TextInputType.number,
-                              maxLength: 6,
-                              enabled: !_isAuthenticating,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                              ],
-                              decoration: InputDecoration(
-                                labelText: '앱 PIN',
-                                counterText: '',
-                                errorText: _pinError,
-                              ),
-                              onSubmitted: (_) => _unlockWithPin(),
-                            ),
-                            if (_message != null) ...[
-                              SizedBox(height: 4.h),
-                              Text(
-                                _message!,
-                                textAlign: TextAlign.center,
-                                style: AppTextStyles.caption.copyWith(
-                                  color: AppColors.red500,
-                                  fontSize: 12.sp,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                            SizedBox(height: 24.h),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 52.h,
-                              child: FilledButton(
-                                onPressed: _isAuthenticating
-                                    ? null
-                                    : _unlockWithPin,
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: AppColors.orange500,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16.r),
-                                  ),
-                                ),
-                                child: _isAuthenticating
-                                    ? SizedBox(
-                                        width: 20.w,
-                                        height: 20.w,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2.w,
-                                          color: colors.white,
-                                        ),
-                                      )
-                                    : Text(
-                                        '앱 PIN으로 해제',
-                                        style: AppTextStyles.bodyMd.copyWith(
-                                          color: colors.white,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                            if (_canUseDeviceAuth) ...[
-                              SizedBox(height: 10.h),
+                            if (_isAuthenticating) ...[
+                              SizedBox(height: 20.h),
                               SizedBox(
-                                width: double.infinity,
-                                height: 52.h,
-                                child: OutlinedButton(
-                                  onPressed: _isAuthenticating
-                                      ? null
-                                      : _startUnlockFlow,
-                                  style: OutlinedButton.styleFrom(
-                                    side: BorderSide(
-                                      color: AppColors.orange500,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16.r),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    '생체인증으로 해제',
-                                    style: AppTextStyles.bodyMd.copyWith(
-                                      color: AppColors.orange500,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
+                                width: 32.w,
+                                height: 32.w,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: AppColors.orange500,
                                 ),
                               ),
-                            ],
-                            SizedBox(height: 10.h),
-                            TextButton(
-                              onPressed: _isAuthenticating ? null : _logout,
-                              child: Text(
-                                '로그아웃',
+                              SizedBox(height: 16.h),
+                              Text(
+                                '생체인증을 확인하고 있어요.',
+                                textAlign: TextAlign.center,
                                 style: AppTextStyles.bodyMd.copyWith(
                                   color: colors.textSecondary,
-                                  fontWeight: FontWeight.w600,
+                                  height: 1.5,
                                 ),
                               ),
-                            ),
+                            ] else
+                              AppPinKeypad(
+                                pin: _enteredPin,
+                                pinLength: BiometricAuthService.appPinLength,
+                                title: '앱 잠금',
+                                subtitle: _canUseDeviceAuth
+                                    ? '4자리 앱 PIN을 입력하거나 생체인증으로 잠금을 해제해주세요.'
+                                    : '4자리 앱 PIN을 입력해 앱 잠금을 해제해주세요.',
+                                errorText: _pinError,
+                                shuffleKey: _pinShuffleSeed,
+                                onDigitPressed: _handlePinDigitPressed,
+                                onBackspace: _handlePinBackspace,
+                                bottomContent: Column(
+                                  children: [
+                                    if (_message != null) ...[
+                                      Text(
+                                        _message!,
+                                        textAlign: TextAlign.center,
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: colors.textSecondary,
+                                          fontSize: 12.sp,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      SizedBox(height: 12.h),
+                                    ],
+                                    if (_canUseDeviceAuth) ...[
+                                      SizedBox(
+                                        width: double.infinity,
+                                        height: 52.h,
+                                        child: OutlinedButton(
+                                          onPressed: _startUnlockFlow,
+                                          style: OutlinedButton.styleFrom(
+                                            side: const BorderSide(
+                                              color: AppColors.orange500,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(16.r),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '생체인증으로 해제',
+                                            style: AppTextStyles.bodyMd.copyWith(
+                                              color: AppColors.orange500,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(height: 10.h),
+                                    ],
+                                    TextButton(
+                                      onPressed: _logout,
+                                      child: Text(
+                                        '로그아웃',
+                                        style: AppTextStyles.bodyMd.copyWith(
+                                          color: colors.textSecondary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                           ],
                         ),
                       ),

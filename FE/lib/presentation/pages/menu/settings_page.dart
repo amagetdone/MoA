@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:more_app/core/security/biometric_auth_service.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/providers/app_data_providers.dart';
@@ -12,6 +12,7 @@ import 'package:more_app/presentation/viewmodels/auth_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/widgets/security/app_pin_keypad.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -42,8 +43,35 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<bool> _reauthenticateForAppLockChange({
+    required String reason,
+    required String failureMessage,
+  }) async {
+    final service = ref.read(biometricAuthServiceProvider);
+    final deviceAuthAvailable = await service.isDeviceAuthAvailable();
+    if (!deviceAuthAvailable) {
+      return true;
+    }
+
+    final authenticated = await service.authenticate(reason: reason);
+    if (authenticated || !mounted) {
+      return authenticated;
+    }
+
+    await _showMessage(failureMessage);
+    return false;
+  }
+
   Future<void> _handleAppPinReset() async {
     if (_isUpdatingBiometric) {
+      return;
+    }
+
+    final authenticated = await _reauthenticateForAppLockChange(
+      reason: '앱 PIN을 다시 설정하려면 본인 확인을 진행해주세요.',
+      failureMessage: '본인 확인이 완료되지 않아 앱 PIN을 변경하지 않았습니다.',
+    );
+    if (!authenticated || !mounted) {
       return;
     }
 
@@ -72,6 +100,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final service = ref.read(biometricAuthServiceProvider);
 
     if (!enabled) {
+      final authenticated = await _reauthenticateForAppLockChange(
+        reason: '앱 잠금을 해제하려면 본인 확인을 진행해주세요.',
+        failureMessage: '본인 확인이 완료되지 않아 앱 잠금을 해제하지 않았습니다.',
+      );
+      if (!authenticated || !mounted) {
+        return;
+      }
+
       setState(() => _isUpdatingBiometric = true);
       try {
         await service.clearAppPin();
@@ -83,6 +119,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           setState(() => _isUpdatingBiometric = false);
         }
       }
+      return;
+    }
+
+    final authenticated = await _reauthenticateForAppLockChange(
+      reason: '앱 잠금을 설정하려면 본인 확인을 진행해주세요.',
+      failureMessage: '본인 확인이 완료되지 않아 앱 잠금을 켜지 않았습니다.',
+    );
+    if (!authenticated || !mounted) {
       return;
     }
 
@@ -110,8 +154,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
       await _showMessage(
         deviceAuthAvailable
-            ? '앱 잠금이 켜졌어요. 앱 PIN이나 생체인증으로 잠금을 해제할 수 있습니다.'
-            : '앱 잠금이 켜졌어요. 자동로그인 후 앱 PIN을 입력해야 합니다.',
+            ? '앱 잠금이 켜졌어요. 4자리 앱 PIN이나 생체인증으로 잠금을 해제할 수 있습니다.'
+            : '앱 잠금이 켜졌어요. 자동로그인 후 4자리 앱 PIN을 입력해야 합니다.',
       );
     } finally {
       if (mounted) {
@@ -248,9 +292,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           Text(
                             biometricEnabled && appPinConfigured
                                 ? deviceAuthAvailable
-                                      ? '자동로그인 후 앱 PIN이나 생체인증으로 잠금을 해제해요'
-                                      : '자동로그인 후 6자리 앱 PIN으로 잠금을 해제해요'
-                                : '6자리 앱 PIN을 설정하면 자동로그인 뒤 한 번 더 확인해요',
+                                      ? '자동로그인 후 4자리 앱 PIN이나 생체인증으로 잠금을 해제해요'
+                                      : '자동로그인 후 4자리 앱 PIN으로 잠금을 해제해요'
+                                : '4자리 앱 PIN을 설정하면 자동로그인 뒤 한 번 더 확인해요',
                             style: AppTextStyles.caption.copyWith(
                               color: colors.textTertiary,
                               fontSize: 11.sp,
@@ -530,118 +574,95 @@ class _AppPinSetupDialog extends StatefulWidget {
 }
 
 class _AppPinSetupDialogState extends State<_AppPinSetupDialog> {
-  final _pinController = TextEditingController();
-  final _confirmPinController = TextEditingController();
+  String _enteredPin = '';
+  String? _firstPin;
   String? _error;
+  int _shuffleSeed = 0;
 
-  @override
-  void dispose() {
-    _pinController.dispose();
-    _confirmPinController.dispose();
-    super.dispose();
+  void _handleDigitPressed(String digit) {
+    if (_enteredPin.length >= BiometricAuthService.appPinLength) {
+      return;
+    }
+
+    final nextPin = '$_enteredPin$digit';
+    setState(() {
+      _enteredPin = nextPin;
+      _error = null;
+    });
+
+    if (nextPin.length < BiometricAuthService.appPinLength) {
+      return;
+    }
+
+    if (_firstPin == null) {
+      setState(() {
+        _firstPin = nextPin;
+        _enteredPin = '';
+        _shuffleSeed++;
+      });
+      return;
+    }
+
+    if (_firstPin == nextPin) {
+      Navigator.of(context).pop(nextPin);
+      return;
+    }
+
+    setState(() {
+      _enteredPin = '';
+      _error = '입력한 PIN이 서로 다릅니다. 다시 입력해주세요.';
+      _shuffleSeed++;
+    });
   }
 
-  void _submit() {
-    final pin = _pinController.text.trim();
-    final confirmPin = _confirmPinController.text.trim();
-
-    if (pin.length != 6 || confirmPin.length != 6) {
-      setState(() {
-        _error = '앱 PIN은 6자리 숫자로 입력해주세요.';
-      });
+  void _handleBackspace() {
+    if (_enteredPin.isEmpty) {
       return;
     }
 
-    if (pin != confirmPin) {
-      setState(() {
-        _error = '입력한 PIN이 서로 다릅니다.';
-      });
-      return;
-    }
-
-    Navigator.of(context).pop(pin);
+    setState(() {
+      _enteredPin = _enteredPin.substring(0, _enteredPin.length - 1);
+      _error = null;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final isConfirmStep = _firstPin != null;
 
-    return AlertDialog(
-      insetPadding: EdgeInsets.symmetric(horizontal: 28.w),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
-      titlePadding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 8.h),
-      contentPadding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 20.h),
-      actionsPadding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 20.h),
-      title: Text(
-        widget.isReset ? '앱 PIN 다시 설정' : '앱 PIN 설정',
-        style: AppTextStyles.headingMd.copyWith(
-          color: colors.textPrimary,
-          fontSize: 18.sp,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '자동로그인 후 앱을 열 때 사용할 6자리 숫자 PIN을 설정해주세요.',
-            style: AppTextStyles.bodyMd.copyWith(
-              color: colors.textSecondary,
-              height: 1.5,
-            ),
-          ),
-          SizedBox(height: 16.h),
-          TextField(
-            controller: _pinController,
-            obscureText: true,
-            keyboardType: TextInputType.number,
-            maxLength: 6,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(
-              labelText: '앱 PIN',
-              counterText: '',
-            ),
-          ),
-          SizedBox(height: 8.h),
-          TextField(
-            controller: _confirmPinController,
-            obscureText: true,
-            keyboardType: TextInputType.number,
-            maxLength: 6,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(
-              labelText: '앱 PIN 확인',
-              counterText: '',
-            ),
-          ),
-          if (_error != null) ...[
-            SizedBox(height: 8.h),
-            Text(
-              _error!,
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.red500,
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w600,
+    return Dialog(
+      insetPadding: EdgeInsets.symmetric(horizontal: 20.w),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28.r)),
+      backgroundColor: colors.bgSurface,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 20.h),
+        child: AppPinKeypad(
+          pin: _enteredPin,
+          pinLength: BiometricAuthService.appPinLength,
+          title: widget.isReset ? '앱 PIN 다시 설정' : '앱 PIN 설정',
+          subtitle: isConfirmStep
+              ? '같은 4자리 PIN을 한 번 더 입력해주세요.'
+              : '자동로그인 뒤 잠금 해제에 사용할 4자리 PIN을 입력해주세요.',
+          errorText: _error,
+          shuffleKey: _shuffleSeed,
+          onDigitPressed: _handleDigitPressed,
+          onBackspace: _handleBackspace,
+          bottomContent: Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                '취소',
+                style: AppTextStyles.bodyMd.copyWith(
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ],
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('취소'),
-        ),
-        FilledButton(
-          onPressed: _submit,
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.orange500,
-            foregroundColor: colors.white,
           ),
-          child: const Text('저장'),
         ),
-      ],
+      ),
     );
   }
 }

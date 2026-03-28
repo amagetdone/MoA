@@ -16,6 +16,7 @@ class BiometricAuthService {
   final LocalAuthentication _localAuth;
   final FlutterSecureStorage _secureStorage;
 
+  static const int appPinLength = 4;
   static const _appPinHashKey = 'app_lock_pin_hash';
   static const _appPinSaltKey = 'app_lock_pin_salt';
 
@@ -60,6 +61,9 @@ class BiometricAuthService {
   }
 
   Future<void> saveAppPin(String pin) async {
+    if (!_isValidPin(pin)) {
+      throw ArgumentError.value(pin, 'pin', 'App PIN must be 4 digits.');
+    }
     final salt = _generateSalt();
     final hash = _hashPin(pin, salt);
     await _secureStorage.write(key: _appPinSaltKey, value: salt);
@@ -67,6 +71,10 @@ class BiometricAuthService {
   }
 
   Future<bool> verifyAppPin(String pin) async {
+    if (!_isValidPin(pin)) {
+      return false;
+    }
+
     final salt = await _secureStorage.read(key: _appPinSaltKey);
     final savedHash = await _secureStorage.read(key: _appPinHashKey);
 
@@ -90,5 +98,9 @@ class BiometricAuthService {
 
   String _hashPin(String pin, String salt) {
     return sha256.convert(utf8.encode('$salt:$pin')).toString();
+  }
+
+  bool _isValidPin(String pin) {
+    return RegExp('^\\d{$appPinLength}\$').hasMatch(pin);
   }
 }
