@@ -99,7 +99,40 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('월 수입 · 주간 예산 설정', style: AppTextStyles.headingLg.copyWith(color: colors.textPrimary)),
+                    Row(
+                      children: [
+                        Text('월 수입 · 주간 예산 설정', style: AppTextStyles.headingLg.copyWith(color: colors.textPrimary)),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () {
+                            if (_showcaseContext != null) {
+                              ShowCaseWidget.of(_showcaseContext!).startShowCase(
+                                [_keyIncome, _keySavings, _keyFixed, _keyVariable, _keyFreedom],
+                              );
+                            }
+                          },
+                          child: Container(
+                            width: 26.w,
+                            height: 26.w,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: colors.borderDefault,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '?',
+                                style: TextStyle(
+                                  color: colors.textSecondary,
+                                  fontSize: 13.sp,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                     SizedBox(height: 12.h),
                     Text(
                       '월 수입을 기반으로 주간 예산 금액이 자동 배분 됩니다.',
@@ -111,52 +144,58 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                     ),
                     SizedBox(height: 24.h),
 
-                    Showcase(
-                      key: _keyIncome,
-                      title: '월 수입',
-                      description: '월에 정기적으로 들어오는 금액을 입력해줘요. 월 수입이 변경되면 연필 버튼을 눌러 수정해주세요.',
-                      child: MoreCard(
+                    MoreCard(
                       padding: EdgeInsets.all(24.w),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                '월 수입',
-                                style: AppTextStyles.bodyMd.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 17.sp,
-                                  color: colors.textPrimary,
+                          Showcase(
+                            key: _keyIncome,
+                            title: '월 수입',
+                            titleTextStyle: AppTextStyles.bodyMd.copyWith(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 18.sp,
+                              color: AppColors.orange500,
+                            ),
+                            description: '월에 정기적으로 들어오는 금액을 입력해줘요.\n월 수입이 변경되면 연필 버튼을 눌러 수정해주세요.',
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  '월 수입',
+                                  style: AppTextStyles.bodyMd.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 17.sp,
+                                    color: colors.textPrimary,
+                                  ),
                                 ),
-                              ),
-                              Flexible(
-                                child: GestureDetector(
-                                  onTap: () => _showEditBudgetDialog(setup.monthlyIncome),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.edit_outlined, size: 20, color: colors.textPrimary),
-                                      SizedBox(width: 8.w),
-                                      Flexible(
-                                        child: FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Text(
-                                            CurrencyFormatter.formatKRW(setup.monthlyIncome),
-                                            style: AppTextStyles.headingLg.copyWith(
-                                              fontSize: 20.sp,
-                                              fontWeight: FontWeight.bold,
-                                              color: colors.textPrimary,
+                                Flexible(
+                                  child: GestureDetector(
+                                    onTap: () => _showEditBudgetDialog(setup.monthlyIncome),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.edit_outlined, size: 20, color: colors.textPrimary),
+                                        SizedBox(width: 8.w),
+                                        Flexible(
+                                          child: FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Text(
+                                              CurrencyFormatter.formatKRW(setup.monthlyIncome),
+                                              style: AppTextStyles.headingLg.copyWith(
+                                                fontSize: 20.sp,
+                                                fontWeight: FontWeight.bold,
+                                                color: colors.textPrimary,
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                           SizedBox(height: 24.h),
                           Divider(color: colors.borderDefault, thickness: 1),
@@ -175,6 +214,11 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           Showcase(
                             key: _keySavings,
                             title: '저축액',
+                            titleTextStyle: AppTextStyles.bodyMd.copyWith(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 18.sp,
+                              color: AppColors.orange500,
+                            ),
                             description: '목표 설정했던 금액을 목표 기간에 따라 배분해 주별 저축되는 금액을 알려줘요.',
                             child: _BudgetSectionHeader(
                               label: '저축액',
@@ -188,6 +232,11 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           Showcase(
                             key: _keyFixed,
                             title: '고정지출',
+                            titleTextStyle: AppTextStyles.bodyMd.copyWith(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 18.sp,
+                              color: AppColors.orange500,
+                            ),
                             description: '구독비 등 고정적으로 지출되는 것에 대한 금액을 주별로 배분해줘요.',
                             child: _BudgetSectionHeader(
                               label: '고정지출',
@@ -211,6 +260,11 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           Showcase(
                             key: _keyVariable,
                             title: '변동지출',
+                            titleTextStyle: AppTextStyles.bodyMd.copyWith(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 18.sp,
+                              color: AppColors.orange500,
+                            ),
                             description: '교통비, 식비 등 변동적으로 지출되는 것에 대한 금액을 주별로 배분해줘요.',
                             child: _BudgetSectionHeader(
                               label: '변동지출',
@@ -237,31 +291,36 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           Showcase(
                             key: _keyFreedom,
                             title: '주간 여유 자금',
+                            titleTextStyle: AppTextStyles.bodyMd.copyWith(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 18.sp,
+                              color: AppColors.orange500,
+                            ),
                             description: '월 수입에서 저축액, 고정지출, 변동지출을 모두 빼고, 주에 자유롭게 사용 가능한 금액이에요.',
                             child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                '= 주간 여유 자금',
-                                style: AppTextStyles.bodyMd.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18.sp,
-                                  color: colors.textPrimary,
-                                ),
-                              ),
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(
-                                  CurrencyFormatter.formatKRW(extraFunds < 0 ? 0 : extraFunds),
-                                  style: AppTextStyles.headingMd.copyWith(
-                                    color: AppColors.orange500,
-                                    fontSize: 22.sp,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  '= 주간 여유 자금',
+                                  style: AppTextStyles.bodyMd.copyWith(
                                     fontWeight: FontWeight.bold,
+                                    fontSize: 18.sp,
+                                    color: colors.textPrimary,
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    CurrencyFormatter.formatKRW(extraFunds < 0 ? 0 : extraFunds),
+                                    style: AppTextStyles.headingMd.copyWith(
+                                      color: AppColors.orange500,
+                                      fontSize: 22.sp,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                           SizedBox(height: 8.h),
                           Text(
@@ -273,7 +332,6 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           ),
                         ],
                       ),
-                    ),
                     ),
                     SizedBox(height: 40.h),
                   ],

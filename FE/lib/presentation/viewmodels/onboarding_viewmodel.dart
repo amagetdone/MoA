@@ -236,7 +236,10 @@ class OnboardingViewModel extends StateNotifier<OnboardingState> {
         data: {'months': 3, 'forceFullSync': true},
       );
 
-      final response = await _dio.get('transactions/analysis');
+      final response = await _dio.post(
+        'transactions/analysis',
+        data: {'months': 3},
+      );
 
       state = state.copyWith(
         isLoading: false,

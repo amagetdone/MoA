@@ -149,11 +149,19 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
                   final idx = e.key;
                   final entry = e.value;
                   final isSelected = _selectedIndex == idx;
+                  final percent = total > 0
+                      ? (entry.amount / total * 100).toStringAsFixed(1)
+                      : '0';
                   return PieChartSectionData(
                     value: entry.amount.toDouble(),
                     color: entry.color,
                     radius: isSelected ? selectedRadius : baseRadius,
-                    title: '',
+                    title: isSelected ? '$percent%' : '',
+                    titleStyle: TextStyle(
+                      color: entry.color, fontSize: isCompact ? 13.sp : 14.sp,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    titlePositionPercentageOffset: 1.8,
                   );
                 }).toList(),
               ),

@@ -162,7 +162,12 @@ class _HomePageState extends ConsumerState<HomePage> {
       floatingActionButton: Showcase(
         key: _keyFab,
         title: 'AI 코치',
-        description: '소비 패턴을 분석하고 절약 팁을 알려주는 AI 코치예요. 궁금한 점이 있으면 언제든지 물어보세요!',
+        titleTextStyle: AppTextStyles.bodyMd.copyWith(
+          fontWeight: FontWeight.w800,
+          fontSize: 18.sp,
+          color: AppColors.orange500,
+        ),
+        description: '소비 패턴을 분석하고 절약 팁을 알려주는 AI 코치예요.\n궁금한 점이 있으면 언제든지 물어보세요!',
         tooltipPosition: TooltipPosition.top,
         targetPadding: EdgeInsets.all(8.w),
         tooltipPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
@@ -173,7 +178,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           backgroundColor: AppColors.orange500,
           foregroundColor: Colors.white,
           elevation: 6,
-          child: const Icon(Icons.chat_bubble_rounded),
+          child: const Icon(Icons.smart_toy),
         ),
       ),
       body: Column(
@@ -222,6 +227,35 @@ class _HomePageState extends ConsumerState<HomePage> {
                                   0xFFFFFFFF,
                                 ).withValues(alpha: 0.7),
                                 fontSize: 11.sp,
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            GestureDetector(
+                              onTap: () {
+                                if (_showcaseContext != null) {
+                                  ShowCaseWidget.of(_showcaseContext!).startShowCase(
+                                    [_keyGoals, _keySavings, _keyChart, _keyFab],
+                                  );
+                                }
+                              },
+                              child: Container(
+                                width: 26.w,
+                                height: 26.w,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '?',
+                                    style: TextStyle(
+                                      color: AppColors.orange500,
+                                      fontSize: 13.sp,
+                                      fontWeight: FontWeight.w800,
+                                      height: 1,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -358,9 +392,14 @@ class _HomePageState extends ConsumerState<HomePage> {
           // 1) 목표
           Showcase(
             key: _keyGoals,
-            title: '목표 섹션',
+            title: '이번 주 목표',
+            titleTextStyle: AppTextStyles.bodyMd.copyWith(
+              fontWeight: FontWeight.w800,
+              fontSize: 18.sp,
+              color: AppColors.orange500,
+            ),
             description:
-                '현재 진행 중인 저축 목표들을 한눈에 볼 수 있어요. 목표를 탭하면 상세 내용과 저축 현황을 확인할 수 있어요.',
+                '현재 진행 중인 저축 목표들을 한눈에 볼 수 있어요.\n목표를 탭하면 상세 내용과 저축 현황을 확인할 수 있어요.',
             tooltipPosition: TooltipPosition.bottom,
             targetPadding: EdgeInsets.all(6.w),
             disableMovingAnimation: true,
@@ -377,9 +416,14 @@ class _HomePageState extends ConsumerState<HomePage> {
           // 3) 저축 + 여유자금 (가로)
           Showcase(
             key: _keySavings,
-            title: '저축·예산 카드',
+            title: '저축·여유자금',
+            titleTextStyle: AppTextStyles.bodyMd.copyWith(
+              fontWeight: FontWeight.w800,
+              fontSize: 18.sp,
+              color: AppColors.orange500,
+            ),
             description:
-                '이번 주 저축 진행률과 남은 여유 예산을 보여줘요. 계획대로 잘 지키고 있는지 매일 확인해보세요!',
+                '이번 주 저축 진행률과 남은 여유 자금을 보여줘요.\n계획대로 잘 지키고 있는지 매일 확인해보세요!',
             targetPadding: EdgeInsets.all(6.w),
             disableMovingAnimation: true,
             child: IntrinsicHeight(
@@ -412,8 +456,13 @@ class _HomePageState extends ConsumerState<HomePage> {
           Showcase(
             key: _keyChart,
             title: '소비 차트',
+            titleTextStyle: AppTextStyles.bodyMd.copyWith(
+              fontWeight: FontWeight.w800,
+              fontSize: 18.sp,
+              color: AppColors.orange500,
+            ),
             description:
-                '주간 소비 내역을 카테고리별로 시각화해요. 좌우로 슬라이드하면 이전 주 소비도 확인할 수 있어요.',
+                '주간 소비 내역을 카테고리별로 시각화해요.\n좌우로 슬라이드하면 이전 주 소비도 확인할 수 있어요.',
             targetPadding: EdgeInsets.all(6.w),
             disableMovingAnimation: true,
             child: Builder(
