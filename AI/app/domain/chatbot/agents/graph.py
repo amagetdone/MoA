@@ -96,6 +96,20 @@ class _TrustedUserContextMiddleware(AgentMiddleware):
         return request.override(tool_call=tool_call)
 
 
+class _ModelMessageSanitizingMiddleware(AgentMiddleware):
+    def wrap_model_call(self, request, handler):
+        return handler(self._sanitize_request_messages(request))
+
+    async def awrap_model_call(self, request, handler):
+        return await handler(self._sanitize_request_messages(request))
+
+    def _sanitize_request_messages(self, request):
+        normalized_messages = _normalized_model_messages(getattr(request, "messages", []))
+        if normalized_messages is request.messages:
+            return request
+        return request.override(messages=normalized_messages)
+
+
 class _ToolTraceMiddleware(AgentMiddleware):
     def __init__(self, tracer: LangfuseTraceLogger | None = None) -> None:
         self._tracer = tracer or LangfuseTraceLogger()
@@ -316,6 +330,7 @@ class _ChatbotAgentRuntime:
             tools=resolved_tools,
             system_prompt=_build_system_prompt(today=self._today),
             middleware=[
+                _ModelMessageSanitizingMiddleware(),
                 _TrustedUserContextMiddleware(),
                 _ToolTraceMiddleware(self._tracer),
                 *list(self._tool_bundle.sql_middleware),
@@ -560,15 +575,205 @@ def _tool_accepts_user_id(tool: BaseTool | None) -> bool:
     return isinstance(model_fields, dict) and "user_id" in model_fields
 
 
+def _normalized_model_messages(messages: Sequence[AnyMessage]) -> list[AnyMessage]:
+    normalized_messages: list[AnyMessage] = []
+    changed = False
+    pending_tool_call_ids: set[str] = set()
+    for message in messages:
+        normalized_message = _normalized_model_message(message)
+        if normalized_message is None:
+            changed = True
+            continue
+
+        if isinstance(normalized_message, ToolMessage):
+            tool_call_id = _message_tool_call_id(normalized_message)
+            if not tool_call_id or tool_call_id not in pending_tool_call_ids:
+                changed = True
+                continue
+            pending_tool_call_ids.discard(tool_call_id)
+        else:
+            pending_tool_call_ids = _message_tool_call_ids_set(normalized_message)
+
+        normalized_messages.append(normalized_message)
+        if normalized_message is not message:
+            changed = True
+    return normalized_messages if changed else list(messages)
+
+
+def _normalized_model_message(message: AnyMessage) -> AnyMessage | None:
+    if not isinstance(message, (AIMessage, AIMessageChunk)):
+        return message
+
+    updates: dict[str, Any] = {}
+    tool_calls, tool_calls_changed = _normalized_tool_call_entries(
+        getattr(message, "tool_calls", None),
+        openai_format=False,
+    )
+    if tool_calls_changed:
+        updates["tool_calls"] = tool_calls
+
+    invalid_tool_calls, invalid_tool_calls_changed = _normalized_tool_call_entries(
+        getattr(message, "invalid_tool_calls", None),
+        openai_format=False,
+    )
+    if invalid_tool_calls_changed:
+        updates["invalid_tool_calls"] = invalid_tool_calls
+
+    additional_kwargs = getattr(message, "additional_kwargs", None)
+    normalized_additional_kwargs: dict[str, Any] | None = None
+    normalized_raw_tool_calls: Any = None
+    if isinstance(additional_kwargs, dict):
+        raw_tool_calls = additional_kwargs.get("tool_calls")
+        normalized_raw_tool_calls, raw_tool_calls_changed = _normalized_tool_call_entries(
+            raw_tool_calls,
+            openai_format=True,
+        )
+        if raw_tool_calls_changed:
+            normalized_additional_kwargs = dict(additional_kwargs)
+            if normalized_raw_tool_calls:
+                normalized_additional_kwargs["tool_calls"] = normalized_raw_tool_calls
+            else:
+                normalized_additional_kwargs.pop("tool_calls", None)
+            updates["additional_kwargs"] = normalized_additional_kwargs
+
+    resolved_tool_calls = updates.get("tool_calls", getattr(message, "tool_calls", None))
+    resolved_invalid_tool_calls = updates.get(
+        "invalid_tool_calls",
+        getattr(message, "invalid_tool_calls", None),
+    )
+    if normalized_additional_kwargs is not None:
+        resolved_raw_tool_calls = normalized_additional_kwargs.get("tool_calls")
+    elif isinstance(additional_kwargs, dict):
+        resolved_raw_tool_calls = additional_kwargs.get("tool_calls")
+    else:
+        resolved_raw_tool_calls = normalized_raw_tool_calls
+
+    had_tool_call_metadata = bool(
+        getattr(message, "tool_calls", None)
+        or getattr(message, "invalid_tool_calls", None)
+        or (
+            isinstance(additional_kwargs, dict)
+            and "tool_calls" in additional_kwargs
+        )
+    )
+    if (
+        had_tool_call_metadata
+        and not _message_text(message)
+        and not resolved_tool_calls
+        and not resolved_invalid_tool_calls
+        and not resolved_raw_tool_calls
+    ):
+        return None
+
+    if not updates:
+        return message
+    return message.model_copy(update=updates)
+
+
+def _normalized_tool_call_entries(
+    tool_calls: Any,
+    *,
+    openai_format: bool,
+) -> tuple[Any, bool]:
+    if not isinstance(tool_calls, list):
+        return tool_calls, False
+
+    normalized_entries: list[Any] = []
+    changed = False
+    for tool_call in tool_calls:
+        if not isinstance(tool_call, dict):
+            normalized_entries.append(tool_call)
+            continue
+
+        if not _tool_call_name_is_present(tool_call, openai_format=openai_format):
+            changed = True
+            continue
+
+        normalized_tool_call = dict(tool_call)
+        normalized_id = _normalized_tool_call_id(normalized_tool_call.get("id"))
+        if normalized_tool_call.get("id") != normalized_id:
+            changed = True
+        normalized_tool_call["id"] = normalized_id
+        normalized_entries.append(normalized_tool_call)
+
+    return normalized_entries, changed
+
+
 def _normalized_tool_call(tool_call: Any) -> dict[str, Any] | None:
     if not isinstance(tool_call, dict):
         return None
 
     normalized = dict(tool_call)
-    tool_call_id = str(normalized.get("id") or "").strip()
-    if not tool_call_id:
-        normalized["id"] = f"server-tool-call-{uuid4().hex}"
+    normalized["id"] = _normalized_tool_call_id(normalized.get("id"))
     return normalized
+
+
+def _normalized_tool_call_id(tool_call_id: Any) -> str:
+    normalized_tool_call_id = str(tool_call_id or "").strip()
+    if normalized_tool_call_id:
+        return normalized_tool_call_id
+    return f"server-tool-call-{uuid4().hex}"
+
+
+def _tool_call_name_is_present(tool_call: dict[str, Any], *, openai_format: bool) -> bool:
+    if openai_format:
+        function = tool_call.get("function")
+        if not isinstance(function, dict):
+            return False
+        tool_name = function.get("name")
+    else:
+        tool_name = tool_call.get("name")
+
+    return isinstance(tool_name, str) and bool(tool_name.strip())
+
+
+def _message_tool_call_id(message: ToolMessage) -> str | None:
+    tool_call_id = str(getattr(message, "tool_call_id", "") or "").strip()
+    return tool_call_id or None
+
+
+def _message_tool_call_ids_set(message: AnyMessage) -> set[str]:
+    if not isinstance(message, (AIMessage, AIMessageChunk)):
+        return set()
+
+    tool_call_ids = {
+        tool_call_id
+        for tool_call_id in (
+            _tool_call_entry_id(tool_call)
+            for tool_call in getattr(message, "tool_calls", []) or []
+        )
+        if tool_call_id is not None
+    }
+    tool_call_ids.update(
+        tool_call_id
+        for tool_call_id in (
+            _tool_call_entry_id(tool_call)
+            for tool_call in getattr(message, "invalid_tool_calls", []) or []
+        )
+        if tool_call_id is not None
+    )
+
+    additional_kwargs = getattr(message, "additional_kwargs", None)
+    if isinstance(additional_kwargs, dict):
+        raw_tool_calls = additional_kwargs.get("tool_calls")
+        if isinstance(raw_tool_calls, list):
+            tool_call_ids.update(
+                tool_call_id
+                for tool_call_id in (
+                    _tool_call_entry_id(tool_call)
+                    for tool_call in raw_tool_calls
+                )
+                if tool_call_id is not None
+            )
+
+    return tool_call_ids
+
+
+def _tool_call_entry_id(tool_call: Any) -> str | None:
+    if not isinstance(tool_call, dict):
+        return None
+    tool_call_id = str(tool_call.get("id") or "").strip()
+    return tool_call_id or None
 
 
 def _translate_mcp_error(error: Exception) -> ChatbotUpstreamUnavailableError:

@@ -8,8 +8,9 @@ from typing import Any, Sequence
 import anyio
 import httpx
 import pytest
+from langchain.agents.middleware.types import ModelRequest, ModelResponse
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import BaseTool, StructuredTool, ToolException
 from pydantic import BaseModel, Field
 
@@ -17,6 +18,7 @@ from app.core.config import Settings
 from app.domain.chatbot.errors import ChatbotUpstreamUnavailableError
 from app.domain.chatbot.agents.graph import (
     ChatbotToolBundle,
+    _ModelMessageSanitizingMiddleware,
     _build_recoverable_tool_error_message,
     build_chatbot_graph,
 )
@@ -464,6 +466,181 @@ def test_build_chatbot_graph_injects_user_id_for_json_schema_mcp_tools() -> None
     )
 
     assert recorder.calls == [{"topic": "weekly coaching", "user_id": 7}]
+
+
+def test_model_message_sanitizer_assigns_missing_tool_call_ids_before_model_call() -> None:
+    middleware = _ModelMessageSanitizingMiddleware()
+    captured: dict[str, object] = {}
+    request = ModelRequest(
+        model=_build_chat_model(response_text="ok"),
+        messages=[
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "get_budget_home",
+                        "args": {"topic": "weekly coaching"},
+                        "id": None,
+                        "type": "tool_call",
+                    }
+                ],
+            )
+        ],
+        tools=[],
+        state={"messages": []},
+        runtime=SimpleNamespace(context=SimpleNamespace(user_id=7)),
+    )
+
+    async def _handler(model_request: ModelRequest) -> ModelResponse:
+        captured["messages"] = model_request.messages
+        return ModelResponse(result=[AIMessage(content="ok")])
+
+    anyio.run(lambda: middleware.awrap_model_call(request, _handler))
+
+    messages = captured["messages"]
+    assert isinstance(messages, list)
+    assert messages[0].tool_calls[0]["id"].startswith("server-tool-call-")
+
+
+def test_model_message_sanitizer_normalizes_openai_style_tool_calls_in_additional_kwargs() -> None:
+    middleware = _ModelMessageSanitizingMiddleware()
+    captured: dict[str, object] = {}
+    request = ModelRequest(
+        model=_build_chat_model(response_text="ok"),
+        messages=[
+            AIMessage(
+                content="",
+                additional_kwargs={
+                    "tool_calls": [
+                        {
+                            "id": None,
+                            "type": "function",
+                            "function": {
+                                "name": "get_budget_home",
+                                "arguments": "{\"topic\":\"weekly coaching\"}",
+                            },
+                        }
+                    ]
+                },
+            )
+        ],
+        tools=[],
+        state={"messages": []},
+        runtime=SimpleNamespace(context=SimpleNamespace(user_id=7)),
+    )
+
+    async def _handler(model_request: ModelRequest) -> ModelResponse:
+        captured["messages"] = model_request.messages
+        return ModelResponse(result=[AIMessage(content="ok")])
+
+    anyio.run(lambda: middleware.awrap_model_call(request, _handler))
+
+    messages = captured["messages"]
+    assert isinstance(messages, list)
+    assert messages[0].additional_kwargs["tool_calls"][0]["id"].startswith(
+        "server-tool-call-"
+    )
+
+
+def test_model_message_sanitizer_drops_empty_name_tool_call_messages_before_model_call() -> None:
+    middleware = _ModelMessageSanitizingMiddleware()
+    captured: dict[str, object] = {}
+    request = ModelRequest(
+        model=_build_chat_model(response_text="ok"),
+        messages=[
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "",
+                        "args": {"topic": "weekly coaching"},
+                        "id": "call-1",
+                        "type": "tool_call",
+                    }
+                ],
+            )
+        ],
+        tools=[],
+        state={"messages": []},
+        runtime=SimpleNamespace(context=SimpleNamespace(user_id=7)),
+    )
+
+    async def _handler(model_request: ModelRequest) -> ModelResponse:
+        captured["messages"] = model_request.messages
+        return ModelResponse(result=[AIMessage(content="ok")])
+
+    anyio.run(lambda: middleware.awrap_model_call(request, _handler))
+
+    assert captured["messages"] == []
+
+
+def test_model_message_sanitizer_drops_empty_name_openai_tool_calls_before_model_call() -> None:
+    middleware = _ModelMessageSanitizingMiddleware()
+    captured: dict[str, object] = {}
+    request = ModelRequest(
+        model=_build_chat_model(response_text="ok"),
+        messages=[
+            AIMessage(
+                content="",
+                additional_kwargs={
+                    "tool_calls": [
+                        {
+                            "id": "call-1",
+                            "type": "function",
+                            "function": {
+                                "name": "",
+                                "arguments": "{\"topic\":\"weekly coaching\"}",
+                            },
+                        }
+                    ]
+                },
+            )
+        ],
+        tools=[],
+        state={"messages": []},
+        runtime=SimpleNamespace(context=SimpleNamespace(user_id=7)),
+    )
+
+    async def _handler(model_request: ModelRequest) -> ModelResponse:
+        captured["messages"] = model_request.messages
+        return ModelResponse(result=[AIMessage(content="ok")])
+
+    anyio.run(lambda: middleware.awrap_model_call(request, _handler))
+
+    assert captured["messages"] == []
+
+
+def test_model_message_sanitizer_drops_orphan_tool_messages_after_removing_tool_call_message() -> None:
+    middleware = _ModelMessageSanitizingMiddleware()
+    captured: dict[str, object] = {}
+    request = ModelRequest(
+        model=_build_chat_model(response_text="ok"),
+        messages=[
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "",
+                        "args": {"topic": "weekly coaching"},
+                        "id": "call-1",
+                        "type": "tool_call",
+                    }
+                ],
+            ),
+            ToolMessage(content="Tool failed.", tool_call_id="call-1"),
+        ],
+        tools=[],
+        state={"messages": []},
+        runtime=SimpleNamespace(context=SimpleNamespace(user_id=7)),
+    )
+
+    async def _handler(model_request: ModelRequest) -> ModelResponse:
+        captured["messages"] = model_request.messages
+        return ModelResponse(result=[AIMessage(content="ok")])
+
+    anyio.run(lambda: middleware.awrap_model_call(request, _handler))
+
+    assert captured["messages"] == []
 
 
 def test_build_chatbot_graph_recovers_when_invalid_tool_call_is_missing_an_id() -> None:
