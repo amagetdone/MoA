@@ -34,6 +34,16 @@ public class TransactionNotificationListener {
 			event.transactionId(),
 			event.amount()
 		);
+		if (isVerificationAlarmTarget(event)) {
+			PushNotificationService.SendResult demoResult =
+				pushNotificationService.sendVerificationAlarmDemoNotification(event);
+			log.info(
+				"Verification demo push result. userId={}, transactionId={}, result={}",
+				event.userId(),
+				event.transactionId(),
+				demoResult
+			);
+		}
 		deviceTokenService.findLatestActiveToken(event.userId())
 			.ifPresent(deviceToken -> {
 				PushNotificationService.SendResult result =
@@ -49,5 +59,17 @@ public class TransactionNotificationListener {
 					deviceTokenService.disable(deviceToken.getId());
 				}
 			});
+	}
+
+	private boolean isVerificationAlarmTarget(TransactionSyncedEvent event) {
+		if (!"입금".equals(event.transactionTypeName())) {
+			return false;
+		}
+		String merchantOrMemo = event.merchantOrMemo();
+		if (merchantOrMemo == null) {
+			return false;
+		}
+		String normalized = merchantOrMemo.trim().toUpperCase();
+		return normalized.startsWith("AMAGETDONE");
 	}
 }

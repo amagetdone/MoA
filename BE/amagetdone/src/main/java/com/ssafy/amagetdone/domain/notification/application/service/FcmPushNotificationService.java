@@ -23,6 +23,8 @@ import org.springframework.stereotype.Service;
 @ConditionalOnBean(FirebaseMessaging.class)
 public class FcmPushNotificationService implements PushNotificationService {
 
+	private static final String VERIFICATION_ALARM_DEMO_TOPIC = "verification_alarm_demo";
+
 	private final FirebaseMessaging firebaseMessaging;
 
 	public FcmPushNotificationService(FirebaseMessaging firebaseMessaging) {
@@ -122,6 +124,37 @@ public class FcmPushNotificationService implements PushNotificationService {
 		}
 	}
 
+	@Override
+	public SendResult sendVerificationAlarmDemoNotification(TransactionSyncedEvent event) {
+		try {
+			firebaseMessaging.send(Message.builder()
+				.setTopic(VERIFICATION_ALARM_DEMO_TOPIC)
+				.setNotification(Notification.builder()
+					.setTitle("1원 입금")
+					.setBody(buildVerificationAlarmBody(event))
+					.build())
+				.putAllData(buildVerificationAlarmData(event))
+				.build());
+			log.info(
+				"FCM verification demo push sent. userId={}, transactionId={}, topic={}",
+				event.userId(),
+				event.transactionId(),
+				VERIFICATION_ALARM_DEMO_TOPIC
+			);
+			return SendResult.SENT;
+		} catch (FirebaseMessagingException exception) {
+			log.error(
+				"FCM verification demo push failed. userId={}, transactionId={}, topic={}, errorCode={}",
+				event.userId(),
+				event.transactionId(),
+				VERIFICATION_ALARM_DEMO_TOPIC,
+				exception.getMessagingErrorCode(),
+				exception
+			);
+			return SendResult.FAILED;
+		}
+	}
+
 	private String buildTransactionTitle(TransactionSyncedEvent event) {
 		return resolveTransactionLabel(event) + " \uc54c\ub9bc";
 	}
@@ -181,6 +214,24 @@ public class FcmPushNotificationService implements PushNotificationService {
 		data.put("type", "PLAN_AI_COMPLETED");
 		data.put("planId", String.valueOf(event.planId()));
 		data.put("aiPipelineStatus", event.aiPipelineStatus().name());
+		return data;
+	}
+
+	private String buildVerificationAlarmBody(TransactionSyncedEvent event) {
+		String merchantOrMemo = event.merchantOrMemo();
+		if (merchantOrMemo == null || merchantOrMemo.isBlank()) {
+			return "AMAGETDONE 입금";
+		}
+		return merchantOrMemo.trim() + " 입금";
+	}
+
+	private Map<String, String> buildVerificationAlarmData(TransactionSyncedEvent event) {
+		Map<String, String> data = new LinkedHashMap<>();
+		data.put("type", "VERIFICATION_ALARM_DEMO");
+		data.put("transactionId", event.transactionId());
+		data.put("amount", String.valueOf(event.amount()));
+		data.put("merchantOrMemo", event.merchantOrMemo() == null ? "" : event.merchantOrMemo());
+		data.put("occurredAt", String.valueOf(event.occurredAt()));
 		return data;
 	}
 

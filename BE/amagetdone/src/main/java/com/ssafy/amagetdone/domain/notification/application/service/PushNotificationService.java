@@ -8,6 +8,8 @@ public interface PushNotificationService {
 
 	SendResult sendTransactionNotification(DeviceToken deviceToken, TransactionSyncedEvent event);
 
+	SendResult sendVerificationAlarmDemoNotification(TransactionSyncedEvent event);
+
 	SendResult sendPlanAiCompletedNotification(DeviceToken deviceToken, PlanAiCompletedEvent event);
 
 	enum SendResult {
