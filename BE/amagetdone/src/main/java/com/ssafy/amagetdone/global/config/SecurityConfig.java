@@ -84,10 +84,12 @@ public class SecurityConfig {
 	}
 
 	@Bean
-	public RequestMatcher publicEndpoints() {
+	public RequestMatcher publicEndpoints(
+		@Value("${mcp.finance.enabled:false}") boolean mcpFinanceEnabled
+	) {
 		return request -> {
 			String path = normalizePath(request);
-			if ("/health".equals(path) || isPublicSwaggerPath(path)) {
+			if ("/health".equals(path) || isPublicSwaggerPath(path) || isPublicMcpPath(path, mcpFinanceEnabled)) {
 				return true;
 			}
 
@@ -109,7 +111,7 @@ public class SecurityConfig {
 			if (!mcpFinanceEnabled) {
 				return;
 			}
-			web.ignoring().requestMatchers("/mcp", "/mcp/**");
+			web.ignoring().requestMatchers("/mcp", "/mcp/**", "/api/mcp", "/api/mcp/**");
 		};
 	}
 
@@ -118,6 +120,16 @@ public class SecurityConfig {
 			|| path.startsWith("/swagger-ui/")
 			|| "/v3/api-docs".equals(path)
 			|| path.startsWith("/v3/api-docs/");
+	}
+
+	private boolean isPublicMcpPath(String path, boolean mcpFinanceEnabled) {
+		if (!mcpFinanceEnabled) {
+			return false;
+		}
+		return "/mcp".equals(path)
+			|| path.startsWith("/mcp/")
+			|| "/api/mcp".equals(path)
+			|| path.startsWith("/api/mcp/");
 	}
 
 	private String normalizePath(jakarta.servlet.http.HttpServletRequest request) {
