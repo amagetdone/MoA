@@ -44,6 +44,11 @@ _FORBIDDEN_RESPONSE_PATTERNS = [
         r"\bsupervisor\s+(node|agent|prompt|graph)\b",
         r"\b(i|we)\s+(used|called|asked)\b.*\bmcp\b",
         r"\b(i|we)\s+(used|called|asked)\b.*\bsupervisor\b",
+        r"analysisincluded\s*:\s*(true|false)",
+        r"\bnon_essential\b",
+        r"\bincome\b\s+(label|reason|code|status|사유|처리)",
+        r"\bout\b\s*(\(|label|reason|code|status|사유|처리)",
+        r"\b(raw|backend|internal)\s+(field|label|status|flag|enum)\b",
     )
 ]
 _BUDGET_STATUS_TOOL_NAMES = frozenset({"get_budget_home", "get_budget_dashboard"})

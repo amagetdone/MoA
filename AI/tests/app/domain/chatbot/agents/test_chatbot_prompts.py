@@ -111,3 +111,21 @@ def test_build_response_guard_prompt_filters_internal_leakage_from_final_answer(
     assert "## 이번 주 행동 제안" in prompt
     assert "hide internal context" in prompt
     assert "remove tool names" in prompt
+def test_build_spendwise_coach_prompt_forbids_raw_internal_analysis_labels() -> None:
+    prompt = build_spendwise_coach_prompt(today=date(2026, 3, 27)).casefold()
+
+    assert "do not expose raw internal status labels" in prompt
+    assert "do not expose raw field names" in prompt
+    assert "translate internal labels into user-facing language" in prompt
+    assert "non_essential" in prompt
+    assert "analysisincluded" in prompt
+
+
+def test_build_response_guard_prompt_rejects_backend_style_analysis_terms() -> None:
+    prompt = build_response_guard_prompt().casefold()
+
+    assert "reject backend labels" in prompt
+    assert "reject raw field names" in prompt
+    assert "reject raw key-value snippets" in prompt
+    assert "analysisincluded" in prompt
+    assert "non_essential" in prompt

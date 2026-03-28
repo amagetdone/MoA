@@ -373,6 +373,32 @@ def test_build_chatbot_graph_drops_internal_leak_responses_without_mutating_them
     assert result["final_answer"] == ""
 
 
+def test_build_chatbot_graph_drops_backend_analysis_labels_from_user_facing_text() -> None:
+    graph = _build_graph(
+        response_text=(
+            "The payment was marked NON_ESSENTIAL with analysisIncluded: false, "
+            "while INCOME and OUT labels were also applied."
+        )
+    )
+
+    result = anyio.run(
+        lambda: graph.ainvoke(
+            {
+                "messages": [
+                    HumanMessage(content="Give me feedback for this week."),
+                ],
+                "user_id": 7,
+                "session_id": "conv-1",
+                "user_query": "Give me feedback for this week.",
+            },
+            config={"configurable": {"thread_id": "moa:7:conv-1"}},
+        )
+    )
+
+    assert result["final_response"] == ""
+    assert result["final_answer"] == ""
+
+
 def test_build_chatbot_graph_executes_a_fake_mcp_like_tool_call() -> None:
     recorder = _ToolRecorder()
     model = _BindableFakeChatModel(
