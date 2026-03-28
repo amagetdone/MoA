@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.firebase.messaging.AndroidConfig;
+import com.google.firebase.messaging.AndroidNotification;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
@@ -26,6 +28,7 @@ import org.springframework.stereotype.Service;
 public class FcmPushNotificationService implements PushNotificationService {
 
 	private static final String VERIFICATION_ALARM_DEMO_TOPIC = "verification_alarm_demo";
+	private static final String VERIFICATION_ALARM_DEMO_CHANNEL_ID = "bank_alarm_demo";
 	private static final Pattern VERIFICATION_TEXT_PATTERN = Pattern.compile("(?i)(AMAGETDONE)\\s*(\\d{4})");
 
 	private final FirebaseMessaging firebaseMessaging;
@@ -135,6 +138,14 @@ public class FcmPushNotificationService implements PushNotificationService {
 				.setNotification(Notification.builder()
 					.setTitle("1원 입금")
 					.setBody(buildVerificationAlarmBody(verificationText))
+					.build())
+				.setAndroidConfig(AndroidConfig.builder()
+					.setPriority(AndroidConfig.Priority.HIGH)
+					.setNotification(AndroidNotification.builder()
+						.setChannelId(VERIFICATION_ALARM_DEMO_CHANNEL_ID)
+						.setPriority(AndroidNotification.Priority.MAX)
+						.setSound("default")
+						.build())
 					.build())
 				.putAllData(buildVerificationAlarmData(verificationText))
 				.build());
