@@ -39,36 +39,43 @@ pip install langchain-mcp-adapters langgraph "langchain[openai]" mcp
 
 Use the model provider that matches your actual AI server environment.
 
-## 3. Current MCP tool list
+## 3. Tool catalog for the coaching assistant
 
-Budget:
+Budget tools:
 
-- `get_budget_income`
-- `get_budget_dashboard`
-- `get_budget_home`
-- `get_budget_summary`
-- `get_budget_week_setup`
-- `get_weekly_savings_detail`
-- `get_weekly_free_spending_detail`
-- `get_weekly_essential_expenses`
-- `get_weekly_essential_expense_detail`
+- `get_budget_income`: role = monthly income baseline. Use when the assistant needs budget context before judging whether spending is safe or aggressive. Do not use this when the user asks why weekly money is running out now; use `get_budget_dashboard` or `get_budget_home` first.
+- `get_budget_dashboard`: role = current weekly free-spending pace and safe daily allowance. Use when answering "Can I spend more this week?" or "Am I overspending right now?" Do not use this when transaction evidence is needed; use `get_weekly_free_spending_detail`.
+- `get_budget_home`: role = one-screen coaching snapshot with free spending, weekly saving, assets, and plan progress. Use as the default first tool for current-state coaching. Do not use this alone when the user asks for root cause detail.
+- `get_budget_summary`: role = lightweight progress summary across plans. Use for motivational or progress recap. Do not use when weekly execution detail matters.
+- `get_budget_week_setup`: role = how the week was planned across essentials, savings, and free spending. Use when the assistant must explain the planned allocation before discussing execution. Do not use when the user asks which transactions caused overspending.
+- `get_weekly_savings_detail`: role = weekly savings execution by plan. Use when coaching on missed savings targets, plan priority trade-offs, or weekly saving discipline. Do not use for broad lifetime progress only; use `get_budget_summary`.
+- `get_weekly_free_spending_detail`: role = weekly discretionary-spending transactions. Use when identifying what purchases reduced free-spending room. This is the best drill-down after `get_budget_dashboard`.
+- `get_weekly_essential_expenses`: role = weekly essential burden split into fixed and variable essentials. Use when separating mandatory spending pressure from avoidable behavior. Do not use when category or transaction-level detail is required.
+- `get_weekly_essential_expense_detail`: role = detailed essential categories and supporting transactions. Use when the assistant must point to which essential category is driving pressure, such as rent, food, or transport.
 
-Assets:
+Asset tools:
 
-- `get_bank_accounts`
-- `get_account_detail`
-- `get_linked_accounts`
-- `get_linked_cards`
+- `get_bank_accounts`: role = external candidate bank accounts visible through SSAFY integration. Use in account-linking or available-account conversations. Do not use as the default current asset overview if the user only cares about already linked accounts.
+- `get_account_detail`: role = one linked account with current balance. Use when checking exact funds in a single account before giving cash or payment advice.
+- `get_linked_accounts`: role = all linked accounts and balances. Use when checking liquidity, emergency buffer, or whether current spending can be absorbed.
+- `get_linked_cards`: role = linked cards and their withdrawal accounts. Use when explaining which card spending paths exist and which account each card drains from.
 
-Transactions and analysis:
+Transaction and analysis tools:
 
-- `get_monthly_expense_summary`
-- `get_weekly_expense_graph`
-- `get_monthly_expense_graph`
-- `get_transaction_list`
-- `get_onboarding_spending_analysis`
-- `get_weekly_spending_analysis`
-- `get_monthly_spending_analysis`
+- `get_monthly_expense_summary`: role = top-line month totals for fixed, variable, and excluded flows. Use as the first monthly diagnosis tool before graphs or category drill-down.
+- `get_weekly_expense_graph`: role = day-by-day weekly spending pattern. Use when looking for spike days or burst spending. Note: `yearWeek` must be `yyyy-MM-w`, for example `2026-03-3`.
+- `get_monthly_expense_graph`: role = week-by-week pace inside one month. Use when the assistant wants to explain which week pushed the month off track.
+- `get_transaction_list`: role = raw transaction evidence with optional filtering. Use when the assistant needs merchant-level facts, supporting evidence, or exact transaction lists behind a summary.
+- `get_onboarding_spending_analysis`: role = long-term baseline habit profile using averages and category patterns. Use for onboarding, initial profiling, or stable spending-habit coaching rather than recent-period diagnosis.
+- `get_weekly_spending_analysis`: role = weekly coaching view with total expense, essential burden, and category actuals. Use when the assistant needs a weekly interpretation layer before deciding whether to drill into free spending or essential detail. Note: `yearWeek` must be `yyyy-MM-w`, for example `2026-03-3`.
+- `get_monthly_spending_analysis`: role = monthly category mix plus essential burden. Use when coaching on which categories dominated the month and how much was structurally unavoidable.
+
+Selection rule of thumb:
+
+- Start with `get_budget_home` for current-state coaching.
+- Use summary tools before raw transaction tools.
+- Use graph tools for timing patterns.
+- Use detail tools when the user asks "why" or "which transactions/category caused this?"
 
 ## 4. Parameter formats
 

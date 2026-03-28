@@ -31,6 +31,11 @@ class McpFinanceToolConfigurationTest {
 			.run(context -> {
 				assertThat(context).hasSingleBean(ToolCallbackProvider.class);
 				assertThat(context.getBean(ToolCallbackProvider.class).getToolCallbacks()).hasSize(20);
+				assertThat(Arrays.stream(context.getBean(ToolCallbackProvider.class).getToolCallbacks()))
+					.allSatisfy(tool -> {
+						assertThat(tool.getToolDefinition().description()).contains("Use when:");
+						assertThat(tool.getToolDefinition().description()).contains("Best for:");
+					});
 				String schema = Arrays.stream(context.getBean(ToolCallbackProvider.class).getToolCallbacks())
 					.filter(tool -> tool.getToolDefinition().name().equals("get_budget_home"))
 					.findFirst()
