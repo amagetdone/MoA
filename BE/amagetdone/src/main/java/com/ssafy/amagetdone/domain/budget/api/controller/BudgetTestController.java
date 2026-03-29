@@ -98,12 +98,11 @@ public class BudgetTestController {
 	)
 	@PostMapping("/savings-accrual/backfill")
 	public ApiResponse<GoalSavingAccrualForceDto.Response> backfillSavingsAccrual(
-		@AuthenticationPrincipal AuthenticatedMember authenticatedMember,
-		@RequestBody(required = false) GoalSavingAccrualForceDto.BackfillRequest request
+		@AuthenticationPrincipal AuthenticatedMember authenticatedMember
 	) {
 		return ApiResponse.ok(
 			"Goal saving accrual backfill test succeeded.",
-			goalSavingAccrualForceTestService.backfill(authenticatedMember.userId(), request)
+			goalSavingAccrualForceTestService.backfill(authenticatedMember.userId())
 		);
 	}
 

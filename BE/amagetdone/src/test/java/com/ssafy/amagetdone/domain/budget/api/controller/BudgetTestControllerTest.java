@@ -20,8 +20,6 @@ import com.ssafy.amagetdone.domain.budget.application.service.BudgetCurrentWeekS
 import com.ssafy.amagetdone.domain.budget.application.service.GoalSavingAccrualForceTestService;
 import com.ssafy.amagetdone.domain.budget.application.service.BudgetWeekSeedService;
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
-import com.ssafy.amagetdone.domain.plan.exception.PlanErrorCode;
-import com.ssafy.amagetdone.domain.plan.exception.PlanException;
 import com.ssafy.amagetdone.global.config.SecurityConfig;
 import com.ssafy.amagetdone.global.security.AuthenticatedMember;
 
@@ -131,7 +129,7 @@ class BudgetTestControllerTest {
 
 	@Test
 	void backfillSavingsAccrualReturnsUnifiedResponseWithoutScope() throws Exception {
-		given(goalSavingAccrualForceTestService.backfill(eq(1), any()))
+		given(goalSavingAccrualForceTestService.backfill(1))
 			.willReturn(new GoalSavingAccrualForceDto.Response(
 				GoalSavingAccrualForceDto.OperationType.BACKFILL,
 				null,
@@ -154,9 +152,7 @@ class BudgetTestControllerTest {
 				.with(csrf())
 				.with(authentication(
 					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
-				))
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("{}"))
+				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ok"))
 			.andExpect(jsonPath("$.message").value("Goal saving accrual backfill test succeeded."))
@@ -214,27 +210,6 @@ class BudgetTestControllerTest {
 			.andExpect(jsonPath("$.data.targetType").value("SINGLE"))
 			.andExpect(jsonPath("$.data.planId").value(11))
 			.andExpect(jsonPath("$.data.appliedScope").value("DAY"));
-	}
-
-	@Test
-	void backfillSavingsAccrualReturnsNotFoundWhenPlanDoesNotBelongToUser() throws Exception {
-		given(goalSavingAccrualForceTestService.backfill(eq(1), any()))
-			.willThrow(new PlanException(PlanErrorCode.PLAN_NOT_FOUND));
-
-		mockMvc.perform(post("/api/test/budget/savings-accrual/backfill")
-				.contextPath("/api")
-				.with(csrf())
-				.with(authentication(
-					UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedMember(1), null, java.util.List.of())
-				))
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-					{
-					  "planId": 99
-					}
-					"""))
-			.andExpect(status().isNotFound())
-			.andExpect(jsonPath("$.errorCode").value("PLAN_001"));
 	}
 
 	@Test

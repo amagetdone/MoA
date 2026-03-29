@@ -56,6 +56,7 @@ public class BudgetReadSyncService {
 		runTransactionAnalysisUseCase.execute(userId, READ_SYNC_MONTHS);
 		runTransactionAnalysisUseCase.execute(userId, YearMonth.from(today));
 		triggerBudgetAllocationUseCase.execute(userId);
+		applyDailyGoalSavingAccrualUseCase.backfill(userId, null);
 		budgetActualSpentRefreshService.refresh(userId, today);
 		budgetRolloverResyncService.resync(userId);
 		applyDailyGoalSavingAccrualUseCase.execute(userId);
@@ -85,6 +86,7 @@ public class BudgetReadSyncService {
 			.orElse(null);
 		if (currentWeek == null) {
 			triggerBudgetAllocationUseCase.execute(userId);
+			applyDailyGoalSavingAccrualUseCase.backfill(userId, null);
 			return;
 		}
 
@@ -100,6 +102,7 @@ public class BudgetReadSyncService {
 			.anyMatch(planId -> !currentAllocatedPlanIds.contains(planId));
 		if (missingActiveAllocation) {
 			triggerBudgetAllocationUseCase.execute(userId);
+			applyDailyGoalSavingAccrualUseCase.backfill(userId, null);
 		}
 	}
 

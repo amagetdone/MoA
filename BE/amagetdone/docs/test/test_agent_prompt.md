@@ -312,12 +312,11 @@ Body: {
 **5-4. Backfill 실행 (1회만!)**
 
 > **중요**: backfill은 **반드시 1회만** 호출하세요.
-> planId를 지정해도 내부적으로 전체 히스토리를 재구축하며 **모든 목표를 한번에** 처리합니다 (응답의 targetType이 "ALL").
+> backfill은 해당 유저의 **모든 목표를 한번에** 채웁니다 (응답의 targetType이 "ALL").
 > 여러 번 호출하면 이중 적립이나 500 에러가 발생합니다.
 
 ```
 POST https://j14d101.p.ssafy.io/api/test/budget/savings-accrual/backfill
-Body: { "planId": {{planId_A}} }
 ```
 - 응답 확인: `data.operationType == "BACKFILL"`, `data.targetType == "ALL"`
 - 응답의 `data.plans` 배열에 **모든 목표**가 포함됨

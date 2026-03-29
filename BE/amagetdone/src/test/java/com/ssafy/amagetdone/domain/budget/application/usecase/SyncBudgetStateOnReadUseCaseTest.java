@@ -107,6 +107,7 @@ class SyncBudgetStateOnReadUseCaseTest {
 		useCase.execute(userId);
 
 		verify(triggerBudgetAllocationUseCase).execute(userId);
+		verify(applyDailyGoalSavingAccrualUseCase).backfill(userId, null);
 		verify(syncLatestTransactionsUseCase).execute(userId, 3, false);
 		verify(runTransactionAnalysisUseCase, never()).execute(any(), anyInt());
 		verifyNoInteractions(budgetActualSpentRefreshService, budgetRolloverResyncService);
@@ -133,6 +134,7 @@ class SyncBudgetStateOnReadUseCaseTest {
 		useCase.execute(userId);
 
 		verify(triggerBudgetAllocationUseCase).execute(userId);
+		verify(applyDailyGoalSavingAccrualUseCase).backfill(userId, null);
 		verify(syncLatestTransactionsUseCase).execute(userId, 3, false);
 		verify(runTransactionAnalysisUseCase, never()).execute(any(), anyInt());
 		verify(applyDailyGoalSavingAccrualUseCase).execute(userId);
@@ -168,14 +170,15 @@ class SyncBudgetStateOnReadUseCaseTest {
 			syncLatestTransactionsUseCase,
 			runTransactionAnalysisUseCase,
 			triggerBudgetAllocationUseCase,
+			applyDailyGoalSavingAccrualUseCase,
 			budgetActualSpentRefreshService,
-			budgetRolloverResyncService,
-			applyDailyGoalSavingAccrualUseCase
+			budgetRolloverResyncService
 		);
 		inOrder.verify(syncLatestTransactionsUseCase).execute(userId, 3, false);
 		inOrder.verify(runTransactionAnalysisUseCase).execute(userId, 3);
 		inOrder.verify(runTransactionAnalysisUseCase).execute(userId, java.time.YearMonth.of(2026, 3));
 		inOrder.verify(triggerBudgetAllocationUseCase).execute(userId);
+		inOrder.verify(applyDailyGoalSavingAccrualUseCase).backfill(userId, null);
 		inOrder.verify(budgetActualSpentRefreshService).refresh(userId, today);
 		inOrder.verify(budgetRolloverResyncService).resync(userId);
 		inOrder.verify(applyDailyGoalSavingAccrualUseCase).execute(userId);
