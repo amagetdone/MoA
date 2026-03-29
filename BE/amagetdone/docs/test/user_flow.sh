@@ -235,7 +235,8 @@ for plan in payload:
             f\"  -> planId={plan.get('planId')} | title={plan.get('title')} | \"
             f\"status={plan.get('status')} | saved={plan.get('savedAmount')} | \"
             f\"target={plan.get('targetAmount')} | weeks={plan.get('weekNumber')} | \"
-            f\"dday={plan.get('dday')} | rate={plan.get('achievementRate')}\"
+            f\"dday={plan.get('dday')} | endDate={plan.get('endDate')} | \"
+            f\"originalEndDate={plan.get('originalEndDate')} | rate={plan.get('achievementRate')}\"
         )
         break
 else:
@@ -563,6 +564,7 @@ STATE_DELAYED_END=$(date_shift_days "$TODAY" 14)
 STATE_DELAYED_TARGET=400000
 STATE_DELAYED_BASE_WEEKS=$(calc_target_weeks "$STATE_DELAYED_START" "$STATE_DELAYED_END")
 STATE_DELAYED_EXPECTED_WEEKS=$((STATE_DELAYED_BASE_WEEKS + 1))
+STATE_DELAYED_EXTENDED_END=$(date_shift_days "$STATE_DELAYED_END" 7)
 STATE_FORCED_FREE_BUDGET_SUBTRACT=2500000
 
 step "Goal-state 완료 목표 생성"
@@ -585,8 +587,13 @@ step "Goal-state 완료 목표 검증"
 STATE_COMPLETED_PLANS_RES=$(curl -sk "$BASE/v1/plans" -H "$AUTH")
 STATE_COMPLETED_STATUS=$(plan_field_from_list "$STATE_COMPLETED_PLANS_RES" "$STATE_COMPLETED_PLAN_ID" "status")
 STATE_COMPLETED_SAVED=$(plan_field_from_list "$STATE_COMPLETED_PLANS_RES" "$STATE_COMPLETED_PLAN_ID" "savedAmount")
+STATE_COMPLETED_END_DATE=$(plan_field_from_list "$STATE_COMPLETED_PLANS_RES" "$STATE_COMPLETED_PLAN_ID" "endDate")
+STATE_COMPLETED_ORIGINAL_END_DATE=$(plan_field_from_list "$STATE_COMPLETED_PLANS_RES" "$STATE_COMPLETED_PLAN_ID" "originalEndDate")
 if [[ "$STATE_COMPLETED_STATUS" != "COMPLETED" ]]; then
   fail "goal-state completed goal was not completed" "$STATE_COMPLETED_PLANS_RES"
+fi
+if [[ "$STATE_COMPLETED_END_DATE" != "$STATE_COMPLETED_END" || "$STATE_COMPLETED_ORIGINAL_END_DATE" != "$STATE_COMPLETED_END" ]]; then
+  fail "goal-state completed goal end dates mismatch" "$STATE_COMPLETED_PLANS_RES"
 fi
 print_plan_from_list "$STATE_COMPLETED_PLANS_RES" "$STATE_COMPLETED_PLAN_ID"
 
@@ -625,17 +632,22 @@ STATE_DELAYED_PLANS_RES=$(curl -sk "$BASE/v1/plans" -H "$AUTH")
 STATE_DELAYED_STATUS=$(plan_field_from_list "$STATE_DELAYED_PLANS_RES" "$STATE_DELAYED_PLAN_ID" "status")
 STATE_DELAYED_WEEKS=$(plan_field_from_list "$STATE_DELAYED_PLANS_RES" "$STATE_DELAYED_PLAN_ID" "weekNumber")
 STATE_DELAYED_SAVED=$(plan_field_from_list "$STATE_DELAYED_PLANS_RES" "$STATE_DELAYED_PLAN_ID" "savedAmount")
+STATE_DELAYED_END_DATE=$(plan_field_from_list "$STATE_DELAYED_PLANS_RES" "$STATE_DELAYED_PLAN_ID" "endDate")
+STATE_DELAYED_ORIGINAL_END_DATE=$(plan_field_from_list "$STATE_DELAYED_PLANS_RES" "$STATE_DELAYED_PLAN_ID" "originalEndDate")
 if [[ "$STATE_DELAYED_STATUS" != "ACTIVE" ]]; then
   fail "goal-state delayed goal should remain active" "$STATE_DELAYED_PLANS_RES"
 fi
 if [[ "$STATE_DELAYED_WEEKS" != "$STATE_DELAYED_EXPECTED_WEEKS" ]]; then
   fail "goal-state delayed goal was not extended by exactly one week" "$STATE_DELAYED_PLANS_RES"
 fi
+if [[ "$STATE_DELAYED_END_DATE" != "$STATE_DELAYED_EXTENDED_END" || "$STATE_DELAYED_ORIGINAL_END_DATE" != "$STATE_DELAYED_END" ]]; then
+  fail "goal-state delayed goal end dates mismatch" "$STATE_DELAYED_PLANS_RES"
+fi
 print_plan_from_list "$STATE_DELAYED_PLANS_RES" "$STATE_DELAYED_PLAN_ID"
 
 step "Goal-state 요약"
-echo "  -> completedPlanId=$STATE_COMPLETED_PLAN_ID | status=$STATE_COMPLETED_STATUS | saved=$STATE_COMPLETED_SAVED"
-echo "  -> delayedPlanId=$STATE_DELAYED_PLAN_ID | status=$STATE_DELAYED_STATUS | saved=$STATE_DELAYED_SAVED | weeks=$STATE_DELAYED_WEEKS"
+echo "  -> completedPlanId=$STATE_COMPLETED_PLAN_ID | status=$STATE_COMPLETED_STATUS | saved=$STATE_COMPLETED_SAVED | endDate=$STATE_COMPLETED_END_DATE | originalEndDate=$STATE_COMPLETED_ORIGINAL_END_DATE"
+echo "  -> delayedPlanId=$STATE_DELAYED_PLAN_ID | status=$STATE_DELAYED_STATUS | saved=$STATE_DELAYED_SAVED | weeks=$STATE_DELAYED_WEEKS | endDate=$STATE_DELAYED_END_DATE | originalEndDate=$STATE_DELAYED_ORIGINAL_END_DATE"
 
 HOME_RES=$(curl -sk "$BASE/budgets/home" -H "$AUTH")
 echo "$HOME_RES" | python_cmd -c "

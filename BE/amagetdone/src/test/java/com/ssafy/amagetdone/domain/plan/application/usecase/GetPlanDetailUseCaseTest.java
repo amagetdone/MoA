@@ -41,6 +41,8 @@ class GetPlanDetailUseCaseTest {
 			250_000L,
 			25,
 			60L,
+			LocalDate.of(2026, 4, 26),
+			LocalDate.of(2026, 4, 19),
 			new PlanDetailResponse.GraphData(List.of(1), List.of(30_000L), List.of(20_000L)),
 			List.of(new PlanDetailResponse.WeeklyPlan(1, 30_000L)),
 			3,

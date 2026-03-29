@@ -100,6 +100,8 @@ class PlanQueryServiceTest {
 		assertThat(response.totalWeeks()).isEqualTo(3);
 		assertThat(response.achievementRate()).isEqualTo(40);
 		assertThat(response.dday()).isEqualTo(287L);
+		assertThat(response.endDate()).isEqualTo(LocalDate.of(2026, 12, 31));
+		assertThat(response.originalEndDate()).isEqualTo(LocalDate.of(2026, 12, 31));
 		assertThat(response.completionProjection()).isEqualTo(
 			new PlanDetailResponse.CompletionProjection(null, null)
 		);
@@ -151,6 +153,22 @@ class PlanQueryServiceTest {
 		assertThat(response.completionProjection()).isEqualTo(
 			new PlanDetailResponse.CompletionProjection(2, LocalDate.of(2026, 3, 29))
 		);
+	}
+
+	@Test
+	void getPlanDetailReturnsOriginalEndDateWhenPlanWasExtended() {
+		Plan plan = plan(1, 1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 4, 5), 100_000L, 10_000L);
+		ReflectionTestUtils.setField(plan, "originalEndDate", LocalDate.of(2026, 3, 29));
+
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(1, 1)).willReturn(Optional.of(plan));
+		given(planWeekAllocationRepository.findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(1)).willReturn(List.of());
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(any(), any(), any()))
+			.willReturn(Optional.empty());
+
+		PlanDetailResponse response = service.getPlanDetail(1, 1);
+
+		assertThat(response.endDate()).isEqualTo(LocalDate.of(2026, 4, 5));
+		assertThat(response.originalEndDate()).isEqualTo(LocalDate.of(2026, 3, 29));
 	}
 
 	@Test

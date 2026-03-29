@@ -12,6 +12,8 @@ public record PlanDetailResponse(
 	Long savedAmount,
 	Integer achievementRate,
 	Long dday,
+	LocalDate endDate,
+	LocalDate originalEndDate,
 	GraphData graphData,
 	List<WeeklyPlan> weeklyPlans,
 	Integer currentWeek,
