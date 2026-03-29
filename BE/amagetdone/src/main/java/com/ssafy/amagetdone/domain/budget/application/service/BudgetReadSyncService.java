@@ -3,6 +3,7 @@ package com.ssafy.amagetdone.domain.budget.application.service;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -58,7 +59,7 @@ public class BudgetReadSyncService {
 
 		runTransactionAnalysisUseCase.execute(userId, READ_SYNC_MONTHS);
 		runTransactionAnalysisUseCase.execute(userId, YearMonth.from(today));
-		triggerBudgetAllocationUseCase.execute(userId);
+		triggerBudgetAllocationForReadSync(userId);
 		applyDailyGoalSavingAccrualUseCase.backfill(userId, null);
 		budgetActualSpentRefreshService.refresh(userId, today);
 		budgetRolloverResyncService.resync(userId);
@@ -89,7 +90,7 @@ public class BudgetReadSyncService {
 			.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(userId, today, today)
 			.orElse(null);
 		if (currentWeek == null) {
-			triggerBudgetAllocationUseCase.execute(userId);
+			triggerBudgetAllocationForReadSync(userId);
 			applyDailyGoalSavingAccrualUseCase.backfill(userId, null);
 			return;
 		}
@@ -106,9 +107,25 @@ public class BudgetReadSyncService {
 			.filter(java.util.Objects::nonNull)
 			.anyMatch(planId -> !currentAllocatedPlanIds.contains(planId));
 		if (missingActiveAllocation) {
-			triggerBudgetAllocationUseCase.execute(userId);
+			triggerBudgetAllocationForReadSync(userId);
 			applyDailyGoalSavingAccrualUseCase.backfill(userId, null);
 		}
+	}
+
+	private void triggerBudgetAllocationForReadSync(Integer userId) {
+		findLatestAutoAllocatedPlanEndDate(userId)
+			.ifPresentOrElse(
+				planEndDate -> triggerBudgetAllocationUseCase.executeIncludingPlanEnd(userId, planEndDate),
+				() -> triggerBudgetAllocationUseCase.execute(userId)
+			);
+	}
+
+	private Optional<LocalDate> findLatestAutoAllocatedPlanEndDate(Integer userId) {
+		return planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE).stream()
+			.filter(Plan::isAutoAllocateEnabled)
+			.map(Plan::getEndDate)
+			.filter(java.util.Objects::nonNull)
+			.max(LocalDate::compareTo);
 	}
 
 	private boolean hasNewTransactions(TransactionSyncService.SyncResult syncResult) {
