@@ -65,9 +65,13 @@ public class PlanQueryService {
 			plan.getTargetAmount(),
 			plan.getSavedAmount(),
 			calculateAchievementRate(plan),
+			plan.getStatus() == null ? null : plan.getStatus().name(),
+			plan.getAiPipelineStatus() == null ? null : plan.getAiPipelineStatus().name(),
 			ChronoUnit.DAYS.between(today(), plan.getEndDate()),
 			plan.getEndDate(),
 			resolveOriginalEndDate(plan),
+			plan.getPlanUrl(),
+			plan.getVideoUrl(),
 			new PlanDetailResponse.GraphData(
 				displayAllocations.stream().map(DisplayAllocation::displayWeek).toList(),
 				displayAllocations.stream().map(DisplayAllocation::plannedAmount).toList(),
