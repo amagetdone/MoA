@@ -429,7 +429,12 @@ public class BudgetAllocationService {
 
 		for (BudgetWeek budgetWeek : budgetWeeks) {
 			essentialAllocations.addAll(essentialWeekAllocationRepository.findByBudgetWeek(budgetWeek));
-			planAllocations.addAll(planWeekAllocationRepository.findByBudgetWeek(budgetWeek));
+			planAllocations.addAll(
+				planWeekAllocationRepository.findByBudgetWeek(budgetWeek).stream()
+					.filter(allocation -> allocation.getPlan() != null)
+					.filter(allocation -> allocation.getPlan().isAutoAllocateEnabled())
+					.toList()
+			);
 		}
 
 		if (!essentialAllocations.isEmpty()) {

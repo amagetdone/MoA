@@ -254,9 +254,13 @@ class PlanControllerTest {
 				3_000_000L,
 				1_200_000L,
 				40,
+				"ACTIVE",
+				"SUCCEEDED",
 				60L,
 				java.time.LocalDate.of(2026, 5, 10),
 				java.time.LocalDate.of(2026, 5, 3),
+				"https://cdn.example.com/plan-1.png",
+				"https://cdn.example.com/plan-1.mp4",
 				new PlanDetailResponse.GraphData(
 					List.of(1, 2, 3),
 					List.of(50_000L, 70_000L, 60_000L),
