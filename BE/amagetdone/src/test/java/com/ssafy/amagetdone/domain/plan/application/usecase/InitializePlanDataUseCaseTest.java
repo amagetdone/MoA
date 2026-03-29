@@ -34,6 +34,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class InitializePlanDataUseCaseTest {
 
+	private static final String COMPLETED_SEED_TITLE = "\uB9E5\uBD81 \uD504\uB85C \uAD6C\uB9E4";
+	private static final String ACTIVE_SEED_TITLE_ONE = "\uC5EC\uD589 \uC790\uAE08 \uBAA8\uC73C\uAE30";
+	private static final String ACTIVE_SEED_TITLE_TWO = "\uC790\uACA9\uC99D \uAD50\uC7AC \uAD6C\uB9E4";
+
 	@Mock
 	private UserRepository userRepository;
 
@@ -45,7 +49,7 @@ class InitializePlanDataUseCaseTest {
 		User user = User.builder().id(13).build();
 		InitializePlanDataUseCase useCase = new InitializePlanDataUseCase(userRepository, planRepository);
 		given(userRepository.findById(13)).willReturn(Optional.of(user));
-		given(planRepository.existsByUserIdAndTitleAndDeletedFalse(any(), any())).willReturn(false);
+		given(planRepository.findByUserIdAndTitleAndDeletedFalse(any(), any())).willReturn(Optional.empty());
 		given(planRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
 
 		AccountAdminDto.PlanDataInitResponse response = useCase.execute(new AccountAdminDto.PlanDataInitRequest(13));
@@ -56,14 +60,18 @@ class InitializePlanDataUseCaseTest {
 		assertThat(response.userId()).isEqualTo(13);
 		assertThat(response.createdCount()).isEqualTo(3);
 		assertThat(response.skippedCount()).isEqualTo(0);
-		assertThat(response.createdTitles()).containsExactly("맥북 프로 구매", "여행 자금 모으기", "자격증 교재 구매");
+		assertThat(response.createdTitles()).containsExactly(
+			COMPLETED_SEED_TITLE,
+			ACTIVE_SEED_TITLE_ONE,
+			ACTIVE_SEED_TITLE_TWO
+		);
 		assertThat(response.skippedTitles()).isEmpty();
 		assertThat(captor.getValue())
 			.extracting(Plan::getTitle, Plan::getSavedAmount, Plan::getTargetAmount, Plan::getStatus)
 			.containsExactly(
-				Tuple.tuple("맥북 프로 구매", 900_000L, 900_000L, PlanStatus.COMPLETED),
-				Tuple.tuple("여행 자금 모으기", 408_791L, 600_000L, PlanStatus.ACTIVE),
-				Tuple.tuple("자격증 교재 구매", 102_198L, 300_000L, PlanStatus.ACTIVE)
+				Tuple.tuple(COMPLETED_SEED_TITLE, 900_000L, 900_000L, PlanStatus.COMPLETED),
+				Tuple.tuple(ACTIVE_SEED_TITLE_ONE, 408_791L, 600_000L, PlanStatus.ACTIVE),
+				Tuple.tuple(ACTIVE_SEED_TITLE_TWO, 102_198L, 300_000L, PlanStatus.ACTIVE)
 			);
 		assertThat(captor.getValue())
 			.extracting(Plan::getStartDate, Plan::getEndDate, Plan::getPriority)
@@ -82,20 +90,56 @@ class InitializePlanDataUseCaseTest {
 		User user = User.builder().id(13).build();
 		InitializePlanDataUseCase useCase = new InitializePlanDataUseCase(userRepository, planRepository);
 		given(userRepository.findById(13)).willReturn(Optional.of(user));
-		given(planRepository.existsByUserIdAndTitleAndDeletedFalse(13, "맥북 프로 구매")).willReturn(true);
-		given(planRepository.existsByUserIdAndTitleAndDeletedFalse(13, "여행 자금 모으기")).willReturn(false);
-		given(planRepository.existsByUserIdAndTitleAndDeletedFalse(13, "자격증 교재 구매")).willReturn(true);
+		given(planRepository.findByUserIdAndTitleAndDeletedFalse(13, COMPLETED_SEED_TITLE)).willReturn(
+			Optional.of(completedSeedPlan(user))
+		);
+		given(planRepository.findByUserIdAndTitleAndDeletedFalse(13, ACTIVE_SEED_TITLE_ONE)).willReturn(Optional.empty());
+		given(planRepository.findByUserIdAndTitleAndDeletedFalse(13, ACTIVE_SEED_TITLE_TWO)).willReturn(
+			Optional.of(activeSeedPlan(user, ACTIVE_SEED_TITLE_TWO, 300_000L, 102_198L, 3, LocalDate.of(2026, 2, 27), LocalDate.of(2026, 5, 27)))
+		);
 		given(planRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
 
 		AccountAdminDto.PlanDataInitResponse response = useCase.execute(new AccountAdminDto.PlanDataInitRequest(13));
 
 		ArgumentCaptor<List<Plan>> captor = listCaptor();
 		verify(planRepository).saveAll(captor.capture());
-		assertThat(captor.getValue()).extracting(Plan::getTitle).containsExactly("여행 자금 모으기");
+		assertThat(captor.getValue()).extracting(Plan::getTitle).containsExactly(ACTIVE_SEED_TITLE_ONE);
 		assertThat(response.createdCount()).isEqualTo(1);
 		assertThat(response.skippedCount()).isEqualTo(2);
-		assertThat(response.createdTitles()).containsExactly("여행 자금 모으기");
-		assertThat(response.skippedTitles()).containsExactly("맥북 프로 구매", "자격증 교재 구매");
+		assertThat(response.createdTitles()).containsExactly(ACTIVE_SEED_TITLE_ONE);
+		assertThat(response.skippedTitles()).containsExactly(COMPLETED_SEED_TITLE, ACTIVE_SEED_TITLE_TWO);
+	}
+
+	@Test
+	void executeBackfillsCompletedSeedWhenExistingGoalWasOldActiveSeed() {
+		User user = User.builder().id(13).build();
+		InitializePlanDataUseCase useCase = new InitializePlanDataUseCase(userRepository, planRepository);
+		Plan existingCompletedSeed = completedSeedPlan(user);
+		existingCompletedSeed.setStatus(PlanStatus.ACTIVE);
+		existingCompletedSeed.setSavedAmount(250_000L);
+		existingCompletedSeed.setTargetAmount(700_000L);
+
+		given(userRepository.findById(13)).willReturn(Optional.of(user));
+		given(planRepository.findByUserIdAndTitleAndDeletedFalse(13, COMPLETED_SEED_TITLE)).willReturn(
+			Optional.of(existingCompletedSeed)
+		);
+		given(planRepository.findByUserIdAndTitleAndDeletedFalse(13, ACTIVE_SEED_TITLE_ONE)).willReturn(Optional.empty());
+		given(planRepository.findByUserIdAndTitleAndDeletedFalse(13, ACTIVE_SEED_TITLE_TWO)).willReturn(Optional.empty());
+		given(planRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
+
+		AccountAdminDto.PlanDataInitResponse response = useCase.execute(new AccountAdminDto.PlanDataInitRequest(13));
+
+		ArgumentCaptor<List<Plan>> captor = listCaptor();
+		verify(planRepository).saveAll(captor.capture());
+		assertThat(existingCompletedSeed.getStatus()).isEqualTo(PlanStatus.COMPLETED);
+		assertThat(existingCompletedSeed.getSavedAmount()).isEqualTo(900_000L);
+		assertThat(existingCompletedSeed.getTargetAmount()).isEqualTo(900_000L);
+		assertThat(captor.getValue())
+			.extracting(Plan::getTitle, Plan::getStatus, Plan::getSavedAmount, Plan::getTargetAmount)
+			.contains(Tuple.tuple(COMPLETED_SEED_TITLE, PlanStatus.COMPLETED, 900_000L, 900_000L));
+		assertThat(response.createdCount()).isEqualTo(2);
+		assertThat(response.skippedCount()).isEqualTo(1);
+		assertThat(response.skippedTitles()).containsExactly(COMPLETED_SEED_TITLE);
 	}
 
 	@Test
@@ -118,6 +162,36 @@ class InitializePlanDataUseCaseTest {
 			.isInstanceOf(MemberException.class)
 			.extracting(exception -> ((MemberException)exception).getErrorCode())
 			.isEqualTo(MemberErrorCode.USER_NOT_FOUND);
+	}
+
+	private Plan completedSeedPlan(User user) {
+		Plan plan = Plan.create(
+			user,
+			COMPLETED_SEED_TITLE,
+			null,
+			900_000L,
+			LocalDate.of(2025, 12, 27),
+			LocalDate.of(2026, 3, 27),
+			1
+		);
+		plan.setSavedAmount(900_000L);
+		plan.setStatus(PlanStatus.COMPLETED);
+		return plan;
+	}
+
+	private Plan activeSeedPlan(
+		User user,
+		String title,
+		long targetAmount,
+		long savedAmount,
+		int priority,
+		LocalDate startDate,
+		LocalDate endDate
+	) {
+		Plan plan = Plan.create(user, title, null, targetAmount, startDate, endDate, priority);
+		plan.setSavedAmount(savedAmount);
+		plan.setStatus(PlanStatus.ACTIVE);
+		return plan;
 	}
 
 	@SuppressWarnings("unchecked")

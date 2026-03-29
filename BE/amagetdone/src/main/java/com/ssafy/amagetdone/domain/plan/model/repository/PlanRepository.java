@@ -45,6 +45,8 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 
 	List<Plan> findAllByUserIdAndDeletedFalse(Integer userId);
 
+	Optional<Plan> findByUserIdAndTitleAndDeletedFalse(Integer userId, String title);
+
 	List<Plan> findAllByUserIdAndPriorityGreaterThanEqualOrderByPriorityAsc(Integer userId, Integer priority);
 
 	List<Plan> findAllByUserIdAndDeletedFalseAndStatusInAndPriorityGreaterThanEqualOrderByPriorityAsc(

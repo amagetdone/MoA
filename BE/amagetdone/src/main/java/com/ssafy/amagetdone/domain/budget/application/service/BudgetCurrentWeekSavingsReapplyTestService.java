@@ -50,7 +50,6 @@ public class BudgetCurrentWeekSavingsReapplyTestService {
 		BudgetWeek currentWeek = budgetWeekRepository
 			.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(userId, today, today)
 			.orElseThrow(() -> new IllegalArgumentException("Current budget week not found"));
-		LocalDate restoreRangeEnd = currentWeek.getWeekEndDate();
 
 		List<BudgetAdjustment> autoAdjustments = budgetAdjustmentRepository.findByBudgetWeekOrderByCreatedAtDesc(currentWeek)
 			.stream()
@@ -68,11 +67,15 @@ public class BudgetCurrentWeekSavingsReapplyTestService {
 			.forEach(allocation -> allocation.setActualAmount(null));
 		planWeekAllocationRepository.saveAll(allocations);
 
+		LocalDate initialAllocationEndDate = resolveAllocationEndDate(userId, currentWeek);
+		budgetAllocationTriggerService.triggerHistorical(userId, monthStart, initialAllocationEndDate);
 		weeklyGoalSavingAccrualService.applyWeeklyAccrual(userId);
-		List<PlanWeekAllocation> preservedAllocations = snapshotAllocations(userId, monthStart, restoreRangeEnd);
 		LocalDate allocationEndDate = resolveAllocationEndDate(userId, currentWeek);
+		List<PlanWeekAllocation> preservedAllocations = snapshotAllocations(userId, monthStart, allocationEndDate);
+		List<Plan> temporarilyActivatedPlans = temporarilyActivateCompletedPlans(preservedAllocations);
 		budgetAllocationTriggerService.triggerHistorical(userId, monthStart, allocationEndDate);
-		restoreAllocations(userId, monthStart, restoreRangeEnd, preservedAllocations);
+		restoreCompletedStatuses(temporarilyActivatedPlans);
+		restoreAllocations(userId, monthStart, allocationEndDate, preservedAllocations);
 		return weeklySavingsDetailQueryService.getDetail(userId, formatYearWeek(today));
 	}
 
@@ -92,6 +95,28 @@ public class BudgetCurrentWeekSavingsReapplyTestService {
 			.max(LocalDate::compareTo)
 			.filter(endDate -> !endDate.isBefore(currentWeekEnd))
 			.orElse(currentWeekEnd);
+	}
+
+	private List<Plan> temporarilyActivateCompletedPlans(List<PlanWeekAllocation> preservedAllocations) {
+		List<Plan> completedPlans = preservedAllocations.stream()
+			.map(PlanWeekAllocation::getPlan)
+			.filter(Objects::nonNull)
+			.filter(plan -> plan.getStatus() == PlanStatus.COMPLETED)
+			.distinct()
+			.toList();
+		completedPlans.forEach(plan -> plan.setStatus(PlanStatus.ACTIVE));
+		if (!completedPlans.isEmpty()) {
+			planRepository.saveAll(completedPlans);
+		}
+		return completedPlans;
+	}
+
+	private void restoreCompletedStatuses(List<Plan> temporarilyActivatedPlans) {
+		if (temporarilyActivatedPlans == null || temporarilyActivatedPlans.isEmpty()) {
+			return;
+		}
+		temporarilyActivatedPlans.forEach(plan -> plan.setStatus(PlanStatus.COMPLETED));
+		planRepository.saveAll(temporarilyActivatedPlans);
 	}
 
 	private void restoreAllocations(
@@ -168,10 +193,6 @@ public class BudgetCurrentWeekSavingsReapplyTestService {
 				.note(allocation.getNote())
 				.build();
 		}
-		restoredAllocation.setBudgetWeek(restoredWeek);
-		restoredAllocation.setAllocationType(allocation.getAllocationType());
-		restoredAllocation.setPlannedAmount(allocation.getPlannedAmount());
-		restoredAllocation.setFinalAmount(allocation.getFinalAmount());
 		restoredAllocation.setActualAmount(allocation.getActualAmount());
 		restoredAllocation.setNote(allocation.getNote());
 		return restoredAllocation;
