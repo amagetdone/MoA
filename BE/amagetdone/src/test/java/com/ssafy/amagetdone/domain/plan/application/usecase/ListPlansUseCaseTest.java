@@ -111,6 +111,43 @@ class ListPlansUseCaseTest {
 		assertEquals(0, response.get(0).achievementRate().compareTo(new java.math.BigDecimal("99.9")));
 	}
 
+	@Test
+	void returnsActivePlansBeforeCompletedPlansWhenPriorityMatches() {
+		Plan completedPlan = instantiatePlan(
+			1,
+			"Completed fund",
+			1_000_000L,
+			1_000_000L,
+			1,
+			4,
+			LocalDate.now().minusDays(1),
+			PlanStatus.COMPLETED
+		);
+		Plan activePlan = instantiatePlan(
+			2,
+			"Travel fund",
+			280_000L,
+			350_000L,
+			1,
+			5,
+			LocalDate.now().plusDays(7),
+			PlanStatus.ACTIVE
+		);
+
+		given(planRepository.findAllByUserIdAndDeletedFalseAndStatusIn(
+			1,
+			List.of(PlanStatus.WAITING, PlanStatus.ACTIVE, PlanStatus.COMPLETED)
+		))
+			.willReturn(List.of(completedPlan, activePlan));
+
+		List<PlanListItemResponse> response = listPlansUseCase.execute(1);
+
+		assertEquals(2L, response.get(0).planId());
+		assertEquals("ACTIVE", response.get(0).status());
+		assertEquals(1L, response.get(1).planId());
+		assertEquals("COMPLETED", response.get(1).status());
+	}
+
 	private Plan instantiatePlan(
 		int id,
 		String title,
