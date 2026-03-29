@@ -1,8 +1,19 @@
 package com.ssafy.amagetdone.domain.account.api.dto;
 
+import java.time.LocalDate;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
+
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 
 public final class AccountAdminDto {
 
@@ -100,6 +111,112 @@ public final class AccountAdminDto {
 		List<String> createdTitles,
 		@Schema(description = "건너뛴 플랜 제목 목록")
 		List<String> skippedTitles
+	) {
+	}
+
+	@Schema(
+		name = "DemoPlanSeedRequest",
+		example = """
+			{
+			  "userId": 12,
+			  "plans": [
+			    {
+			      "title": "유럽 여행",
+			      "description": "유럽 배낭 여행을 위한 저축",
+			      "targetAmount": 1000000,
+			      "priority": 1,
+			      "status": "ACTIVE",
+			      "startDate": "2026-03-09",
+			      "endDate": "2026-04-26",
+			      "originalEndDate": "2026-04-26",
+			      "weeks": [
+			        { "weekNumber": 1, "plannedAmount": 125000, "actualAmount": 125000 },
+			        { "weekNumber": 2, "plannedAmount": 125000, "actualAmount": 125000 },
+			        { "weekNumber": 3, "plannedAmount": 125000, "actualAmount": 125000 },
+			        { "weekNumber": 4, "plannedAmount": 125000, "actualAmount": 62500 },
+			        { "weekNumber": 5, "plannedAmount": 125000, "actualAmount": 0 },
+			        { "weekNumber": 6, "plannedAmount": 125000, "actualAmount": 0 },
+			        { "weekNumber": 7, "plannedAmount": 125000, "actualAmount": 0 }
+			      ]
+			    }
+			  ]
+			}
+			"""
+	)
+	public record DemoPlanSeedRequest(
+		@Schema(description = "데모 플랜을 세팅할 사용자 ID", example = "12")
+		@NotNull Integer userId,
+		@Schema(description = "사용자의 기존 플랜/저축 이력을 덮어쓸 데모 플랜 목록")
+		@NotEmpty List<@Valid DemoPlanSeedPlanRequest> plans
+	) {
+	}
+
+	@Schema(name = "DemoPlanSeedPlanRequest")
+	public record DemoPlanSeedPlanRequest(
+		@NotBlank String title,
+		String description,
+		@NotNull @Positive Long targetAmount,
+		@NotNull @Positive Integer priority,
+		@NotNull PlanStatus status,
+		@NotNull LocalDate startDate,
+		@NotNull LocalDate endDate,
+		LocalDate originalEndDate,
+		@NotEmpty List<@Valid DemoPlanSeedWeekRequest> weeks
+	) {
+
+		@JsonIgnore
+		@Schema(hidden = true)
+		@AssertTrue(message = "startDate must be on or before endDate")
+		public boolean isDateRangeValid() {
+			if (startDate == null || endDate == null) {
+				return true;
+			}
+			return !startDate.isAfter(endDate);
+		}
+
+		@JsonIgnore
+		@Schema(hidden = true)
+		@AssertTrue(message = "originalEndDate must be on or before endDate")
+		public boolean isOriginalEndDateValid() {
+			if (originalEndDate == null || endDate == null) {
+				return true;
+			}
+			return !originalEndDate.isAfter(endDate);
+		}
+	}
+
+	@Schema(name = "DemoPlanSeedWeekRequest")
+	public record DemoPlanSeedWeekRequest(
+		@NotNull @Positive Integer weekNumber,
+		@NotNull @PositiveOrZero Long plannedAmount,
+		@PositiveOrZero Long finalAmount,
+		@NotNull @PositiveOrZero Long actualAmount
+	) {
+	}
+
+	@Schema(name = "DemoPlanSeedResponse")
+	public record DemoPlanSeedResponse(
+		String targetType,
+		Integer userId,
+		int replacedPlanCount,
+		int seededPlanCount,
+		int seededWeekCount,
+		long seededActualAmount,
+		List<DemoPlanSeedPlanResult> plans
+	) {
+	}
+
+	@Schema(name = "DemoPlanSeedPlanResult")
+	public record DemoPlanSeedPlanResult(
+		Integer planId,
+		String title,
+		PlanStatus status,
+		Long savedAmount,
+		Long targetAmount,
+		LocalDate startDate,
+		LocalDate endDate,
+		LocalDate originalEndDate,
+		int totalWeeks
 	) {
 	}
 
