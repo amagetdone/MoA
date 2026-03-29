@@ -99,6 +99,9 @@ class BudgetAllocationServiceTest {
 			.thenReturn(java.util.Optional.empty());
 		Mockito.lenient().when(essentialWeekAllocationRepository.findByBudgetWeek(any(BudgetWeek.class))).thenReturn(List.of());
 		Mockito.lenient().when(planWeekAllocationRepository.findByBudgetWeek(any(BudgetWeek.class))).thenReturn(List.of());
+		Mockito.lenient().when(
+			planWeekAllocationRepository.findAllByPlanIdInAndBudgetWeekWeekStartDateBefore(anyList(), any(LocalDate.class))
+		).thenReturn(List.of());
 		Mockito.lenient().when(budgetMonthRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 		Mockito.lenient().when(budgetWeekRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 	}
@@ -411,6 +414,92 @@ class BudgetAllocationServiceTest {
 		Mockito.verify(budgetAdjustmentRepository).deleteAll(List.of(obsoleteAdjustment));
 	}
 
+	@Test
+	void allocateBudgetUsesExistingPriorWeeksAsBaseWhenReallocatingCurrentMonthSegment() {
+		User user = user(1);
+		LocalDate historicalStartDate = LocalDate.of(2025, 12, 30);
+		LocalDate historicalEndDate = LocalDate.of(2026, 3, 29);
+		LocalDate currentMonthStartDate = LocalDate.of(2026, 3, 2);
+		LocalDate currentMonthEndDate = LocalDate.of(2026, 4, 5);
+
+		BudgetMonth decemberMonth = budgetMonth(user, LocalDate.of(2025, 12, 1));
+		BudgetMonth januaryMonth = budgetMonth(user, LocalDate.of(2026, 1, 1));
+		BudgetMonth februaryMonth = budgetMonth(user, LocalDate.of(2026, 2, 1));
+		BudgetMonth marchMonth = budgetMonth(user, LocalDate.of(2026, 3, 1));
+		BudgetMonth aprilMonth = budgetMonth(user, LocalDate.of(2026, 4, 1));
+		Plan macbookPlan = Plan.builder()
+			.id(53)
+			.user(user)
+			.title("맥북 프로 구매")
+			.description("맥북 프로 구매")
+			.targetAmount(900_000L)
+			.savedAmount(0L)
+			.startDate(LocalDate.of(2025, 12, 30))
+			.endDate(LocalDate.of(2026, 3, 30))
+			.targetWeeks(13)
+			.priority(1)
+			.autoAllocateEnabled(true)
+			.build();
+
+		Mockito.lenient().when(budgetMonthRepository.findFirstByUserAndBaseDateOrderByIdDesc(eq(user), eq(LocalDate.of(2025, 12, 1))))
+			.thenReturn(java.util.Optional.of(decemberMonth));
+		Mockito.lenient().when(budgetMonthRepository.findFirstByUserAndBaseDateOrderByIdDesc(eq(user), eq(LocalDate.of(2026, 1, 1))))
+			.thenReturn(java.util.Optional.of(januaryMonth));
+		Mockito.lenient().when(budgetMonthRepository.findFirstByUserAndBaseDateOrderByIdDesc(eq(user), eq(LocalDate.of(2026, 2, 1))))
+			.thenReturn(java.util.Optional.of(februaryMonth));
+		Mockito.lenient().when(budgetMonthRepository.findFirstByUserAndBaseDateOrderByIdDesc(eq(user), eq(LocalDate.of(2026, 3, 1))))
+			.thenReturn(java.util.Optional.of(marchMonth));
+		Mockito.lenient().when(budgetMonthRepository.findFirstByUserAndBaseDateOrderByIdDesc(eq(user), eq(LocalDate.of(2026, 4, 1))))
+			.thenReturn(java.util.Optional.of(aprilMonth));
+
+		BudgetAllocationService.AllocationResult historicalResult = budgetAllocationService.allocateBudget(
+			user,
+			historicalStartDate,
+			10_000_000L,
+			List.of(),
+			List.of(macbookPlan),
+			historicalEndDate
+		);
+
+		List<PlanWeekAllocation> priorAllocations = historicalResult.planAllocations().stream()
+			.filter(allocation -> allocation.getBudgetWeek().getWeekStartDate().isBefore(currentMonthStartDate))
+			.toList();
+		Mockito.when(
+			planWeekAllocationRepository.findAllByPlanIdInAndBudgetWeekWeekStartDateBefore(
+				eq(List.of(53)),
+				eq(currentMonthStartDate)
+			)
+		).thenReturn(priorAllocations);
+
+		BudgetAllocationService.AllocationResult currentMonthResult = budgetAllocationService.allocateBudget(
+			user,
+			currentMonthStartDate,
+			10_000_000L,
+			List.of(),
+			List.of(macbookPlan),
+			currentMonthEndDate
+		);
+
+		long combinedFinalAmount = priorAllocations.stream()
+			.mapToLong(PlanWeekAllocation::getFinalAmount)
+			.sum()
+			+ currentMonthResult.planAllocations().stream().mapToLong(PlanWeekAllocation::getFinalAmount).sum();
+
+		assertEquals(900_000L, combinedFinalAmount);
+		assertEquals(
+			286_812L,
+			currentMonthResult.planAllocations().stream().mapToLong(PlanWeekAllocation::getFinalAmount).sum()
+		);
+		assertEquals(
+			69_230L,
+			findAllocationByStartDate(currentMonthResult.planAllocations(), LocalDate.of(2026, 3, 23)).getFinalAmount()
+		);
+		assertEquals(
+			9_890L,
+			findAllocationByStartDate(currentMonthResult.planAllocations(), LocalDate.of(2026, 3, 30)).getFinalAmount()
+		);
+	}
+
 	private User user(int userId) {
 		User user = User.createPendingSocialUser();
 		ReflectionTestUtils.setField(user, "id", userId);
@@ -504,5 +593,12 @@ class BudgetAllocationServiceTest {
 			.partial(true)
 			.status(com.ssafy.amagetdone.domain.budget.model.vo.BudgetWeekStatus.PLANNED)
 			.build();
+	}
+
+	private PlanWeekAllocation findAllocationByStartDate(List<PlanWeekAllocation> allocations, LocalDate startDate) {
+		return allocations.stream()
+			.filter(allocation -> allocation.getBudgetWeek().getWeekStartDate().equals(startDate))
+			.findFirst()
+			.orElseThrow();
 	}
 }

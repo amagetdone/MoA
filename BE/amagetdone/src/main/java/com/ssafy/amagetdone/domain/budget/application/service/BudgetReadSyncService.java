@@ -18,6 +18,7 @@ import com.ssafy.amagetdone.domain.transaction.application.service.TransactionSy
 import com.ssafy.amagetdone.domain.transaction.application.usecase.RunTransactionAnalysisUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.SyncLatestTransactionsUseCase;
 
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
@@ -40,6 +41,7 @@ public class BudgetReadSyncService {
 	private final PlanRepository planRepository;
 	private final PlanWeekAllocationRepository planWeekAllocationRepository;
 	private final Clock clock;
+	private final EntityManager entityManager;
 
 	public void sync(Integer userId) {
 		LocalDate today = LocalDate.now(clock);
@@ -50,6 +52,7 @@ public class BudgetReadSyncService {
 		TransactionSyncService.SyncResult syncResult = syncLatestTransactionsUseCase.execute(userId, READ_SYNC_MONTHS, false);
 		if (!hasNewTransactions(syncResult)) {
 			applyDailyGoalSavingAccrualUseCase.execute(userId);
+			flushAndClear();
 			return;
 		}
 
@@ -62,6 +65,7 @@ public class BudgetReadSyncService {
 		applyDailyGoalSavingAccrualUseCase.execute(userId);
 
 		restoreCurrentWeekFreeAmount(userId, today, preservedFinalFreeAmount);
+		flushAndClear();
 	}
 
 	private Long preserveCurrentWeekFreeAmount(Integer userId, LocalDate today) {
@@ -109,5 +113,10 @@ public class BudgetReadSyncService {
 	private boolean hasNewTransactions(TransactionSyncService.SyncResult syncResult) {
 		return syncResult != null
 			&& (syncResult.insertedAccountCount() > 0 || syncResult.insertedCardCount() > 0);
+	}
+
+	private void flushAndClear() {
+		entityManager.flush();
+		entityManager.clear();
 	}
 }

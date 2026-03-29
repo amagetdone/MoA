@@ -525,15 +525,18 @@ public class BudgetAllocationService {
 		}
 
 		Map<Plan, PlanShortageSummary> shortageSummaries = new LinkedHashMap<>();
+		Map<Integer, PriorPlanAllocationState> priorAllocationStates = loadPriorPlanAllocationStates(activePlans, serviceStartDate);
 
 		for (Plan plan : activePlans) {
 			long targetAmount = normalizeAmount(plan.getTargetAmount());
+			long totalPlanDays = (long)plan.getTargetWeeks() * 7L;
 			long baseWeeklyAmount = calculateBaseWeeklyAmount(targetAmount, plan.getTargetWeeks());
 			if (baseWeeklyAmount <= 0L) {
 				continue;
 			}
 
-			LocalDate planStartDate = maxDate(serviceStartDate, defaultDate(plan.getStartDate(), serviceStartDate));
+			LocalDate originalPlanStartDate = defaultDate(plan.getStartDate(), serviceStartDate);
+			LocalDate planStartDate = maxDate(serviceStartDate, originalPlanStartDate);
 			LocalDate planEndDate = minDate(allocationEndDate, plan.getEndDate());
 			if (planEndDate.isBefore(planStartDate)) {
 				continue;
@@ -544,7 +547,21 @@ public class BudgetAllocationService {
 				continue;
 			}
 
-			Map<LocalDate, Long> distributedAmounts = distributeByDenominator(targetAmount, (long) plan.getTargetWeeks() * 7L, slices);
+			long elapsedDaysBeforeSegment = elapsedPlanDays(originalPlanStartDate, plan.getEndDate(), planStartDate.minusDays(1L));
+			long remainingPlanDays = Math.max(totalPlanDays - elapsedDaysBeforeSegment, 0L);
+			if (remainingPlanDays <= 0L) {
+				continue;
+			}
+
+			PriorPlanAllocationState priorAllocationState = priorAllocationStates.getOrDefault(
+				plan.getId(),
+				PriorPlanAllocationState.EMPTY
+			);
+			long allocatedBeforeSegment = priorAllocationState.exists()
+				? Math.min(priorAllocationState.finalAmount(), targetAmount)
+				: proratedAmount(targetAmount, totalPlanDays, elapsedDaysBeforeSegment);
+			long remainingAmount = Math.max(targetAmount - allocatedBeforeSegment, 0L);
+			Map<LocalDate, Long> distributedAmounts = distributeByDenominator(remainingAmount, remainingPlanDays, slices);
 			shortageSummaries.put(plan, new PlanShortageSummary(plan, baseWeeklyAmount, 0L, 0));
 
 			for (Map.Entry<LocalDate, Long> entry : distributedAmounts.entrySet()) {
@@ -569,6 +586,30 @@ public class BudgetAllocationService {
 		}
 
 		return new PlanAllocationBundle(allocationsByWeekStartDate, shortageSummaries);
+	}
+
+	private Map<Integer, PriorPlanAllocationState> loadPriorPlanAllocationStates(List<Plan> activePlans, LocalDate serviceStartDate) {
+		List<Integer> planIds = activePlans.stream()
+			.map(Plan::getId)
+			.filter(Objects::nonNull)
+			.toList();
+		if (planIds.isEmpty()) {
+			return Map.of();
+		}
+
+		Map<Integer, PriorPlanAllocationState> priorStatesByPlanId = new HashMap<>();
+		for (PlanWeekAllocation allocation : planWeekAllocationRepository
+			.findAllByPlanIdInAndBudgetWeekWeekStartDateBefore(planIds, serviceStartDate)) {
+			if (allocation.getPlan() == null || allocation.getPlan().getId() == null) {
+				continue;
+			}
+			priorStatesByPlanId.merge(
+				allocation.getPlan().getId(),
+				new PriorPlanAllocationState(normalizeAmount(allocation.getFinalAmount()), true),
+				(left, right) -> new PriorPlanAllocationState(left.finalAmount() + right.finalAmount(), true)
+			);
+		}
+		return priorStatesByPlanId;
 	}
 
 	private void applyShortageAdjustments(
@@ -779,6 +820,25 @@ public class BudgetAllocationService {
 		return remainingAmount / targetWeeks;
 	}
 
+	private long elapsedPlanDays(LocalDate planStartDate, LocalDate planEndDate, LocalDate targetDate) {
+		if (planStartDate == null || planEndDate == null || targetDate == null || targetDate.isBefore(planStartDate)) {
+			return 0L;
+		}
+		LocalDate effectiveEndDate = minDate(targetDate, planEndDate);
+		if (effectiveEndDate.isBefore(planStartDate)) {
+			return 0L;
+		}
+		return ChronoUnit.DAYS.between(planStartDate, effectiveEndDate) + 1L;
+	}
+
+	private long proratedAmount(long totalAmount, long denominator, long numerator) {
+		if (totalAmount <= 0L || denominator <= 0L || numerator <= 0L) {
+			return 0L;
+		}
+		long cappedNumerator = Math.min(numerator, denominator);
+		return (totalAmount * cappedNumerator + (denominator / 2L)) / denominator;
+	}
+
 	private ExpenseScope parseExpenseScope(String expenseScope) {
 		if (expenseScope == null || expenseScope.isBlank()) {
 			return ExpenseScope.VARIABLE;
@@ -855,6 +915,10 @@ public class BudgetAllocationService {
 		long floorAmount,
 		long remainder
 	) {
+	}
+
+	private record PriorPlanAllocationState(long finalAmount, boolean exists) {
+		private static final PriorPlanAllocationState EMPTY = new PriorPlanAllocationState(0L, false);
 	}
 
 	private record MonthlyEssentialTotal(long fixedAmount, long variableAmount) {

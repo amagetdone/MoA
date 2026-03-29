@@ -1,5 +1,7 @@
 package com.ssafy.amagetdone.domain.plan.model.repository;
 
+import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
@@ -23,6 +25,11 @@ public interface PlanWeekAllocationRepository extends JpaRepository<PlanWeekAllo
 	List<PlanWeekAllocation> findAllByBudgetWeekIn(List<BudgetWeek> budgetWeeks);
 
 	List<PlanWeekAllocation> findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(Integer planId);
+
+	List<PlanWeekAllocation> findAllByPlanIdInAndBudgetWeekWeekStartDateBefore(
+		Collection<Integer> planIds,
+		LocalDate weekStartDate
+	);
 
 	void deleteByPlanUserId(Integer userId);
 }

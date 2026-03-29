@@ -32,6 +32,7 @@ import com.ssafy.amagetdone.domain.transaction.application.service.TransactionSy
 import com.ssafy.amagetdone.domain.transaction.application.usecase.RunTransactionAnalysisUseCase;
 import com.ssafy.amagetdone.domain.transaction.application.usecase.SyncLatestTransactionsUseCase;
 
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -70,6 +71,9 @@ class SyncBudgetStateOnReadUseCaseTest {
 	@Mock
 	private PlanWeekAllocationRepository planWeekAllocationRepository;
 
+	@Mock
+	private EntityManager entityManager;
+
 	private SyncBudgetStateOnReadUseCase useCase;
 
 	@BeforeEach
@@ -85,7 +89,8 @@ class SyncBudgetStateOnReadUseCaseTest {
 			budgetWeekRepository,
 			planRepository,
 			planWeekAllocationRepository,
-			clock
+			clock,
+			entityManager
 		);
 		useCase = new SyncBudgetStateOnReadUseCase(service);
 	}
