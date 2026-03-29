@@ -1,7 +1,6 @@
 package com.ssafy.amagetdone.domain.budget.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.times;
@@ -27,7 +26,6 @@ import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
-import com.ssafy.amagetdone.domain.budget.application.usecase.TriggerBudgetAllocationUseCase;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,133 +54,21 @@ class BudgetCurrentWeekSavingsReapplyTestServiceTest {
 	private WeeklyGoalSavingAccrualService weeklyGoalSavingAccrualService;
 
 	@Mock
-	private TriggerBudgetAllocationUseCase triggerBudgetAllocationUseCase;
+	private BudgetAllocationTriggerService budgetAllocationTriggerService;
 
 	@Mock
 	private WeeklySavingsDetailQueryService weeklySavingsDetailQueryService;
 
 	@Test
-	void reapplyCurrentWeekSavingsRemovesAutoAdjustmentsThenRunsWeeklyAccrualAgain() {
+	void reapplyCurrentWeekSavingsRemovesAutoAdjustmentsThenRunsHistoricalAllocation() {
 		User user = user(1);
 		BudgetWeek currentWeek = budgetWeek(user, 101, LocalDate.of(2026, 3, 23), LocalDate.of(2026, 3, 29));
-		Plan activePlan = plan(user, 11, "제주도 여행 경비 모으기", PlanStatus.ACTIVE);
-		Plan completedPlan = plan(user, 12, "블루투스 이어폰 구매하기", PlanStatus.COMPLETED);
-		PlanWeekAllocation activeAllocation = PlanWeekAllocation.builder()
-			.plan(activePlan)
-			.budgetWeek(currentWeek)
-			.plannedAmount(70_000L)
-			.finalAmount(70_000L)
-			.actualAmount(70_000L)
-			.build();
-		PlanWeekAllocation completedAllocation = PlanWeekAllocation.builder()
-			.plan(completedPlan)
-			.budgetWeek(currentWeek)
-			.plannedAmount(80_000L)
-			.finalAmount(80_000L)
-			.actualAmount(80_000L)
-			.build();
-		BudgetAdjustment autoAdd = BudgetAdjustment.builder()
-			.budgetWeek(currentWeek)
-			.plan(activePlan)
-			.adjustmentType(BudgetAdjustmentType.PLAN_SAVED_AUTO_ADD)
-			.adjustmentAmount(70_000L)
-			.reason("Weekly goal saving accrual applied")
-			.build();
-		BudgetAdjustment autoSubtract = BudgetAdjustment.builder()
-			.budgetWeek(currentWeek)
-			.plan(completedPlan)
-			.adjustmentType(BudgetAdjustmentType.PLAN_SAVED_AUTO_SUBTRACT)
-			.adjustmentAmount(10_000L)
-			.reason("Automatic daily goal saving accrual reconciled")
-			.build();
-		WeeklySavingsDetailDto.Response detail = WeeklySavingsDetailDto.Response.of(
-			"2026-W13",
-			LocalDate.of(2026, 3, 23),
-			LocalDate.of(2026, 3, 29),
-			180_000L,
-			150_000L,
-			List.of()
-		);
-		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
-			1,
-			LocalDate.of(2026, 3, 29),
-			LocalDate.of(2026, 3, 29)
-		)).willReturn(Optional.of(currentWeek));
-		given(planWeekAllocationRepository.findByBudgetWeek(currentWeek)).willReturn(List.of(activeAllocation, completedAllocation));
-		given(budgetAdjustmentRepository.findByBudgetWeekOrderByCreatedAtDesc(currentWeek)).willReturn(List.of(autoAdd, autoSubtract));
-		given(weeklySavingsDetailQueryService.getDetail(1, "2026-W13")).willReturn(detail);
-
-		BudgetCurrentWeekSavingsReapplyTestService service = new BudgetCurrentWeekSavingsReapplyTestService(
-			budgetWeekRepository,
-			planWeekAllocationRepository,
-			budgetAdjustmentRepository,
-			planRepository,
-			weeklyGoalSavingAccrualService,
-			triggerBudgetAllocationUseCase,
-			weeklySavingsDetailQueryService,
-			Clock.fixed(Instant.parse("2026-03-29T00:00:00Z"), ZoneId.of("Asia/Seoul"))
-		);
-
-		WeeklySavingsDetailDto.Response actual = service.reapplyCurrentWeekSavings(1);
-
-		assertThat(actual).isSameAs(detail);
-		assertThat(activeAllocation.getActualAmount()).isNull();
-		assertThat(completedAllocation.getActualAmount()).isEqualTo(80_000L);
-		verify(planRepository).adjustSavedAmount(11, -70_000L);
-		verify(planRepository).adjustSavedAmount(12, 10_000L);
-		verify(budgetAdjustmentRepository).deleteAll(List.of(autoAdd, autoSubtract));
-		verify(planWeekAllocationRepository).saveAll(List.of(activeAllocation, completedAllocation));
-		verify(weeklyGoalSavingAccrualService).applyWeeklyAccrual(1);
-		verify(triggerBudgetAllocationUseCase).execute(1);
-
-		InOrder inOrder = inOrder(
-			planRepository,
-			budgetAdjustmentRepository,
-			planWeekAllocationRepository,
-			weeklyGoalSavingAccrualService,
-			triggerBudgetAllocationUseCase,
-			weeklySavingsDetailQueryService
-		);
-		inOrder.verify(planRepository).adjustSavedAmount(11, -70_000L);
-		inOrder.verify(planRepository).adjustSavedAmount(12, 10_000L);
-		inOrder.verify(budgetAdjustmentRepository).deleteAll(List.of(autoAdd, autoSubtract));
-		inOrder.verify(planWeekAllocationRepository).saveAll(List.of(activeAllocation, completedAllocation));
-		inOrder.verify(weeklyGoalSavingAccrualService).applyWeeklyAccrual(1);
-		inOrder.verify(triggerBudgetAllocationUseCase).execute(1);
-		inOrder.verify(weeklySavingsDetailQueryService).getDetail(1, "2026-W13");
-	}
-
-	@Test
-	void reapplyCurrentWeekSavingsRestoresCompletedPlanAllocationsRemovedByReallocation() {
-		User user = user(1);
-		BudgetWeek week1 = budgetWeek(user, 91, LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 8));
-		BudgetWeek week2 = budgetWeek(user, 92, LocalDate.of(2026, 3, 9), LocalDate.of(2026, 3, 15));
-		BudgetWeek week3 = budgetWeek(user, 93, LocalDate.of(2026, 3, 16), LocalDate.of(2026, 3, 22));
-		BudgetWeek currentWeek = budgetWeek(user, 94, LocalDate.of(2026, 3, 23), LocalDate.of(2026, 3, 29));
-		List<BudgetWeek> beforeTriggerWeeks = List.of(week1, week2, week3, currentWeek);
-
-		BudgetWeek rebuiltWeek1 = budgetWeek(user, 191, LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 8));
-		BudgetWeek rebuiltWeek2 = budgetWeek(user, 192, LocalDate.of(2026, 3, 9), LocalDate.of(2026, 3, 15));
-		BudgetWeek rebuiltWeek3 = budgetWeek(user, 193, LocalDate.of(2026, 3, 16), LocalDate.of(2026, 3, 22));
-		BudgetWeek rebuiltCurrentWeek = budgetWeek(user, 194, LocalDate.of(2026, 3, 23), LocalDate.of(2026, 3, 29));
-		List<BudgetWeek> afterTriggerWeeks = List.of(rebuiltWeek1, rebuiltWeek2, rebuiltWeek3, rebuiltCurrentWeek);
-
-		Plan successPlan = plan(user, 11, "제주도 여행 경비 모으기", PlanStatus.ACTIVE);
-		Plan completedPlan = plan(user, 12, "블루투스 이어폰 구매하기", PlanStatus.COMPLETED);
-
-		PlanWeekAllocation activeCurrentAllocation = allocation(successPlan, currentWeek, 70_000L, 70_000L, 70_000L, "active-current");
-		PlanWeekAllocation completedAllocation1 = allocation(completedPlan, week1, 80_000L, 80_000L, 80_000L, "completed-1");
-		PlanWeekAllocation completedAllocation2 = allocation(completedPlan, week2, 80_000L, 80_000L, 80_000L, "completed-2");
-		PlanWeekAllocation completedAllocation3 = allocation(completedPlan, week3, 80_000L, 80_000L, 80_000L, "completed-3");
-		PlanWeekAllocation completedAllocation4 = allocation(completedPlan, currentWeek, 80_000L, 80_000L, 80_000L, "completed-4");
-
-		BudgetAdjustment autoAdd = BudgetAdjustment.builder()
-			.budgetWeek(currentWeek)
-			.plan(successPlan)
-			.adjustmentType(BudgetAdjustmentType.PLAN_SAVED_AUTO_ADD)
-			.adjustmentAmount(70_000L)
-			.reason("Weekly goal saving accrual applied")
-			.build();
+		Plan activePlan = plan(user, 11, "제주도 여행 경비 모으기", PlanStatus.ACTIVE, LocalDate.of(2026, 3, 29));
+		Plan completedPlan = plan(user, 12, "블루투스 이어폰 구매하기", PlanStatus.COMPLETED, LocalDate.of(2026, 3, 29));
+		PlanWeekAllocation activeAllocation = allocation(activePlan, currentWeek, 70_000L, 70_000L, 70_000L, "active-current");
+		PlanWeekAllocation completedAllocation = allocation(completedPlan, currentWeek, 80_000L, 80_000L, 80_000L, "completed-current");
+		BudgetAdjustment autoAdd = autoAdjustment(currentWeek, activePlan, BudgetAdjustmentType.PLAN_SAVED_AUTO_ADD, 70_000L);
+		BudgetAdjustment autoSubtract = autoAdjustment(currentWeek, completedPlan, BudgetAdjustmentType.PLAN_SAVED_AUTO_SUBTRACT, 10_000L);
 		WeeklySavingsDetailDto.Response detail = WeeklySavingsDetailDto.Response.of(
 			"2026-W13",
 			LocalDate.of(2026, 3, 23),
@@ -200,20 +86,13 @@ class BudgetCurrentWeekSavingsReapplyTestServiceTest {
 		given(budgetWeekRepository.findAllByUserIdAndWeekEndDateGreaterThanEqualAndWeekStartDateLessThanEqualOrderByWeekStartDateAscIdDesc(
 			1,
 			LocalDate.of(2026, 3, 1),
-			LocalDate.of(2026, 3, 31)
-		)).willReturn(beforeTriggerWeeks, afterTriggerWeeks);
-		given(planWeekAllocationRepository.findByBudgetWeek(currentWeek)).willReturn(List.of(activeCurrentAllocation, completedAllocation4));
-		given(planWeekAllocationRepository.findAllByBudgetWeekIn(beforeTriggerWeeks)).willReturn(List.of(
-			activeCurrentAllocation,
-			completedAllocation1,
-			completedAllocation2,
-			completedAllocation3,
-			completedAllocation4
-		));
-		given(planWeekAllocationRepository.findAllByBudgetWeekIn(afterTriggerWeeks)).willReturn(List.of(
-			allocation(successPlan, rebuiltCurrentWeek, 70_000L, 70_000L, 70_000L, "rebuilt-active-current")
-		));
-		given(budgetAdjustmentRepository.findByBudgetWeekOrderByCreatedAtDesc(currentWeek)).willReturn(List.of(autoAdd));
+			LocalDate.of(2026, 3, 29)
+		)).willReturn(List.of(currentWeek), List.of(currentWeek));
+		given(planWeekAllocationRepository.findByBudgetWeek(currentWeek)).willReturn(List.of(activeAllocation, completedAllocation));
+		given(planWeekAllocationRepository.findAllByBudgetWeekIn(List.of(currentWeek)))
+			.willReturn(List.of(activeAllocation, completedAllocation), List.of(activeAllocation, completedAllocation));
+		given(budgetAdjustmentRepository.findByBudgetWeekOrderByCreatedAtDesc(currentWeek)).willReturn(List.of(autoAdd, autoSubtract));
+		given(planRepository.findAllByUserIdAndDeletedFalse(1)).willReturn(List.of(activePlan, completedPlan));
 		given(weeklySavingsDetailQueryService.getDetail(1, "2026-W13")).willReturn(detail);
 
 		BudgetCurrentWeekSavingsReapplyTestService service = new BudgetCurrentWeekSavingsReapplyTestService(
@@ -222,39 +101,166 @@ class BudgetCurrentWeekSavingsReapplyTestServiceTest {
 			budgetAdjustmentRepository,
 			planRepository,
 			weeklyGoalSavingAccrualService,
-			triggerBudgetAllocationUseCase,
+			budgetAllocationTriggerService,
 			weeklySavingsDetailQueryService,
 			Clock.fixed(Instant.parse("2026-03-29T00:00:00Z"), ZoneId.of("Asia/Seoul"))
 		);
 
+		WeeklySavingsDetailDto.Response actual = service.reapplyCurrentWeekSavings(1);
+
+		assertThat(actual).isSameAs(detail);
+		assertThat(activeAllocation.getActualAmount()).isNull();
+		assertThat(completedAllocation.getActualAmount()).isEqualTo(80_000L);
+		verify(planRepository).adjustSavedAmount(11, -70_000L);
+		verify(planRepository).adjustSavedAmount(12, 10_000L);
+		verify(budgetAdjustmentRepository).deleteAll(List.of(autoAdd, autoSubtract));
+		verify(weeklyGoalSavingAccrualService).applyWeeklyAccrual(1);
+		verify(budgetAllocationTriggerService).triggerHistorical(1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 29));
+
+		InOrder inOrder = inOrder(
+			planRepository,
+			budgetAdjustmentRepository,
+			planWeekAllocationRepository,
+			weeklyGoalSavingAccrualService,
+			budgetAllocationTriggerService,
+			weeklySavingsDetailQueryService
+		);
+		inOrder.verify(planRepository).adjustSavedAmount(11, -70_000L);
+		inOrder.verify(planRepository).adjustSavedAmount(12, 10_000L);
+		inOrder.verify(budgetAdjustmentRepository).deleteAll(List.of(autoAdd, autoSubtract));
+		inOrder.verify(planWeekAllocationRepository).saveAll(List.of(activeAllocation, completedAllocation));
+		inOrder.verify(weeklyGoalSavingAccrualService).applyWeeklyAccrual(1);
+		inOrder.verify(budgetAllocationTriggerService).triggerHistorical(1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 29));
+		inOrder.verify(weeklySavingsDetailQueryService).getDetail(1, "2026-W13");
+	}
+
+	@Test
+	void reapplyCurrentWeekSavingsRestoresGoalStoryAndAllocatesThroughExtendedEndDate() {
+		User user = user(1);
+		BudgetWeek week1 = budgetWeek(user, 91, LocalDate.of(2026, 3, 9), LocalDate.of(2026, 3, 15));
+		BudgetWeek week2 = budgetWeek(user, 92, LocalDate.of(2026, 3, 16), LocalDate.of(2026, 3, 22));
+		BudgetWeek week3 = budgetWeek(user, 93, LocalDate.of(2026, 3, 23), LocalDate.of(2026, 3, 29));
+		BudgetWeek currentWeek = budgetWeek(user, 94, LocalDate.of(2026, 3, 30), LocalDate.of(2026, 4, 5));
+		List<BudgetWeek> beforeTriggerWeeks = List.of(week1, week2, week3, currentWeek);
+
+		BudgetWeek rebuiltWeek1 = budgetWeek(user, 191, LocalDate.of(2026, 3, 9), LocalDate.of(2026, 3, 15));
+		BudgetWeek rebuiltWeek2 = budgetWeek(user, 192, LocalDate.of(2026, 3, 16), LocalDate.of(2026, 3, 22));
+		BudgetWeek rebuiltWeek3 = budgetWeek(user, 193, LocalDate.of(2026, 3, 23), LocalDate.of(2026, 3, 29));
+		BudgetWeek rebuiltCurrentWeek = budgetWeek(user, 194, LocalDate.of(2026, 3, 30), LocalDate.of(2026, 4, 5));
+		List<BudgetWeek> afterTriggerWeeks = List.of(rebuiltWeek1, rebuiltWeek2, rebuiltWeek3, rebuiltCurrentWeek);
+
+		Plan completedPlan = plan(user, 14, "블루투스 이어폰 구매하기", PlanStatus.COMPLETED, LocalDate.of(2026, 4, 5));
+		Plan successPlan = plan(user, 11, "제주도 여행 경비 모으기", PlanStatus.ACTIVE, LocalDate.of(2026, 4, 12));
+		Plan partialPlan = plan(user, 12, "노트북 교체 자금 모으기", PlanStatus.ACTIVE, LocalDate.of(2026, 4, 12));
+		Plan failedPlan = plan(user, 13, "자격증 응시료 모으기", PlanStatus.ACTIVE, LocalDate.of(2026, 4, 12));
+
+		List<PlanWeekAllocation> beforeAllocations = List.of(
+			allocation(completedPlan, week1, 80_000L, 80_000L, 80_000L, "completed-1"),
+			allocation(completedPlan, week2, 80_000L, 80_000L, 80_000L, "completed-2"),
+			allocation(completedPlan, week3, 80_000L, 80_000L, 80_000L, "completed-3"),
+			allocation(completedPlan, currentWeek, 80_000L, 80_000L, 80_000L, "completed-4"),
+			allocation(successPlan, week1, 70_000L, 70_000L, 70_000L, "success-1"),
+			allocation(successPlan, week2, 70_000L, 70_000L, 70_000L, "success-2"),
+			allocation(successPlan, week3, 70_000L, 70_000L, 70_000L, "success-3"),
+			allocation(successPlan, currentWeek, 70_000L, 70_000L, 70_000L, "success-4"),
+			allocation(partialPlan, week1, 100_000L, 100_000L, 100_000L, "partial-1"),
+			allocation(partialPlan, week2, 100_000L, 100_000L, 100_000L, "partial-2"),
+			allocation(partialPlan, week3, 100_000L, 100_000L, 100_000L, "partial-3"),
+			allocation(partialPlan, currentWeek, 100_000L, 100_000L, 50_000L, "partial-4"),
+			allocation(failedPlan, week1, 30_000L, 30_000L, 30_000L, "failed-1"),
+			allocation(failedPlan, week2, 30_000L, 30_000L, 30_000L, "failed-2"),
+			allocation(failedPlan, week3, 30_000L, 30_000L, 30_000L, "failed-3"),
+			allocation(failedPlan, currentWeek, 30_000L, 30_000L, 0L, "failed-4")
+		);
+		List<PlanWeekAllocation> afterTriggerAllocations = List.of(
+			allocation(successPlan, rebuiltWeek1, 50_000L, 50_000L, 50_000L, "rebuilt-success-1"),
+			allocation(successPlan, rebuiltWeek2, 50_000L, 50_000L, 50_000L, "rebuilt-success-2"),
+			allocation(successPlan, rebuiltWeek3, 50_000L, 50_000L, 50_000L, "rebuilt-success-3"),
+			allocation(successPlan, rebuiltCurrentWeek, 50_000L, 50_000L, 50_000L, "rebuilt-success-4"),
+			allocation(partialPlan, rebuiltCurrentWeek, 80_000L, 80_000L, 50_000L, "rebuilt-partial-4"),
+			allocation(failedPlan, rebuiltCurrentWeek, 24_000L, 24_000L, 0L, "rebuilt-failed-4")
+		);
+		BudgetAdjustment partialAutoAdd = autoAdjustment(currentWeek, partialPlan, BudgetAdjustmentType.PLAN_SAVED_AUTO_ADD, 50_000L);
+		BudgetAdjustment successAutoAdd = autoAdjustment(currentWeek, successPlan, BudgetAdjustmentType.PLAN_SAVED_AUTO_ADD, 70_000L);
+		WeeklySavingsDetailDto.Response detail = WeeklySavingsDetailDto.Response.of(
+			"2026-W14",
+			LocalDate.of(2026, 3, 30),
+			LocalDate.of(2026, 4, 5),
+			180_000L,
+			150_000L,
+			List.of()
+		);
+
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			1,
+			LocalDate.of(2026, 3, 30),
+			LocalDate.of(2026, 3, 30)
+		)).willReturn(Optional.of(currentWeek));
+		given(budgetWeekRepository.findAllByUserIdAndWeekEndDateGreaterThanEqualAndWeekStartDateLessThanEqualOrderByWeekStartDateAscIdDesc(
+			1,
+			LocalDate.of(2026, 3, 1),
+			LocalDate.of(2026, 4, 5)
+		)).willReturn(beforeTriggerWeeks, afterTriggerWeeks);
+		given(planWeekAllocationRepository.findByBudgetWeek(currentWeek)).willReturn(List.of(
+			allocation(completedPlan, currentWeek, 80_000L, 80_000L, 80_000L, "completed-4-live"),
+			allocation(successPlan, currentWeek, 70_000L, 70_000L, 70_000L, "success-4-live"),
+			allocation(partialPlan, currentWeek, 100_000L, 100_000L, 50_000L, "partial-4-live"),
+			allocation(failedPlan, currentWeek, 30_000L, 30_000L, 0L, "failed-4-live")
+		));
+		given(planWeekAllocationRepository.findAllByBudgetWeekIn(beforeTriggerWeeks)).willReturn(beforeAllocations);
+		given(planWeekAllocationRepository.findAllByBudgetWeekIn(afterTriggerWeeks)).willReturn(afterTriggerAllocations);
+		given(budgetAdjustmentRepository.findByBudgetWeekOrderByCreatedAtDesc(currentWeek)).willReturn(List.of(partialAutoAdd, successAutoAdd));
+		given(planRepository.findAllByUserIdAndDeletedFalse(1)).willReturn(List.of(completedPlan, successPlan, partialPlan, failedPlan));
+		given(weeklySavingsDetailQueryService.getDetail(1, "2026-W14")).willReturn(detail);
+
+		BudgetCurrentWeekSavingsReapplyTestService service = new BudgetCurrentWeekSavingsReapplyTestService(
+			budgetWeekRepository,
+			planWeekAllocationRepository,
+			budgetAdjustmentRepository,
+			planRepository,
+			weeklyGoalSavingAccrualService,
+			budgetAllocationTriggerService,
+			weeklySavingsDetailQueryService,
+			Clock.fixed(Instant.parse("2026-03-30T00:00:00Z"), ZoneId.of("Asia/Seoul"))
+		);
+
 		service.reapplyCurrentWeekSavings(1);
+
+		verify(budgetAllocationTriggerService).triggerHistorical(1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 4, 12));
 
 		ArgumentCaptor<List<PlanWeekAllocation>> captor = ArgumentCaptor.forClass(List.class);
 		verify(planWeekAllocationRepository, times(2)).saveAll(captor.capture());
-		List<List<PlanWeekAllocation>> savedBatches = captor.getAllValues();
-		List<PlanWeekAllocation> restoredAllocations = savedBatches.get(1);
+		List<PlanWeekAllocation> restoredAllocations = captor.getAllValues().get(1);
 
-		assertThat(restoredAllocations).hasSize(4);
-		assertThat(restoredAllocations)
-			.extracting(allocation -> allocation.getBudgetWeek().getWeekStartDate())
-			.containsExactly(
-				LocalDate.of(2026, 3, 2),
-				LocalDate.of(2026, 3, 9),
-				LocalDate.of(2026, 3, 16),
-				LocalDate.of(2026, 3, 23)
-			);
-		assertThat(restoredAllocations)
-			.extracting(allocation -> allocation.getBudgetWeek().getId())
-			.containsExactly(191, 192, 193, 194);
-		assertThat(restoredAllocations)
-			.extracting(allocation -> allocation.getPlan().getId())
-			.containsOnly(12);
-		assertThat(restoredAllocations)
-			.extracting(PlanWeekAllocation::getActualAmount)
-			.containsExactly(80_000L, 80_000L, 80_000L, 80_000L);
-		assertThat(restoredAllocations)
-			.extracting(PlanWeekAllocation::getNote)
-			.containsExactly("completed-1", "completed-2", "completed-3", "completed-4");
+		assertThat(restoredAllocations).hasSize(16);
+		assertThat(findAllocation(restoredAllocations, 14, LocalDate.of(2026, 3, 30)).getActualAmount()).isEqualTo(80_000L);
+		assertThat(findAllocation(restoredAllocations, 12, LocalDate.of(2026, 3, 30)).getPlannedAmount()).isEqualTo(100_000L);
+		assertThat(findAllocation(restoredAllocations, 12, LocalDate.of(2026, 3, 30)).getActualAmount()).isEqualTo(50_000L);
+		assertThat(findAllocation(restoredAllocations, 13, LocalDate.of(2026, 3, 30)).getPlannedAmount()).isEqualTo(30_000L);
+		assertThat(findAllocation(restoredAllocations, 13, LocalDate.of(2026, 3, 30)).getActualAmount()).isZero();
+	}
+
+	private PlanWeekAllocation findAllocation(List<PlanWeekAllocation> allocations, int planId, LocalDate weekStartDate) {
+		return allocations.stream()
+			.filter(allocation -> allocation.getPlan().getId().equals(planId))
+			.filter(allocation -> allocation.getBudgetWeek().getWeekStartDate().equals(weekStartDate))
+			.findFirst()
+			.orElseThrow();
+	}
+
+	private BudgetAdjustment autoAdjustment(
+		BudgetWeek budgetWeek,
+		Plan plan,
+		BudgetAdjustmentType adjustmentType,
+		long adjustmentAmount
+	) {
+		return BudgetAdjustment.builder()
+			.budgetWeek(budgetWeek)
+			.plan(plan)
+			.adjustmentType(adjustmentType)
+			.adjustmentAmount(adjustmentAmount)
+			.reason("Weekly goal saving accrual applied")
+			.build();
 	}
 
 	private User user(int userId) {
@@ -277,15 +283,15 @@ class BudgetCurrentWeekSavingsReapplyTestServiceTest {
 		return week;
 	}
 
-	private Plan plan(User user, int id, String title, PlanStatus status) {
+	private Plan plan(User user, int id, String title, PlanStatus status, LocalDate endDate) {
 		Plan plan = Plan.builder()
 			.user(user)
 			.title(title)
 			.description(title)
 			.targetAmount(400_000L)
 			.savedAmount(0L)
-			.startDate(LocalDate.of(2026, 2, 23))
-			.endDate(LocalDate.of(2026, 3, 29))
+			.startDate(LocalDate.of(2026, 3, 9))
+			.endDate(endDate)
 			.targetWeeks(5)
 			.priority(1)
 			.status(status)

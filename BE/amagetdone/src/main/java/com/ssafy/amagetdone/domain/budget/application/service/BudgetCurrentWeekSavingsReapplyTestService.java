@@ -12,12 +12,12 @@ import java.util.Map;
 import java.util.Objects;
 
 import com.ssafy.amagetdone.domain.budget.api.dto.WeeklySavingsDetailDto;
-import com.ssafy.amagetdone.domain.budget.application.usecase.TriggerBudgetAllocationUseCase;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetAdjustment;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetAdjustmentRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetAdjustmentType;
+import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
@@ -40,18 +40,17 @@ public class BudgetCurrentWeekSavingsReapplyTestService {
 	private final BudgetAdjustmentRepository budgetAdjustmentRepository;
 	private final PlanRepository planRepository;
 	private final WeeklyGoalSavingAccrualService weeklyGoalSavingAccrualService;
-	private final TriggerBudgetAllocationUseCase triggerBudgetAllocationUseCase;
+	private final BudgetAllocationTriggerService budgetAllocationTriggerService;
 	private final WeeklySavingsDetailQueryService weeklySavingsDetailQueryService;
 	private final Clock clock;
 
 	public WeeklySavingsDetailDto.Response reapplyCurrentWeekSavings(Integer userId) {
 		LocalDate today = LocalDate.now(clock);
 		LocalDate monthStart = today.withDayOfMonth(1);
-		LocalDate monthEnd = today.withDayOfMonth(today.lengthOfMonth());
 		BudgetWeek currentWeek = budgetWeekRepository
 			.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(userId, today, today)
 			.orElseThrow(() -> new IllegalArgumentException("Current budget week not found"));
-		List<PlanWeekAllocation> preservedMonthlyAllocations = snapshotMonthlyAllocations(userId, monthStart, monthEnd);
+		LocalDate restoreRangeEnd = currentWeek.getWeekEndDate();
 
 		List<BudgetAdjustment> autoAdjustments = budgetAdjustmentRepository.findByBudgetWeekOrderByCreatedAtDesc(currentWeek)
 			.stream()
@@ -70,30 +69,42 @@ public class BudgetCurrentWeekSavingsReapplyTestService {
 		planWeekAllocationRepository.saveAll(allocations);
 
 		weeklyGoalSavingAccrualService.applyWeeklyAccrual(userId);
-		triggerBudgetAllocationUseCase.execute(userId);
-		restoreNonActiveAllocations(userId, monthStart, monthEnd, preservedMonthlyAllocations);
+		List<PlanWeekAllocation> preservedAllocations = snapshotAllocations(userId, monthStart, restoreRangeEnd);
+		LocalDate allocationEndDate = resolveAllocationEndDate(userId, currentWeek);
+		budgetAllocationTriggerService.triggerHistorical(userId, monthStart, allocationEndDate);
+		restoreAllocations(userId, monthStart, restoreRangeEnd, preservedAllocations);
 		return weeklySavingsDetailQueryService.getDetail(userId, formatYearWeek(today));
 	}
 
-	private List<PlanWeekAllocation> snapshotMonthlyAllocations(Integer userId, LocalDate monthStart, LocalDate monthEnd) {
-		List<BudgetWeek> affectedWeeks = findAffectedWeeks(userId, monthStart, monthEnd);
+	private List<PlanWeekAllocation> snapshotAllocations(Integer userId, LocalDate rangeStart, LocalDate rangeEnd) {
+		List<BudgetWeek> affectedWeeks = findAffectedWeeks(userId, rangeStart, rangeEnd);
 		if (affectedWeeks.isEmpty()) {
 			return List.of();
 		}
 		return new ArrayList<>(planWeekAllocationRepository.findAllByBudgetWeekIn(affectedWeeks));
 	}
 
-	private void restoreNonActiveAllocations(
+	private LocalDate resolveAllocationEndDate(Integer userId, BudgetWeek currentWeek) {
+		LocalDate currentWeekEnd = currentWeek.getWeekEndDate();
+		return planRepository.findAllByUserIdAndDeletedFalse(userId).stream()
+			.map(Plan::getEndDate)
+			.filter(Objects::nonNull)
+			.max(LocalDate::compareTo)
+			.filter(endDate -> !endDate.isBefore(currentWeekEnd))
+			.orElse(currentWeekEnd);
+	}
+
+	private void restoreAllocations(
 		Integer userId,
-		LocalDate monthStart,
-		LocalDate monthEnd,
-		List<PlanWeekAllocation> preservedMonthlyAllocations
+		LocalDate rangeStart,
+		LocalDate rangeEnd,
+		List<PlanWeekAllocation> preservedAllocations
 	) {
-		if (preservedMonthlyAllocations == null || preservedMonthlyAllocations.isEmpty()) {
+		if (preservedAllocations == null || preservedAllocations.isEmpty()) {
 			return;
 		}
 
-		List<BudgetWeek> affectedWeeks = findAffectedWeeks(userId, monthStart, monthEnd);
+		List<BudgetWeek> affectedWeeks = findAffectedWeeks(userId, rangeStart, rangeEnd);
 		if (affectedWeeks.isEmpty()) {
 			return;
 		}
@@ -114,14 +125,12 @@ public class BudgetCurrentWeekSavingsReapplyTestService {
 				(map, allocation) -> map.putIfAbsent(AllocationKey.from(allocation), allocation),
 				Map::putAll);
 
-		List<PlanWeekAllocation> restoredAllocations = preservedMonthlyAllocations.stream()
+		List<PlanWeekAllocation> restoredAllocations = preservedAllocations.stream()
 			.filter(allocation -> allocation.getPlan() != null)
 			.filter(allocation -> allocation.getPlan().getId() != null)
 			.filter(allocation -> allocation.getBudgetWeek() != null)
 			.filter(allocation -> allocation.getBudgetWeek().getWeekStartDate() != null)
-			.filter(allocation -> allocation.getPlan().getStatus() != PlanStatus.ACTIVE)
-			.filter(allocation -> !existingAllocationsByKey.containsKey(AllocationKey.from(allocation)))
-			.map(allocation -> restoreAllocation(allocation, weeksByStartDate))
+			.map(allocation -> restoreAllocation(allocation, weeksByStartDate, existingAllocationsByKey))
 			.filter(Objects::nonNull)
 			.toList();
 
@@ -130,28 +139,42 @@ public class BudgetCurrentWeekSavingsReapplyTestService {
 		}
 	}
 
-	private List<BudgetWeek> findAffectedWeeks(Integer userId, LocalDate monthStart, LocalDate monthEnd) {
+	private List<BudgetWeek> findAffectedWeeks(Integer userId, LocalDate rangeStart, LocalDate rangeEnd) {
 		return budgetWeekRepository.findAllByUserIdAndWeekEndDateGreaterThanEqualAndWeekStartDateLessThanEqualOrderByWeekStartDateAscIdDesc(
 			userId,
-			monthStart,
-			monthEnd
+			rangeStart,
+			rangeEnd
 		);
 	}
 
-	private PlanWeekAllocation restoreAllocation(PlanWeekAllocation allocation, Map<LocalDate, BudgetWeek> weeksByStartDate) {
+	private PlanWeekAllocation restoreAllocation(
+		PlanWeekAllocation allocation,
+		Map<LocalDate, BudgetWeek> weeksByStartDate,
+		Map<AllocationKey, PlanWeekAllocation> existingAllocationsByKey
+	) {
 		BudgetWeek restoredWeek = weeksByStartDate.get(allocation.getBudgetWeek().getWeekStartDate());
 		if (restoredWeek == null) {
 			return null;
 		}
-		return PlanWeekAllocation.builder()
-			.budgetWeek(restoredWeek)
-			.plan(allocation.getPlan())
-			.allocationType(allocation.getAllocationType())
-			.plannedAmount(allocation.getPlannedAmount())
-			.finalAmount(allocation.getFinalAmount())
-			.actualAmount(allocation.getActualAmount())
-			.note(allocation.getNote())
-			.build();
+		PlanWeekAllocation restoredAllocation = existingAllocationsByKey.get(AllocationKey.from(allocation));
+		if (restoredAllocation == null) {
+			return PlanWeekAllocation.builder()
+				.budgetWeek(restoredWeek)
+				.plan(allocation.getPlan())
+				.allocationType(allocation.getAllocationType())
+				.plannedAmount(allocation.getPlannedAmount())
+				.finalAmount(allocation.getFinalAmount())
+				.actualAmount(allocation.getActualAmount())
+				.note(allocation.getNote())
+				.build();
+		}
+		restoredAllocation.setBudgetWeek(restoredWeek);
+		restoredAllocation.setAllocationType(allocation.getAllocationType());
+		restoredAllocation.setPlannedAmount(allocation.getPlannedAmount());
+		restoredAllocation.setFinalAmount(allocation.getFinalAmount());
+		restoredAllocation.setActualAmount(allocation.getActualAmount());
+		restoredAllocation.setNote(allocation.getNote());
+		return restoredAllocation;
 	}
 
 	private boolean isCurrentWeekAutoAdjustment(BudgetAdjustment adjustment) {
