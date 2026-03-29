@@ -218,7 +218,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       floatingActionButton: MoreShowcase(
         showcaseKey: _keyFab,
         title: 'AI 코치',
-        description: '소비 패턴을 분석하고 절약 팁을 알려주는 AI 코치예요.\n궁금한 점이 있으면 언제든지 물어보세요!',
+        description: '소비 패턴을 분석하고 절약 팁을 알려주는\nAI 코치예요.\n궁금한 점이 있으면 언제든지 물어보세요!',
         tooltipPosition: TooltipPosition.top,
         targetShapeBorder: const CircleBorder(),
         targetPadding: EdgeInsets.all(4.w),
@@ -439,7 +439,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                 '현재 진행 중인 저축 목표들을 한눈에 볼 수 있어요.\n목표를 탭하면 상세 내용과 저축 현황을 확인할 수 있어요.',
             tooltipPosition: TooltipPosition.bottom,
             targetPadding: EdgeInsets.all(6.w),
-            disableMovingAnimation: true,
             onSkip: _stopShowcasePreview,
             child: GoalsSectionCard(
               goals: topGoals,
@@ -457,8 +456,8 @@ class _HomePageState extends ConsumerState<HomePage> {
             title: '저축·여유자금',
             description:
                 '이번 주 저축 진행률과 남은 여유 자금을 보여줘요.\n계획대로 잘 지키고 있는지 매일 확인해보세요!',
+            tooltipPosition: TooltipPosition.top,
             targetPadding: EdgeInsets.all(6.w),
-            disableMovingAnimation: true,
             onSkip: _stopShowcasePreview,
             child: IntrinsicHeight(
               child: Row(
@@ -491,9 +490,9 @@ class _HomePageState extends ConsumerState<HomePage> {
             showcaseKey: _keyChart,
             title: '소비 차트',
             description:
-                '주간 소비 내역을 카테고리별로 시각화해요.\n좌우로 슬라이드하면 이전 주 소비도 확인할 수 있어요.',
+                '주간 소비 내역을 카테고리별로 시각화해요.\n좌우로 슬라이드하면 이전 주 소비도 확인할 수\n있어요.',
+            tooltipPosition: TooltipPosition.top,
             targetPadding: EdgeInsets.all(6.w),
-            disableMovingAnimation: true,
             onSkip: _stopShowcasePreview,
             child: Builder(
               builder: (context) {

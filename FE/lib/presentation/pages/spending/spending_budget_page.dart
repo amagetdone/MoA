@@ -180,6 +180,7 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                             showcaseKey: _keyIncome,
                             title: '월 수입',
                             description: '월에 정기적으로 들어오는 금액을 입력해줘요.\n월 수입이 변경되면 연필 버튼을 눌러 수정해주세요.',
+                            tooltipOffsetX: 30.w,
                             onSkip: _stopShowcasePreview,
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -238,6 +239,8 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                             showcaseKey: _keySavings,
                             title: '저축액',
                             description: '목표 설정했던 금액을 목표 기간에 따라 배분해 주별 저축되는 금액을 알려줘요.',
+                            tooltipPosition: TooltipPosition.bottom,
+                            tooltipOffsetX: 30.w,
                             onSkip: _stopShowcasePreview,
                             child: _BudgetSectionHeader(
                               label: '저축액',
@@ -251,7 +254,9 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           MoreShowcase(
                             showcaseKey: _keyFixed,
                             title: '고정지출',
-                            description: '구독비 등 고정적으로 지출되는 것에 대한 금액을 주별로 배분해줘요.',
+                            description: '구독비 등 고정적으로 지출되는 것에 대한 금액을\n주별로 배분해줘요.',
+                            tooltipPosition: TooltipPosition.top,
+                            tooltipOffsetX: 30.w,
                             onSkip: _stopShowcasePreview,
                             child: _BudgetSectionHeader(
                               label: '고정지출',
@@ -275,7 +280,9 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           MoreShowcase(
                             showcaseKey: _keyVariable,
                             title: '변동지출',
-                            description: '교통비, 식비 등 변동적으로 지출되는 것에 대한 금액을 주별로 배분해줘요.',
+                            description: '교통비, 식비 등 변동적으로 지출되는 것에 대한\n금액을 주별로 배분해줘요.',
+                            tooltipPosition: TooltipPosition.top,
+                            tooltipOffsetX: 30.w,
                             onSkip: _stopShowcasePreview,
                             child: _BudgetSectionHeader(
                               label: '변동지출',
@@ -302,7 +309,9 @@ class _SpendingBudgetPageState extends ConsumerState<SpendingBudgetPage> {
                           MoreShowcase(
                             showcaseKey: _keyFreedom,
                             title: '주간 여유 자금',
-                            description: '월 수입에서 저축액, 고정지출, 변동지출을 모두 빼고, 주에 자유롭게 사용 가능한 금액이에요.',
+                            description: '월 수입에서 저축액, 고정지출, 변동지출을 모두\n빼고, 주에 자유롭게 사용 가능한 금액이에요.',
+                            tooltipPosition: TooltipPosition.top,
+                            tooltipOffsetX: 30.w,
                             onSkip: _stopShowcasePreview,
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,

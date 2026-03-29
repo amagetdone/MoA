@@ -226,7 +226,8 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
                             showcaseKey: _keySummary,
                             title: '기간 이동',
                             description:
-                                '좌우 화살표를 눌러 지난 주/달의 지출 내역을 확인할 수 있어요.\n소비 추이를 파악하는 데 도움이 돼요.',
+                                '좌우 화살표를 눌러 지난 주/달의 지출 내역을\n확인할 수 있어요.\n소비 추이를 파악하는 데 도움이 돼요.',
+                            tooltipPosition: TooltipPosition.top,
                             onSkip: _stopShowcasePreview,
                             child: _SpendingSummaryCard(state: effectiveState),
                           ),
@@ -244,7 +245,8 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
                               showcaseKey: _keyChart,
                               title: '지출 그래프',
                               description:
-                                  '선택한 기간의 일별/주별 지출을 그래프로 보여줘요.\n어느 날 지출이 많았는지 한눈에 파악해보세요.',
+                                  '선택한 기간의 일별/주별 지출을 그래프로\n보여줘요.\n어느 날 지출이 많았는지 한눈에 파악해보세요.',
+                              tooltipPosition: TooltipPosition.top,
                               onSkip: _stopShowcasePreview,
                               child: MoreCard(
                                 padding: EdgeInsets.all(20.w),
@@ -297,7 +299,7 @@ class _SpendingAnalysisPageState extends ConsumerState<SpendingAnalysisPage> {
                               showcaseKey: _keyCategory,
                               title: '카테고리별 지출',
                               description:
-                                  '식비, 교통비 등 카테고리별로 얼마나 썼는지 확인할 수 있어요.\n주요 지출 항목을 파악해 절약 계획을 세워보세요.',
+                                  '식비, 교통비 등 카테고리별로 얼마나 썼는지\n확인할 수 있어요.\n주요 지출 항목을 파악해 절약 계획을 세워보세요.',
                               tooltipPosition: TooltipPosition.top,
                               onSkip: _stopShowcasePreview,
                               child: MoreCard(

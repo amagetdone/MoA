@@ -149,7 +149,7 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
                             showcaseKey: _keyFilterChips,
                             title: '목표 필터',
                             description:
-                                '진행 중인 목표와 달성한 목표를 구분해서 볼 수 있어요.\n원하는 탭을 눌러 목표를 관리해보세요.',
+                                '진행 중인 목표와 달성한 목표를 구분해서 볼 수\n있어요.\n원하는 탭을 눌러 목표를 관리해보세요.',
                             onSkip: _stopShowcasePreview,
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -174,6 +174,7 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
                             title: '우선순위 설정',
                             description:
                                 '목표의 저축 우선순위를 직접 정할 수 있어요.\n중요한 목표부터 저축되도록 순서를 설정해보세요.',
+                            tooltipPosition: TooltipPosition.top,
                             onSkip: _stopShowcasePreview,
                             child: GestureDetector(
                               onTap: () => context.push(AppRoutes.goalPriority),
@@ -216,7 +217,8 @@ class _GoalListPageState extends ConsumerState<GoalListPage> {
             showcaseKey: _keyFab,
             title: '목표 추가',
             description:
-                '새로운 목표를 추가할 수 있어요.\n여행, 가전제품 등 원하는 것을 목표로 등록하고 저축을 시작해보세요!',
+                '새로운 목표를 추가할 수 있어요.\n여행, 가전제품 등 원하는 것을 목표로 등록하고\n저축을 시작해보세요!',
+            tooltipPosition: TooltipPosition.top,
             onSkip: _stopShowcasePreview,
             child: FloatingActionButton(
               heroTag: 'goal_list_add_fab',

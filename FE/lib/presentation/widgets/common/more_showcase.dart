@@ -19,6 +19,7 @@ class MoreShowcase extends StatelessWidget {
     this.blurValue,
     this.overlayOpacity,
     this.disableMovingAnimation,
+    this.tooltipOffsetX = 0,
     this.onSkip,
   });
 
@@ -32,17 +33,18 @@ class MoreShowcase extends StatelessWidget {
   final double? blurValue;
   final double? overlayOpacity;
   final bool? disableMovingAnimation;
+  final double tooltipOffsetX;
   final VoidCallback? onSkip;
 
   @override
   Widget build(BuildContext context) {
     final showcase = ShowCaseWidget.of(context);
-    final tooltipWidth = math.min(MediaQuery.sizeOf(context).width - 36.w, 328.w);
+    final tooltipWidth = math.min(MediaQuery.sizeOf(context).width - 36.w, 320.w);
     final estimatedLines = description
         .split('\n')
-        .fold<int>(0, (sum, line) => sum + math.max(1, (line.length / 24).ceil()));
+        .fold<int>(0, (sum, line) => sum + math.max(1, (line.length / 26).ceil()));
     final tooltipHeight =
-        (102.h + estimatedLines * 14.h).clamp(126.h, 182.h).toDouble();
+        (88.h + estimatedLines * 12.h).clamp(116.h, 156.h).toDouble();
 
     return Showcase.withWidget(
       key: showcaseKey,
@@ -57,14 +59,19 @@ class MoreShowcase extends StatelessWidget {
       blurValue: blurValue,
       overlayOpacity: overlayOpacity ?? 0.75,
       disableMovingAnimation: disableMovingAnimation,
-      container: _MoreShowcaseTooltip(
-        title: title,
-        description: description,
-        onSkip: () {
-          onSkip?.call();
-          showcase.dismiss();
-        },
-        onNext: showcase.next,
+      toolTipSlideEndDistance: 11,
+      container: Transform.translate(
+        offset: Offset(tooltipOffsetX, 0),
+        child: _MoreShowcaseTooltip(
+          maxWidth: tooltipWidth,
+          title: title,
+          description: description,
+          onSkip: () {
+            onSkip?.call();
+            showcase.dismiss();
+          },
+          onNext: showcase.next,
+        ),
       ),
       child: child,
     );
@@ -113,12 +120,14 @@ class ShowcaseHelpButton extends StatelessWidget {
 
 class _MoreShowcaseTooltip extends StatelessWidget {
   const _MoreShowcaseTooltip({
+    required this.maxWidth,
     required this.title,
     required this.description,
     this.onSkip,
     this.onNext,
   });
 
+  final double maxWidth;
   final String title;
   final String description;
   final VoidCallback? onSkip;
@@ -127,94 +136,99 @@ class _MoreShowcaseTooltip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    return Container(
-      padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 12.h),
-      decoration: BoxDecoration(
-        color: colors.bgSurface,
-        borderRadius: BorderRadius.circular(18.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 14.r,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: AppTextStyles.bodyMd.copyWith(
-              fontWeight: FontWeight.w800,
-              fontSize: 16.sp,
-              color: AppColors.orange500,
+    return SizedBox(
+      width: maxWidth,
+      child: Container(
+        padding: EdgeInsets.fromLTRB(14.w, 14.h, 14.w, 10.h),
+        decoration: BoxDecoration(
+          color: colors.bgSurface,
+          borderRadius: BorderRadius.circular(18.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 14.r,
+              offset: const Offset(0, 5),
             ),
-          ),
-          SizedBox(height: 8.h),
-          Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Text(
-                description,
-                style: AppTextStyles.bodySm.copyWith(
-                  color: colors.textPrimary,
-                  fontWeight: FontWeight.w600,
-                  height: 1.4,
-                  fontSize: 14.sp,
-                ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              title,
+              style: AppTextStyles.bodyMd.copyWith(
+                fontWeight: FontWeight.w800,
+                fontSize: 15.sp,
+                color: AppColors.orange500,
               ),
             ),
-          ),
-          SizedBox(height: 8.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton(
-                onPressed: onSkip,
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 8.w,
-                    vertical: 6.h,
-                  ),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
+            SizedBox(height: 6.h),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: 96.h),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
                 child: Text(
-                  '건너뛰기',
+                  description,
                   style: AppTextStyles.bodySm.copyWith(
-                    color: colors.textTertiary,
-                    fontWeight: FontWeight.w700,
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                    height: 1.32,
+                    fontSize: 13.sp,
                   ),
                 ),
               ),
-              SizedBox(width: 8.w),
-              FilledButton(
-                onPressed: onNext,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.orange500,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(999.r),
+            ),
+            SizedBox(height: 6.h),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: onSkip,
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 6.w,
+                      vertical: 4.h,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 14.w,
-                    vertical: 8.h,
+                  child: Text(
+                    '건너뛰기',
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: colors.textTertiary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: Text(
-                  '다음',
-                  style: AppTextStyles.bodySm.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
+                SizedBox(width: 8.w),
+                FilledButton(
+                  onPressed: onNext,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.orange500,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999.r),
+                    ),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12.w,
+                      vertical: 6.h,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    '다음',
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
