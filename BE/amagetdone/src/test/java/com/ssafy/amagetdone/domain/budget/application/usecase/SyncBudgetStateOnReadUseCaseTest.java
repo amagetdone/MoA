@@ -146,6 +146,33 @@ class SyncBudgetStateOnReadUseCaseTest {
 	}
 
 	@Test
+	void doesNotRetriggerAllocationWhenMissingPlanIsManualOnly() {
+		Integer userId = 1;
+		BudgetWeek currentWeek = budgetWeek(userId, 3, LocalDate.of(2026, 3, 16), LocalDate.of(2026, 3, 22));
+		Plan manualPlan = activePlan(userId, 100);
+		manualPlan.setAutoAllocateEnabled(false);
+
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			eq(userId),
+			any(),
+			any()
+		))
+			.willReturn(Optional.of(currentWeek));
+		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE)).willReturn(List.of(manualPlan));
+		given(planWeekAllocationRepository.findByBudgetWeek(currentWeek)).willReturn(List.of());
+		given(syncLatestTransactionsUseCase.execute(userId, 3, false))
+			.willReturn(new TransactionSyncService.SyncResult(0, 0));
+
+		useCase.execute(userId);
+
+		verify(triggerBudgetAllocationUseCase, never()).execute(userId);
+		verify(applyDailyGoalSavingAccrualUseCase, never()).backfill(userId, null);
+		verify(syncLatestTransactionsUseCase).execute(userId, 3, false);
+		verify(runTransactionAnalysisUseCase, never()).execute(any(), anyInt());
+		verify(applyDailyGoalSavingAccrualUseCase).execute(userId);
+	}
+
+	@Test
 	void runsFullReadSyncPipelineWhenNewTransactionsWereInserted() {
 		Integer userId = 1;
 		LocalDate today = LocalDate.of(2026, 3, 22);

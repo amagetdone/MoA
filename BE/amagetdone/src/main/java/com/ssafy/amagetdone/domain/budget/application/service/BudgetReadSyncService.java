@@ -101,6 +101,7 @@ public class BudgetReadSyncService {
 			.filter(java.util.Objects::nonNull)
 			.collect(Collectors.toSet());
 		boolean missingActiveAllocation = planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE).stream()
+			.filter(Plan::isAutoAllocateEnabled)
 			.map(Plan::getId)
 			.filter(java.util.Objects::nonNull)
 			.anyMatch(planId -> !currentAllocatedPlanIds.contains(planId));
