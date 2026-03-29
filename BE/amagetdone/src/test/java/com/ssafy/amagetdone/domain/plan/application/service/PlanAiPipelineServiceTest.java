@@ -92,20 +92,7 @@ class PlanAiPipelineServiceTest {
 			.willReturn("Z2VuZXJhdGVkLWltYWdl");
 		given(storageService.upload(any(), eq(ImageCategory.PLAN))).willReturn("plan/generated.png");
 		given(pyanClient.generate(any(byte[].class), eq("plan-10"), any()))
-			.willReturn(new PyanGenerateResponse(
-				"queued",
-				"task-1",
-				"plan-10",
-				null,
-				"https://sketch.pyan.kr/api/status/task-1",
-				null,
-				null,
-				null,
-				null,
-				"https://sketch.pyan.kr/api/goals/plan-10",
-				null,
-				null
-			));
+			.willReturn(response("queued", "task-1", "plan-10", null, "https://sketch.pyan.kr/api/status/task-1", null, null));
 
 		planAiPipelineService.start(10, 1);
 
@@ -141,17 +128,12 @@ class PlanAiPipelineServiceTest {
 			.willReturn("data:image/png;base64,Z2VuZXJhdGVkLWltYWdl");
 		given(storageService.upload(any(), eq(ImageCategory.PLAN))).willReturn("plan/generated.png");
 		given(pyanClient.generate(any(byte[].class), eq("plan-11"), any()))
-			.willReturn(new PyanGenerateResponse(
+			.willReturn(response(
 				"ready",
 				"task-2",
 				"plan-11",
 				null,
 				"https://sketch.pyan.kr/api/status/task-2",
-				"https://sketch.pyan.kr/api/video/task-2?variant=original",
-				null,
-				null,
-				"https://sketch.pyan.kr/cdn/original-2.mp4",
-				"https://sketch.pyan.kr/api/goals/plan-11",
 				"https://sketch.pyan.kr/cdn/original-2.mp4",
 				null
 			));
@@ -253,20 +235,7 @@ class PlanAiPipelineServiceTest {
 			.willReturn("Z2VuZXJhdGVkLWltYWdl");
 		given(storageService.upload(any(), eq(ImageCategory.PLAN))).willReturn("plan/generated.png");
 		given(pyanClient.generate(any(byte[].class), eq("plan-14"), any()))
-			.willReturn(new PyanGenerateResponse(
-				"queued",
-				"task-14",
-				"plan-14",
-				null,
-				"https://sketch.pyan.kr/api/status/task-14",
-				null,
-				null,
-				null,
-				null,
-				"https://sketch.pyan.kr/api/goals/plan-14",
-				null,
-				null
-			));
+			.willReturn(response("queued", "task-14", "plan-14", null, "https://sketch.pyan.kr/api/status/task-14", null, null));
 		planAiPipelineService.start(14, 1);
 
 		assertEquals("CANCELLED", ReflectionTestUtils.getField(plan, "status").toString());
@@ -276,7 +245,7 @@ class PlanAiPipelineServiceTest {
 	}
 
 	@Test
-	void startReusesExistingPyanRequestKeyWhenPresent() {
+	void startUsesStablePyanRequestKey() {
 		createServiceWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
 		Plan plan = instantiatePlan(16, 1, "Europe trip fund", "Summer travel savings");
 		ReflectionTestUtils.setField(plan, "pyanRequestKey", "plan-16-pyan-existing");
@@ -288,27 +257,42 @@ class PlanAiPipelineServiceTest {
 			"https://cdn.example.com/profile.png"
 		)).willReturn("Z2VuZXJhdGVkLWltYWdl");
 		given(storageService.upload(any(), eq(ImageCategory.PLAN))).willReturn("plan/generated.png");
-		given(pyanClient.generate(any(byte[].class), eq("plan-16"), eq("plan-16-pyan-existing")))
-			.willReturn(new PyanGenerateResponse(
-				"queued",
-				"task-16",
-				"plan-16",
-				null,
-				"https://sketch.pyan.kr/api/status/task-16",
-				null,
-				null,
-				null,
-				null,
-				"https://sketch.pyan.kr/api/goals/plan-16",
-				null,
-				null
-			));
+		given(pyanClient.generate(any(byte[].class), eq("plan-16"), eq("plan-16-pyan-1")))
+			.willReturn(response("queued", "task-16", "plan-16", null, "https://sketch.pyan.kr/api/status/task-16", null, null));
 
 		planAiPipelineService.start(16, 1);
 
 		assertEquals("plan-16-pyan-existing", ReflectionTestUtils.getField(plan, "pyanRequestKey"));
-		verify(pyanClient).generate(any(byte[].class), eq("plan-16"), eq("plan-16-pyan-existing"));
+		verify(pyanClient).generate(any(byte[].class), eq("plan-16"), eq("plan-16-pyan-1"));
 		verify(applicationEventPublisher, never()).publishEvent(any());
+	}
+
+	@Test
+	void startUsesDemoPyanEndpointForPresentationCondition() {
+		createServiceWithClock(Clock.fixed(Instant.parse("2026-03-18T15:30:00Z"), ZoneId.of("Asia/Seoul")));
+		Plan plan = instantiatePlan(18, 12, "바닷속 탐험 자금", "잠수함 체험 발표용");
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(18, 12)).willReturn(Optional.of(plan));
+		stubQueuedStateUpdates(18, 12);
+		given(memberProfileImageService.loadProfileImageUrl(12)).willReturn("https://cdn.example.com/profile.png");
+		given(planAiClient.generatePlanImage(
+			"[Title] 바닷속 탐험 자금 [description] 잠수함 체험 발표용",
+			"https://cdn.example.com/profile.png"
+		)).willReturn("Z2VuZXJhdGVkLWltYWdl");
+		given(storageService.upload(any(), eq(ImageCategory.PLAN))).willReturn("plan/generated.png");
+		given(pyanClient.generateDemo(any(byte[].class), eq("plan-18"), eq("plan-18-pyan-1"), eq(12), eq(18), eq("바닷속 탐험 자금")))
+			.willReturn(response("queued", "task-demo-18", "plan-18", null, "https://sketch.pyan.kr/api/status/task-demo-18", null, null));
+
+		planAiPipelineService.start(18, 12);
+
+		verify(pyanClient).generateDemo(
+			any(byte[].class),
+			eq("plan-18"),
+			eq("plan-18-pyan-1"),
+			eq(12),
+			eq(18),
+			eq("바닷속 탐험 자금")
+		);
+		verify(pyanClient, never()).generate(any(byte[].class), eq("plan-18"), any());
 	}
 
 	private Plan instantiatePlan(int planId, int userId, String title, String description) {
@@ -343,5 +327,38 @@ class PlanAiPipelineServiceTest {
 		given(planRepository.markAiProcessing(eq(planId), eq(userId), any(), any(), any(), any())).willReturn(1);
 		given(planRepository.updateAiImageKey(eq(planId), eq(userId), any(), any())).willReturn(1);
 		given(planRepository.registerPyanTask(eq(planId), eq(userId), any(), any(), any())).willReturn(1);
+	}
+
+	private PyanGenerateResponse response(
+		String status,
+		String taskId,
+		String goalId,
+		String message,
+		String statusUrl,
+		String originalDownloadUrl,
+		String compressedDownloadUrl
+	) {
+		return new PyanGenerateResponse(
+			status,
+			taskId,
+			goalId,
+			message,
+			statusUrl,
+			null,
+			null,
+			null,
+			null,
+			"https://sketch.pyan.kr/api/goals/" + goalId,
+			originalDownloadUrl,
+			compressedDownloadUrl,
+			null,
+			null,
+			null,
+			null,
+			null,
+			null,
+			null,
+			null
+		);
 	}
 }

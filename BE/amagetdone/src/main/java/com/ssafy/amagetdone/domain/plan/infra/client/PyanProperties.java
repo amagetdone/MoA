@@ -7,6 +7,8 @@ public class PyanProperties {
 
 	private String baseUrl;
 	private String apiKey;
+	private String generatePath = "/api/generate";
+	private String demoGeneratePath = "/api/demo/generate";
 	private String penMode = "none";
 	private boolean outputAutocrop = true;
 	private long pollInitialDelayMillis = 3000;
@@ -30,6 +32,22 @@ public class PyanProperties {
 
 	public void setApiKey(String apiKey) {
 		this.apiKey = apiKey;
+	}
+
+	public String getGeneratePath() {
+		return generatePath;
+	}
+
+	public void setGeneratePath(String generatePath) {
+		this.generatePath = generatePath;
+	}
+
+	public String getDemoGeneratePath() {
+		return demoGeneratePath;
+	}
+
+	public void setDemoGeneratePath(String demoGeneratePath) {
+		this.demoGeneratePath = demoGeneratePath;
 	}
 
 	public String getPenMode() {

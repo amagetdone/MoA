@@ -2,9 +2,11 @@ package com.ssafy.amagetdone.domain.plan.infra.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -83,6 +85,54 @@ class PyanApiClientTest {
 		assertEquals("queued", response.status());
 		assertEquals("task-2", response.taskId());
 		assertEquals("https://sketch.pyan.kr/api/status/task-2", response.statusUrl());
+	}
+
+	@Test
+	void generateDemoCallsDemoEndpointWithRequiredMultipartFields() {
+		RestClient.Builder builder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+		PyanApiClient client = new PyanApiClient(builder, createProperties());
+
+		server.expect(requestTo("https://sketch.pyan.kr/api/demo/generate"))
+			.andExpect(method(POST))
+			.andExpect(header("X-API-Key", "pyan-api-key"))
+			.andExpect(header("Idempotency-Key", "plan-12-pyan-1"))
+			.andExpect(content().string(containsString("name=\"goal_id\"")))
+			.andExpect(content().string(containsString("plan-12")))
+			.andExpect(content().string(containsString("name=\"user_id\"")))
+			.andExpect(content().string(containsString("12")))
+			.andExpect(content().string(containsString("name=\"plan_id\"")))
+			.andExpect(content().string(containsString("name=\"plan_title\"")))
+			.andExpect(content().string(containsString("바닷속 탐험 자금")))
+			.andRespond(withSuccess("""
+				{
+				  "status": "queued",
+				  "task_id": "task-demo-1",
+				  "goal_id": "plan-12",
+				  "status_url": "https://sketch.pyan.kr/api/status/task-demo-1",
+				  "user_id": 12,
+				  "plan_id": 12,
+				  "plan_title": "바닷속 탐험 자금",
+				  "demo_fallback_eligible": true,
+				  "demo_fallback_scheduled": true
+				}
+				""", APPLICATION_JSON));
+
+		PyanGenerateResponse response = client.generateDemo(
+			"generated-image".getBytes(),
+			"plan-12",
+			"plan-12-pyan-1",
+			12,
+			12,
+			"바닷속 탐험 자금"
+		);
+
+		assertEquals("task-demo-1", response.taskId());
+		assertEquals(12, response.userId());
+		assertEquals(12, response.planId());
+		assertEquals("바닷속 탐험 자금", response.planTitle());
+		assertEquals(Boolean.TRUE, response.demoFallbackEligible());
+		assertEquals(Boolean.TRUE, response.demoFallbackScheduled());
 	}
 
 	@Test
