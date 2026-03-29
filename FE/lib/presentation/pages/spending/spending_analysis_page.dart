@@ -11,6 +11,7 @@ import 'package:more_app/core/utils/tutorial_service.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/pages/spending/widgets/category_list.dart';
 import 'package:more_app/presentation/pages/spending/widgets/spending_line_chart.dart';
+import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/providers/showcase_preview_provider.dart';
 import 'package:more_app/presentation/showcase/showcase_mock_data.dart';
 import 'package:more_app/presentation/viewmodels/spending_viewmodel.dart';
@@ -385,10 +386,28 @@ class _SpendingSummaryCard extends ConsumerWidget {
   final SpendingState state;
   const _SpendingSummaryCard({required this.state});
 
+  String? _buildBudgetInsight(HomeState homeState) {
+    if (!state.isWeekly ||
+        !_isSameCalendarDay(state.selectedWeekStart, _currentWeekStart())) {
+      return null;
+    }
+
+    final weeklySaved = homeState.weeklySaved;
+    final weeklyRemaining = homeState.weeklyRemaining;
+
+    if (weeklySaved <= 0 && weeklyRemaining <= 0) {
+      return null;
+    }
+
+    return '이번 주 저축 ${CurrencyFormatter.formatKRW(weeklySaved)}을 챙겼네요!\n'
+        '여유 자금은 ${CurrencyFormatter.formatKRW(weeklyRemaining)}이 남아있어요.';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors.of(context);
     final viewModel = ref.read(spendingViewModelProvider.notifier);
+    final homeState = ref.watch(homeViewModelProvider);
     final periodLabel = state.isWeekly
         ? _weekLabel(state.selectedWeekStart)
         : _monthLabel(state.selectedMonthStart);
@@ -398,6 +417,7 @@ class _SpendingSummaryCard extends ConsumerWidget {
     final canMoveNext = state.isWeekly
         ? state.selectedWeekStart.isBefore(_currentWeekStart())
         : state.selectedMonthStart.isBefore(_currentMonthStart());
+    final budgetInsight = _buildBudgetInsight(homeState);
 
     return MoreCard(
       padding: EdgeInsets.symmetric(vertical: 24.h, horizontal: 16.w),
@@ -478,8 +498,47 @@ class _SpendingSummaryCard extends ConsumerWidget {
               ],
             ),
           ),
+          if (budgetInsight != null) ...[
+            SizedBox(height: 14.h),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 11.h),
+              decoration: BoxDecoration(
+                color: const Color(0xFF53A65A).withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.savings_outlined,
+                    size: 16.w,
+                    color: const Color(0xFF53A65A),
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Text(
+                      budgetInsight,
+                      style: AppTextStyles.caption.copyWith(
+                        color: colors.textSecondary,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w600,
+                        height: 1.45,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
+}
+
+bool _isSameCalendarDay(DateTime left, DateTime right) {
+  return left.year == right.year &&
+      left.month == right.month &&
+      left.day == right.day;
 }
