@@ -15,9 +15,10 @@ import com.ssafy.amagetdone.domain.budget.model.repository.BudgetAdjustmentRepos
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetAdjustmentType;
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetWeekStatus;
+import com.ssafy.amagetdone.domain.plan.application.service.PlanPriorityService;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
-import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
+import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class BudgetAdjustmentCommandService {
 	private final PlanWeekAllocationRepository planWeekAllocationRepository;
 	private final BudgetAdjustmentRepository budgetAdjustmentRepository;
 	private final PlanRepository planRepository;
+	private final PlanPriorityService planPriorityService;
 
 	public BudgetAdjustmentDto.Response saveAdjustment(Integer userId, String yearWeek, BudgetAdjustmentDto.Request request) {
 		validateRequest(request);
@@ -86,7 +88,7 @@ public class BudgetAdjustmentCommandService {
 				}
 				Plan targetPlan = targetAllocation.getPlan();
 				planRepository.adjustSavedAmount(targetPlan.getId(), adjustmentAmount);
-				markCompletedWhenTargetReached(targetPlan, adjustmentAmount);
+				markCompletedWhenTargetReached(userId, targetPlan, adjustmentAmount);
 				budgetWeek.setFinalFreeAmount(zero(budgetWeek.getFinalFreeAmount()) - adjustmentAmount);
 			}
 			case PLAN_DELAY, PLAN_EARLY_CLOSE, ROLLOVER_APPLIED -> throw new IllegalArgumentException(
@@ -161,7 +163,7 @@ public class BudgetAdjustmentCommandService {
 			.orElseThrow(() -> new IllegalArgumentException("Plan allocation not found"));
 	}
 
-	private void markCompletedWhenTargetReached(Plan plan, long deltaAmount) {
+	private void markCompletedWhenTargetReached(Integer userId, Plan plan, long deltaAmount) {
 		if (plan == null || plan.getId() == null) {
 			return;
 		}
@@ -176,7 +178,15 @@ public class BudgetAdjustmentCommandService {
 			return;
 		}
 
-		planRepository.markCompleted(plan.getId(), PlanStatus.COMPLETED, PlanStatus.CANCELLED);
+		int updated = planRepository.markCompleted(plan.getId(), PlanStatus.COMPLETED, PlanStatus.CANCELLED);
+		if (updated <= 0) {
+			return;
+		}
+
+		plan.setStatus(PlanStatus.COMPLETED);
+		if (userId != null && plan.getPriority() != null) {
+			planPriorityService.compactPrioritiesAfterCompletion(userId, plan.getPriority());
+		}
 	}
 
 	private long calculateFinalFreeAmount(BudgetWeek budgetWeek, List<PlanWeekAllocation> planAllocations) {

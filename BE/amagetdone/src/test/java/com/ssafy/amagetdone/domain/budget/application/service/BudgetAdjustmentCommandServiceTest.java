@@ -19,6 +19,7 @@ import com.ssafy.amagetdone.domain.budget.model.vo.BudgetAdjustmentType;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
+import com.ssafy.amagetdone.domain.plan.application.service.PlanPriorityService;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
@@ -47,6 +48,9 @@ class BudgetAdjustmentCommandServiceTest {
 	@Mock
 	private PlanRepository planRepository;
 
+	@Mock
+	private PlanPriorityService planPriorityService;
+
 	private BudgetAdjustmentCommandService service;
 
 	@BeforeEach
@@ -55,7 +59,8 @@ class BudgetAdjustmentCommandServiceTest {
 			budgetWeekRepository,
 			planWeekAllocationRepository,
 			budgetAdjustmentRepository,
-			planRepository
+			planRepository,
+			planPriorityService
 		);
 	}
 
@@ -119,11 +124,13 @@ class BudgetAdjustmentCommandServiceTest {
 			.willReturn(Optional.of(budgetWeek));
 		given(planWeekAllocationRepository.findByBudgetWeek(budgetWeek)).willReturn(List.of(allocation));
 		given(budgetAdjustmentRepository.save(any(BudgetAdjustment.class))).willAnswer(invocation -> invocation.getArgument(0));
+		given(planRepository.markCompleted(11, PlanStatus.COMPLETED, PlanStatus.CANCELLED)).willReturn(1);
 
 		service.saveAdjustment(1, "2026-W10", request);
 
 		verify(planRepository).adjustSavedAmount(11, 10_000L);
 		verify(planRepository).markCompleted(11, PlanStatus.COMPLETED, PlanStatus.CANCELLED);
+		verify(planPriorityService).compactPrioritiesAfterCompletion(1, 1);
 	}
 
 	@Test

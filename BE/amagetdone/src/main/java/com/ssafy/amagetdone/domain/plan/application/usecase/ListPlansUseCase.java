@@ -32,9 +32,17 @@ public class ListPlansUseCase {
 		LocalDate today = LocalDate.now();
 
 		return planRepository.findAllByUserIdAndDeletedFalseAndStatusIn(userId, LISTED_PLAN_STATUSES).stream()
-			.sorted(Comparator.comparing(Plan::getPriority)
+			.sorted(Comparator.comparingInt((Plan plan) -> listOrder(plan.getStatus()))
+				.thenComparing(Plan::getPriority, Comparator.nullsLast(Integer::compareTo))
 				.thenComparing(Plan::getTitle, Comparator.nullsLast(String::compareTo)))
 			.map(plan -> PlanListItemResponse.from(plan, today))
 			.toList();
+	}
+
+	private int listOrder(PlanStatus status) {
+		if (status == PlanStatus.COMPLETED) {
+			return 1;
+		}
+		return 0;
 	}
 }
