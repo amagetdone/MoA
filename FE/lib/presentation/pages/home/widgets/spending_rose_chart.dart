@@ -115,12 +115,19 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
         final baseRadius = isCompact ? 28.w : 32.w;
         final selectedRadius = isCompact ? 34.w : 38.w;
         final titleFontSize = 11.sp;
+        final centerLabelFontSize = isCompact ? 9.sp : 10.sp;
+        final centerAmountFontSize = isCompact ? 12.sp : 13.sp;
+        final centerPercentFontSize = isCompact ? 10.sp : 11.sp;
+        final centerContentWidth = centerSpaceRadius * 1.55;
         final legendFontSize = hasSelection
             ? (isCompact ? 8.sp : 9.sp)
             : (isCompact ? 9.sp : 10.sp);
         final chartHeight = (contentWidth * 0.72)
             .clamp(180.w, 240.w)
             .toDouble();
+        final centerPercent = centerEntry != null && total > 0
+            ? (centerEntry.amount / total * 100).toStringAsFixed(1)
+            : null;
 
         final chart = Stack(
           alignment: Alignment.center,
@@ -149,45 +156,63 @@ class _SpendingRoseChartState extends State<SpendingRoseChart> {
                   final idx = e.key;
                   final entry = e.value;
                   final isSelected = _selectedIndex == idx;
-                  final percent = total > 0
-                      ? (entry.amount / total * 100).toStringAsFixed(1)
-                      : '0';
                   return PieChartSectionData(
                     value: entry.amount.toDouble(),
                     color: entry.color,
                     radius: isSelected ? selectedRadius : baseRadius,
-                    title: isSelected ? '$percent%' : '',
-                    titleStyle: TextStyle(
-                      color: entry.color, fontSize: isCompact ? 13.sp : 14.sp,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    titlePositionPercentageOffset: 1.8,
+                    title: '',
+                    titleStyle: const TextStyle(fontSize: 0),
                   );
                 }).toList(),
               ),
             ),
             IgnorePointer(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    centerEntry?.name ?? '총 소비',
-                    style: AppTextStyles.caption.copyWith(
-                      color: colors.textTertiary,
-                      fontSize: titleFontSize,
+              child: SizedBox(
+                width: centerContentWidth,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      centerEntry?.name ?? '총 소비',
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.caption.copyWith(
+                        color: colors.textTertiary,
+                        fontSize: centerLabelFontSize,
+                        height: 1.2,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 2.h),
-                  Text(
-                    CurrencyFormatter.formatCompact(
-                      centerEntry?.amount ?? total,
+                    SizedBox(height: 4.h),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        CurrencyFormatter.formatCompact(
+                          centerEntry?.amount ?? total,
+                        ),
+                        maxLines: 1,
+                        style: AppTextStyles.headingMd.copyWith(
+                          color: colors.textPrimary,
+                          fontSize: centerAmountFontSize,
+                          fontWeight: FontWeight.w800,
+                          height: 1,
+                        ),
+                      ),
                     ),
-                    style: AppTextStyles.headingMd.copyWith(
-                      color: colors.textPrimary,
-                      fontSize: isCompact ? 14.sp : 15.sp,
-                    ),
-                  ),
-                ],
+                    if (centerPercent != null) ...[
+                      SizedBox(height: 4.h),
+                      Text(
+                        '$centerPercent%',
+                        style: AppTextStyles.caption.copyWith(
+                          color: centerEntry!.color,
+                          fontSize: centerPercentFontSize,
+                          fontWeight: FontWeight.w700,
+                          height: 1,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
           ],

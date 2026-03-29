@@ -67,47 +67,14 @@ class _CategoryListState extends State<CategoryList> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: EdgeInsets.only(left: labelWidth + contentGap),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          useTotalRatio
-                              ? '${CurrencyFormatter.formatKRW(category.amount)} / ${CurrencyFormatter.formatKRW(widget.totalAmount!)}'
-                              : CurrencyFormatter.formatKRW(category.amount),
-                          textAlign: TextAlign.end,
-                          style: AppTextStyles.caption.copyWith(
-                            color: colors.textSecondary,
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      if (useTotalRatio) ...[
-                        SizedBox(width: 6.w),
-                        Text(
-                          '(${displayPercent.toStringAsFixed(1)}%)',
-                          style: AppTextStyles.caption.copyWith(
-                            color: AppColors.orange500,
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                SizedBox(height: 8.h),
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     SizedBox(
                       width: labelWidth,
                       child: Text(
                         category.name,
-                        textAlign: TextAlign.center,
+                        textAlign: TextAlign.left,
                         style: labelStyle,
                         maxLines: 1,
                         softWrap: false,
@@ -116,17 +83,55 @@ class _CategoryListState extends State<CategoryList> {
                     ),
                     SizedBox(width: contentGap),
                     Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: FractionallySizedBox(
-                          widthFactor: 0.9,
-                          child: MoreProgressBar(
-                            progress: barRatio,
-                            color: AppColors.orange500,
-                            backgroundColor: colors.gray50,
-                            height: 14.h,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerRight,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    useTotalRatio
+                                        ? '${CurrencyFormatter.formatKRW(category.amount)} / ${CurrencyFormatter.formatKRW(widget.totalAmount!)}'
+                                        : CurrencyFormatter.formatKRW(
+                                            category.amount,
+                                          ),
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: colors.textSecondary,
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  if (useTotalRatio) ...[
+                                    SizedBox(width: 6.w),
+                                    Text(
+                                      '(${displayPercent.toStringAsFixed(1)}%)',
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: AppColors.orange500,
+                                        fontSize: 11.sp,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
+                          SizedBox(height: 10.h),
+                          FractionallySizedBox(
+                            widthFactor: 0.9,
+                            child: MoreProgressBar(
+                              progress: barRatio,
+                              color: AppColors.orange500,
+                              backgroundColor: colors.gray50,
+                              height: 14.h,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
