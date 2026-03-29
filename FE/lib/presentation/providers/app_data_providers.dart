@@ -141,7 +141,7 @@ final biometricAuthServiceProvider = Provider<BiometricAuthService>((ref) {
 });
 
 final appLockAvailabilityProvider = FutureProvider<bool>((ref) {
-  return ref.read(biometricAuthServiceProvider).isDeviceAuthAvailable();
+  return ref.read(biometricAuthServiceProvider).isBiometricAvailable();
 });
 
 final appLockPinConfiguredProvider = FutureProvider<bool>((ref) {

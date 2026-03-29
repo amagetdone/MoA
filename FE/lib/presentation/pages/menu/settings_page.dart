@@ -77,6 +77,23 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
+  Future<bool> _showAppPinVerificationDialog({
+    required String title,
+    required String subtitle,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => _AppPinVerificationDialog(
+        title: title,
+        subtitle: subtitle,
+        validator: ref.read(biometricAuthServiceProvider).verifyAppPin,
+      ),
+    );
+
+    return result ?? false;
+  }
+
   Future<void> _showMessage(String message) async {
     if (!mounted) {
       return;
@@ -91,14 +108,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Future<bool> _reauthenticateForAppLockChange({
     required String reason,
     required String failureMessage,
+    bool biometricOnly = false,
   }) async {
     final service = ref.read(biometricAuthServiceProvider);
-    final deviceAuthAvailable = await service.isDeviceAuthAvailable();
-    if (!deviceAuthAvailable) {
+    final authAvailable = biometricOnly
+        ? await service.isBiometricAvailable()
+        : await service.isDeviceAuthAvailable();
+    if (!authAvailable) {
+      if (biometricOnly) {
+        await _showMessage(failureMessage);
+        return false;
+      }
       return true;
     }
 
-    final authenticated = await service.authenticate(reason: reason);
+    final authenticated = await service.authenticate(
+      reason: reason,
+      biometricOnly: biometricOnly,
+    );
     if (authenticated || !mounted) {
       return authenticated;
     }
@@ -107,14 +134,51 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return false;
   }
 
+  Future<bool> _confirmCurrentAppLockAccess({
+    required String biometricReason,
+    required String failureMessage,
+    required String pinTitle,
+    required String pinSubtitle,
+  }) async {
+    final service = ref.read(biometricAuthServiceProvider);
+    final hasPin = await service.hasAppPin();
+    final currentMethod =
+        await service.getAppLockMethod() ??
+        (hasPin ? AppLockMethod.pin : AppLockMethod.biometric);
+
+    if (currentMethod == AppLockMethod.pin) {
+      if (!hasPin) {
+        await _showMessage('앱 PIN 정보를 찾을 수 없어 잠금 설정을 변경할 수 없습니다.');
+        return false;
+      }
+
+      final verified = await _showAppPinVerificationDialog(
+        title: pinTitle,
+        subtitle: pinSubtitle,
+      );
+      if (!verified && mounted) {
+        await _showMessage(failureMessage);
+      }
+      return verified;
+    }
+
+    return _reauthenticateForAppLockChange(
+      reason: biometricReason,
+      failureMessage: failureMessage,
+      biometricOnly: true,
+    );
+  }
+
   Future<void> _handleAppPinReset() async {
     if (_isUpdatingBiometric) {
       return;
     }
 
-    final authenticated = await _reauthenticateForAppLockChange(
-      reason: '앱 PIN을 다시 설정하려면 본인 확인을 진행해주세요.',
+    final authenticated = await _confirmCurrentAppLockAccess(
+      biometricReason: '앱 PIN을 다시 설정하려면 본인 확인을 진행해주세요.',
       failureMessage: '본인 확인이 완료되지 않아 앱 PIN을 변경하지 않았습니다.',
+      pinTitle: '앱 PIN 확인',
+      pinSubtitle: '현재 앱 PIN을 입력하면 새 PIN으로 다시 설정할 수 있어요.',
     );
     if (!authenticated || !mounted) {
       return;
@@ -148,9 +212,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final service = ref.read(biometricAuthServiceProvider);
 
     if (!enabled) {
-      final authenticated = await _reauthenticateForAppLockChange(
-        reason: '앱 잠금을 해제하려면 본인 확인을 진행해주세요.',
+      final authenticated = await _confirmCurrentAppLockAccess(
+        biometricReason: '앱 잠금을 해제하려면 본인 확인을 진행해주세요.',
         failureMessage: '본인 확인이 완료되지 않아 앱 잠금을 해제하지 않았습니다.',
+        pinTitle: '앱 잠금 해제',
+        pinSubtitle: '현재 앱 PIN을 입력하면 앱 잠금이 해제돼요.',
       );
       if (!authenticated || !mounted) {
         return;
@@ -171,12 +237,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       return;
     }
 
-    final deviceAuthAvailable = await service.isDeviceAuthAvailable();
+    final biometricAvailable = await service.isBiometricAvailable();
     if (!mounted) {
       return;
     }
 
-    final selectedMethod = deviceAuthAvailable
+    final selectedMethod = biometricAvailable
         ? await _showAppLockMethodDialog()
         : AppLockMethod.pin;
     if (!mounted) {
@@ -188,12 +254,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       return;
     }
 
-    final authenticated = await _reauthenticateForAppLockChange(
-      reason: '앱 잠금을 설정하려면 본인 확인을 진행해주세요.',
-      failureMessage: '본인 확인이 완료되지 않아 앱 잠금을 켜지 않았습니다.',
-    );
-    if (!authenticated || !mounted) {
-      return;
+    if (selectedMethod == AppLockMethod.biometric) {
+      final authenticated = await _reauthenticateForAppLockChange(
+        reason: '앱 잠금을 설정하려면 본인 확인을 진행해주세요.',
+        failureMessage: '본인 확인이 완료되지 않아 앱 잠금을 켜지 않았습니다.',
+        biometricOnly: true,
+      );
+      if (!authenticated || !mounted) {
+        return;
+      }
     }
 
     try {
@@ -244,7 +313,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final appLockPinConfigured = ref.watch(appLockPinConfiguredProvider);
     final showBiometric =
         !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-    final deviceAuthAvailable = appLockAvailability.maybeWhen(
+    final biometricAvailable = appLockAvailability.maybeWhen(
       data: (value) => value,
       orElse: () => false,
     );
@@ -363,7 +432,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           Text(
                             biometricEnabled
                                 ? '자동로그인 뒤 설정한 방식으로 한 번 더 확인해요'
-                                : deviceAuthAvailable
+                                : biometricAvailable
                                 ? '생체인증 또는 4자리 앱 PIN으로 앱 잠금을 설정할 수 있어요'
                                 : '4자리 앱 PIN으로 앱 잠금을 설정할 수 있어요',
                             style: AppTextStyles.caption.copyWith(
@@ -731,6 +800,136 @@ class _AppPinSetupDialogState extends State<_AppPinSetupDialog> {
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AppPinVerificationDialog extends StatefulWidget {
+  const _AppPinVerificationDialog({
+    required this.title,
+    required this.subtitle,
+    required this.validator,
+  });
+
+  final String title;
+  final String subtitle;
+  final Future<bool> Function(String pin) validator;
+
+  @override
+  State<_AppPinVerificationDialog> createState() =>
+      _AppPinVerificationDialogState();
+}
+
+class _AppPinVerificationDialogState extends State<_AppPinVerificationDialog> {
+  String _enteredPin = '';
+  String? _error;
+  int _shuffleSeed = 0;
+  bool _isVerifying = false;
+
+  Future<void> _verifyPin(String pin) async {
+    setState(() {
+      _isVerifying = true;
+      _error = null;
+    });
+
+    final isValid = await widget.validator(pin);
+    if (!mounted) {
+      return;
+    }
+
+    if (isValid) {
+      Navigator.of(context).pop(true);
+      return;
+    }
+
+    setState(() {
+      _isVerifying = false;
+      _enteredPin = '';
+      _error = '앱 PIN이 올바르지 않습니다.';
+      _shuffleSeed++;
+    });
+  }
+
+  void _handleDigitPressed(String digit) {
+    if (_isVerifying || _enteredPin.length >= BiometricAuthService.appPinLength) {
+      return;
+    }
+
+    final nextPin = '$_enteredPin$digit';
+    setState(() {
+      _enteredPin = nextPin;
+      _error = null;
+    });
+
+    if (nextPin.length == BiometricAuthService.appPinLength) {
+      _verifyPin(nextPin);
+    }
+  }
+
+  void _handleBackspace() {
+    if (_isVerifying || _enteredPin.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _enteredPin = _enteredPin.substring(0, _enteredPin.length - 1);
+      _error = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
+    return Dialog(
+      insetPadding: EdgeInsets.symmetric(horizontal: 20.w),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28.r)),
+      backgroundColor: colors.bgSurface,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 20.h),
+        child: AppPinKeypad(
+          pin: _enteredPin,
+          pinLength: BiometricAuthService.appPinLength,
+          title: widget.title,
+          subtitle: widget.subtitle,
+          errorText: _error,
+          shuffleKey: _shuffleSeed,
+          enabled: !_isVerifying,
+          onDigitPressed: _handleDigitPressed,
+          onBackspace: _handleBackspace,
+          bottomContent: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_isVerifying) ...[
+                SizedBox(
+                  width: 24.w,
+                  height: 24.w,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: AppColors.orange500,
+                  ),
+                ),
+                SizedBox(height: 12.h),
+              ],
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: _isVerifying
+                      ? null
+                      : () => Navigator.of(context).pop(false),
+                  child: Text(
+                    '취소',
+                    style: AppTextStyles.bodyMd.copyWith(
+                      color: colors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

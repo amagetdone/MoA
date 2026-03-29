@@ -26,6 +26,24 @@ class BiometricAuthService {
   bool get isAndroidOnlySupported =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
+  Future<bool> isBiometricAvailable() async {
+    if (!isAndroidOnlySupported) {
+      return false;
+    }
+
+    try {
+      final canCheckBiometrics = await _localAuth.canCheckBiometrics;
+      if (!canCheckBiometrics) {
+        return false;
+      }
+
+      final availableBiometrics = await _localAuth.getAvailableBiometrics();
+      return availableBiometrics.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> isDeviceAuthAvailable() async {
     if (!isAndroidOnlySupported) {
       return false;
@@ -38,16 +56,22 @@ class BiometricAuthService {
     }
   }
 
-  Future<bool> authenticate({required String reason}) async {
-    if (!await isDeviceAuthAvailable()) {
+  Future<bool> authenticate({
+    required String reason,
+    bool biometricOnly = false,
+  }) async {
+    final isAvailable = biometricOnly
+        ? await isBiometricAvailable()
+        : await isDeviceAuthAvailable();
+    if (!isAvailable) {
       return false;
     }
 
     try {
       return await _localAuth.authenticate(
         localizedReason: reason,
-        options: const AuthenticationOptions(
-          biometricOnly: false,
+        options: AuthenticationOptions(
+          biometricOnly: biometricOnly,
           stickyAuth: true,
           useErrorDialogs: true,
         ),

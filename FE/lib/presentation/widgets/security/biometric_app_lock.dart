@@ -124,7 +124,7 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
       return;
     }
 
-    final canUseDeviceAuth = await service.isDeviceAuthAvailable();
+    final canUseBiometric = await service.isBiometricAvailable();
     if (!mounted) {
       return;
     }
@@ -149,7 +149,7 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
       return;
     }
 
-    if (selectedMethod == AppLockMethod.biometric && !canUseDeviceAuth) {
+    if (selectedMethod == AppLockMethod.biometric && !canUseBiometric) {
       if (!mounted) {
         return;
       }
@@ -160,7 +160,7 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
         _backgroundedAt = null;
         _selectedMethod = AppLockMethod.biometric;
         _needsPinRecovery = true;
-        _availabilityNotice = '기기 생체인증 또는 화면 잠금을 사용할 수 없어 앱 PIN으로 잠금 방식을 다시 설정해야 해요.';
+        _availabilityNotice = '기기 생체인증을 사용할 수 없어 앱 PIN으로 잠금 방식을 다시 설정해야 해요.';
         _message = null;
         _pinError = null;
         _enteredPin = '';
@@ -182,6 +182,7 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
     if (selectedMethod == AppLockMethod.biometric) {
       final unlocked = await service.authenticate(
         reason: '앱 잠금을 해제하려면 본인 확인을 진행해주세요.',
+        biometricOnly: true,
       );
       if (!mounted) {
         return;
@@ -569,29 +570,31 @@ class _BiometricAppLockState extends ConsumerState<BiometricAppLock>
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Container(
-                              width: 68.w,
-                              height: 68.w,
-                              decoration: const BoxDecoration(
-                                color: AppColors.orange50,
-                                shape: BoxShape.circle,
+                            if (_selectedMethod != AppLockMethod.pin) ...[
+                              Container(
+                                width: 68.w,
+                                height: 68.w,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.orange50,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.lock_outline,
+                                  size: 34.w,
+                                  color: AppColors.orange500,
+                                ),
                               ),
-                              child: Icon(
-                                Icons.lock_outline,
-                                size: 34.w,
-                                color: AppColors.orange500,
+                              SizedBox(height: 18.h),
+                              Text(
+                                '앱 잠금',
+                                style: AppTextStyles.headingLg.copyWith(
+                                  color: colors.textPrimary,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 28.sp,
+                                ),
                               ),
-                            ),
-                            SizedBox(height: 18.h),
-                            Text(
-                              '앱 잠금',
-                              style: AppTextStyles.headingLg.copyWith(
-                                color: colors.textPrimary,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 28.sp,
-                              ),
-                            ),
-                            SizedBox(height: 10.h),
+                              SizedBox(height: 10.h),
+                            ],
                             if (_isAuthenticating) ...[
                               SizedBox(height: 20.h),
                               SizedBox(
