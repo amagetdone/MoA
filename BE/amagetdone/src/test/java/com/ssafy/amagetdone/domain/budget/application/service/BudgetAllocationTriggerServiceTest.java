@@ -110,11 +110,11 @@ class BudgetAllocationTriggerServiceTest {
 		inOrder.verify(planRepository).findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE);
 		inOrder.verify(allocateBudgetUseCase).execute(
 			any(User.class),
-			eq(baseMonth),
+			eq(LocalDate.of(2026, 3, 2)),
 			eq(3_200_000L),
 			eq(List.of(essential)),
 			eq(List.of(activePlan)),
-			eq(baseMonth.withDayOfMonth(baseMonth.lengthOfMonth()))
+			eq(LocalDate.of(2026, 4, 5))
 			);
 	}
 

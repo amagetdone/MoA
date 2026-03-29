@@ -1,7 +1,9 @@
 package com.ssafy.amagetdone.domain.budget.application.service;
 
 import java.time.Clock;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 
 import com.ssafy.amagetdone.domain.budget.application.usecase.AllocateBudgetUseCase;
@@ -36,7 +38,11 @@ public class BudgetAllocationTriggerService {
 
 	public void trigger(Integer userId) {
 		LocalDate baseMonth = LocalDate.now(clock).withDayOfMonth(1);
-		triggerHistorical(userId, baseMonth, baseMonth.withDayOfMonth(baseMonth.lengthOfMonth()));
+		LocalDate serviceStartDate = baseMonth.with(TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY));
+		LocalDate allocationEndDate = baseMonth.withDayOfMonth(baseMonth.lengthOfMonth())
+			.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+			.plusDays(6L);
+		triggerHistorical(userId, serviceStartDate, allocationEndDate);
 	}
 
 	public BudgetAllocationService.AllocationResult triggerHistorical(

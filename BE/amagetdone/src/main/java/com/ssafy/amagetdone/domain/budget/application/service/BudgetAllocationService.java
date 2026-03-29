@@ -16,6 +16,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import com.ssafy.amagetdone.domain.account.model.repository.PocketRepository;
+import com.ssafy.amagetdone.domain.budget.model.entity.BudgetAdjustment;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetMonth;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
 import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseMonth;
@@ -33,6 +34,7 @@ import com.ssafy.amagetdone.domain.budget.model.vo.ExpenseScope;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
+import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -55,6 +57,7 @@ public class BudgetAllocationService {
 	private final PlanWeekAllocationRepository planWeekAllocationRepository;
 	private final BudgetRolloverRepository budgetRolloverRepository;
 	private final PocketRepository pocketRepository;
+	private final PlanRepository planRepository;
 
 	public AllocationResult allocateBudget(
 		User user,
@@ -351,12 +354,39 @@ public class BudgetAllocationService {
 			.filter(budgetWeek -> !retainedIds.contains(budgetWeek.getId()))
 			.toList();
 		if (!obsoleteBudgetWeeks.isEmpty()) {
-			budgetAdjustmentRepository.deleteAllByBudgetWeekIn(obsoleteBudgetWeeks);
+			List<BudgetAdjustment> obsoleteAdjustments = budgetAdjustmentRepository.findAllByBudgetWeekIn(obsoleteBudgetWeeks);
+			restoreSavedAmounts(obsoleteAdjustments);
+			if (!obsoleteAdjustments.isEmpty()) {
+				budgetAdjustmentRepository.deleteAll(obsoleteAdjustments);
+			}
 			budgetRolloverRepository.deleteAllBySourceBudgetWeekIn(obsoleteBudgetWeeks);
 			budgetRolloverRepository.deleteAllByTargetBudgetWeekIn(obsoleteBudgetWeeks);
 			pocketRepository.deleteAllByBudgetWeekIn(obsoleteBudgetWeeks);
 			budgetWeekRepository.deleteAll(obsoleteBudgetWeeks);
 		}
+	}
+
+	private void restoreSavedAmounts(List<BudgetAdjustment> adjustments) {
+		Map<Integer, Long> savedAmountDeltasByPlanId = new LinkedHashMap<>();
+		for (BudgetAdjustment adjustment : adjustments) {
+			if (adjustment.getPlan() == null || adjustment.getPlan().getId() == null) {
+				continue;
+			}
+			long signedAmount = signedSavedAdjustmentAmount(adjustment);
+			if (signedAmount == 0L) {
+				continue;
+			}
+			savedAmountDeltasByPlanId.merge(adjustment.getPlan().getId(), -signedAmount, Long::sum);
+		}
+		savedAmountDeltasByPlanId.forEach(planRepository::adjustSavedAmount);
+	}
+
+	private long signedSavedAdjustmentAmount(BudgetAdjustment adjustment) {
+		return switch (adjustment.getAdjustmentType()) {
+			case PLAN_SAVED_ADD, PLAN_SAVED_AUTO_ADD -> normalizeAmount(adjustment.getAdjustmentAmount());
+			case PLAN_SAVED_AUTO_SUBTRACT -> -normalizeAmount(adjustment.getAdjustmentAmount());
+			default -> 0L;
+		};
 	}
 
 	private Map<EssentialAllocationKey, ExistingEssentialAllocationState> loadExistingEssentialStates(

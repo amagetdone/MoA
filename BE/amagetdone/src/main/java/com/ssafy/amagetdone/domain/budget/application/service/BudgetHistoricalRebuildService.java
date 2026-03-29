@@ -1,8 +1,10 @@
 package com.ssafy.amagetdone.domain.budget.application.service;
 
 import java.time.Clock;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +30,7 @@ import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
 
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -78,6 +81,50 @@ public class BudgetHistoricalRebuildService {
 			);
 		}
 
+		return rebuildRange(userId, serviceStartDate, rebuildEndDate, List.of(planId), true);
+	}
+
+	public GoalSavingAccrualForceDto.Response rebuildPastWeeks(Integer userId) {
+		LocalDate today = LocalDate.now(clock);
+		LocalDate rebuildEndDate = today.with(DayOfWeek.MONDAY).minusDays(1L);
+		List<Plan> rebuildTargets = planRepository.findAllByUserIdAndDeletedFalseAndStatusIn(
+			userId,
+			List.of(PlanStatus.ACTIVE)
+		).stream()
+			.filter(plan -> plan.getStartDate() != null)
+			.filter(plan -> !plan.getStartDate().isAfter(rebuildEndDate))
+			.toList();
+		if (rebuildTargets.isEmpty()) {
+			return new GoalSavingAccrualForceDto.Response(
+				GoalSavingAccrualForceDto.OperationType.BACKFILL,
+				null,
+				GoalSavingAccrualForceDto.TargetType.ALL,
+				null,
+				0L,
+				today,
+				today.minusDays(1L),
+				null,
+				rebuildEndDate,
+				"UP_TO_%s".formatted(rebuildEndDate),
+				List.of()
+			);
+		}
+
+		LocalDate serviceStartDate = rebuildTargets.stream()
+			.map(Plan::getStartDate)
+			.min(LocalDate::compareTo)
+			.orElse(rebuildEndDate);
+		return rebuildRange(userId, serviceStartDate, rebuildEndDate, List.of(), false);
+	}
+
+	private GoalSavingAccrualForceDto.Response rebuildRange(
+		Integer userId,
+		LocalDate serviceStartDate,
+		LocalDate rebuildEndDate,
+		Collection<Integer> planIdsToReset,
+		boolean reapplyCurrentWeekSavings
+	) {
+
 		List<BudgetMonth> budgetMonths = budgetMonthsWithSeedFallback(userId, serviceStartDate, rebuildEndDate);
 		List<BudgetWeek> affectedWeeks = budgetWeekRepository.findAllByUser_IdOrderByWeekStartDateAsc(userId).stream()
 			.filter(week -> overlaps(week, serviceStartDate, rebuildEndDate))
@@ -93,7 +140,10 @@ public class BudgetHistoricalRebuildService {
 		List<BudgetAdjustment> adjustments = affectedWeeks.isEmpty()
 			? List.of()
 			: budgetAdjustmentRepository.findAllByBudgetWeekIn(affectedWeeks);
-		planRepository.resetSavedAmount(planId);
+		planIdsToReset.stream()
+			.filter(Objects::nonNull)
+			.distinct()
+			.forEach(planRepository::resetSavedAmount);
 		resetPlanSavedAmounts(adjustments);
 
 		if (!adjustments.isEmpty()) {
@@ -137,7 +187,9 @@ public class BudgetHistoricalRebuildService {
 			userId,
 			new GoalSavingAccrualForceDto.BackfillRequest(null)
 		);
-		weeklyGoalSavingAccrualService.applyWeeklyAccrual(userId);
+		if (reapplyCurrentWeekSavings) {
+			weeklyGoalSavingAccrualService.applyWeeklyAccrual(userId);
+		}
 		return response;
 	}
 
