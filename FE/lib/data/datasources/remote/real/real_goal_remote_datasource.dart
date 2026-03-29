@@ -89,7 +89,18 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
     } catch (_) {
       weeklyPlanPage = GoalWeeklyPlanPage(goalId: id);
     }
-    final videoUrl = await _fetchVideoUrlSafely(planId);
+    final detailAiPipelineStatus = parseGoalAiPipelineStatus(
+      data['aiPipelineStatus'] as String?,
+    );
+    final detailVideoUrl =
+        data['planVideoUrl'] as String? ?? data['videoUrl'] as String?;
+    final videoUrl =
+        detailVideoUrl?.isNotEmpty == true
+        ? detailVideoUrl
+        : (detailAiPipelineStatus == null ||
+                  detailAiPipelineStatus == GoalAiPipelineStatus.succeeded
+              ? await _fetchVideoUrlSafely(planId)
+              : null);
 
     final targetAmount = (data['targetAmount'] as num?)?.toInt() ?? 0;
     final savedAmount = (data['savedAmount'] as num?)?.toInt() ?? 0;
@@ -144,6 +155,7 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
       totalWeeksOverride: totalWeeks,
       detailLoaded: true,
       apiStatus: apiStatus,
+      aiPipelineStatus: detailAiPipelineStatus,
     );
   }
 
