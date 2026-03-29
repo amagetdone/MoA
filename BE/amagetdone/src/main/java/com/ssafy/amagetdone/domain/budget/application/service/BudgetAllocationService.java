@@ -534,13 +534,13 @@ public class BudgetAllocationService {
 
 		for (Plan plan : activePlans) {
 			long targetAmount = normalizeAmount(plan.getTargetAmount());
-			long totalPlanDays = (long)plan.getTargetWeeks() * 7L;
+			LocalDate originalPlanStartDate = defaultDate(plan.getStartDate(), serviceStartDate);
+			long totalPlanDays = planDurationDays(originalPlanStartDate, plan.getEndDate());
 			long baseWeeklyAmount = calculateBaseWeeklyAmount(targetAmount, plan.getTargetWeeks());
 			if (baseWeeklyAmount <= 0L) {
 				continue;
 			}
 
-			LocalDate originalPlanStartDate = defaultDate(plan.getStartDate(), serviceStartDate);
 			LocalDate planStartDate = maxDate(serviceStartDate, originalPlanStartDate);
 			LocalDate planEndDate = minDate(allocationEndDate, plan.getEndDate());
 			if (planEndDate.isBefore(planStartDate)) {
@@ -834,6 +834,13 @@ public class BudgetAllocationService {
 			return 0L;
 		}
 		return ChronoUnit.DAYS.between(planStartDate, effectiveEndDate) + 1L;
+	}
+
+	private long planDurationDays(LocalDate planStartDate, LocalDate planEndDate) {
+		if (planStartDate == null || planEndDate == null || planEndDate.isBefore(planStartDate)) {
+			return 0L;
+		}
+		return ChronoUnit.DAYS.between(planStartDate, planEndDate) + 1L;
 	}
 
 	private long proratedAmount(long totalAmount, long denominator, long numerator) {
