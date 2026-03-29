@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'package:more_app/core/utils/app_env.dart';
+import 'package:more_app/data/datasources/remote/google_id_token_stub.dart'
+    if (dart.library.js_interop)
+        'package:more_app/data/datasources/remote/google_id_token_web.dart';
 import 'package:more_app/data/datasources/remote/social_auth_datasource.dart';
 
 class SocialAuthDataSourceImpl implements SocialAuthDataSource {
@@ -92,13 +95,21 @@ class SocialAuthDataSourceImpl implements SocialAuthDataSource {
       currentRequest: _pendingGoogleToken,
       setRequest: (next) => _pendingGoogleToken = next,
       action: () async {
-        if (_resolveGoogleClientId() == null) {
+        final googleClientId = _resolveGoogleClientId();
+        if (googleClientId == null) {
           throw Exception('GOOGLE_CLIENT_ID가 설정되지 않았습니다.');
         }
 
-        final googleSignIn = _resolveGoogleSignIn();
-
         try {
+          if (kIsWeb) {
+            final idToken = await getGoogleIdToken(googleClientId);
+            return GoogleSocialTokens(
+              idToken: idToken,
+              accessToken: null,
+            );
+          }
+
+          final googleSignIn = _resolveGoogleSignIn();
           await googleSignIn.signOut();
 
           final googleUser = await googleSignIn.signIn();
