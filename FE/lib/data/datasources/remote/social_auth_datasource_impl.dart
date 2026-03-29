@@ -7,17 +7,29 @@ import 'package:more_app/core/utils/app_env.dart';
 import 'package:more_app/data/datasources/remote/social_auth_datasource.dart';
 
 class SocialAuthDataSourceImpl implements SocialAuthDataSource {
-  static const String _webGoogleClientId =
+  static const String _legacyWebGoogleClientId =
       '26025204114-h0lsehum6766elgasajahjtdo79bsrej.apps.googleusercontent.com';
 
   GoogleSignIn? _googleSignIn;
   Future<GoogleSocialTokens>? _pendingGoogleToken;
   Future<String>? _pendingKakaoToken;
 
+  String? _resolveGoogleClientId() {
+    final configuredClientId = AppEnv.optional('GOOGLE_CLIENT_ID');
+    if (configuredClientId != null && configuredClientId.isNotEmpty) {
+      return configuredClientId;
+    }
+    if (kIsWeb) {
+      return _legacyWebGoogleClientId;
+    }
+    return null;
+  }
+
   GoogleSignIn _resolveGoogleSignIn() {
+    final googleClientId = _resolveGoogleClientId();
     return _googleSignIn ??= GoogleSignIn(
-      clientId: kIsWeb ? _webGoogleClientId : null,
-      serverClientId: kIsWeb ? AppEnv.optional('GOOGLE_CLIENT_ID') : null,
+      clientId: kIsWeb ? googleClientId : null,
+      serverClientId: !kIsWeb ? googleClientId : null,
       scopes: const ['email', 'openid', 'profile'],
     );
   }
@@ -80,7 +92,7 @@ class SocialAuthDataSourceImpl implements SocialAuthDataSource {
       currentRequest: _pendingGoogleToken,
       setRequest: (next) => _pendingGoogleToken = next,
       action: () async {
-        if (!kIsWeb && AppEnv.optional('GOOGLE_CLIENT_ID') == null) {
+        if (_resolveGoogleClientId() == null) {
           throw Exception('GOOGLE_CLIENT_ID가 설정되지 않았습니다.');
         }
 
