@@ -90,21 +90,29 @@ class Goal {
       (targetAmount - currentAmount).clamp(0, targetAmount);
 
   int get currentWeekNumber {
-    if (currentWeekOverride != null && currentWeekOverride! > 0) {
-      return currentWeekOverride!;
+    if (currentWeekOverride != null) {
+      if (currentWeekOverride! > 0) {
+        return currentWeekOverride!;
+      }
+      final knownWeekCount = _knownWeekCount;
+      if (knownWeekCount > 0) {
+        return knownWeekCount;
+      }
+      return 1;
     }
     if (weekNumber != null && weekNumber! > 0) {
       return weekNumber!;
     }
     final weeks = DateTime.now().difference(startDate).inDays ~/ 7 + 1;
-    return weeks.clamp(1, 9999);
+    return weeks.clamp(1, totalWeeks);
   }
 
   int get totalWeeks {
     if (totalWeeksOverride != null && totalWeeksOverride! > 0) {
       return totalWeeksOverride!;
     }
-    final weeks = endDate.difference(startDate).inDays ~/ 7;
+    final inclusiveDays = endDate.difference(startDate).inDays + 1;
+    final weeks = (inclusiveDays + 6) ~/ 7;
     return weeks.clamp(1, 9999);
   }
 
@@ -338,6 +346,37 @@ class Goal {
     }
 
     return weeklySaved != currentAmount || weeklyTarget != targetAmount;
+  }
+
+  int get _knownWeekCount {
+    var maxWeek = 0;
+
+    for (final plan in weeklyPlans) {
+      if (plan.week > maxWeek) {
+        maxWeek = plan.week;
+      }
+    }
+
+    final graph = graphData;
+    if (graph != null) {
+      for (final week in graph.weeks) {
+        if (week > maxWeek) {
+          maxWeek = week;
+        }
+      }
+      if (graph.planned.length > maxWeek) {
+        maxWeek = graph.planned.length;
+      }
+      if (graph.actual.length > maxWeek) {
+        maxWeek = graph.actual.length;
+      }
+    }
+
+    if (totalWeeksOverride != null && totalWeeksOverride! > maxWeek) {
+      maxWeek = totalWeeksOverride!;
+    }
+
+    return maxWeek;
   }
 }
 
