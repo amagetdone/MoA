@@ -15,9 +15,11 @@ import com.ssafy.amagetdone.domain.budget.model.repository.BudgetAdjustmentRepos
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetAdjustmentType;
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetWeekStatus;
+import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
@@ -82,7 +84,9 @@ public class BudgetAdjustmentCommandService {
 				if (remainingFreeBudget < adjustmentAmount) {
 					throw new IllegalArgumentException("Adjustment amount exceeds remaining free budget");
 				}
-				planRepository.adjustSavedAmount(targetAllocation.getPlan().getId(), adjustmentAmount);
+				Plan targetPlan = targetAllocation.getPlan();
+				planRepository.adjustSavedAmount(targetPlan.getId(), adjustmentAmount);
+				markCompletedWhenTargetReached(targetPlan, adjustmentAmount);
 				budgetWeek.setFinalFreeAmount(zero(budgetWeek.getFinalFreeAmount()) - adjustmentAmount);
 			}
 			case PLAN_DELAY, PLAN_EARLY_CLOSE, ROLLOVER_APPLIED -> throw new IllegalArgumentException(
@@ -155,6 +159,24 @@ public class BudgetAdjustmentCommandService {
 			.filter(allocation -> allocation.getPlan().getUser().getId().equals(userId))
 			.findFirst()
 			.orElseThrow(() -> new IllegalArgumentException("Plan allocation not found"));
+	}
+
+	private void markCompletedWhenTargetReached(Plan plan, long deltaAmount) {
+		if (plan == null || plan.getId() == null) {
+			return;
+		}
+
+		long targetAmount = zero(plan.getTargetAmount());
+		if (targetAmount <= 0L) {
+			return;
+		}
+
+		long updatedSavedAmount = zero(plan.getSavedAmount()) + deltaAmount;
+		if (updatedSavedAmount < targetAmount) {
+			return;
+		}
+
+		planRepository.markCompleted(plan.getId(), PlanStatus.COMPLETED, PlanStatus.CANCELLED);
 	}
 
 	private long calculateFinalFreeAmount(BudgetWeek budgetWeek, List<PlanWeekAllocation> planAllocations) {
