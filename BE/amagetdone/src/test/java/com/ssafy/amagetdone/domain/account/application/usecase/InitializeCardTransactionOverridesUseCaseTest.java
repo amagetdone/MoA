@@ -148,7 +148,7 @@ class InitializeCardTransactionOverridesUseCaseTest {
 		assertThat(response.targetType()).isEqualTo("card");
 		assertThat(response.targetNo()).isEqualTo("5241111122223333");
 		assertThat(response.transactionCount()).isEqualTo(captor.getValue().size());
-		assertThat(captor.getValue().size()).isGreaterThanOrEqualTo(600);
+		assertThat(captor.getValue().size()).isGreaterThanOrEqualTo(700);
 		assertThat(captor.getValue())
 			.extracting(CardTransactionOverride::getId)
 			.containsOnlyNulls();
@@ -162,7 +162,7 @@ class InitializeCardTransactionOverridesUseCaseTest {
 		assertThat(captor.getValue())
 			.extracting(CardTransactionOverride::getTransactionDateTime)
 			.map(dateTime -> dateTime.toLocalDate())
-			.contains(LocalDate.of(2026, 3, 25));
+			.contains(LocalDate.of(2026, 3, 29));
 		assertThat(countMatches(captor.getValue(), FOOD_MERCHANT_IDS)).isGreaterThanOrEqualTo(290);
 		assertThat(countMatches(captor.getValue(), TRANSPORT_MERCHANT_IDS)).isGreaterThanOrEqualTo(160);
 		assertThat(countMatches(captor.getValue(), CONVENIENCE_MERCHANT_IDS)).isGreaterThanOrEqualTo(110);

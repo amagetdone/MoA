@@ -231,9 +231,23 @@ class SecurityConfigIntegrationTest {
 	}
 
 	@Test
-	void mcpEndpointIsNotHandledByPublicEndpointMatcher() {
-		org.junit.jupiter.api.Assertions.assertFalse(publicEndpoints.matches(apiGet("/mcp")));
-		org.junit.jupiter.api.Assertions.assertFalse(publicEndpoints.matches(apiGet("/mcp/messages")));
+	void mcpEndpointMatcherBecomesPublicWhenEnabled() {
+		assertTrue(publicEndpoints.matches(apiGet("/mcp")));
+		assertTrue(publicEndpoints.matches(apiGet("/mcp/messages")));
+	}
+
+	@Test
+	void mcpEndpointBypassesAuthenticationWhenEnabled() throws Exception {
+		given(jwtAccessTokenReader.readUserId(INVALID_BEARER))
+			.willThrow(new MemberException(MemberErrorCode.INVALID_ACCESS_TOKEN));
+
+		mockMvc.perform(get("/api/mcp")
+				.contextPath("/api")
+				.header(AUTHORIZATION, INVALID_BEARER))
+			.andExpect(status().isInternalServerError())
+			.andExpect(jsonPath("$.errorCode").value("INTERNAL_SERVER_ERROR"));
+
+		then(jwtAccessTokenReader).should(never()).readUserId(INVALID_BEARER);
 	}
 
 	private MockHttpServletRequestBuilder apiPost(String path) {
