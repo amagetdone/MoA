@@ -330,6 +330,38 @@ class BudgetAllocationServiceTest {
 	}
 
 	@Test
+	void allocateBudgetDistributesFullTargetAcrossPartialEndingPlanPeriod() {
+		User user = user(1);
+		LocalDate serviceStartDate = LocalDate.of(2026, 3, 30);
+		Plan partialEndingPlan = Plan.builder()
+			.id(91)
+			.user(user)
+			.title("Partial Ending Plan")
+			.description("Partial Ending Plan")
+			.targetAmount(250_000L)
+			.savedAmount(0L)
+			.startDate(LocalDate.of(2026, 3, 30))
+			.endDate(LocalDate.of(2026, 5, 30))
+			.targetWeeks(9)
+			.priority(1)
+			.autoAllocateEnabled(true)
+			.build();
+
+		BudgetAllocationService.AllocationResult result = budgetAllocationService.allocateBudget(
+			user,
+			serviceStartDate,
+			10_000_000L,
+			List.of(),
+			List.of(partialEndingPlan),
+			LocalDate.of(2026, 5, 30)
+		);
+
+		assertEquals(9, result.planAllocations().size());
+		assertEquals(250_000L, result.planAllocations().stream().mapToLong(PlanWeekAllocation::getPlannedAmount).sum());
+		assertEquals(250_000L, result.planAllocations().stream().mapToLong(PlanWeekAllocation::getFinalAmount).sum());
+	}
+
+	@Test
 	void allocateBudgetRenumbersOverlappingWeeksAndDeletesLegacyFrames() {
 		User user = user(1);
 		LocalDate serviceStartDate = LocalDate.of(2026, 3, 1);
