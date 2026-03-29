@@ -52,6 +52,7 @@ public class PlanAiPollingScheduler {
 		try {
 			PyanGenerateResponse response = pyanClient.fetchStatus(plan.getPyanStatusUrl());
 			PyanTaskStatus pyanStatus = PyanTaskStatus.from(response.status());
+			logPollingResult(response);
 
 			if (isReady(response)) {
 				String resolvedVideoUrl = resolvePreferredDownloadUrl(response);
@@ -144,5 +145,19 @@ public class PlanAiPollingScheduler {
 			return response.originalDownloadUrl();
 		}
 		return null;
+	}
+
+	private void logPollingResult(PyanGenerateResponse response) {
+		log.info(
+			"event=PLAN_AI_POLLING_RESULT taskId={} status={} demoFallbackScheduled={} demoFallbackApplied={} compressedDownloadUrl={} originalDownloadUrl={} message={} error={}",
+			response.taskId(),
+			response.status(),
+			response.demoFallbackScheduled(),
+			response.demoFallbackApplied(),
+			response.compressedDownloadUrl(),
+			response.originalDownloadUrl(),
+			response.message(),
+			isFailure(response) ? response.message() : null
+		);
 	}
 }

@@ -28,6 +28,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Base64;
+import java.util.List;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,6 +38,10 @@ import java.io.InputStream;
 public class PlanAiPipelineService {
 
 	private static final Logger log = LoggerFactory.getLogger(PlanAiPipelineService.class);
+	private static final Integer PYAN_DEMO_USER_ID = 12;
+	private static final String PYAN_GENERATE_ENDPOINT = "/api/generate";
+	private static final String PYAN_DEMO_GENERATE_ENDPOINT = "/api/demo/generate";
+	private static final List<String> PYAN_DEMO_TITLE_KEYWORDS = List.of("바다", "바닷", "바닷속", "잠수함");
 
 	private final PlanRepository planRepository;
 	private final MemberProfileImageService memberProfileImageService;
@@ -110,8 +115,27 @@ public class PlanAiPipelineService {
 			log.info("event=PLAN_IMAGE_STORED planId={} userId={} objectKey={}", planId, userId, objectKey);
 
 			String goalId = "plan-" + plan.getId();
-			log.info("event=PYAN_REQUEST_STARTED planId={} userId={} goalId={} requestKey={}", planId, userId, goalId, pyanRequestKey);
-			PyanGenerateResponse response = pyanClient.generate(generatedImageBytes, goalId, pyanRequestKey);
+			boolean demoRequest = shouldUseDemoGenerate(plan, userId);
+			String endpoint = resolvePyanGenerateEndpoint(demoRequest);
+			log.info(
+				"event=PYAN_REQUEST_STARTED planId={} userId={} goalId={} requestKey={} endpoint={} planTitle={}",
+				planId,
+				userId,
+				goalId,
+				pyanRequestKey,
+				endpoint,
+				plan.getTitle()
+			);
+			PyanGenerateResponse response = demoRequest
+				? pyanClient.generateDemo(
+					generatedImageBytes,
+					goalId,
+					pyanRequestKey,
+					userId,
+					plan.getId(),
+					plan.getTitle()
+				)
+				: pyanClient.generate(generatedImageBytes, goalId, pyanRequestKey);
 			if (!registerPyanTask(planId, userId, response)) {
 				log.info("event=PLAN_AI_PIPELINE_ABORTED planId={} userId={} reason=deleted_or_cancelled", planId, userId);
 				return;
@@ -167,12 +191,7 @@ public class PlanAiPipelineService {
 	}
 
 	private String resolvePyanRequestKey(Plan plan) {
-		String existing = plan.getPyanRequestKey();
-		if (existing != null && !existing.isBlank()) {
-			return existing;
-		}
-		int attempt = (plan.getAiRetryCount() == null ? 0 : plan.getAiRetryCount()) + 1;
-		return "plan-" + plan.getId() + "-pyan-" + attempt;
+		return "plan-" + plan.getId() + "-pyan-1";
 	}
 
 	private boolean updateAiImageKey(Integer planId, Integer userId, String planUrl) {
@@ -245,6 +264,21 @@ public class PlanAiPipelineService {
 	private String buildUserPrompt(Plan plan) {
 		String description = plan.getDescription() == null ? "" : plan.getDescription();
 		return "[Title] " + plan.getTitle() + " [description] " + description;
+	}
+
+	private boolean shouldUseDemoGenerate(Plan plan, Integer userId) {
+		if (!PYAN_DEMO_USER_ID.equals(userId)) {
+			return false;
+		}
+		String planTitle = plan.getTitle();
+		if (planTitle == null || planTitle.isBlank()) {
+			return false;
+		}
+		return PYAN_DEMO_TITLE_KEYWORDS.stream().anyMatch(planTitle::contains);
+	}
+
+	private String resolvePyanGenerateEndpoint(boolean demoRequest) {
+		return demoRequest ? PYAN_DEMO_GENERATE_ENDPOINT : PYAN_GENERATE_ENDPOINT;
 	}
 
 	private String resolvePreferredDownloadUrl(PyanGenerateResponse response) {

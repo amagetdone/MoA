@@ -44,19 +44,16 @@ class PlanAiPollingSchedulerTest {
 			PlanStatus.CANCELLED
 		)).willReturn(List.of(plan));
 		given(pyanClient.fetchStatus("https://sketch.pyan.kr/api/status/task-21"))
-			.willReturn(new PyanGenerateResponse(
+			.willReturn(response(
 				"ready",
 				"task-21",
 				"plan-21",
 				null,
 				"https://sketch.pyan.kr/api/status/task-21",
-				null,
-				null,
-				null,
-				null,
-				"https://sketch.pyan.kr/api/goals/plan-21",
 				"https://sketch.pyan.kr/cdn/task-21.mp4",
-				"https://sketch.pyan.kr/cdn/task-21.compressed.mp4"
+				"https://sketch.pyan.kr/cdn/task-21.compressed.mp4",
+				null,
+				null
 			));
 		given(planRepository.completeAiSuccess(eq(21), eq(3), eq("https://sketch.pyan.kr/cdn/task-21.compressed.mp4"), any(), any(), any()))
 			.willReturn(1);
@@ -86,7 +83,7 @@ class PlanAiPollingSchedulerTest {
 			PlanStatus.CANCELLED
 		)).willReturn(List.of(plan));
 		given(pyanClient.fetchStatus("https://sketch.pyan.kr/api/status/task-22"))
-			.willReturn(new PyanGenerateResponse(
+			.willReturn(response(
 				"cancelled",
 				"task-22",
 				"plan-22",
@@ -94,9 +91,6 @@ class PlanAiPollingSchedulerTest {
 				"https://sketch.pyan.kr/api/status/task-22",
 				null,
 				null,
-				null,
-				null,
-				"https://sketch.pyan.kr/api/goals/plan-22",
 				null,
 				null
 			));
@@ -120,7 +114,7 @@ class PlanAiPollingSchedulerTest {
 			PlanStatus.CANCELLED
 		)).willReturn(List.of(plan));
 		given(pyanClient.fetchStatus("https://sketch.pyan.kr/api/status/task-23"))
-			.willReturn(new PyanGenerateResponse(
+			.willReturn(response(
 				"processing",
 				"task-23",
 				"plan-23",
@@ -128,11 +122,8 @@ class PlanAiPollingSchedulerTest {
 				"https://sketch.pyan.kr/api/status/task-23",
 				null,
 				null,
-				null,
-				null,
-				"https://sketch.pyan.kr/api/goals/plan-23",
-				null,
-				null
+				Boolean.TRUE,
+				Boolean.FALSE
 			));
 
 		PlanAiPollingScheduler scheduler = new PlanAiPollingScheduler(planRepository, pyanClient, applicationEventPublisher);
@@ -167,5 +158,40 @@ class PlanAiPollingSchedulerTest {
 		} catch (ReflectiveOperationException exception) {
 			throw new IllegalStateException(exception);
 		}
+	}
+
+	private PyanGenerateResponse response(
+		String status,
+		String taskId,
+		String goalId,
+		String message,
+		String statusUrl,
+		String originalDownloadUrl,
+		String compressedDownloadUrl,
+		Boolean demoFallbackScheduled,
+		Boolean demoFallbackApplied
+	) {
+		return new PyanGenerateResponse(
+			status,
+			taskId,
+			goalId,
+			message,
+			statusUrl,
+			null,
+			null,
+			null,
+			null,
+			"https://sketch.pyan.kr/api/goals/" + goalId,
+			originalDownloadUrl,
+			compressedDownloadUrl,
+			null,
+			null,
+			null,
+			null,
+			demoFallbackScheduled,
+			demoFallbackApplied,
+			null,
+			null
+		);
 	}
 }
