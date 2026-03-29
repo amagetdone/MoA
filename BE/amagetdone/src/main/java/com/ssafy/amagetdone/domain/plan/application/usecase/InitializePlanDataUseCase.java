@@ -3,6 +3,7 @@ package com.ssafy.amagetdone.domain.plan.application.usecase;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import com.ssafy.amagetdone.domain.account.api.dto.AccountAdminDto;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
@@ -101,9 +102,14 @@ public class InitializePlanDataUseCase {
 		List<String> createdTitles = new ArrayList<>();
 		List<String> skippedTitles = new ArrayList<>();
 		List<Plan> createdPlans = new ArrayList<>();
+		List<Plan> updatedPlans = new ArrayList<>();
 
 		for (PlanSeed seed : PLAN_SEEDS) {
-			if (planRepository.existsByUserIdAndTitleAndDeletedFalse(userId, seed.title())) {
+			Plan existingPlan = planRepository.findByUserIdAndTitleAndDeletedFalse(userId, seed.title()).orElse(null);
+			if (existingPlan != null) {
+				if (synchronizeCompletedSeed(existingPlan, seed)) {
+					updatedPlans.add(existingPlan);
+				}
 				skippedTitles.add(seed.title());
 				continue;
 			}
@@ -111,8 +117,11 @@ public class InitializePlanDataUseCase {
 			createdTitles.add(seed.title());
 		}
 
-		if (!createdPlans.isEmpty()) {
-			planRepository.saveAll(createdPlans);
+		if (!createdPlans.isEmpty() || !updatedPlans.isEmpty()) {
+			List<Plan> plansToSave = new ArrayList<>(createdPlans.size() + updatedPlans.size());
+			plansToSave.addAll(createdPlans);
+			plansToSave.addAll(updatedPlans);
+			planRepository.saveAll(plansToSave);
 		}
 
 		return new AccountAdminDto.PlanDataInitResponse(
@@ -146,6 +155,27 @@ public class InitializePlanDataUseCase {
 		plan.setAiPipelineStatus(seed.aiPipelineStatus());
 		plan.setPyanLastError(null);
 		return plan;
+	}
+
+	private boolean synchronizeCompletedSeed(Plan plan, PlanSeed seed) {
+		if (seed.status() != PlanStatus.COMPLETED) {
+			return false;
+		}
+
+		boolean changed = false;
+		if (!Objects.equals(plan.getTargetAmount(), seed.targetAmount())) {
+			plan.setTargetAmount(seed.targetAmount());
+			changed = true;
+		}
+		if (!Objects.equals(plan.getSavedAmount(), seed.savedAmount())) {
+			plan.setSavedAmount(seed.savedAmount());
+			changed = true;
+		}
+		if (plan.getStatus() != PlanStatus.COMPLETED) {
+			plan.setStatus(PlanStatus.COMPLETED);
+			changed = true;
+		}
+		return changed;
 	}
 
 	private record PlanSeed(
