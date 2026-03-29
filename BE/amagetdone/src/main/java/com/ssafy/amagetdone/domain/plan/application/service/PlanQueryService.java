@@ -66,6 +66,8 @@ public class PlanQueryService {
 			plan.getSavedAmount(),
 			calculateAchievementRate(plan),
 			ChronoUnit.DAYS.between(today(), plan.getEndDate()),
+			plan.getEndDate(),
+			resolveOriginalEndDate(plan),
 			new PlanDetailResponse.GraphData(
 				displayAllocations.stream().map(DisplayAllocation::displayWeek).toList(),
 				displayAllocations.stream().map(displayAllocation -> zero(displayAllocation.allocation().getPlannedAmount())).toList(),
@@ -204,6 +206,10 @@ public class PlanQueryService {
 
 	private long zero(Long amount) {
 		return amount == null ? 0L : amount;
+	}
+
+	private LocalDate resolveOriginalEndDate(Plan plan) {
+		return plan.getOriginalEndDate() == null ? plan.getEndDate() : plan.getOriginalEndDate();
 	}
 
 	private List<DisplayAllocation> toDisplayAllocations(List<PlanWeekAllocation> allocations) {

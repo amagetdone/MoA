@@ -87,6 +87,8 @@ class PlanControllerTest {
 					1,
 					3,
 					14L,
+					java.time.LocalDate.of(2026, 4, 2),
+					java.time.LocalDate.of(2026, 4, 2),
 					new java.math.BigDecimal("32"),
 					"WAITING",
 					"PENDING"
@@ -99,6 +101,8 @@ class PlanControllerTest {
 					2,
 					5,
 					72L,
+					java.time.LocalDate.of(2026, 5, 30),
+					java.time.LocalDate.of(2026, 5, 23),
 					new java.math.BigDecimal("33.5"),
 					"COMPLETED",
 					"SUCCEEDED"
@@ -116,6 +120,8 @@ class PlanControllerTest {
 			.andExpect(jsonPath("$.data[0].planId").value(1))
 			.andExpect(jsonPath("$.data[0].title").value("iPad purchase"))
 			.andExpect(jsonPath("$.data[0].achievementRate").value(32))
+			.andExpect(jsonPath("$.data[0].endDate").value("2026-04-02"))
+			.andExpect(jsonPath("$.data[1].originalEndDate").value("2026-05-23"))
 			.andExpect(jsonPath("$.data[0].status").value("WAITING"))
 			.andExpect(jsonPath("$.data[0].aiPipelineStatus").value("PENDING"))
 			.andExpect(jsonPath("$.data[1].status").value("COMPLETED"))
@@ -249,6 +255,8 @@ class PlanControllerTest {
 				1_200_000L,
 				40,
 				60L,
+				java.time.LocalDate.of(2026, 5, 10),
+				java.time.LocalDate.of(2026, 5, 3),
 				new PlanDetailResponse.GraphData(
 					List.of(1, 2, 3),
 					List.of(50_000L, 70_000L, 60_000L),
@@ -275,6 +283,8 @@ class PlanControllerTest {
 				.andExpect(jsonPath("$.data.weeklyPlans[0].week").value(1))
 				.andExpect(jsonPath("$.data.currentWeek").value(2))
 				.andExpect(jsonPath("$.data.totalWeeks").value(3))
+				.andExpect(jsonPath("$.data.endDate").value("2026-05-10"))
+				.andExpect(jsonPath("$.data.originalEndDate").value("2026-05-03"))
 				.andExpect(jsonPath("$.data.completionProjection.weeksToGoal").value(5))
 				.andExpect(jsonPath("$.data.completionProjection.estimatedCompletionDate").value("2026-05-03"));
 	}

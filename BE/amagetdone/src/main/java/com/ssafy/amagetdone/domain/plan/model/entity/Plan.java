@@ -21,6 +21,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import lombok.AccessLevel;
@@ -116,6 +117,9 @@ public class Plan extends BaseEntity {
 	@Column(name = "end_date", nullable = false)
 	private LocalDate endDate;
 
+	@Column(name = "original_end_date")
+	private LocalDate originalEndDate;
+
 	@Version
 	@ColumnDefault("0")
 	@Column(name = "version", nullable = false)
@@ -138,9 +142,17 @@ public class Plan extends BaseEntity {
 		plan.targetAmount = targetAmount;
 		plan.startDate = startDate;
 		plan.endDate = endDate;
+		plan.originalEndDate = endDate;
 		plan.priority = priority;
 		plan.targetWeeks = calculateTargetWeeks(startDate, endDate);
 		return plan;
+	}
+
+	@PrePersist
+	void initializeOriginalEndDate() {
+		if (this.originalEndDate == null) {
+			this.originalEndDate = this.endDate;
+		}
 	}
 
 	private static int calculateTargetWeeks(LocalDate startDate, LocalDate endDate) {
@@ -195,6 +207,9 @@ public class Plan extends BaseEntity {
 	public void extendEndDate(int additionalWeeks) {
 		if (additionalWeeks <= 0) {
 			return;
+		}
+		if (this.originalEndDate == null) {
+			this.originalEndDate = this.endDate;
 		}
 		this.endDate = this.endDate.plusWeeks(additionalWeeks);
 		this.targetWeeks = calculateTargetWeeks(this.startDate, this.endDate);

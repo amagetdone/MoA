@@ -114,6 +114,29 @@ class WeeklyGoalSavingAccrualServiceTest {
 		verify(planRepository, never()).adjustSavedAmount(any(), any());
 	}
 
+	@Test
+	void preservesOriginalEndDateWhenShortfallExtendsPlan() {
+		User user = user(1);
+		BudgetWeek budgetWeek = budgetWeek(user, 10);
+		ReflectionTestUtils.setField(budgetWeek, "plannedIncomeAmount", 0L);
+		Plan activePlan = activePlan(user, 101, 2, 0L, 1_300L);
+		PlanWeekAllocation allocation = allocation(activePlan, budgetWeek, 100L);
+
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			1,
+			LocalDate.of(2026, 3, 24),
+			LocalDate.of(2026, 3, 24)
+		)).willReturn(Optional.of(budgetWeek));
+		given(planWeekAllocationRepository.findByBudgetWeekAndActualAmountIsNull(budgetWeek)).willReturn(List.of(allocation));
+		given(planWeekAllocationRepository.findByBudgetWeek(budgetWeek)).willReturn(List.of());
+		given(budgetAdjustmentRepository.findByBudgetWeekOrderByCreatedAtDesc(budgetWeek)).willReturn(List.of());
+
+		weeklyGoalSavingAccrualService.applyWeeklyAccrual(1);
+
+		assertEquals(LocalDate.of(2026, 5, 31), activePlan.getOriginalEndDate());
+		assertEquals(LocalDate.of(2026, 6, 7), activePlan.getEndDate());
+	}
+
 	private User user(int userId) {
 		User user = User.createPendingSocialUser();
 		ReflectionTestUtils.setField(user, "id", userId);
