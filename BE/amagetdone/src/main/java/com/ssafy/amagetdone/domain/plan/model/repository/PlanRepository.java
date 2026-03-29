@@ -227,6 +227,22 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
 	@Modifying(flushAutomatically = true)
 	@Query("""
 		update Plan p
+		set p.status = :completedStatus,
+			p.version = p.version + 1
+		where p.id = :planId
+			and p.deleted = false
+			and p.status <> :completedStatus
+			and p.status <> :cancelledStatus
+		""")
+	int markCompleted(
+		@Param("planId") Integer planId,
+		@Param("completedStatus") PlanStatus completedStatus,
+		@Param("cancelledStatus") PlanStatus cancelledStatus
+	);
+
+	@Modifying(flushAutomatically = true)
+	@Query("""
+		update Plan p
 		set p.savedAmount = 0,
 			p.version = p.version + 1
 		where p.id = :planId

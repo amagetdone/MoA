@@ -20,6 +20,7 @@ import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
 
@@ -94,6 +95,35 @@ class BudgetAdjustmentCommandServiceTest {
 		assertThat(adjustmentCaptor.getValue().getPlan()).isSameAs(plan);
 		assertThat(adjustmentCaptor.getValue().getAdjustmentType()).isEqualTo(BudgetAdjustmentType.PLAN_SAVED_ADD);
 		verify(budgetWeekRepository).save(budgetWeek);
+	}
+
+	@Test
+	void saveAdjustmentMarksPlanCompletedWhenSavedAmountReachesTarget() {
+		User user = user(1);
+		Plan plan = plan(user, 11, 90_000L);
+		ReflectionTestUtils.setField(plan, "targetAmount", 100_000L);
+		BudgetWeek budgetWeek = budgetWeek(user, 1, 120_000L, 20_000L);
+		PlanWeekAllocation allocation = allocation(plan, budgetWeek, 250_000L, 230_000L);
+		BudgetAdjustmentDto.Request request = new BudgetAdjustmentDto.Request(
+			BudgetAdjustmentType.PLAN_SAVED_ADD,
+			10_000L,
+			11,
+			"complete goal"
+		);
+
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
+			1,
+			LocalDate.of(2026, 3, 2),
+			LocalDate.of(2026, 3, 2)
+		))
+			.willReturn(Optional.of(budgetWeek));
+		given(planWeekAllocationRepository.findByBudgetWeek(budgetWeek)).willReturn(List.of(allocation));
+		given(budgetAdjustmentRepository.save(any(BudgetAdjustment.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+		service.saveAdjustment(1, "2026-W10", request);
+
+		verify(planRepository).adjustSavedAmount(11, 10_000L);
+		verify(planRepository).markCompleted(11, PlanStatus.COMPLETED, PlanStatus.CANCELLED);
 	}
 
 	@Test
