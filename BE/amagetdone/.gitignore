@@ -55,6 +55,7 @@ docs/*.md
 !docs/subagents.skills.md
 docs/superpowers/
 docs/test/
+bootrun-codex*.log
 .j14d101.pem
 
 ui

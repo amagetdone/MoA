@@ -63,38 +63,59 @@ fail() {
   exit 1
 }
 
+python_cmd() {
+  if command -v python >/dev/null 2>&1; then
+    python "$@"
+    return
+  fi
+  if command -v py >/dev/null 2>&1; then
+    py -3 "$@"
+    return
+  fi
+  echo "FAIL: python interpreter not found" >&2
+  exit 1
+}
+
+now_in_kst() {
+  python_cmd - "$1" <<'PY'
+import sys
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+print(datetime.now(ZoneInfo("Asia/Seoul")).strftime(sys.argv[1]))
+PY
+}
+
 gen_unique_no() {
-  date +"%Y%m%d%H%M%S"$(printf "%06d" $((RANDOM % 1000000)))
+  printf '%s%06d\n' "$(now_in_kst "%Y%m%d%H%M%S")" $((RANDOM % 1000000))
 }
 
 fin_header() {
   local api_name="$1"
   local user_key="${2:-}"
-  local unique_no
+  local unique_no now_date now_time
   unique_no=$(gen_unique_no)
-  local now_date
-  now_date=$(date +"%Y%m%d")
-  local now_time
-  now_time=$(date +"%H%M%S")
+  now_date=$(now_in_kst "%Y%m%d")
+  now_time=$(now_in_kst "%H%M%S")
+  python_cmd - "$api_name" "$now_date" "$now_time" "$unique_no" "$FIN_API_KEY" "$user_key" <<'PY'
+import json
+import sys
 
-  local header
-  header=$(cat <<HEADER_EOF
-{
-  "apiName": "${api_name}",
-  "transmissionDate": "${now_date}",
-  "transmissionTime": "${now_time}",
-  "institutionCode": "00100",
-  "fintechAppNo": "001",
-  "apiServiceCode": "${api_name}",
-  "institutionTransactionUniqueNo": "${unique_no}",
-  "apiKey": "${FIN_API_KEY}"
-HEADER_EOF
-)
-  if [[ -n "$user_key" ]]; then
-    header="${header}, \"userKey\": \"${user_key}\""
-  fi
-  header="${header} }"
-  echo "$header"
+api_name, now_date, now_time, unique_no, api_key, user_key = sys.argv[1:]
+header = {
+    "apiName": api_name,
+    "transmissionDate": now_date,
+    "transmissionTime": now_time,
+    "institutionCode": "00100",
+    "fintechAppNo": "001",
+    "apiServiceCode": api_name,
+    "institutionTransactionUniqueNo": unique_no,
+    "apiKey": api_key,
+}
+if user_key:
+    header["userKey"] = user_key
+print(json.dumps(header, separators=(",", ":")))
+PY
 }
 
 jq_r() {
@@ -103,7 +124,7 @@ jq_r() {
   if command -v jq &>/dev/null; then
     echo "$json" | jq -r "$path"
   else
-    echo "$json" | python3 -c "
+    echo "$json" | python_cmd -c "
 import sys, json, re
 data = json.load(sys.stdin)
 path = '$path'
@@ -124,8 +145,106 @@ else:
   fi
 }
 
+date_shift_days() {
+  python_cmd - "$1" "$2" <<'PY'
+import sys
+from datetime import date, timedelta
+
+base = date.fromisoformat(sys.argv[1])
+shift = int(sys.argv[2])
+print((base + timedelta(days=shift)).isoformat())
+PY
+}
+
+current_year_week() {
+  python_cmd - "$1" <<'PY'
+import sys
+from datetime import date
+
+target = date.fromisoformat(sys.argv[1])
+year, week, _ = target.isocalendar()
+print(f"{year}-W{week:02d}")
+PY
+}
+
+iso_weekday() {
+  python_cmd - "$1" <<'PY'
+import sys
+from datetime import date
+
+print(date.fromisoformat(sys.argv[1]).isoweekday())
+PY
+}
+
+calc_target_weeks() {
+  python_cmd - "$1" "$2" <<'PY'
+import sys
+from datetime import date
+
+start = date.fromisoformat(sys.argv[1])
+end = date.fromisoformat(sys.argv[2])
+days = (end - start).days + 1
+print((days + 6) // 7)
+PY
+}
+
+compact_date_shift_days() {
+  python_cmd - "$1" "$2" <<'PY'
+import sys
+from datetime import date, timedelta
+
+base = date.fromisoformat(sys.argv[1])
+shift = int(sys.argv[2])
+print((base + timedelta(days=shift)).strftime("%Y%m%d"))
+PY
+}
+
+plan_field_from_list() {
+  local json="$1"
+  local plan_id="$2"
+  local field="$3"
+  echo "$json" | python_cmd -c "
+import json
+import sys
+
+plan_id = int(sys.argv[1])
+field = sys.argv[2]
+payload = json.load(sys.stdin).get('data', [])
+for plan in payload:
+    if int(plan.get('planId', -1)) == plan_id:
+        value = plan.get(field)
+        print('null' if value is None else value)
+        break
+else:
+    print('')
+" "$plan_id" "$field"
+}
+
+print_plan_from_list() {
+  local json="$1"
+  local plan_id="$2"
+  echo "$json" | python_cmd -c "
+import json
+import sys
+
+plan_id = int(sys.argv[1])
+payload = json.load(sys.stdin).get('data', [])
+for plan in payload:
+    if int(plan.get('planId', -1)) == plan_id:
+        print(
+            f\"  -> planId={plan.get('planId')} | title={plan.get('title')} | \"
+            f\"status={plan.get('status')} | saved={plan.get('savedAmount')} | \"
+            f\"target={plan.get('targetAmount')} | weeks={plan.get('weekNumber')} | \"
+            f\"dday={plan.get('dday')} | rate={plan.get('achievementRate')}\"
+        )
+        break
+else:
+    print('  -> plan not found')
+" "$plan_id"
+}
+
 AUTH="Authorization: Bearer $ACCESS_TOKEN"
-TOKEN_SUB=$(python3 - <<'PY'
+TOKEN_SUB=$(python_cmd - <<'PY'
 import base64
 import json
 import os
@@ -210,12 +329,12 @@ if [[ "$HAS_ACCOUNT" != "true" ]]; then
   fi
 
   step "1원 인증 코드 조회"
-  START_DATE=$(date -d "7 days ago" +%Y%m%d 2>/dev/null || date -v-7d +%Y%m%d)
-  END_DATE=$(date +%Y%m%d)
+  END_DATE=$(now_in_kst "%Y%m%d")
+  START_DATE=$(compact_date_shift_days "$(now_in_kst "%Y-%m-%d")" -7)
   VERIFY_TX_RES=$(curl -sk -X POST "$FIN_BASE/edu/demandDeposit/inquireTransactionHistoryList" \
     -H "Content-Type: application/json" \
     -d "{\"Header\": $(fin_header inquireTransactionHistoryList "$USER_KEY"), \"accountNo\": \"$ACCOUNT_NO\", \"startDate\": \"$START_DATE\", \"endDate\": \"$END_DATE\", \"transactionType\": \"A\", \"orderByType\": \"DESC\"}")
-  AUTH_CODE=$(printf '%s' "$VERIFY_TX_RES" | python3 -c '
+  AUTH_CODE=$(printf '%s' "$VERIFY_TX_RES" | python_cmd -c '
 import json
 import re
 import sys
@@ -257,7 +376,7 @@ if [[ "$HAS_ACCOUNT" == "true" ]]; then
   step "내 카드 조회"
   CARDS_RES=$(curl -sk "$BASE/v1/accounts/me/cards" -H "$AUTH")
   if [[ -z "$CARD_NO" ]]; then
-    CARD_NO=$(printf '%s' "$CARDS_RES" | python3 -c '
+    CARD_NO=$(printf '%s' "$CARDS_RES" | python_cmd -c '
 import json
 import os
 import sys
@@ -303,7 +422,7 @@ if [[ "$HAS_ACCOUNT" != "true" ]]; then
   step "내 카드 조회"
   CARDS_RES=$(curl -sk "$BASE/v1/accounts/me/cards" -H "$AUTH")
   if [[ -z "$CARD_NO" ]]; then
-    CARD_NO=$(printf '%s' "$CARDS_RES" | python3 -c '
+    CARD_NO=$(printf '%s' "$CARDS_RES" | python_cmd -c '
 import json
 import os
 import sys
@@ -416,7 +535,7 @@ echo "  -> type=$BACKFILL_TYPE, appliedAmount=$BACKFILL_AMOUNT"
 
 echo ""
 echo "  -- Backfill 결과 --"
-echo "$BACKFILL_RES" | python3 -c "
+echo "$BACKFILL_RES" | python_cmd -c "
 import sys, json
 data = json.load(sys.stdin)
 plans = data.get('data', {}).get('plans', [])
@@ -429,8 +548,97 @@ for p in plans:
 "
 
 step "홈 화면 조회"
+RUN_TAG=$(date +%Y%m%d%H%M%S)
+CURRENT_YEAR_WEEK=$(current_year_week "$TODAY")
+TODAY_WEEKDAY=$(iso_weekday "$TODAY")
+
+STATE_COMPLETED_TITLE="STATE-COMPLETED-${TOKEN_SUB}-${RUN_TAG}"
+STATE_COMPLETED_START=$(date_shift_days "$TODAY" "-$((TODAY_WEEKDAY - 1))")
+STATE_COMPLETED_END=$(date_shift_days "$STATE_COMPLETED_START" 6)
+STATE_COMPLETED_TARGET=1000
+
+STATE_DELAYED_TITLE="STATE-DELAYED-${TOKEN_SUB}-${RUN_TAG}"
+STATE_DELAYED_START=$(date_shift_days "$TODAY" -14)
+STATE_DELAYED_END=$(date_shift_days "$TODAY" 14)
+STATE_DELAYED_TARGET=400000
+STATE_DELAYED_BASE_WEEKS=$(calc_target_weeks "$STATE_DELAYED_START" "$STATE_DELAYED_END")
+STATE_DELAYED_EXPECTED_WEEKS=$((STATE_DELAYED_BASE_WEEKS + 1))
+STATE_FORCED_FREE_BUDGET_SUBTRACT=2500000
+
+step "Goal-state 완료 목표 생성"
+echo "  -> 기간: $STATE_COMPLETED_START ~ $STATE_COMPLETED_END"
+STATE_COMPLETED_RES=$(curl -sk -X POST "$BASE/v1/plans" \
+  -H "$AUTH" -H "Content-Type: application/json" \
+  -d "{\"title\": \"$STATE_COMPLETED_TITLE\", \"targetAmount\": $STATE_COMPLETED_TARGET, \"startDate\": \"$STATE_COMPLETED_START\", \"endDate\": \"$STATE_COMPLETED_END\", \"priority\": 1}")
+STATE_COMPLETED_PLAN_ID=$(jq_r "$STATE_COMPLETED_RES" '.data.planId')
+if [[ -z "$STATE_COMPLETED_PLAN_ID" || "$STATE_COMPLETED_PLAN_ID" == "null" ]]; then
+  fail "goal-state completed goal creation failed" "$STATE_COMPLETED_RES"
+fi
+echo "  -> planId=$STATE_COMPLETED_PLAN_ID"
+
+step "Goal-state 완료 목표 현재 주 allocation 강제 실행"
+STATE_COMPLETED_FORCE_RES=$(curl -sk -X POST "$BASE/test/budget/weeks/current/savings-allocation/force" \
+  -H "$AUTH" -H "Content-Type: application/json")
+echo "  -> totalSaved=$(jq_r "$STATE_COMPLETED_FORCE_RES" '.data.totalSavedAmount')"
+
+step "Goal-state 완료 목표 검증"
+STATE_COMPLETED_PLANS_RES=$(curl -sk "$BASE/v1/plans" -H "$AUTH")
+STATE_COMPLETED_STATUS=$(plan_field_from_list "$STATE_COMPLETED_PLANS_RES" "$STATE_COMPLETED_PLAN_ID" "status")
+STATE_COMPLETED_SAVED=$(plan_field_from_list "$STATE_COMPLETED_PLANS_RES" "$STATE_COMPLETED_PLAN_ID" "savedAmount")
+if [[ "$STATE_COMPLETED_STATUS" != "COMPLETED" ]]; then
+  fail "goal-state completed goal was not completed" "$STATE_COMPLETED_PLANS_RES"
+fi
+print_plan_from_list "$STATE_COMPLETED_PLANS_RES" "$STATE_COMPLETED_PLAN_ID"
+
+step "Goal-state 연장 목표 free budget 부족분 강제 적용"
+STATE_DELAYED_ADJUST_RES=$(curl -sk -X POST "$BASE/budgets/weeks/$CURRENT_YEAR_WEEK/adjustments" \
+  -H "$AUTH" -H "Content-Type: application/json" \
+  -d "{\"type\": \"FREE_BUDGET_SUBTRACT\", \"amount\": $STATE_FORCED_FREE_BUDGET_SUBTRACT, \"reason\": \"Force one-week goal shortfall\"}")
+if [[ "$(jq_r "$STATE_DELAYED_ADJUST_RES" '.data.adjustmentType')" != "FREE_BUDGET_SUBTRACT" ]]; then
+  fail "goal-state delayed free budget adjustment failed" "$STATE_DELAYED_ADJUST_RES"
+fi
+echo "  -> yearWeek=$CURRENT_YEAR_WEEK"
+
+step "Goal-state 연장 목표 생성"
+echo "  -> 기간: $STATE_DELAYED_START ~ $STATE_DELAYED_END"
+STATE_DELAYED_CREATE_RES=$(curl -sk -X POST "$BASE/v1/plans" \
+  -H "$AUTH" -H "Content-Type: application/json" \
+  -d "{\"title\": \"$STATE_DELAYED_TITLE\", \"targetAmount\": $STATE_DELAYED_TARGET, \"startDate\": \"$STATE_DELAYED_START\", \"endDate\": \"$STATE_DELAYED_END\", \"priority\": 2}")
+STATE_DELAYED_PLAN_ID=$(jq_r "$STATE_DELAYED_CREATE_RES" '.data.planId')
+if [[ -z "$STATE_DELAYED_PLAN_ID" || "$STATE_DELAYED_PLAN_ID" == "null" ]]; then
+  fail "goal-state delayed goal creation failed" "$STATE_DELAYED_CREATE_RES"
+fi
+echo "  -> planId=$STATE_DELAYED_PLAN_ID"
+
+step "Goal-state 연장 목표 과거 주 backfill"
+STATE_DELAYED_BACKFILL_RES=$(curl -sk -X POST "$BASE/test/budget/savings-accrual/backfill" \
+  -H "$AUTH" -H "Content-Type: application/json" \
+  -d '{}')
+echo "  -> appliedAmount=$(jq_r "$STATE_DELAYED_BACKFILL_RES" '.data.appliedAmount')"
+
+step "Goal-state 연장 목표 현재 주 반영"
+STATE_DELAYED_HOME_RES=$(curl -sk "$BASE/budgets/home" -H "$AUTH")
+echo "  -> weeklySaving=$(jq_r "$STATE_DELAYED_HOME_RES" '.data.weeklySaving.thisWeekSavingAmount')"
+
+step "Goal-state 연장 목표 검증"
+STATE_DELAYED_PLANS_RES=$(curl -sk "$BASE/v1/plans" -H "$AUTH")
+STATE_DELAYED_STATUS=$(plan_field_from_list "$STATE_DELAYED_PLANS_RES" "$STATE_DELAYED_PLAN_ID" "status")
+STATE_DELAYED_WEEKS=$(plan_field_from_list "$STATE_DELAYED_PLANS_RES" "$STATE_DELAYED_PLAN_ID" "weekNumber")
+STATE_DELAYED_SAVED=$(plan_field_from_list "$STATE_DELAYED_PLANS_RES" "$STATE_DELAYED_PLAN_ID" "savedAmount")
+if [[ "$STATE_DELAYED_STATUS" != "ACTIVE" ]]; then
+  fail "goal-state delayed goal should remain active" "$STATE_DELAYED_PLANS_RES"
+fi
+if [[ "$STATE_DELAYED_WEEKS" != "$STATE_DELAYED_EXPECTED_WEEKS" ]]; then
+  fail "goal-state delayed goal was not extended by exactly one week" "$STATE_DELAYED_PLANS_RES"
+fi
+print_plan_from_list "$STATE_DELAYED_PLANS_RES" "$STATE_DELAYED_PLAN_ID"
+
+step "Goal-state 요약"
+echo "  -> completedPlanId=$STATE_COMPLETED_PLAN_ID | status=$STATE_COMPLETED_STATUS | saved=$STATE_COMPLETED_SAVED"
+echo "  -> delayedPlanId=$STATE_DELAYED_PLAN_ID | status=$STATE_DELAYED_STATUS | saved=$STATE_DELAYED_SAVED | weeks=$STATE_DELAYED_WEEKS"
+
 HOME_RES=$(curl -sk "$BASE/budgets/home" -H "$AUTH")
-echo "$HOME_RES" | python3 -c "
+echo "$HOME_RES" | python_cmd -c "
 import sys, json
 data = json.load(sys.stdin).get('data', {})
 fs = data.get('freeSpending', {})
@@ -457,7 +665,7 @@ for p in data.get('plans', []):
 
 step "목표 목록 조회"
 PLANS_RES=$(curl -sk "$BASE/v1/plans" -H "$AUTH")
-echo "$PLANS_RES" | python3 -c "
+echo "$PLANS_RES" | python_cmd -c "
 import sys, json
 plans = json.load(sys.stdin).get('data', [])
 fmt = '  {:<4} {:<20} {:>12} {:>12} {:>8} {:>6}'
