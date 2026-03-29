@@ -48,7 +48,7 @@ class TransactionSeedScenarioSanityTest {
 	void cardSeedsCoverExtendedMonthsWithBalancedMonthlyCounts() {
 		CardRealTransactionScenario scenario = new CardRealTransactionScenario();
 
-		assertThat(scenario.completedMonthSeeds()).hasSizeGreaterThanOrEqualTo(680);
+		assertThat(scenario.completedMonthSeeds()).hasSizeGreaterThanOrEqualTo(700);
 		assertThat(scenario.completedMonthSeeds())
 			.extracting(CardSeed::transactionDateTime)
 			.map(YearMonth::from)
@@ -56,7 +56,7 @@ class TransactionSeedScenarioSanityTest {
 		assertThat(scenario.completedMonthSeeds())
 			.extracting(CardSeed::transactionDateTime)
 			.map(dateTime -> dateTime.toLocalDate())
-			.contains(LocalDate.of(2026, 3, 25));
+			.contains(LocalDate.of(2026, 3, 29));
 
 		Map<YearMonth, Long> monthlyCounts = scenario.completedMonthSeeds().stream()
 			.collect(Collectors.groupingBy(
@@ -69,6 +69,6 @@ class TransactionSeedScenarioSanityTest {
 		assertThat(monthlyCounts.get(YearMonth.of(2025, 12))).isBetween(170L, 210L);
 		assertThat(monthlyCounts.get(YearMonth.of(2026, 1))).isBetween(170L, 210L);
 		assertThat(monthlyCounts.get(YearMonth.of(2026, 2))).isBetween(150L, 190L);
-		assertThat(monthlyCounts.get(YearMonth.of(2026, 3))).isBetween(145L, 170L);
+		assertThat(monthlyCounts.get(YearMonth.of(2026, 3))).isBetween(170L, 180L);
 	}
 }

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 public class CardRealTransactionScenario {
 
 	private static final DateTimeFormatter UNIQUE_NO_DAY_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
+	private static final int MARCH_2026_SEED_END_DAY = 29;
 	private static final String PURCHASED_STATUS = "\uB9E4\uC785";
 	private static final String PENDING_STATUS = "\uBBF8\uB9E4\uC785";
 	private static final String NORMAL_STATUS = "\uC815\uC0C1";
@@ -133,7 +134,7 @@ public class CardRealTransactionScenario {
 		dayIndex = addMonth(drafts, 2025, 12, 31, dayIndex);
 		dayIndex = addMonth(drafts, 2026, 1, 31, dayIndex);
 		dayIndex = addMonth(drafts, 2026, 2, 28, dayIndex);
-		addMonth(drafts, 2026, 3, 25, dayIndex);
+		addMonth(drafts, 2026, 3, MARCH_2026_SEED_END_DAY, dayIndex);
 		drafts.sort(Comparator.comparing(SeedDraft::transactionDateTime));
 
 		Map<String, Integer> daySequence = new HashMap<>();
