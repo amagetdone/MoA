@@ -1,15 +1,20 @@
-ㄱ# Environment
+# Environment
 .env
 .env.*
 !.env.example
 
 # Local machine settings
 android/local.properties
+android/key.properties
+android/app/*.jks
 
 # Claude
 .claude/
 AGENTS.md
-CLAUDE.md
+CLAUDE.mdㄴㄴ 음수
+
+
+
 ref/
 
 # Local debug artifacts

@@ -136,14 +136,21 @@ class GoalBarChart extends StatelessWidget {
           ? highlightedIndex
           : (currentWeek - 1).clamp(0, normalizedPlans.length - 1);
       final highlightedPlan = normalizedPlans[safeHighlightedIndex];
-      final weeklyTarget = goal.weeklyMission?.weeklySavingsAmount.toDouble();
+      final plannedWeeklyValues = goal.graphData?.planned;
+      final weeklyTarget = (plannedWeeklyValues != null && plannedWeeklyValues.isNotEmpty)
+          ? plannedWeeklyValues[
+              (highlightedPlan.week - 1).clamp(0, plannedWeeklyValues.length - 1)
+            ].toDouble()
+          : (goal.totalWeeks > 0
+              ? (goal.targetAmount / goal.totalWeeks).ceilToDouble()
+              : null);
 
       return _BarChartCard(
         title: '저축 이력',
-        leftMetricLabel: goal.status == GoalStatus.achieved ? null : '현재 주차 계획',
+        leftMetricLabel: goal.status == GoalStatus.achieved ? null : '이번 주 저축 계획',
         leftMetricValue: goal.status == GoalStatus.achieved ? null : CurrencyFormatter.formatKRW(highlightedPlan.amount),
         leftMetricColor: goal.status == GoalStatus.achieved ? null : AppColors.orange500,
-        rightMetricLabel: goal.status == GoalStatus.achieved ? null : '주간 목표',
+        rightMetricLabel: goal.status == GoalStatus.achieved ? null : '주간 목표액',
         rightMetricValue: goal.status == GoalStatus.achieved ? null : CurrencyFormatter.formatKRW(weeklyTarget?.round() ?? 0),
         bars: [
           for (final plan in normalizedPlans)
@@ -1119,8 +1126,8 @@ List<GoalWeeklyPlan> _buildNormalizedWeeklyPlans({
   final lastWeek = math.max(
     1,
     math.max(
-      goal.totalWeeks,
-      math.max(goal.currentWeekNumber, math.max(maxPlanWeek, maxHistoryWeek)),
+      goal.currentWeekNumber,
+      maxHistoryWeek,
     ),
   );
 
