@@ -7,13 +7,12 @@
 android/local.properties
 android/key.properties
 android/app/*.jks
+android/app/*.jks.bak
 
 # Claude
 .claude/
 AGENTS.md
-CLAUDE.mdㄴㄴ 음수
-
-
+CLAUDE.md
 
 ref/
 
