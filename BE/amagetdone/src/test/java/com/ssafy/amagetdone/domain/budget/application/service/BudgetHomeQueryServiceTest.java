@@ -97,6 +97,12 @@ class BudgetHomeQueryServiceTest {
 		assertThat(response.weeklySaving().progressRate()).isEqualTo(39L);
 		assertThat(response.plans()).extracting(BudgetHomeDto.PlanCard::title)
 			.containsExactly("Travel Fund", "Wedding Fund");
+		assertThat(response.plans()).extracting(BudgetHomeDto.PlanCard::savedAmount)
+			.containsExactly(680_000L, 500_000L);
+		assertThat(response.plans()).extracting(BudgetHomeDto.PlanCard::targetAmount)
+			.containsExactly(1_000_000L, 2_000_000L);
+		assertThat(response.plans()).extracting(BudgetHomeDto.PlanCard::progressRate)
+			.containsExactly(68L, 25L);
 		assertThat(response.assetSummary().totalAssetAmount()).isEqualTo(5_400_000L);
 	}
 

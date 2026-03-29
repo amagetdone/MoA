@@ -140,37 +140,17 @@ public class BudgetHomeQueryService {
 		LocalDate today,
 		List<PlanWeekAllocation> currentWeekAllocations
 	) {
-		Map<Integer, Long> weeklyTargetByPlanId = currentWeekAllocations.stream()
-			.filter(a -> a.getPlan() != null && a.getPlan().getId() != null)
-			.collect(java.util.stream.Collectors.toMap(
-				a -> a.getPlan().getId(),
-				a -> zero(a.getPlannedAmount()),
-				Long::sum
-			));
-
-		Map<Integer, Long> weeklySavedByPlanId = currentWeekAllocations.stream()
-			.filter(a -> a.getPlan() != null && a.getPlan().getId() != null)
-			.collect(java.util.stream.Collectors.toMap(
-				a -> a.getPlan().getId(),
-				a -> zero(a.getActualAmount()),
-				Long::sum
-			));
-
 		return selectedPlans.stream()
-			.map(plan -> {
-				long weeklyTarget = weeklyTargetByPlanId.getOrDefault(plan.getId(), 0L);
-				long weeklySaved = weeklySavedByPlanId.getOrDefault(plan.getId(), 0L);
-				return BudgetHomeDto.PlanCard.of(
-					plan.getId() == null ? null : Long.valueOf(plan.getId()),
-					plan.getTitle(),
-					plan.getPriority(),
-					calculateDDay(today, plan.getEndDate()),
-					weeklySaved,
-					weeklyTarget,
-					calculateProgressRate(weeklySaved, weeklyTarget),
-					plan.getPlanUrl()
-				);
-			})
+			.map(plan -> BudgetHomeDto.PlanCard.of(
+				plan.getId() == null ? null : Long.valueOf(plan.getId()),
+				plan.getTitle(),
+				plan.getPriority(),
+				calculateDDay(today, plan.getEndDate()),
+				zero(plan.getSavedAmount()),
+				zero(plan.getTargetAmount()),
+				calculateProgressRate(zero(plan.getSavedAmount()), zero(plan.getTargetAmount())),
+				plan.getPlanUrl()
+			))
 			.toList();
 	}
 
