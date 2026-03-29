@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -118,6 +119,10 @@ class SocialAuthDataSourceImpl implements SocialAuthDataSource {
           }
 
           final googleAuth = await googleUser.authentication;
+          _logGoogleAuthMetadata(
+            idToken: googleAuth.idToken,
+            accessToken: googleAuth.accessToken,
+          );
           final tokens = GoogleSocialTokens(
             idToken: googleAuth.idToken,
             accessToken: googleAuth.accessToken,
@@ -150,5 +155,59 @@ class SocialAuthDataSourceImpl implements SocialAuthDataSource {
         await googleSignIn.signOut();
       }
     } catch (_) {}
+  }
+
+  void _logGoogleAuthMetadata({
+    required String? idToken,
+    required String? accessToken,
+  }) {
+    if (!kDebugMode) {
+      return;
+    }
+
+    debugPrint(
+      '[GoogleLoginDebug] hasIdToken=${idToken?.isNotEmpty == true} '
+      'hasAccessToken=${accessToken?.isNotEmpty == true} '
+      'aud=${_readJwtClaim(idToken, 'aud')} '
+      'azp=${_readJwtClaim(idToken, 'azp')} '
+      'iss=${_readJwtClaim(idToken, 'iss')} '
+      'exp=${_readJwtClaim(idToken, 'exp')} '
+      'sub=${_readJwtClaim(idToken, 'sub')}',
+    );
+
+    if (idToken != null && idToken.isNotEmpty) {
+      const chunkSize = 250;
+      for (var i = 0; i < idToken.length; i += chunkSize) {
+        final end = (i + chunkSize < idToken.length)
+            ? i + chunkSize
+            : idToken.length;
+        debugPrint(
+          '[GoogleLoginDebugToken ${i ~/ chunkSize}] ${idToken.substring(i, end)}',
+        );
+      }
+    }
+  }
+
+  String? _readJwtClaim(String? token, String claim) {
+    if (token == null || token.isEmpty) {
+      return null;
+    }
+
+    final parts = token.split('.');
+    if (parts.length < 2) {
+      return null;
+    }
+
+    try {
+      final normalized = base64Url.normalize(parts[1]);
+      final payload = utf8.decode(base64Url.decode(normalized));
+      final json = jsonDecode(payload);
+      if (json is Map<String, dynamic>) {
+        final value = json[claim];
+        return value?.toString();
+      }
+    } catch (_) {}
+
+    return null;
   }
 }

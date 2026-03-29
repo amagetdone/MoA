@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:more_app/data/datasources/remote/auth_remote_datasource.dart';
 import 'package:more_app/data/models/social_login_response_dto.dart';
 import 'package:more_app/data/models/token_refresh_response_dto.dart';
@@ -20,19 +21,33 @@ class RealAuthRemoteDataSource implements AuthRemoteDataSource {
       if (idToken != null && idToken.isNotEmpty) {
         body['idToken'] = idToken;
       }
-      if (accessToken != null && accessToken.isNotEmpty) {
+      if ((idToken == null || idToken.isEmpty) &&
+          accessToken != null &&
+          accessToken.isNotEmpty) {
         body['accessToken'] = accessToken;
       }
     } else if (accessToken != null && accessToken.isNotEmpty) {
       body['accessToken'] = accessToken;
     }
 
-    final response = await _dio.post(
-      'v1/auth/social/$provider',
-      data: body,
-    );
+    try {
+      final response = await _dio.post(
+        'v1/auth/social/$provider',
+        data: body,
+      );
 
-    return SocialLoginResponseDto.fromJson(response.data as Map<String, dynamic>);
+      return SocialLoginResponseDto.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (error) {
+      if (kDebugMode && provider == 'google') {
+        debugPrint(
+          '[GoogleLoginDebug] backend status=${error.response?.statusCode} '
+          'body=${error.response?.data}',
+        );
+      }
+      rethrow;
+    }
   }
 
   @override
