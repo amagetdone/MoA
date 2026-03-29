@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
+
 @Tag(name = "관리자 API")
 @RestController
 @RequestMapping("/admin")
@@ -73,6 +75,17 @@ public class AdminController {
 		return ApiResponse.ok(
 			"플랜 초기 데이터를 세팅했습니다.",
 			accountAdminService.initializePlanData(request)
+		);
+	}
+
+	@Operation(summary = "데모 플랜/주차/저축 이력 시드 세팅")
+	@PostMapping("/data-init/plan/demo")
+	public ApiResponse<AccountAdminDto.DemoPlanSeedResponse> seedDemoPlanData(
+		@Valid @RequestBody AccountAdminDto.DemoPlanSeedRequest request
+	) {
+		return ApiResponse.ok(
+			"데모 플랜 데이터를 세팅했습니다.",
+			accountAdminService.seedDemoPlanData(request)
 		);
 	}
 

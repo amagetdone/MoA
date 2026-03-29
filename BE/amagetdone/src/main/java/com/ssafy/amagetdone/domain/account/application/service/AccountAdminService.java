@@ -8,6 +8,7 @@ import com.ssafy.amagetdone.domain.account.application.usecase.InitializeCardTra
 import com.ssafy.amagetdone.domain.account.application.usecase.ListDemandDepositProductsUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.RegisterDemandDepositProductUseCase;
 import com.ssafy.amagetdone.domain.plan.application.usecase.InitializePlanDataUseCase;
+import com.ssafy.amagetdone.domain.plan.application.usecase.SeedDemoPlanDataUseCase;
 
 import lombok.RequiredArgsConstructor;
 
@@ -22,6 +23,7 @@ public class AccountAdminService {
 	private final InitializeAccountTransactionOverridesUseCase initializeAccountTransactionOverridesUseCase;
 	private final InitializeCardTransactionOverridesUseCase initializeCardTransactionOverridesUseCase;
 	private final InitializePlanDataUseCase initializePlanDataUseCase;
+	private final SeedDemoPlanDataUseCase seedDemoPlanDataUseCase;
 
 	public AccountAdminDto.ProductResponse registerProduct(AccountAdminDto.ProductCreateRequest request) {
 		return registerDemandDepositProductUseCase.execute(request);
@@ -47,5 +49,11 @@ public class AccountAdminService {
 		AccountAdminDto.PlanDataInitRequest request
 	) {
 		return initializePlanDataUseCase.execute(request);
+	}
+
+	public AccountAdminDto.DemoPlanSeedResponse seedDemoPlanData(
+		AccountAdminDto.DemoPlanSeedRequest request
+	) {
+		return seedDemoPlanDataUseCase.execute(request);
 	}
 }
