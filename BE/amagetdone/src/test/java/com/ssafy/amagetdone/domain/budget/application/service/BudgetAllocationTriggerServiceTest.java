@@ -178,6 +178,50 @@ class BudgetAllocationTriggerServiceTest {
 		);
 	}
 
+	@Test
+	void triggerForPlanExtendsAllocationRangeToPlanEndDate() {
+		Clock clock = Clock.fixed(Instant.parse("2026-03-30T00:00:00Z"), ZoneId.of("Asia/Seoul"));
+		BudgetAllocationTriggerService service = new BudgetAllocationTriggerService(
+			allocateBudgetUseCase,
+			refreshEssentialExpenseMonthFromAnalysisUseCase,
+			budgetMonthRepository,
+			essentialExpenseMonthRepository,
+			planRepository,
+			userRepository,
+			clock
+		);
+		Integer userId = 1;
+		LocalDate baseMonth = LocalDate.of(2026, 3, 1);
+		LocalDate planEndDate = LocalDate.of(2026, 5, 17);
+		User user = user(userId);
+		BudgetMonth budgetMonth = BudgetMonth.builder()
+			.user(user)
+			.baseDate(baseMonth)
+			.status(BudgetMonthStatus.OPEN)
+			.totalIncomeAmount(3_200_000L)
+			.build();
+		Plan activePlan = Plan.create(user, "Travel", "desc", 500_000L, LocalDate.of(2026, 3, 30), planEndDate, 1);
+		activePlan.activate();
+
+		given(userRepository.findByIdForUpdate(userId)).willReturn(Optional.of(user));
+		given(budgetMonthRepository.findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, baseMonth))
+			.willReturn(Optional.of(budgetMonth));
+		given(essentialExpenseMonthRepository.findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(userId))
+			.willReturn(List.of());
+		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE)).willReturn(List.of(activePlan));
+
+		service.triggerForPlan(userId, planEndDate);
+
+		inOrder(allocateBudgetUseCase).verify(allocateBudgetUseCase).execute(
+			any(User.class),
+			eq(LocalDate.of(2026, 3, 2)),
+			eq(3_200_000L),
+			eq(List.of()),
+			eq(List.of(activePlan)),
+			eq(planEndDate)
+		);
+	}
+
 	private User user(int id) {
 		User user = User.createPendingSocialUser();
 		ReflectionTestUtils.setField(user, "id", id);
