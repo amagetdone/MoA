@@ -100,7 +100,8 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
     final achievementRate = (data['achievementRate'] as num?)?.toDouble();
     final apiStatus = data['status'] as String?;
 
-    final endDate = _inferEndDate(dday);
+    final endDate = _parseDate(data['endDate']) ?? _inferEndDate(dday);
+    final originalEndDate = _parseDate(data['originalEndDate']);
     final startDate = _inferStartDate(
       endDate: endDate,
       currentWeek: currentWeek,
@@ -115,6 +116,7 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
       currentAmount: savedAmount,
       startDate: startDate,
       endDate: endDate,
+      originalEndDate: originalEndDate,
       priority: priority,
       status: _parseGoalStatus(
         apiStatus: apiStatus,
@@ -232,7 +234,8 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
         ? await _fetchVideoUrlSafely(planId)
         : null;
 
-    final endDate = _inferEndDate(dday);
+    final endDate = _parseDate(json['endDate']) ?? _inferEndDate(dday);
+    final originalEndDate = _parseDate(json['originalEndDate']);
     final startDate = _inferStartDate(
       endDate: endDate,
       currentWeek: weekNumber,
@@ -246,6 +249,7 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
       currentAmount: savedAmount,
       startDate: startDate,
       endDate: endDate,
+      originalEndDate: originalEndDate,
       priority: priority,
       status: _parseGoalStatus(
         apiStatus: apiStatus,
@@ -381,6 +385,19 @@ class RealGoalRemoteDataSource implements GoalRemoteDataSource {
           )
           .toList(),
     );
+  }
+
+  DateTime? _parseDate(dynamic value) {
+    if (value is! String || value.isEmpty) {
+      return null;
+    }
+
+    try {
+      final parsed = DateTime.parse(value);
+      return DateTime(parsed.year, parsed.month, parsed.day);
+    } catch (_) {
+      return null;
+    }
   }
 
   DateTime _inferEndDate(int? dday) {

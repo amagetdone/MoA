@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
@@ -217,6 +218,7 @@ class _HeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final dateFmt = DateFormat('yyyy.MM.dd');
     final remaining = CurrencyFormatter.formatKRW(goal.remainingAmount);
     final current = CurrencyFormatter.formatKRW(goal.currentAmount);
     final target = CurrencyFormatter.formatKRW(goal.targetAmount);
@@ -415,11 +417,100 @@ class _HeroCard extends StatelessWidget {
                         : FontWeight.w400,
                   ),
                 ),
+                if (goal.hasExtendedDeadline && goal.originalEndDate != null) ...[
+                  SizedBox(height: 14.h),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 14.w,
+                      vertical: 12.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.orange500.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14.r),
+                      border: Border.all(
+                        color: AppColors.orange500.withValues(alpha: 0.18),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.event_repeat_rounded,
+                              color: AppColors.orange500,
+                              size: 18.w,
+                            ),
+                            SizedBox(width: 8.w),
+                            Text(
+                              '목표 기간이 연장되었어요',
+                              style: AppTextStyles.bodySm.copyWith(
+                                color: AppColors.orange500,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 10.h),
+                        _DeadlineInfoRow(
+                          label: '현재 마감일',
+                          value: dateFmt.format(goal.endDate),
+                        ),
+                        SizedBox(height: 6.h),
+                        _DeadlineInfoRow(
+                          label: '최초 마감일',
+                          value: dateFmt.format(goal.originalEndDate!),
+                          isMuted: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _DeadlineInfoRow extends StatelessWidget {
+  const _DeadlineInfoRow({
+    required this.label,
+    required this.value,
+    this.isMuted = false,
+  });
+
+  final String label;
+  final String value;
+  final bool isMuted;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final valueColor = isMuted ? colors.textTertiary : colors.textPrimary;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.bodySm.copyWith(
+            color: colors.textTertiary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Text(
+          value,
+          style: AppTextStyles.bodySm.copyWith(
+            color: valueColor,
+            fontWeight: FontWeight.w700,
+            decoration: isMuted ? TextDecoration.lineThrough : null,
+          ),
+        ),
+      ],
     );
   }
 }

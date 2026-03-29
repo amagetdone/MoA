@@ -6,6 +6,7 @@ class Goal {
   final int currentAmount;
   final DateTime startDate;
   final DateTime endDate;
+  final DateTime? originalEndDate;
   final int priority;
   final GoalStatus status;
   final String? iconName;
@@ -37,6 +38,7 @@ class Goal {
     required this.currentAmount,
     required this.startDate,
     required this.endDate,
+    this.originalEndDate,
     this.priority = 0,
     this.status = GoalStatus.inProgress,
     this.iconName,
@@ -112,6 +114,14 @@ class Goal {
     return endDate.difference(DateTime.now()).inDays;
   }
 
+  bool get hasExtendedDeadline {
+    final original = originalEndDate;
+    if (original == null) {
+      return false;
+    }
+    return !_isSameCalendarDay(original, endDate);
+  }
+
   bool get hasDetailData =>
       detailLoaded ||
       graphData != null ||
@@ -178,6 +188,7 @@ class Goal {
     int? currentAmount,
     DateTime? startDate,
     DateTime? endDate,
+    DateTime? originalEndDate,
     int? priority,
     GoalStatus? status,
     String? iconName,
@@ -208,6 +219,7 @@ class Goal {
       currentAmount: currentAmount ?? this.currentAmount,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
+      originalEndDate: originalEndDate ?? this.originalEndDate,
       priority: priority ?? this.priority,
       status: status ?? this.status,
       iconName: iconName ?? this.iconName,
@@ -235,6 +247,12 @@ class Goal {
       aiPipelineStatus: aiPipelineStatus ?? this.aiPipelineStatus,
     );
   }
+}
+
+bool _isSameCalendarDay(DateTime left, DateTime right) {
+  return left.year == right.year &&
+      left.month == right.month &&
+      left.day == right.day;
 }
 
 class GoalGraphData {

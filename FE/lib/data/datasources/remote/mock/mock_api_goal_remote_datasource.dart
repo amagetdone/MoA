@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:more_app/data/datasources/remote/goal_remote_datasource.dart';
 import 'package:more_app/domain/entities/goal.dart';
 import 'package:more_app/domain/entities/spending.dart';
@@ -19,6 +20,7 @@ class MockApiGoalRemoteDataSource implements GoalRemoteDataSource {
       'assets/mock_api/plans_video_download_success.json';
   static const _planPriorityPatchPath =
       'assets/mock_api/plans_patch_priority.json';
+  static final _dateFmt = DateFormat('yyyy-MM-dd');
 
   static bool _initialized = false;
   static List<Map<String, dynamic>> _planListItems = [];
@@ -194,6 +196,8 @@ class MockApiGoalRemoteDataSource implements GoalRemoteDataSource {
       'weekNumber': 1,
       'dday': dday,
       'achievementRate': 0,
+      'endDate': _formatDate(goal.endDate),
+      'originalEndDate': _formatDate(goal.originalEndDate ?? goal.endDate),
     };
     _planListItems.add(listJson);
 
@@ -206,6 +210,8 @@ class MockApiGoalRemoteDataSource implements GoalRemoteDataSource {
       'savedAmount': 0,
       'achievementRate': 0,
       'dday': dday,
+      'endDate': _formatDate(goal.endDate),
+      'originalEndDate': _formatDate(goal.originalEndDate ?? goal.endDate),
       'graphData': _buildGraphDataJson(
         weeksToGoal: weeksToGoal,
         weeklySavingsAmount: weeklySavingsAmount,
@@ -228,6 +234,7 @@ class MockApiGoalRemoteDataSource implements GoalRemoteDataSource {
       currentAmount: 0,
       startDate: goal.startDate,
       endDate: goal.endDate,
+      originalEndDate: goal.originalEndDate ?? goal.endDate,
       priority: goal.priority,
       status: GoalStatus.inProgress,
       iconName: goal.iconName ?? _inferIconName(goal.name),
@@ -272,6 +279,10 @@ class MockApiGoalRemoteDataSource implements GoalRemoteDataSource {
     listJson['savedAmount'] = goal.currentAmount;
     listJson['dday'] = goal.remainingDays;
     listJson['achievementRate'] = goal.progressRate * 100;
+    listJson['endDate'] = _formatDate(goal.endDate);
+    listJson['originalEndDate'] = _formatDate(
+      goal.originalEndDate ?? goal.endDate,
+    );
 
     final detailJson = _planDetails[planId] ?? <String, dynamic>{'planId': planId};
     detailJson['title'] = goal.name;
@@ -281,6 +292,10 @@ class MockApiGoalRemoteDataSource implements GoalRemoteDataSource {
     detailJson['savedAmount'] = goal.currentAmount;
     detailJson['achievementRate'] = goal.progressRate * 100;
     detailJson['dday'] = goal.remainingDays;
+    detailJson['endDate'] = _formatDate(goal.endDate);
+    detailJson['originalEndDate'] = _formatDate(
+      goal.originalEndDate ?? goal.endDate,
+    );
     detailJson['currentWeek'] = goal.currentWeekNumber;
     detailJson['totalWeeks'] = goal.totalWeeks;
     detailJson['weeklyPlans'] = goal.weeklyPlans
@@ -410,7 +425,8 @@ class MockApiGoalRemoteDataSource implements GoalRemoteDataSource {
     final dday = (json['dday'] as num?)?.toInt();
     final achievementRate = (json['achievementRate'] as num?)?.toDouble();
 
-    final endDate = _inferEndDate(dday);
+    final endDate = _parseDate(json['endDate']) ?? _inferEndDate(dday);
+    final originalEndDate = _parseDate(json['originalEndDate']);
     final startDate = _inferStartDate(
       endDate: endDate,
       currentWeek: weekNumber,
@@ -424,6 +440,7 @@ class MockApiGoalRemoteDataSource implements GoalRemoteDataSource {
       currentAmount: savedAmount,
       startDate: startDate,
       endDate: endDate,
+      originalEndDate: originalEndDate,
       priority: priority,
       status: _parseStatus(
         savedAmount: savedAmount,
@@ -453,7 +470,8 @@ class MockApiGoalRemoteDataSource implements GoalRemoteDataSource {
     final currentWeek = (json['currentWeek'] as num?)?.toInt();
     final totalWeeks = (json['totalWeeks'] as num?)?.toInt();
 
-    final endDate = _inferEndDate(dday);
+    final endDate = _parseDate(json['endDate']) ?? _inferEndDate(dday);
+    final originalEndDate = _parseDate(json['originalEndDate']);
     final startDate = _inferStartDate(
       endDate: endDate,
       currentWeek: currentWeek,
@@ -468,6 +486,7 @@ class MockApiGoalRemoteDataSource implements GoalRemoteDataSource {
       currentAmount: savedAmount,
       startDate: startDate,
       endDate: endDate,
+      originalEndDate: originalEndDate,
       priority: priority,
       status: _parseStatus(
         savedAmount: savedAmount,
@@ -572,6 +591,23 @@ class MockApiGoalRemoteDataSource implements GoalRemoteDataSource {
     return GoalStatus.inProgress;
   }
 
+  DateTime? _parseDate(dynamic value) {
+    if (value is! String || value.isEmpty) {
+      return null;
+    }
+
+    try {
+      final parsed = DateTime.parse(value);
+      return DateTime(parsed.year, parsed.month, parsed.day);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _formatDate(DateTime value) {
+    return _dateFmt.format(value);
+  }
+
   DateTime _inferEndDate(int? dday) {
     final today = DateTime.now();
     return DateTime(today.year, today.month, today.day).add(
@@ -665,6 +701,8 @@ class MockApiGoalRemoteDataSource implements GoalRemoteDataSource {
       'savedAmount': savedAmount,
       'achievementRate': achievementRate,
       'dday': listJson['dday'],
+      'endDate': listJson['endDate'],
+      'originalEndDate': listJson['originalEndDate'],
       'graphData': _buildGraphDataJson(
         weeksToGoal: weekNumber,
         weeklySavingsAmount: weeklySavingsAmount,
