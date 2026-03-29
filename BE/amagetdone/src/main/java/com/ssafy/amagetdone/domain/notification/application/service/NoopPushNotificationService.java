@@ -34,6 +34,15 @@ public class NoopPushNotificationService implements PushNotificationService {
 	}
 
 	@Override
+	public SendResult sendVerificationAlarmDemoNotification(String verificationText) {
+		log.warn(
+			"Skipping verification demo push. verificationText={}, reason=no FirebaseMessaging bean",
+			verificationText
+		);
+		return SendResult.SKIPPED;
+	}
+
+	@Override
 	public SendResult sendPlanAiCompletedNotification(DeviceToken deviceToken, PlanAiCompletedEvent event) {
 		log.warn(
 			"Skipping plan AI push. userId={}, planId={}, deviceTokenId={}, platform={}, reason=no FirebaseMessaging bean",

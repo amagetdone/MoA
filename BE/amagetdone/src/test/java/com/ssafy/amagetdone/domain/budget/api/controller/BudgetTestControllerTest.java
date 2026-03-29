@@ -16,6 +16,7 @@ import com.ssafy.amagetdone.domain.budget.api.dto.BudgetWeekSeedResponse;
 import com.ssafy.amagetdone.domain.budget.api.dto.GoalSavingAccrualForceDto;
 import com.ssafy.amagetdone.domain.budget.api.dto.WeeklySavingsDetailDto;
 import com.ssafy.amagetdone.domain.budget.application.service.BudgetCurrentWeekGoalAllocationTestService;
+import com.ssafy.amagetdone.domain.budget.application.service.BudgetCurrentWeekSavingsReapplyTestService;
 import com.ssafy.amagetdone.domain.budget.application.service.GoalSavingAccrualForceTestService;
 import com.ssafy.amagetdone.domain.budget.application.service.BudgetWeekSeedService;
 import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
@@ -45,6 +46,9 @@ class BudgetTestControllerTest {
 
 	@MockitoBean
 	private BudgetCurrentWeekGoalAllocationTestService budgetCurrentWeekGoalAllocationTestService;
+
+	@MockitoBean
+	private BudgetCurrentWeekSavingsReapplyTestService budgetCurrentWeekSavingsReapplyTestService;
 
 	@MockitoBean
 	private GoalSavingAccrualForceTestService goalSavingAccrualForceTestService;

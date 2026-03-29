@@ -66,9 +66,11 @@ public class PlanQueryService {
 			plan.getSavedAmount(),
 			calculateAchievementRate(plan),
 			ChronoUnit.DAYS.between(today(), plan.getEndDate()),
+			plan.getEndDate(),
+			resolveOriginalEndDate(plan),
 			new PlanDetailResponse.GraphData(
 				displayAllocations.stream().map(DisplayAllocation::displayWeek).toList(),
-				displayAllocations.stream().map(displayAllocation -> zero(displayAllocation.allocation().getPlannedAmount())).toList(),
+				displayAllocations.stream().map(DisplayAllocation::plannedAmount).toList(),
 				displayAllocations.stream().map(DisplayAllocation::actualAmount).toList()
 			),
 			displayAllocations.stream()
@@ -206,6 +208,10 @@ public class PlanQueryService {
 		return amount == null ? 0L : amount;
 	}
 
+	private LocalDate resolveOriginalEndDate(Plan plan) {
+		return plan.getOriginalEndDate() == null ? plan.getEndDate() : plan.getOriginalEndDate();
+	}
+
 	private List<DisplayAllocation> toDisplayAllocations(List<PlanWeekAllocation> allocations) {
 		Map<AdjustmentKey, Long> actualAmountsByKey = resolveActualAmountsByKey(allocations);
 		List<DisplayAllocation> displayAllocations = new ArrayList<>();
@@ -213,10 +219,14 @@ public class PlanQueryService {
 
 		for (int index = 0; index < allocations.size(); index++) {
 			PlanWeekAllocation allocation = allocations.get(index);
-			long actualAmount = isFutureWeek(allocation.getBudgetWeek(), today)
+			boolean futureWeek = isFutureWeek(allocation.getBudgetWeek(), today);
+			long actualAmount = futureWeek
 				? 0L
 				: actualAmountsByKey.getOrDefault(AdjustmentKey.from(allocation), 0L);
-			displayAllocations.add(new DisplayAllocation(index + 1, allocation, actualAmount));
+			long plannedAmount = futureWeek
+				? zero(allocation.getPlannedAmount())
+				: Math.max(zero(allocation.getPlannedAmount()), actualAmount);
+			displayAllocations.add(new DisplayAllocation(index + 1, allocation, plannedAmount, actualAmount));
 		}
 
 		return displayAllocations;
@@ -276,7 +286,7 @@ public class PlanQueryService {
 		return LocalDate.now(clock);
 	}
 
-	private record DisplayAllocation(int displayWeek, PlanWeekAllocation allocation, long actualAmount) {
+	private record DisplayAllocation(int displayWeek, PlanWeekAllocation allocation, long plannedAmount, long actualAmount) {
 	}
 
 	private record AdjustmentKey(Integer planId, LocalDate weekStartDate, LocalDate weekEndDate) {

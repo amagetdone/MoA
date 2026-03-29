@@ -20,7 +20,10 @@ public final class SocialAuthDto {
 		boolean account,
 		boolean plan,
 		String accessToken,
-		String refreshToken
+		String refreshToken,
+		String nickname,
+		String email,
+		String profileImageUrl
 	) {
 	}
 }

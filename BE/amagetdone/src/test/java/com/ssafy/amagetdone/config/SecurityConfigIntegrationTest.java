@@ -90,7 +90,7 @@ class SecurityConfigIntegrationTest {
 		given(jwtAccessTokenReader.readUserId(INVALID_BEARER))
 			.willThrow(new MemberException(MemberErrorCode.INVALID_ACCESS_TOKEN));
 		given(memberAuthService.authenticateTest(new TestSocialAuthDto.Request(1)))
-			.willReturn(new SocialAuthDto.Response("TEMP", false, false, "access-token", "refresh-token"));
+			.willReturn(new SocialAuthDto.Response("TEMP", false, false, "access-token", "refresh-token", null, null, null));
 
 		mockMvc.perform(apiPost("/v1/auth/social/test")
 				.header(AUTHORIZATION, INVALID_BEARER))

@@ -38,9 +38,10 @@ public class GoogleSocialAuthClient implements SocialAuthClient {
 
 	@Override
 	public SocialUserIdentity fetchIdentity(SocialAuthDto.Request request) {
+		SocialUserIdentity idTokenIdentity = null;
 		if (request.idToken() != null && !request.idToken().isBlank()) {
 			try {
-				return fetchByIdToken(request.idToken());
+				idTokenIdentity = fetchByIdToken(request.idToken());
 			} catch (MemberException exception) {
 				if (request.accessToken() == null || request.accessToken().isBlank()) {
 					throw exception;
@@ -49,7 +50,18 @@ public class GoogleSocialAuthClient implements SocialAuthClient {
 		}
 
 		if (request.accessToken() != null && !request.accessToken().isBlank()) {
-			return fetchByAccessToken(request.accessToken());
+			SocialUserIdentity accessTokenIdentity = fetchByAccessToken(request.accessToken());
+			if (idTokenIdentity == null) {
+				return accessTokenIdentity;
+			}
+			if (!idTokenIdentity.providerUid().equals(accessTokenIdentity.providerUid())) {
+				throw new MemberException(MemberErrorCode.INVALID_GOOGLE_ID_TOKEN);
+			}
+			return mergeIdentity(idTokenIdentity, accessTokenIdentity);
+		}
+
+		if (idTokenIdentity != null) {
+			return idTokenIdentity;
 		}
 
 		throw new MemberException(MemberErrorCode.GOOGLE_ID_TOKEN_REQUIRED);
@@ -71,7 +83,13 @@ public class GoogleSocialAuthClient implements SocialAuthClient {
 				throw new MemberException(MemberErrorCode.INVALID_GOOGLE_ID_TOKEN);
 			}
 
-			return new SocialUserIdentity(SocialProvider.GOOGLE, response.sub());
+			return new SocialUserIdentity(
+				SocialProvider.GOOGLE,
+				response.sub(),
+				null,
+				normalizeEmail(response.email()),
+				null
+			);
 		} catch (RestClientException exception) {
 			throw new MemberException(MemberErrorCode.INVALID_GOOGLE_ID_TOKEN, exception);
 		}
@@ -93,10 +111,71 @@ public class GoogleSocialAuthClient implements SocialAuthClient {
 				throw new MemberException(MemberErrorCode.INVALID_GOOGLE_ID_TOKEN);
 			}
 
-			return new SocialUserIdentity(SocialProvider.GOOGLE, response.sub());
+			return mergeIdentity(
+				new SocialUserIdentity(
+					SocialProvider.GOOGLE,
+					response.sub(),
+					null,
+					normalizeEmail(response.email()),
+					null
+				),
+				fetchGoogleUserInfo(accessToken)
+			);
 		} catch (RestClientException exception) {
 			throw new MemberException(MemberErrorCode.INVALID_GOOGLE_ID_TOKEN, exception);
 		}
+	}
+
+	private SocialUserIdentity fetchGoogleUserInfo(String accessToken) {
+		if (properties.getGoogle().getUserInfoUri() == null || properties.getGoogle().getUserInfoUri().isBlank()) {
+			return new SocialUserIdentity(SocialProvider.GOOGLE, "");
+		}
+
+		try {
+			GoogleUserInfoResponse response = restClient.get()
+				.uri(properties.getGoogle().getUserInfoUri())
+				.headers(headers -> headers.setBearerAuth(accessToken))
+				.retrieve()
+				.body(GoogleUserInfoResponse.class);
+
+			if (response == null || response.sub() == null || response.sub().isBlank()) {
+				return new SocialUserIdentity(SocialProvider.GOOGLE, "");
+			}
+
+			return new SocialUserIdentity(
+				SocialProvider.GOOGLE,
+				response.sub(),
+				response.name(),
+				normalizeEmail(response.email()),
+				response.picture()
+			);
+		} catch (RestClientException exception) {
+			return new SocialUserIdentity(SocialProvider.GOOGLE, "");
+		}
+	}
+
+	private SocialUserIdentity mergeIdentity(SocialUserIdentity primary, SocialUserIdentity secondary) {
+		return new SocialUserIdentity(
+			primary.provider(),
+			primary.providerUid(),
+			firstNonBlank(primary.nickname(), secondary.nickname()),
+			firstNonBlank(primary.email(), secondary.email()),
+			firstNonBlank(primary.profileImageUrl(), secondary.profileImageUrl())
+		);
+	}
+
+	private String firstNonBlank(String primary, String secondary) {
+		if (primary != null && !primary.isBlank()) {
+			return primary;
+		}
+		if (secondary != null && !secondary.isBlank()) {
+			return secondary;
+		}
+		return null;
+	}
+
+	private String normalizeEmail(String email) {
+		return email != null && !email.isBlank() ? email : null;
 	}
 
 	private boolean isValidGoogleTokenInfo(GoogleTokenInfoResponse response) {
@@ -132,7 +211,16 @@ public class GoogleSocialAuthClient implements SocialAuthClient {
 		String aud,
 		String exp,
 		String iss,
-		String sub
+		String sub,
+		String email
+	) {
+	}
+
+	private record GoogleUserInfoResponse(
+		String sub,
+		String email,
+		String name,
+		String picture
 	) {
 	}
 }

@@ -15,6 +15,8 @@ public record PlanListItemResponse(
 	Integer priority,
 	Integer weekNumber,
 	Long dday,
+	LocalDate endDate,
+	LocalDate originalEndDate,
 	BigDecimal achievementRate,
 	String status,
 	String aiPipelineStatus
@@ -32,10 +34,16 @@ public record PlanListItemResponse(
 			plan.getPriority(),
 			plan.getTargetWeeks() == null ? 0 : plan.getTargetWeeks(),
 			calculateDday(today, plan.getEndDate()),
+			plan.getEndDate(),
+			resolveOriginalEndDate(plan),
 			calculateAchievementRate(safeSavedAmount, safeTargetAmount),
 			plan.getStatus() == null ? null : plan.getStatus().name(),
 			plan.getAiPipelineStatus() == null ? null : plan.getAiPipelineStatus().name()
 		);
+	}
+
+	private static LocalDate resolveOriginalEndDate(Plan plan) {
+		return plan.getOriginalEndDate() == null ? plan.getEndDate() : plan.getOriginalEndDate();
 	}
 
 	private static long calculateDday(LocalDate today, LocalDate endDate) {
