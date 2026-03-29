@@ -183,7 +183,6 @@ public class BudgetAdjustmentCommandService {
 			return;
 		}
 
-		plan.setStatus(PlanStatus.COMPLETED);
 		if (userId != null && plan.getPriority() != null) {
 			planPriorityService.compactPrioritiesAfterCompletion(userId, plan.getPriority());
 		}
