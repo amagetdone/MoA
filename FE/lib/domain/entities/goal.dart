@@ -173,6 +173,51 @@ class Goal {
     return targetAmount;
   }
 
+  int? get homeWeeklyPlannedAmount {
+    final currentWeekPlan = _currentWeekPlanAmount;
+    if (currentWeekPlan != null) {
+      return currentWeekPlan;
+    }
+
+    final currentWeekActual = _currentWeekGraphActualAmount;
+    if (currentWeekActual != null) {
+      return currentWeekActual;
+    }
+
+    if (_hasDistinctWeeklyOverrides && weeklySavedAmountOverride != null) {
+      return weeklySavedAmountOverride;
+    }
+
+    if (homeWeeklyTargetAmount != null) {
+      return 0;
+    }
+
+    return null;
+  }
+
+  int? get homeWeeklyTargetAmount {
+    final currentWeekPlanned = _currentWeekGraphPlannedAmount;
+    if (currentWeekPlanned != null && currentWeekPlanned > 0) {
+      return currentWeekPlanned;
+    }
+
+    final missionAmount = weeklyMission?.weeklySavingsAmount ?? 0;
+    if (missionAmount > 0) {
+      return missionAmount;
+    }
+
+    final weeklyBudgetSaving = weeklyBudget?.savingAmount ?? 0;
+    if (weeklyBudgetSaving > 0) {
+      return weeklyBudgetSaving;
+    }
+
+    if (_hasDistinctWeeklyOverrides && weeklyTargetAmountOverride != null) {
+      return weeklyTargetAmountOverride;
+    }
+
+    return null;
+  }
+
   GoalStatus get effectiveStatus {
     if (isEffectivelyAchieved) {
       return GoalStatus.achieved;
@@ -246,6 +291,53 @@ class Goal {
       apiStatus: apiStatus ?? this.apiStatus,
       aiPipelineStatus: aiPipelineStatus ?? this.aiPipelineStatus,
     );
+  }
+
+  int? get _currentWeekPlanAmount {
+    for (final plan in weeklyPlans) {
+      if (plan.week == currentWeekNumber) {
+        return plan.amount;
+      }
+    }
+    return null;
+  }
+
+  int? get _currentWeekGraphPlannedAmount {
+    final planned = graphData?.planned;
+    if (planned == null || planned.isEmpty) {
+      return null;
+    }
+
+    final index = currentWeekNumber - 1;
+    if (index < 0 || index >= planned.length) {
+      return null;
+    }
+
+    return planned[index];
+  }
+
+  int? get _currentWeekGraphActualAmount {
+    final actual = graphData?.actual;
+    if (actual == null || actual.isEmpty) {
+      return null;
+    }
+
+    final index = currentWeekNumber - 1;
+    if (index < 0 || index >= actual.length) {
+      return null;
+    }
+
+    return actual[index];
+  }
+
+  bool get _hasDistinctWeeklyOverrides {
+    final weeklySaved = weeklySavedAmountOverride;
+    final weeklyTarget = weeklyTargetAmountOverride;
+    if (weeklySaved == null && weeklyTarget == null) {
+      return false;
+    }
+
+    return weeklySaved != currentAmount || weeklyTarget != targetAmount;
   }
 }
 

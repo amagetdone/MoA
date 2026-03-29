@@ -250,12 +250,14 @@ class _GoalItem extends StatelessWidget {
     final percent = percentValue > 0 && percentValue < 1
         ? percentValue.toStringAsFixed(1)
         : percentValue.toStringAsFixed(0);
-    final weeklySaved = goal.weeklySavedAmount;
-    final weeklyTarget = goal.weeklyTargetAmount;
-    final remainingWeeklyTarget = (weeklyTarget - weeklySaved).clamp(
-      0,
-      weeklyTarget,
-    );
+    final weeklySaved = goal.homeWeeklyPlannedAmount;
+    final weeklyTarget = goal.homeWeeklyTargetAmount;
+    final hasWeeklySummary =
+        weeklySaved != null && weeklyTarget != null && weeklyTarget > 0;
+    final normalizedWeeklySaved = weeklySaved ?? 0;
+    final normalizedWeeklyTarget = weeklyTarget ?? 0;
+    final remainingWeeklyTarget = (normalizedWeeklyTarget - normalizedWeeklySaved)
+        .clamp(0, normalizedWeeklyTarget);
     final weeklyTargetMarkerProgress = goal.targetAmount > 0
         ? ((goal.currentAmount + remainingWeeklyTarget) / goal.targetAmount)
               .clamp(0.0, 1.0)
@@ -298,15 +300,17 @@ class _GoalItem extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: 2.h),
-                    Text(
-                      '이번 주 ${CurrencyFormatter.formatKRW(weeklySaved)} / ${CurrencyFormatter.formatKRW(weeklyTarget)}',
-                      style: AppTextStyles.caption.copyWith(
-                        color: colors.textSecondary,
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w700,
+                    if (hasWeeklySummary) ...[
+                      Text(
+                        '이번 주 ${CurrencyFormatter.formatKRW(normalizedWeeklySaved)} / ${CurrencyFormatter.formatKRW(normalizedWeeklyTarget)}',
+                        style: AppTextStyles.caption.copyWith(
+                          color: colors.textSecondary,
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 2.h),
+                      SizedBox(height: 2.h),
+                    ],
                     Text(
                       '전체 기간 ${CurrencyFormatter.formatKRW(goal.currentAmount)} / ${CurrencyFormatter.formatKRW(goal.targetAmount)}',
                       style: AppTextStyles.caption.copyWith(
@@ -333,9 +337,9 @@ class _GoalItem extends StatelessWidget {
                       children: [
                         Expanded(
                           child: SizedBox(
-                            height: 16.h,
+                            height: 20.h,
                             child: Align(
-                              alignment: Alignment.centerLeft,
+                              alignment: Alignment.topLeft,
                               child: _GoalProgressBar(
                                 progress: overallProgress,
                                 markerProgress: weeklyTargetMarkerProgress,
@@ -389,9 +393,12 @@ class _GoalProgressBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final normalizedProgress = progress.clamp(0.0, 1.0);
     final normalizedMarker = markerProgress.clamp(0.0, 1.0);
+    final barHeight = 6.h;
+    final markerPointerWidth = 8.w;
+    final markerPointerHeight = 5.h;
 
     return SizedBox(
-      height: 6.h,
+      height: 14.h,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final markerLeft = normalizedMarker <= 0
@@ -405,20 +412,25 @@ class _GoalProgressBar extends StatelessWidget {
           return Stack(
             clipBehavior: Clip.none,
             children: [
-              Container(
-                height: 6.h,
-                decoration: BoxDecoration(
-                  color: AppColors.orange500.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(3.r),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: barHeight,
+                  decoration: BoxDecoration(
+                    color: AppColors.orange500.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(3.r),
+                  ),
                 ),
               ),
               if (normalizedProgress > 0)
                 Positioned(
                   left: 0,
-                  bottom: 0,
+                  top: 0,
                   child: Container(
                     width: progressWidth.clamp(2.w, constraints.maxWidth),
-                    height: 6.h,
+                    height: barHeight,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(3.r),
                       gradient: const LinearGradient(
@@ -429,13 +441,24 @@ class _GoalProgressBar extends StatelessWidget {
                 ),
               Positioned(
                 left: markerLeft - 0.5.w,
-                bottom: 0,
+                top: 0,
                 child: Container(
                   width: 1.w,
-                  height: 6.h,
+                  height: barHeight,
                   decoration: BoxDecoration(
-                    color: AppColors.orange500,
+                    color: AppColors.orange500.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(999.r),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: markerLeft - (markerPointerWidth / 2),
+                top: barHeight - 0.5.h,
+                child: CustomPaint(
+                  size: Size(markerPointerWidth, markerPointerHeight),
+                  painter: _GoalProgressMarkerPainter(
+                    fillColor: AppColors.orange500,
+                    strokeColor: Colors.white,
                   ),
                 ),
               ),
@@ -444,5 +467,41 @@ class _GoalProgressBar extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+class _GoalProgressMarkerPainter extends CustomPainter {
+  const _GoalProgressMarkerPainter({
+    required this.fillColor,
+    required this.strokeColor,
+  });
+
+  final Color fillColor;
+  final Color strokeColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(size.width / 2, 0)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+
+    final strokePaint = Paint()
+      ..color = strokeColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    final fillPaint = Paint()
+      ..color = fillColor
+      ..style = PaintingStyle.fill;
+
+    canvas.drawPath(path, strokePaint);
+    canvas.drawPath(path, fillPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _GoalProgressMarkerPainter oldDelegate) {
+    return oldDelegate.fillColor != fillColor ||
+        oldDelegate.strokeColor != strokeColor;
   }
 }

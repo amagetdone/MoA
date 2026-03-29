@@ -147,7 +147,7 @@ class GoalBarChart extends StatelessWidget {
 
       return _BarChartCard(
         title: '저축 이력',
-        leftMetricLabel: goal.status == GoalStatus.achieved ? null : '이번 주 저축 계획',
+        leftMetricLabel: goal.status == GoalStatus.achieved ? null : '이번 주 저축액',
         leftMetricValue: goal.status == GoalStatus.achieved ? null : CurrencyFormatter.formatKRW(highlightedPlan.amount),
         leftMetricColor: goal.status == GoalStatus.achieved ? null : AppColors.orange500,
         rightMetricLabel: goal.status == GoalStatus.achieved ? null : '주간 목표액',
