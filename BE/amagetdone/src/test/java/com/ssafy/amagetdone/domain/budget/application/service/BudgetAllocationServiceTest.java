@@ -24,6 +24,7 @@ import com.ssafy.amagetdone.domain.account.model.repository.PocketRepository;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
+import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.plan.model.repository.PlanWeekAllocationRepository;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -61,6 +62,9 @@ class BudgetAllocationServiceTest {
 	@Mock
 	private PocketRepository pocketRepository;
 
+	@Mock
+	private PlanRepository planRepository;
+
 	private BudgetAllocationService budgetAllocationService;
 
 	@BeforeEach
@@ -73,7 +77,8 @@ class BudgetAllocationServiceTest {
 			essentialWeekAllocationRepository,
 			planWeekAllocationRepository,
 			budgetRolloverRepository,
-			pocketRepository
+			pocketRepository,
+			planRepository
 		);
 
 		Mockito.lenient().when(budgetMonthRepository.findFirstByUserAndBaseDateOrderByIdDesc(any(User.class), any(LocalDate.class)))
@@ -364,6 +369,46 @@ class BudgetAllocationServiceTest {
 		List<Integer> deletedIds = new java.util.ArrayList<>();
 		captor.getValue().forEach(week -> deletedIds.add(week.getId()));
 		assertEquals(List.of(100), deletedIds);
+	}
+
+	@Test
+	void allocateBudgetRestoresSavedAmountWhenDeletingObsoleteWeeks() {
+		User user = user(1);
+		LocalDate serviceStartDate = LocalDate.of(2026, 3, 1);
+		LocalDate allocationEndDate = LocalDate.of(2026, 3, 31);
+		Plan plan = plan(1, user, "Travel", 100_000L, 4, 1, serviceStartDate);
+		BudgetWeek obsoleteWeek = existingBudgetWeek(100, user, 10, LocalDate.of(2026, 2, 23), LocalDate.of(2026, 3, 1));
+
+		Mockito.when(
+			budgetWeekRepository.findAllByUserIdAndWeekEndDateGreaterThanEqualAndWeekStartDateLessThanEqualOrderByWeekStartDateAscIdDesc(
+				eq(user.getId()),
+				eq(serviceStartDate),
+				eq(allocationEndDate)
+			)
+		).thenReturn(List.of(obsoleteWeek));
+
+		com.ssafy.amagetdone.domain.budget.model.entity.BudgetAdjustment obsoleteAdjustment =
+			com.ssafy.amagetdone.domain.budget.model.entity.BudgetAdjustment.builder()
+			.budgetWeek(obsoleteWeek)
+			.plan(plan)
+			.adjustmentType(com.ssafy.amagetdone.domain.budget.model.vo.BudgetAdjustmentType.PLAN_SAVED_AUTO_ADD)
+			.adjustmentAmount(10_000L)
+			.reason("obsolete")
+			.build();
+		Mockito.when(budgetAdjustmentRepository.findAllByBudgetWeekIn(List.of(obsoleteWeek)))
+			.thenReturn(List.of(obsoleteAdjustment));
+
+		budgetAllocationService.allocateBudget(
+			user,
+			serviceStartDate,
+			0L,
+			List.of(),
+			List.of(),
+			allocationEndDate
+		);
+
+		Mockito.verify(planRepository).adjustSavedAmount(1, -10_000L);
+		Mockito.verify(budgetAdjustmentRepository).deleteAll(List.of(obsoleteAdjustment));
 	}
 
 	private User user(int userId) {

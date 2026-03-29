@@ -289,8 +289,16 @@ public class DailyGoalSavingAccrualService {
 				appliedAmount -= Math.abs(deltaAmount);
 			}
 
+			long responseSavedAmount = catchUpMode ? expectedAccruedAmount : savedAmount;
 			aggregates.computeIfAbsent(plan.getId(), ignored -> new PlanAggregate(plan))
-				.accumulate(plannedAmount, finalAmount, deltaAmount, savedAmount, remainingScheduledAmount);
+				.accumulate(
+					plannedAmount,
+					finalAmount,
+					deltaAmount,
+					responseSavedAmount,
+					remainingScheduledAmount,
+					catchUpMode
+				);
 		}
 
 		savedAmountDeltas.forEach((planId, delta) -> planRepository.adjustSavedAmount(planId, delta));
@@ -512,12 +520,17 @@ public class DailyGoalSavingAccrualService {
 			long finalAmount,
 			long accruedAmount,
 			long savedAmount,
-			long remainingScheduledAmount
+			long remainingScheduledAmount,
+			boolean scopedSavedAmount
 		) {
 			this.plannedAmount += plannedAmount;
 			this.finalAmount += finalAmount;
 			this.accruedAmount += accruedAmount;
-			this.savedAmount = savedAmount;
+			if (scopedSavedAmount) {
+				this.savedAmount += savedAmount;
+			} else {
+				this.savedAmount = savedAmount;
+			}
 			this.remainingScheduledAmount += remainingScheduledAmount;
 		}
 
