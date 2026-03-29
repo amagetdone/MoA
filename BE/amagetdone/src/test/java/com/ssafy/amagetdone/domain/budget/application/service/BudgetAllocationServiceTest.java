@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -412,6 +413,54 @@ class BudgetAllocationServiceTest {
 
 		Mockito.verify(planRepository).adjustSavedAmount(1, -10_000L);
 		Mockito.verify(budgetAdjustmentRepository).deleteAll(List.of(obsoleteAdjustment));
+	}
+
+	@Test
+	void allocateBudgetPreservesManualPlanAllocationsWhenReallocatingCurrentMonth() {
+		User user = user(1);
+		LocalDate serviceStartDate = LocalDate.of(2026, 3, 2);
+		LocalDate allocationEndDate = LocalDate.of(2026, 4, 5);
+		BudgetWeek overlappingWeek = existingBudgetWeek(100, user, 1, LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 8));
+		Plan autoPlan = plan(1, user, "Auto Plan", 100_000L, 4, 1, serviceStartDate);
+		Plan manualPlan = plan(2, user, "Manual Plan", 100_000L, 4, 2, serviceStartDate);
+		manualPlan.setAutoAllocateEnabled(false);
+
+		PlanWeekAllocation autoAllocation = PlanWeekAllocation.builder()
+			.id(1000)
+			.budgetWeek(overlappingWeek)
+			.plan(autoPlan)
+			.plannedAmount(25_000L)
+			.finalAmount(25_000L)
+			.build();
+		PlanWeekAllocation manualAllocation = PlanWeekAllocation.builder()
+			.id(1001)
+			.budgetWeek(overlappingWeek)
+			.plan(manualPlan)
+			.plannedAmount(25_000L)
+			.finalAmount(25_000L)
+			.build();
+
+		Mockito.when(
+			budgetWeekRepository.findAllByUserIdAndWeekEndDateGreaterThanEqualAndWeekStartDateLessThanEqualOrderByWeekStartDateAscIdDesc(
+				eq(user.getId()),
+				eq(serviceStartDate),
+				eq(allocationEndDate)
+			)
+		).thenReturn(List.of(overlappingWeek));
+		Mockito.when(planWeekAllocationRepository.findByBudgetWeek(overlappingWeek))
+			.thenReturn(List.of(autoAllocation, manualAllocation));
+
+		budgetAllocationService.allocateBudget(
+			user,
+			serviceStartDate,
+			1_000_000L,
+			List.of(),
+			List.of(autoPlan),
+			allocationEndDate
+		);
+
+		Mockito.verify(planWeekAllocationRepository).deleteAll(List.of(autoAllocation));
+		Mockito.verify(planWeekAllocationRepository, never()).deleteAll(List.of(autoAllocation, manualAllocation));
 	}
 
 	@Test
