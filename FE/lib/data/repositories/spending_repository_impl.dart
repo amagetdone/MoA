@@ -166,8 +166,8 @@ class SpendingRepositoryImpl implements SpendingRepository {
       final totalExpense = dto.expenseAmount;
       final fixedAmount = dto.fixedEssentialAmount;
       final variableAmount = dto.variableEssentialAmount;
-      final freeAmount = (totalExpense - fixedAmount - variableAmount).clamp(0, totalExpense);
       final savingsAmount = totalIncome - totalExpense;
+      final freeAmount = savingsAmount.clamp(0, savingsAmount.abs());
 
       final categories = dto.categoryExpenses
           .map((e) => SpendingCategory(
