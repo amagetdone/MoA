@@ -51,6 +51,7 @@ public class BudgetHistoricalRebuildService {
 	private final BudgetAllocationTriggerService budgetAllocationTriggerService;
 	private final BudgetActualSpentRefreshService budgetActualSpentRefreshService;
 	private final DailyGoalSavingAccrualService dailyGoalSavingAccrualService;
+	private final WeeklyGoalSavingAccrualService weeklyGoalSavingAccrualService;
 	private final EntityManager entityManager;
 	private final Clock clock;
 
@@ -132,7 +133,12 @@ public class BudgetHistoricalRebuildService {
 		}
 		flushAndClear();
 
-		return dailyGoalSavingAccrualService.backfillAccrual(userId, new GoalSavingAccrualForceDto.BackfillRequest(null));
+		GoalSavingAccrualForceDto.Response response = dailyGoalSavingAccrualService.backfillAccrual(
+			userId,
+			new GoalSavingAccrualForceDto.BackfillRequest(null)
+		);
+		weeklyGoalSavingAccrualService.applyWeeklyAccrual(userId);
+		return response;
 	}
 
 	private void flushAndClear() {

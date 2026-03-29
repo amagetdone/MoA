@@ -33,6 +33,19 @@ if [[ -z "$LOCAL_USER_ID" ]]; then
   exit 1
 fi
 
+python_cmd() {
+  if command -v python >/dev/null 2>&1; then
+    python "$@"
+    return
+  fi
+  if command -v py >/dev/null 2>&1; then
+    py -3 "$@"
+    return
+  fi
+  echo "FAIL: python interpreter not found" >&2
+  exit 1
+}
+
 USER_ROW=$(
   docker exec "$POSTGRES_CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -F '|' -c \
     "select coalesce(email, ''), coalesce(user_key, '') from users where id = ${LOCAL_USER_ID};" 2>/dev/null || true
@@ -66,7 +79,7 @@ export USER_KEY
 TOKEN_VERSION=$(redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" -a "$REDIS_PASSWORD" --raw GET "auth:token-version:$LOCAL_USER_ID" 2>/dev/null || true)
 TOKEN_VERSION="${TOKEN_VERSION:-0}"
 
-ACCESS_TOKEN=$(LOCAL_USER_ID="$LOCAL_USER_ID" LOCAL_PROVIDER="$LOCAL_PROVIDER" TOKEN_VERSION="$TOKEN_VERSION" JWT_SECRET="$JWT_SECRET" python3 - <<'PY'
+ACCESS_TOKEN=$(LOCAL_USER_ID="$LOCAL_USER_ID" LOCAL_PROVIDER="$LOCAL_PROVIDER" TOKEN_VERSION="$TOKEN_VERSION" JWT_SECRET="$JWT_SECRET" python_cmd - <<'PY'
 import base64
 import hashlib
 import hmac

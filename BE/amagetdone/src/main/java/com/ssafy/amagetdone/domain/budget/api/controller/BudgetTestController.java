@@ -5,6 +5,7 @@ import com.ssafy.amagetdone.domain.budget.api.dto.BudgetWeekSeedResponse;
 import com.ssafy.amagetdone.domain.budget.api.dto.GoalSavingAccrualForceDto;
 import com.ssafy.amagetdone.domain.budget.api.dto.WeeklySavingsDetailDto;
 import com.ssafy.amagetdone.domain.budget.application.service.BudgetCurrentWeekGoalAllocationTestService;
+import com.ssafy.amagetdone.domain.budget.application.service.BudgetCurrentWeekSavingsReapplyTestService;
 import com.ssafy.amagetdone.domain.budget.application.service.BudgetWeekSeedService;
 import com.ssafy.amagetdone.domain.budget.application.service.GoalSavingAccrualForceTestService;
 import com.ssafy.amagetdone.global.response.ApiResponse;
@@ -29,15 +30,18 @@ public class BudgetTestController {
 
 	private final BudgetWeekSeedService budgetWeekSeedService;
 	private final BudgetCurrentWeekGoalAllocationTestService budgetCurrentWeekGoalAllocationTestService;
+	private final BudgetCurrentWeekSavingsReapplyTestService budgetCurrentWeekSavingsReapplyTestService;
 	private final GoalSavingAccrualForceTestService goalSavingAccrualForceTestService;
 
 	public BudgetTestController(
 		BudgetWeekSeedService budgetWeekSeedService,
 		BudgetCurrentWeekGoalAllocationTestService budgetCurrentWeekGoalAllocationTestService,
+		BudgetCurrentWeekSavingsReapplyTestService budgetCurrentWeekSavingsReapplyTestService,
 		GoalSavingAccrualForceTestService goalSavingAccrualForceTestService
 	) {
 		this.budgetWeekSeedService = budgetWeekSeedService;
 		this.budgetCurrentWeekGoalAllocationTestService = budgetCurrentWeekGoalAllocationTestService;
+		this.budgetCurrentWeekSavingsReapplyTestService = budgetCurrentWeekSavingsReapplyTestService;
 		this.goalSavingAccrualForceTestService = goalSavingAccrualForceTestService;
 	}
 
@@ -69,6 +73,21 @@ public class BudgetTestController {
 		return ApiResponse.ok(
 			"Current week goal savings allocation test succeeded.",
 			budgetCurrentWeekGoalAllocationTestService.forceCurrentWeekAllocation(authenticatedMember.userId())
+		);
+	}
+
+	@Operation(
+		summary = "?꾩옱 二쇱감 紐⑺몴 ?異? ?곸슜 ?ㅼ떆 怨꾩궛",
+		description = "?꾩옱 二쇱감 ?먮룞 ?異??곷┰???쒓굅?섍퀬 ?꾩옱 ?덉궛 ?곹깭濡??ㅼ떆 ?異??곸슜?덉뿬 ?붾㈃ ?곷깭瑜??섎룞 寃利앺빀?덈떎.",
+		security = @SecurityRequirement(name = "bearerAuth")
+	)
+	@PostMapping("/weeks/current/savings-accrual/reapply")
+	public ApiResponse<WeeklySavingsDetailDto.Response> reapplyCurrentWeekSavingsAccrual(
+		@AuthenticationPrincipal AuthenticatedMember authenticatedMember
+	) {
+		return ApiResponse.ok(
+			"Current week goal savings accrual reapply test succeeded.",
+			budgetCurrentWeekSavingsReapplyTestService.reapplyCurrentWeekSavings(authenticatedMember.userId())
 		);
 	}
 

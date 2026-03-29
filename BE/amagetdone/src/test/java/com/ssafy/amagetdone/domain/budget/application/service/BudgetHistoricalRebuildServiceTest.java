@@ -85,6 +85,9 @@ class BudgetHistoricalRebuildServiceTest {
 	private DailyGoalSavingAccrualService dailyGoalSavingAccrualService;
 
 	@Mock
+	private WeeklyGoalSavingAccrualService weeklyGoalSavingAccrualService;
+
+	@Mock
 	private EntityManager entityManager;
 
 	@Test
@@ -167,6 +170,7 @@ class BudgetHistoricalRebuildServiceTest {
 			budgetAllocationTriggerService,
 			budgetActualSpentRefreshService,
 			dailyGoalSavingAccrualService,
+			weeklyGoalSavingAccrualService,
 			entityManager,
 			Clock.fixed(Instant.parse("2026-03-20T00:00:00Z"), ZoneId.of("Asia/Seoul"))
 		);
@@ -182,6 +186,7 @@ class BudgetHistoricalRebuildServiceTest {
 		verify(budgetAllocationTriggerService).triggerHistorical(1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
 		verify(budgetActualSpentRefreshService).refresh(1, List.of(rebuiltWeek));
 		verify(dailyGoalSavingAccrualService).backfillAccrual(1, new GoalSavingAccrualForceDto.BackfillRequest(null));
+		verify(weeklyGoalSavingAccrualService).applyWeeklyAccrual(1);
 		verify(entityManager, org.mockito.Mockito.times(2)).flush();
 		verify(entityManager, org.mockito.Mockito.times(2)).clear();
 
@@ -227,6 +232,7 @@ class BudgetHistoricalRebuildServiceTest {
 			budgetAllocationTriggerService,
 			budgetActualSpentRefreshService,
 			dailyGoalSavingAccrualService,
+			weeklyGoalSavingAccrualService,
 			entityManager,
 			Clock.fixed(Instant.parse("2026-03-20T00:00:00Z"), ZoneId.of("Asia/Seoul"))
 		);
@@ -286,6 +292,7 @@ class BudgetHistoricalRebuildServiceTest {
 			budgetAllocationTriggerService,
 			budgetActualSpentRefreshService,
 			dailyGoalSavingAccrualService,
+			weeklyGoalSavingAccrualService,
 			entityManager,
 			Clock.fixed(Instant.parse("2026-03-20T00:00:00Z"), ZoneId.of("Asia/Seoul"))
 		);
@@ -352,6 +359,7 @@ class BudgetHistoricalRebuildServiceTest {
 			budgetAllocationTriggerService,
 			budgetActualSpentRefreshService,
 			dailyGoalSavingAccrualService,
+			weeklyGoalSavingAccrualService,
 			entityManager,
 			Clock.fixed(Instant.parse("2026-03-20T00:00:00Z"), ZoneId.of("Asia/Seoul"))
 		);
