@@ -156,6 +156,38 @@ class PlanQueryServiceTest {
 	}
 
 	@Test
+	void getPlanDetailDoesNotExposePlannedAmountsLowerThanActualHistory() {
+		Plan plan = plan(1, 1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 4, 5), 120_000L, 90_000L);
+		List<PlanWeekAllocation> allocations = List.of(
+			allocation(plan, budgetWeek(9, LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 8)), 24_000L, 24_000L),
+			allocation(plan, budgetWeek(10, LocalDate.of(2026, 3, 9), LocalDate.of(2026, 3, 15)), 24_000L, 24_000L),
+			allocation(plan, budgetWeek(11, LocalDate.of(2026, 3, 16), LocalDate.of(2026, 3, 22)), 24_000L, 24_000L),
+			allocation(plan, budgetWeek(12, LocalDate.of(2026, 3, 23), LocalDate.of(2026, 3, 29)), 24_000L, 24_000L)
+		);
+		List<BudgetAdjustment> adjustments = List.of(
+			adjustment(allocations.get(0), BudgetAdjustmentType.PLAN_SAVED_ADD, 30_000L),
+			adjustment(allocations.get(1), BudgetAdjustmentType.PLAN_SAVED_ADD, 30_000L),
+			adjustment(allocations.get(2), BudgetAdjustmentType.PLAN_SAVED_ADD, 30_000L)
+		);
+
+		given(planRepository.findByIdAndUserIdAndDeletedFalse(1, 1)).willReturn(Optional.of(plan));
+		given(planWeekAllocationRepository.findAllByPlanIdOrderByBudgetWeekWeekSequenceAsc(1)).willReturn(allocations);
+		given(budgetAdjustmentRepository.findAllByBudgetWeekIn(List.of(
+			allocations.get(0).getBudgetWeek(),
+			allocations.get(1).getBudgetWeek(),
+			allocations.get(2).getBudgetWeek(),
+			allocations.get(3).getBudgetWeek()
+		))).willReturn(adjustments);
+		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(any(), any(), any()))
+			.willReturn(Optional.of(currentBudgetWeek(11, LocalDate.of(2026, 3, 16), LocalDate.of(2026, 3, 22))));
+
+		PlanDetailResponse response = service.getPlanDetail(1, 1);
+
+		assertThat(response.graphData().planned()).containsExactly(30_000L, 30_000L, 30_000L, 24_000L);
+		assertThat(response.graphData().actual()).containsExactly(30_000L, 30_000L, 30_000L, 0L);
+	}
+
+	@Test
 	void getPlanDetailReturnsOriginalEndDateWhenPlanWasExtended() {
 		Plan plan = plan(1, 1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 4, 5), 100_000L, 10_000L);
 		ReflectionTestUtils.setField(plan, "originalEndDate", LocalDate.of(2026, 3, 29));
