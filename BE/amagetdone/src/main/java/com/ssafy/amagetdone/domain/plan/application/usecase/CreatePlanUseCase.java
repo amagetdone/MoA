@@ -73,7 +73,11 @@ public class CreatePlanUseCase {
 		activateIfStarted(plan);
 
 		Plan savedPlan = planRepository.save(plan);
-		triggerBudgetAllocationUseCase.execute(userId);
+		if (savedPlan.getStatus() == PlanStatus.ACTIVE) {
+			triggerBudgetAllocationUseCase.executeIncludingPlanEnd(userId, savedPlan.getEndDate());
+		} else {
+			triggerBudgetAllocationUseCase.execute(userId);
+		}
 		if (savedPlan.getStatus() == PlanStatus.ACTIVE) {
 			weeklyGoalSavingAccrualService.applyImmediateAccrual(userId, savedPlan.getId());
 		}

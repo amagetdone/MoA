@@ -147,7 +147,7 @@ class CreatePlanUseCaseTest {
 		ArgumentCaptor<Plan> planCaptor = ArgumentCaptor.forClass(Plan.class);
 		verify(planRepository).save(planCaptor.capture());
 		assertEquals(com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus.ACTIVE, planCaptor.getValue().getStatus());
-		verify(triggerBudgetAllocationUseCase).execute(1);
+		verify(triggerBudgetAllocationUseCase).executeIncludingPlanEnd(1, today.plusWeeks(2));
 		verify(applicationEventPublisher).publishEvent(new PlanCreatedEvent(11, 1));
 	}
 
@@ -179,7 +179,7 @@ class CreatePlanUseCaseTest {
 		assertEquals("ACTIVE", response.status());
 		assertEquals(12, response.planId());
 		assertEquals(100_000L, response.weeklyMission().weeklySavingsAmount());
-		verify(triggerBudgetAllocationUseCase).execute(1);
+		verify(triggerBudgetAllocationUseCase).executeIncludingPlanEnd(1, LocalDate.of(2026, 4, 1));
 	}
 
 	@Test
