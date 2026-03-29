@@ -42,6 +42,11 @@ class GoalLineChart extends StatelessWidget {
         weeklyValues: graphData.planned,
         totalWeeks: totalWeekCount,
       );
+      final visibleActualWeekCount = _resolveVisibleActualWeekCount(
+        totalWeeks: totalWeekCount,
+        currentWeek: goal.currentWeekNumber,
+        fallbackWeekCount: graphData.actual.length,
+      );
 
       return _LineChartCard(
         title: '달성 추이',
@@ -50,7 +55,7 @@ class GoalLineChart extends StatelessWidget {
         primaryColor: AppColors.green500,
         secondaryColor: colors.textTertiary,
         primarySeries: [
-          for (var i = 0; i < totalWeekCount; i++)
+          for (var i = 0; i < visibleActualWeekCount; i++)
             _ChartDatum(
               x: i.toDouble(),
               label: '${i + 1}주차',
@@ -88,6 +93,11 @@ class GoalLineChart extends StatelessWidget {
       totalWeeks: totalWeeks,
       targetAmount: goal.targetAmount,
     );
+    final visibleActualWeekCount = _resolveVisibleActualWeekCount(
+      totalWeeks: totalWeeks,
+      currentWeek: goal.currentWeekNumber,
+      fallbackWeekCount: weeklyTotals.lastIndexWhere((value) => value != 0) + 1,
+    );
 
     return _LineChartCard(
       title: '달성 추이',
@@ -96,7 +106,7 @@ class GoalLineChart extends StatelessWidget {
       primaryColor: AppColors.green500,
       secondaryColor: colors.textTertiary,
       primarySeries: [
-        for (var i = 0; i < totalWeeks; i++)
+        for (var i = 0; i < visibleActualWeekCount; i++)
           _ChartDatum(
             x: i.toDouble(),
             label: '${i + 1}주차',
@@ -288,7 +298,10 @@ class _LineChartCardState extends State<_LineChartCard> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final pointCount = widget.primarySeries.length;
+    final pointCount = math.max(
+      widget.primarySeries.length,
+      widget.secondarySeries.length,
+    );
     final allValues = <double>[
       ...widget.primarySeries.map((e) => e.value),
       ...widget.secondarySeries.map((e) => e.value),
@@ -470,22 +483,29 @@ class _LineChartCardState extends State<_LineChartCard> {
                               sideTitles: SideTitles(
                                 showTitles: true,
                                 reservedSize: 28.h,
-                                interval: titleInterval.toDouble(),
-                                getTitlesWidget: (value, meta) {
-                                  final index = value.toInt();
-                                  if (index < 0 ||
-                                      index >= widget.primarySeries.length) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  return Padding(
-                                    padding: EdgeInsets.only(top: 6.h),
-                                    child: Text(
-                                      widget.primarySeries[index].label,
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: colors.textTertiary,
-                                      ),
-                                    ),
-                                  );
+                                 interval: titleInterval.toDouble(),
+                                 getTitlesWidget: (value, meta) {
+                                   final index = value.toInt();
+                                   if (index < 0 || index >= pointCount) {
+                                     return const SizedBox.shrink();
+                                   }
+                                   final label = index < widget.secondarySeries.length
+                                       ? widget.secondarySeries[index].label
+                                       : (index < widget.primarySeries.length
+                                           ? widget.primarySeries[index].label
+                                           : null);
+                                   if (label == null) {
+                                     return const SizedBox.shrink();
+                                   }
+                                   return Padding(
+                                     padding: EdgeInsets.only(top: 6.h),
+                                     child: Text(
+                                       label,
+                                       style: AppTextStyles.caption.copyWith(
+                                         color: colors.textTertiary,
+                                       ),
+                                     ),
+                                   );
                                 },
                               ),
                             ),
@@ -702,16 +722,6 @@ class _BarChartCardState extends State<_BarChartCard> {
                 final visibleCount = math.max(
                   1,
                   (constraints.maxWidth / stepWidth).ceil(),
-                );
-                final startIndex = _scrollController.hasClients
-                    ? (_scrollController.offset / stepWidth).floor()
-                    : 0;
-                final clampedStart = startIndex
-                    .clamp(0, math.max(0, count - 1))
-                    .toInt();
-                final endIndex = math.min(
-                  count - 1,
-                  clampedStart + visibleCount - 1,
                 );
                 final allValues = <double>[
                   for (final bar in widget.bars) bar.value,
@@ -1117,9 +1127,6 @@ List<GoalWeeklyPlan> _buildNormalizedWeeklyPlans({
     planByWeek[plan.week] = plan.amount;
   }
 
-  final maxPlanWeek = planByWeek.keys.isEmpty
-      ? 0
-      : planByWeek.keys.reduce(math.max);
   final maxHistoryWeek = historyByWeek.keys.isEmpty
       ? 0
       : historyByWeek.keys.reduce(math.max);
@@ -1178,6 +1185,21 @@ List<double> _buildEvenPlanSeries({
   }
 
   return result;
+}
+
+int _resolveVisibleActualWeekCount({
+  required int totalWeeks,
+  required int currentWeek,
+  required int fallbackWeekCount,
+}) {
+  final safeTotalWeeks = math.max(totalWeeks, 1);
+  if (currentWeek > 0) {
+    return currentWeek.clamp(1, safeTotalWeeks);
+  }
+  if (fallbackWeekCount > 0) {
+    return fallbackWeekCount.clamp(1, safeTotalWeeks);
+  }
+  return safeTotalWeeks;
 }
 
 double _resolvePositiveChartMaxY(
