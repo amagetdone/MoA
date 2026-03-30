@@ -279,6 +279,10 @@ Map<String, dynamic> _accountToJson(Account account) {
 }
 
 Goal _goalFromJson(Map<String, dynamic> json) {
+  final graphDataJson = json['graphData'] as Map<String, dynamic>?;
+  final weeklyMissionJson = json['weeklyMission'] as Map<String, dynamic>?;
+  final weeklyBudgetJson = json['weeklyBudget'] as Map<String, dynamic>?;
+
   return Goal(
     id: json['id'] as String,
     name: json['name'] as String,
@@ -291,6 +295,66 @@ Goal _goalFromJson(Map<String, dynamic> json) {
     status: _goalStatusFromString(json['status'] as String?),
     iconName: json['iconName'] as String?,
     sketchVideoAssetPath: json['sketchVideoAssetPath'] as String?,
+    weekNumber: json['weekNumber'] as int?,
+    dday: json['dday'] as int?,
+    achievementRateOverride: (json['achievementRateOverride'] as num?)
+        ?.toDouble(),
+    graphData: graphDataJson == null
+        ? null
+        : GoalGraphData(
+            weeks: (graphDataJson['weeks'] as List<dynamic>? ?? const [])
+                .map((item) => (item as num).toInt())
+                .toList(),
+            planned: (graphDataJson['planned'] as List<dynamic>? ?? const [])
+                .map((item) => (item as num).toInt())
+                .toList(),
+            actual: (graphDataJson['actual'] as List<dynamic>? ?? const [])
+                .map((item) => (item as num).toInt())
+                .toList(),
+          ),
+    weeklyPlans: (json['weeklyPlans'] as List<dynamic>? ?? const [])
+        .map(
+          (item) => GoalWeeklyPlan(
+            week: (item['week'] as num?)?.toInt() ?? 0,
+            amount: (item['amount'] as num?)?.toInt() ?? 0,
+          ),
+        )
+        .toList(),
+    weeklyMission: weeklyMissionJson == null
+        ? null
+        : GoalWeeklyMission(
+            weeklySavingsAmount:
+                (weeklyMissionJson['weeklySavingsAmount'] as num?)?.toInt() ??
+                0,
+            weeksToGoal:
+                (weeklyMissionJson['weeksToGoal'] as num?)?.toInt() ?? 0,
+          ),
+    weeklyBudget: weeklyBudgetJson == null
+        ? null
+        : GoalWeeklyBudget(
+            totalIncomeAmount:
+                (weeklyBudgetJson['totalIncomeAmount'] as num?)?.toInt() ?? 0,
+            savingAmount:
+                (weeklyBudgetJson['savingAmount'] as num?)?.toInt() ?? 0,
+            fixedExpense: _goalBudgetSectionFromJson(
+              weeklyBudgetJson['fixedExpense'] as Map<String, dynamic>?,
+            ),
+            variableExpense: _goalBudgetSectionFromJson(
+              weeklyBudgetJson['variableExpense'] as Map<String, dynamic>?,
+            ),
+            freeAmount: (weeklyBudgetJson['freeAmount'] as num?)?.toInt() ?? 0,
+          ),
+    weeklySavedAmountOverride: (json['weeklySavedAmountOverride'] as num?)
+        ?.toInt(),
+    weeklyTargetAmountOverride: (json['weeklyTargetAmountOverride'] as num?)
+        ?.toInt(),
+    currentWeekOverride: (json['currentWeekOverride'] as num?)?.toInt(),
+    totalWeeksOverride: (json['totalWeeksOverride'] as num?)?.toInt(),
+    detailLoaded: json['detailLoaded'] as bool? ?? false,
+    apiStatus: json['apiStatus'] as String?,
+    aiPipelineStatus: parseGoalAiPipelineStatus(
+      json['aiPipelineStatus'] as String?,
+    ),
   );
 }
 
@@ -307,6 +371,72 @@ Map<String, dynamic> _goalToJson(Goal goal) {
     'status': _goalStatusToString(goal.status),
     'iconName': goal.iconName,
     'sketchVideoAssetPath': goal.sketchVideoAssetPath,
+    'weekNumber': goal.weekNumber,
+    'dday': goal.dday,
+    'achievementRateOverride': goal.achievementRateOverride,
+    'graphData': goal.graphData == null
+        ? null
+        : {
+            'weeks': goal.graphData!.weeks,
+            'planned': goal.graphData!.planned,
+            'actual': goal.graphData!.actual,
+          },
+    'weeklyPlans': goal.weeklyPlans
+        .map((item) => {'week': item.week, 'amount': item.amount})
+        .toList(),
+    'weeklyMission': goal.weeklyMission == null
+        ? null
+        : {
+            'weeklySavingsAmount': goal.weeklyMission!.weeklySavingsAmount,
+            'weeksToGoal': goal.weeklyMission!.weeksToGoal,
+          },
+    'weeklyBudget': goal.weeklyBudget == null
+        ? null
+        : {
+            'totalIncomeAmount': goal.weeklyBudget!.totalIncomeAmount,
+            'savingAmount': goal.weeklyBudget!.savingAmount,
+            'fixedExpense': _goalBudgetSectionToJson(
+              goal.weeklyBudget!.fixedExpense,
+            ),
+            'variableExpense': _goalBudgetSectionToJson(
+              goal.weeklyBudget!.variableExpense,
+            ),
+            'freeAmount': goal.weeklyBudget!.freeAmount,
+          },
+    'weeklySavedAmountOverride': goal.weeklySavedAmountOverride,
+    'weeklyTargetAmountOverride': goal.weeklyTargetAmountOverride,
+    'currentWeekOverride': goal.currentWeekOverride,
+    'totalWeeksOverride': goal.totalWeeksOverride,
+    'detailLoaded': goal.detailLoaded,
+    'apiStatus': goal.apiStatus,
+    'aiPipelineStatus': goalAiPipelineStatusToWire(goal.aiPipelineStatus),
+  };
+}
+
+GoalBudgetSection _goalBudgetSectionFromJson(Map<String, dynamic>? json) {
+  if (json == null) {
+    return const GoalBudgetSection();
+  }
+
+  return GoalBudgetSection(
+    totalAmount: (json['totalAmount'] as num?)?.toInt() ?? 0,
+    items: (json['items'] as List<dynamic>? ?? const [])
+        .map(
+          (item) => GoalBudgetItem(
+            category: item['category'] as String? ?? '',
+            amount: (item['amount'] as num?)?.toInt() ?? 0,
+          ),
+        )
+        .toList(),
+  );
+}
+
+Map<String, dynamic> _goalBudgetSectionToJson(GoalBudgetSection section) {
+  return {
+    'totalAmount': section.totalAmount,
+    'items': section.items
+        .map((item) => {'category': item.category, 'amount': item.amount})
+        .toList(),
   };
 }
 

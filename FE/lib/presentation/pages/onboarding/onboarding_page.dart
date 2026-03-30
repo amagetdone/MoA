@@ -57,10 +57,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return PopScope(
       canPop: false,
       child: Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colors.bgSurface,
       body: SafeArea(
         child: Column(
           children: [
@@ -74,7 +75,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   child: Text(
                     '건너뛰기',
                     style: AppTextStyles.bodySm.copyWith(
-                      color: AppColors.gray500,
+                      color: colors.gray500,
                       fontSize: 14.sp,
                     ),
                   ),
@@ -107,13 +108,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
                               height: 280.h,
                               width: 280.w,
                               decoration: BoxDecoration(
-                                color: AppColors.gray50,
+                                color: colors.gray50,
                                 borderRadius: BorderRadius.circular(24.r),
                               ),
                               child: Icon(
                                 Icons.image_outlined,
                                 size: 64.w,
-                                color: AppColors.gray100,
+                                color: colors.gray100,
                               ),
                             );
                           },
@@ -122,7 +123,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         Text(
                           page.title,
                           style: AppTextStyles.headingLg.copyWith(
-                            color: AppColors.gray900,
+                            color: colors.gray900,
                             fontSize: 22.sp,
                           ),
                           textAlign: TextAlign.center,
@@ -131,7 +132,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         Text(
                           page.description,
                           style: AppTextStyles.bodyMd.copyWith(
-                            color: AppColors.gray500,
+                            color: colors.gray500,
                             fontSize: 15.sp,
                           ),
                           textAlign: TextAlign.center,
@@ -157,42 +158,16 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     decoration: BoxDecoration(
                       color: _currentPage == index
                           ? AppColors.orange500
-                          : AppColors.gray100,
+                          : colors.gray100,
                       borderRadius: BorderRadius.circular(4.r),
                     ),
                   ),
                 ),
               ),
             ),
-            // Bottom button with progress
+            // Progress bar
             Padding(
               padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 12.h),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56.h,
-                child: ElevatedButton(
-                  onPressed: _onNext,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.orange500,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16.r),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    '다음',
-                    style: AppTextStyles.bodyMd.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16.sp,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 16.h),
               child: SizedBox(
                 height: 6.h,
                 width: double.infinity,
@@ -202,26 +177,58 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          color: AppColors.gray100,
+                          color: colors.gray100,
                           borderRadius: BorderRadius.circular(4.r),
                         ),
                       ),
                       FractionallySizedBox(
-                        widthFactor: 1 / 6,
+                        widthFactor: (_currentPage + 1) / 7,
                         child: Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(4.r),
-                            gradient: const LinearGradient(
+                            gradient: LinearGradient(
                               colors: [
-                                AppColors.white,
+                                colors.white,
                                 AppColors.orange500,
                               ],
-                              stops: [0.0, 0.7],
+                              stops: const [0.0, 0.7],
                             ),
                           ),
                         ),
                       ),
                     ],
+                  ),
+                ),
+              ),
+            ),
+            // Bottom button
+            Padding(
+              padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 16.h),
+              child: SizedBox(
+                width: double.infinity,
+                height: 56.h,
+                child: ElevatedButton(
+                  onPressed: _onNext,
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.pressed)) return AppColors.orange600;
+                      return AppColors.orange500;
+                    }),
+                    foregroundColor: WidgetStateProperty.all(Colors.white),
+                    shape: WidgetStateProperty.all(
+                      RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16.r),
+                      ),
+                    ),
+                    elevation: WidgetStateProperty.all(0),
+                  ),
+                  child: Text(
+                    '다음',
+                    style: AppTextStyles.bodyMd.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16.sp,
+                    ),
                   ),
                 ),
               ),

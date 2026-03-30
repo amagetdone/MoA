@@ -30,10 +30,14 @@ abstract class AppLocalDataSource {
   Future<List<DailySpending>> getGoalSavingsHistory(String goalId);
   Future<Goal> createGoal(Goal goal);
   Future<Goal> updateGoal(Goal goal);
+  Future<void> removeGoal(String id);
   Future<List<Goal>> saveGoalPriority(List<Goal> goals);
+  Future<List<Goal>> replaceGoals(List<Goal> goals);
   Future<Uint8List?> getGoalSketchVideo(String goalId);
   Future<SpendingSnapshotDto> getSpendingSnapshotDto();
-  Future<SpendingSnapshotDto> updateSpendingSnapshotDto(SpendingSnapshotDto snapshot);
+  Future<SpendingSnapshotDto> updateSpendingSnapshotDto(
+    SpendingSnapshotDto snapshot,
+  );
 }
 
 class AppLocalDataSourceImpl implements AppLocalDataSource {
@@ -319,6 +323,29 @@ class AppLocalDataSourceImpl implements AppLocalDataSource {
   }
 
   @override
+  Future<void> removeGoal(String id) async {
+    final snapshot = await _loadSnapshot();
+    final updatedGoals = snapshot.goals.where((item) => item.id != id).toList();
+    final updatedHistory = Map<String, List<DailySpending>>.from(
+      snapshot.goalSavingsHistoryByGoalId,
+    )..remove(id);
+
+    await _persistSnapshot(
+      snapshot.copyWith(
+        goals: updatedGoals,
+        goalSavingsHistoryByGoalId: updatedHistory,
+      ),
+    );
+
+    await _ensureStorageReady();
+    if (_storageReady) {
+      await _goalSketchVideoBox?.delete(id);
+    } else {
+      _memorySketchVideos.remove(id);
+    }
+  }
+
+  @override
   Future<List<Goal>> saveGoalPriority(List<Goal> goals) async {
     final snapshot = await _loadSnapshot();
     final prioritizedGoals = <String, Goal>{};
@@ -335,6 +362,15 @@ class AppLocalDataSourceImpl implements AppLocalDataSource {
 
     await _persistSnapshot(snapshot.copyWith(goals: updatedGoals));
     return updatedGoals;
+  }
+
+  @override
+  Future<List<Goal>> replaceGoals(List<Goal> goals) async {
+    final snapshot = await _loadSnapshot();
+    final orderedGoals = List<Goal>.from(goals)
+      ..sort((a, b) => a.priority.compareTo(b.priority));
+    await _persistSnapshot(snapshot.copyWith(goals: orderedGoals));
+    return orderedGoals;
   }
 
   @override

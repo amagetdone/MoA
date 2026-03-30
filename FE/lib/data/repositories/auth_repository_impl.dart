@@ -23,6 +23,9 @@ class AuthRepositoryImpl implements AuthRepository {
       status: response.status,
       account: response.account,
       plan: response.plan,
+      nickname: response.nickname,
+      email: response.email,
+      profileImageUrl: response.profileImageUrl,
     );
   }
 
@@ -37,7 +40,7 @@ class AuthRepositoryImpl implements AuthRepository {
     final socialToken = await socialAuthDataSource.getKakaoToken();
     final result = await remoteDataSource.loginWithSocialToken(
       provider: 'kakao',
-      socialToken: socialToken,
+      accessToken: socialToken,
     );
     return _saveTokensAndConvert(result);
   }
@@ -47,9 +50,15 @@ class AuthRepositoryImpl implements AuthRepository {
     final socialToken = await socialAuthDataSource.getGoogleToken();
     final result = await remoteDataSource.loginWithSocialToken(
       provider: 'google',
-      socialToken: socialToken,
+      accessToken: socialToken.accessToken,
+      idToken: socialToken.idToken,
     );
     return _saveTokensAndConvert(result);
+  }
+
+  @override
+  Future<void> resetSocialLoginState() async {
+    await socialAuthDataSource.resetPendingLogins();
   }
 
   @override
@@ -80,13 +89,19 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<bool> isLoggedIn() => localDataSource.hasTokens();
 
   @override
-  Future<bool> autoLogin() async {
+  Future<AuthResult> loginWithTest({required int id}) async {
+    final result = await remoteDataSource.loginWithTest(id: id);
+    return _saveTokensAndConvert(result);
+  }
+
+  @override
+  Future<AuthResult?> autoLogin() async {
     final hasTokens = await localDataSource.hasTokens();
-    if (!hasTokens) return false;
+    if (!hasTokens) return null;
 
     try {
       final refreshTokenValue = await localDataSource.getRefreshToken();
-      if (refreshTokenValue == null) return false;
+      if (refreshTokenValue == null) return null;
 
       final result = await remoteDataSource.refreshToken(
         refreshToken: refreshTokenValue,
@@ -95,10 +110,14 @@ class AuthRepositoryImpl implements AuthRepository {
       await localDataSource.saveAccessToken(result.accessToken);
       await localDataSource.saveRefreshToken(result.refreshToken);
 
-      return true;
+      return AuthResult(
+        status: result.status,
+        account: result.account,
+        plan: result.plan,
+      );
     } catch (_) {
       await localDataSource.deleteTokens();
-      return false;
+      return null;
     }
   }
 }

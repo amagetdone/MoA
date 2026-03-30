@@ -20,18 +20,7 @@ class AccountRepositoryImpl implements AccountRepository {
     try {
       return await _remoteDataSource.fetchAccountDashboard();
     } catch (_) {
-      final snapshot = await _localDataSource.getCachedSnapshot();
-      final totalAsset = snapshot.accounts.fold(0, (sum, account) {
-        return sum + account.balance;
-      });
-
-      return AccountDashboard(
-        accounts: snapshot.accounts,
-        transactions: List<Transaction>.from(snapshot.transactions)
-          ..sort((a, b) => b.dateTime.compareTo(a.dateTime)),
-        bankNames: List<String>.from(snapshot.bankNames),
-        totalAsset: totalAsset,
-      );
+      return const AccountDashboard();
     }
   }
 
@@ -60,5 +49,37 @@ class AccountRepositoryImpl implements AccountRepository {
     } catch (_) {
       return _localDataSource.getTransactionById(id);
     }
+  }
+
+  @override
+  Future<bool> confirmAccount(String accountNo) async {
+    return await _remoteDataSource.confirmAccount(accountNo);
+  }
+
+  @override
+  Future<Map<String, dynamic>> requestVerification(String accountNo) async {
+    return await _remoteDataSource.requestVerification(accountNo);
+  }
+
+  @override
+  Future<bool> checkVerification({required String accountNo, required String authCode}) async {
+    return await _remoteDataSource.checkVerification(accountNo: accountNo, authCode: authCode);
+  }
+
+  @override
+  Future<List<Transaction>> fetchTransactions({
+    String? fromDate,
+    String? toDate,
+    String? analysisInclusion,
+    int page = 0,
+    int size = 50,
+  }) async {
+    return await _remoteDataSource.fetchTransactions(
+      fromDate: fromDate,
+      toDate: toDate,
+      analysisInclusion: analysisInclusion,
+      page: page,
+      size: size,
+    );
   }
 }

@@ -18,10 +18,11 @@ class MoreBottomSheet extends StatelessWidget {
     String? title,
     required Widget child,
   }) {
+    final colors = AppColors.of(context);
     return showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.bgSurface,
+      backgroundColor: colors.bgSurface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
       ),
@@ -31,6 +32,7 @@ class MoreBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -43,13 +45,13 @@ class MoreBottomSheet extends StatelessWidget {
             width: 40.w,
             height: 4.h,
             decoration: BoxDecoration(
-              color: AppColors.gray100,
+              color: colors.gray100,
               borderRadius: BorderRadius.circular(2.r),
             ),
           ),
           if (title != null) ...[
             SizedBox(height: 20.h),
-            Text(title!, style: AppTextStyles.headingMd),
+            Text(title!, style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary)),
           ],
           SizedBox(height: 16.h),
           child,

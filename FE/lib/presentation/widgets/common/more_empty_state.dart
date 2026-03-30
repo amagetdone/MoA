@@ -19,24 +19,25 @@ class MoreEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
         padding: EdgeInsets.symmetric(vertical: 40.h, horizontal: 24.w),
         decoration: BoxDecoration(
-          color: AppColors.bgSurface,
+          color: colors.bgSurface,
           borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: AppColors.borderDefault),
+          border: Border.all(color: colors.borderDefault),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48.w, color: AppColors.textTertiary),
+            Icon(icon, size: 48.w, color: colors.textTertiary),
             SizedBox(height: 12.h),
             Text(
               message,
-              style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary),
+              style: AppTextStyles.bodySm.copyWith(color: colors.textTertiary),
               textAlign: TextAlign.center,
             ),
             if (buttonText != null) ...[

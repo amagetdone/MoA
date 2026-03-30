@@ -18,18 +18,19 @@ class MoreCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
         padding: padding ?? EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: color ?? AppColors.bgSurface,
+          color: color ?? colors.bgSurface,
           borderRadius: BorderRadius.circular(16.r),
 
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
+              color: colors.cardShadow,
               offset: Offset(0, 2.h),
               blurRadius: 8.r,
             ),

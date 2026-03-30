@@ -19,38 +19,14 @@ class MoreBottomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(24.w, 8.h, 24.w, 16.h),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
-              width: double.infinity,
-              height: 52.h,
-              child: ElevatedButton(
-                onPressed: enabled ? onPressed : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      enabled ? AppColors.buttonPrimary : AppColors.gray100,
-                  foregroundColor:
-                      enabled ? AppColors.white : AppColors.textTertiary,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                ),
-                child: Text(
-                  text,
-                  style: AppTextStyles.bodyLg.copyWith(
-                    color: enabled ? AppColors.white : AppColors.textTertiary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
             if (progress != null) ...[
-              SizedBox(height: 12.h),
               SizedBox(
                 height: 6.h,
                 width: double.infinity,
@@ -61,7 +37,7 @@ class MoreBottomButton extends StatelessWidget {
                       // Background
                       Container(
                         decoration: BoxDecoration(
-                          color: AppColors.gray100,
+                          color: colors.gray100,
                           borderRadius: BorderRadius.circular(4.r),
                         ),
                       ),
@@ -71,12 +47,12 @@ class MoreBottomButton extends StatelessWidget {
                         child: Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(4.r),
-                            gradient: const LinearGradient(
+                            gradient: LinearGradient(
                               colors: [
-                                AppColors.white,
+                                colors.white,
                                 AppColors.orange500,
                               ],
-                              stops: [0.0, 0.7],
+                              stops: const [0.0, 0.7],
                             ),
                           ),
                         ),
@@ -85,7 +61,38 @@ class MoreBottomButton extends StatelessWidget {
                   ),
                 ),
               ),
+              SizedBox(height: 12.h),
             ],
+            SizedBox(
+              width: double.infinity,
+              height: 52.h,
+              child: ElevatedButton(
+                onPressed: enabled ? onPressed : null,
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.resolveWith((states) {
+                    if (!enabled) return colors.gray100;
+                    if (states.contains(WidgetState.pressed)) return AppColors.orange600;
+                    return colors.buttonPrimary;
+                  }),
+                  foregroundColor: WidgetStateProperty.all(
+                    enabled ? colors.white : colors.textTertiary,
+                  ),
+                  elevation: WidgetStateProperty.all(0),
+                  shape: WidgetStateProperty.all(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                  ),
+                ),
+                child: Text(
+                  text,
+                  style: AppTextStyles.bodyLg.copyWith(
+                    color: enabled ? colors.white : colors.textTertiary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

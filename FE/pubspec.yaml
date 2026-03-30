@@ -23,8 +23,10 @@ dependencies:
   # 로컬 저장소
   shared_preferences: ^2.3.4
   flutter_secure_storage: ^9.2.4
+  crypto: ^3.0.6
   hive: ^2.2.3
   hive_flutter: ^1.1.0
+  path_provider: ^2.1.5
 
   # 라우팅
   go_router: ^14.8.1
@@ -34,6 +36,7 @@ dependencies:
   json_annotation: ^4.9.0
 
   # UI / UX
+  video_player: ^2.9.2
   flutter_screenutil: ^5.9.3
   flutter_svg: ^2.0.17
   cached_network_image: ^3.4.1
@@ -44,6 +47,8 @@ dependencies:
   fl_chart: ^0.70.2
   intl: ^0.20.2
   currency_text_input_formatter: ^2.2.5
+  flutter_markdown: ^0.7.6
+  showcaseview: ^3.0.0
 
   # 소셜 로그인
   kakao_flutter_sdk_user: ^1.9.6
@@ -54,18 +59,25 @@ dependencies:
 
   # 환경변수
   flutter_dotenv: ^5.2.1
+  firebase_core: ^4.1.1
+  firebase_messaging: ^16.0.1
+  flutter_local_notifications: ^17.2.4
 
   # 유틸리티
   logger: ^2.5.0
   connectivity_plus: ^6.1.1
   permission_handler: ^11.3.1
   url_launcher: ^6.3.1
+  web: ^1.1.1
+  image_picker: ^1.2.1
+  graphic: ^2.7.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
   # 코드 생성
   build_runner: ^2.4.14
@@ -86,6 +98,7 @@ flutter:
     - assets/images/logo/
     - assets/icons/
     - assets/animations/
+    - assets/mock_api/
     - assets/seeds/
     - assets/videos/
 
@@ -102,3 +115,9 @@ flutter:
           weight: 700
         - asset: assets/fonts/Pretendard-ExtraBold.otf
           weight: 800
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/logo/applogo.png
+  remove_alpha_ios: true
