@@ -370,6 +370,11 @@ class HomeRepositoryImpl implements HomeRepository {
   }
 
   int? _resolveGoalWeeklyTarget(Goal goal) {
+    final homeWeeklyTarget = goal.homeWeeklyTargetAmount;
+    if (homeWeeklyTarget != null && homeWeeklyTarget > 0) {
+      return homeWeeklyTarget;
+    }
+
     final missionAmount = goal.weeklyMission?.weeklySavingsAmount ?? 0;
     if (missionAmount > 0) {
       return missionAmount;
