@@ -84,6 +84,7 @@ class MenuViewModel extends StateNotifier<MenuState> {
       final summary = await _repository.fetchMenuSummary();
       var activeGoalCount = summary.activeGoalCount;
       var achievedGoalCount = summary.achievedGoalCount;
+      var totalSaved = summary.totalSaved;
 
       try {
         final goals = await _goalRepository.fetchGoals();
@@ -93,6 +94,7 @@ class MenuViewModel extends StateNotifier<MenuState> {
         achievedGoalCount = goals
             .where((goal) => goal.isEffectivelyAchieved)
             .length;
+        totalSaved = goals.fold<int>(0, (sum, goal) => sum + goal.currentAmount);
       } catch (_) {}
 
       if (!mounted) {
@@ -106,7 +108,7 @@ class MenuViewModel extends StateNotifier<MenuState> {
         profileImageUrl: summary.user.profileImageUrl,
         activeGoalCount: activeGoalCount,
         achievedGoalCount: achievedGoalCount,
-        totalSaved: summary.totalSaved,
+        totalSaved: totalSaved,
         notificationEnabled: summary.notificationEnabled,
         biometricEnabled: summary.biometricEnabled,
         hasLoadedSummary: true,
