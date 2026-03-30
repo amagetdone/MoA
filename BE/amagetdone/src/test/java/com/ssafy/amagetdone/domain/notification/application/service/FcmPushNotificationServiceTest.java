@@ -1,0 +1,123 @@
+package com.ssafy.amagetdone.domain.notification.application.service;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.time.LocalDateTime;
+
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.ssafy.amagetdone.domain.member.model.entity.User;
+import com.ssafy.amagetdone.domain.notification.application.event.PlanAiCompletedEvent;
+import com.ssafy.amagetdone.domain.notification.application.event.TransactionSyncedEvent;
+import com.ssafy.amagetdone.domain.notification.model.entity.DeviceToken;
+import com.ssafy.amagetdone.domain.notification.model.vo.DevicePlatform;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
+@ExtendWith(MockitoExtension.class)
+class FcmPushNotificationServiceTest {
+
+	@Mock
+	private FirebaseMessaging firebaseMessaging;
+
+	@InjectMocks
+	private FcmPushNotificationService fcmPushNotificationService;
+
+	@Test
+	void sendTransactionNotificationBuildsAndSendsMessage() throws Exception {
+		when(firebaseMessaging.send(any())).thenReturn("message-id");
+
+		PushNotificationService.SendResult result = fcmPushNotificationService.sendTransactionNotification(
+			deviceToken("token-1"),
+			new TransactionSyncedEvent(
+				1,
+				"CARD",
+				"txn-1",
+				5400L,
+				null,
+				"Starbucks",
+				LocalDateTime.of(2026, 3, 24, 9, 30)
+			)
+		);
+
+		ArgumentCaptor<com.google.firebase.messaging.Message> captor =
+			ArgumentCaptor.forClass(com.google.firebase.messaging.Message.class);
+		verify(firebaseMessaging).send(captor.capture());
+		assertEquals("token-1", ReflectionTestUtils.getField(captor.getValue(), "token"));
+		com.google.firebase.messaging.Notification notification =
+			(com.google.firebase.messaging.Notification)ReflectionTestUtils.getField(captor.getValue(), "notification");
+		assertEquals("결제 알림", ReflectionTestUtils.getField(notification, "title"));
+		assertEquals("Starbucks 5400원 결제", ReflectionTestUtils.getField(notification, "body"));
+		@SuppressWarnings("unchecked")
+		java.util.Map<String, String> data = (java.util.Map<String, String>)ReflectionTestUtils.getField(captor.getValue(), "data");
+		assertEquals("TRANSACTION_POSTED", data.get("type"));
+		assertEquals("5400", data.get("amount"));
+		assertEquals(PushNotificationService.SendResult.SENT, result);
+	}
+
+	@Test
+	void sendTransactionNotificationBuildsDepositMessageForAccountDeposit() throws Exception {
+		when(firebaseMessaging.send(any())).thenReturn("message-id");
+
+		PushNotificationService.SendResult result = fcmPushNotificationService.sendTransactionNotification(
+			deviceToken("token-1"),
+			new TransactionSyncedEvent(
+				1,
+				"ACCOUNT",
+				"txn-2",
+				1L,
+				"입금",
+				"AMAGETDONE",
+				LocalDateTime.of(2026, 3, 24, 9, 31)
+			)
+		);
+
+		ArgumentCaptor<com.google.firebase.messaging.Message> captor =
+			ArgumentCaptor.forClass(com.google.firebase.messaging.Message.class);
+		verify(firebaseMessaging).send(captor.capture());
+		com.google.firebase.messaging.Notification notification =
+			(com.google.firebase.messaging.Notification)ReflectionTestUtils.getField(captor.getValue(), "notification");
+		assertEquals("입금 알림", ReflectionTestUtils.getField(notification, "title"));
+		assertEquals("AMAGETDONE 1원 입금", ReflectionTestUtils.getField(notification, "body"));
+		@SuppressWarnings("unchecked")
+		java.util.Map<String, String> data = (java.util.Map<String, String>)ReflectionTestUtils.getField(captor.getValue(), "data");
+		assertEquals("입금", data.get("transactionTypeName"));
+		assertEquals(PushNotificationService.SendResult.SENT, result);
+	}
+
+	@Test
+	void sendPlanAiCompletedNotificationBuildsAndSendsMessage() throws Exception {
+		when(firebaseMessaging.send(any())).thenReturn("message-id");
+
+		PushNotificationService.SendResult result = fcmPushNotificationService.sendPlanAiCompletedNotification(
+			deviceToken("token-2"),
+			new PlanAiCompletedEvent(1, 31, "Europe trip fund", PlanAiPipelineStatus.SUCCEEDED)
+		);
+
+		ArgumentCaptor<com.google.firebase.messaging.Message> captor =
+			ArgumentCaptor.forClass(com.google.firebase.messaging.Message.class);
+		verify(firebaseMessaging).send(captor.capture());
+		assertEquals("token-2", ReflectionTestUtils.getField(captor.getValue(), "token"));
+		@SuppressWarnings("unchecked")
+		java.util.Map<String, String> data = (java.util.Map<String, String>)ReflectionTestUtils.getField(captor.getValue(), "data");
+		assertEquals("PLAN_AI_COMPLETED", data.get("type"));
+		assertEquals("31", data.get("planId"));
+		assertEquals("SUCCEEDED", data.get("aiPipelineStatus"));
+		assertEquals(PushNotificationService.SendResult.SENT, result);
+	}
+
+	private DeviceToken deviceToken(String fcmToken) {
+		User user = User.createPendingSocialUser();
+		ReflectionTestUtils.setField(user, "id", 1);
+		return DeviceToken.create(user, "install-1", fcmToken, DevicePlatform.ANDROID, LocalDateTime.of(2026, 3, 24, 9, 0));
+	}
+}

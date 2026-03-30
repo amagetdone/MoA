@@ -98,6 +98,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -221,10 +222,11 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Text(
       title,
       style: AppTextStyles.bodySm.copyWith(
-        color: AppColors.textSecondary,
+        color: colors.textSecondary,
         fontWeight: FontWeight.w600,
         fontSize: 13.sp,
       ),

@@ -1,0 +1,44 @@
+package com.ssafy.amagetdone.domain.plan.exception;
+
+import com.ssafy.amagetdone.global.exception.ErrorCode;
+
+import org.springframework.http.HttpStatus;
+
+public enum PlanErrorCode implements ErrorCode {
+	PLAN_NOT_FOUND(HttpStatus.NOT_FOUND, "PLAN_001", "Plan not found"),
+	PLAN_OWNER_NOT_FOUND(HttpStatus.NOT_FOUND, "PLAN_002", "Plan owner not found"),
+	BUDGET_WEEK_NOT_FOUND(HttpStatus.BAD_REQUEST, "PLAN_003", "Budget week not found for plan period"),
+	PLAN_VIDEO_NOT_FOUND(HttpStatus.NOT_FOUND, "PLAN_004", "Plan video not found"),
+	INVALID_PAGE_REQUEST(HttpStatus.BAD_REQUEST, "PLAN_005", "Invalid page request"),
+	INVALID_PRIORITY_UPDATE_REQUEST(HttpStatus.BAD_REQUEST, "PLAN_006", "Invalid priority update request"),
+	PLAN_VIDEO_NOT_READY(HttpStatus.CONFLICT, "PLAN_007", "Plan video is not ready"),
+	PLAN_VIDEO_GENERATION_FAILED(HttpStatus.CONFLICT, "PLAN_008", "Plan video generation failed"),
+	PLAN_UPDATE_NOT_ALLOWED(HttpStatus.CONFLICT, "PLAN_009", "Plan update is not allowed while AI generation is processing"),
+	INVALID_PLAN_DATA_INIT_REQUEST(HttpStatus.BAD_REQUEST, "PLAN_010", "Invalid plan data init request"),
+	INVALID_PLAN_DEMO_SEED_REQUEST(HttpStatus.BAD_REQUEST, "PLAN_011", "Invalid demo plan seed request");
+
+	private final HttpStatus httpStatus;
+	private final String code;
+	private final String message;
+
+	PlanErrorCode(HttpStatus httpStatus, String code, String message) {
+		this.httpStatus = httpStatus;
+		this.code = code;
+		this.message = message;
+	}
+
+	@Override
+	public String code() {
+		return code;
+	}
+
+	@Override
+	public String message() {
+		return message;
+	}
+
+	@Override
+	public HttpStatus httpStatus() {
+		return httpStatus;
+	}
+}

@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:more_app/core/constants/bank_catalog.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
-import 'package:more_app/presentation/viewmodels/account_viewmodel.dart';
-import 'package:more_app/presentation/widgets/common/bank_icon.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
+import 'package:more_app/presentation/providers/app_data_providers.dart';
+import 'package:more_app/presentation/widgets/common/bank_icon.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
-import 'package:more_app/presentation/widgets/common/more_text_field.dart';
 
 class AccountAddPage extends ConsumerStatefulWidget {
   final bool isOnboarding;
@@ -21,227 +21,332 @@ class AccountAddPage extends ConsumerStatefulWidget {
 }
 
 class _AccountAddPageState extends ConsumerState<AccountAddPage> {
-  String? _selectedBank;
-  final TextEditingController _accountNumberController =
-      TextEditingController();
+  String? selectedBank;
+  bool isExpanded = false;
+  bool _isAccountVerified = false;
+  bool _isVerifying = false;
+  bool _isRequesting = false;
+  final TextEditingController _accountController = TextEditingController();
+  final FocusNode _accountFocusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
 
-  @override
-  void dispose() {
-    _accountNumberController.dispose();
-    super.dispose();
-  }
-
-  bool get _isFormValid =>
-      _selectedBank != null && _accountNumberController.text.isNotEmpty;
-
-  void _onNext() {
-    if (!_isFormValid) {
-      return;
-    }
-
-    final route = widget.isOnboarding
-        ? AppRoutes.onboardingAccountVerify
-        : AppRoutes.accountVerify;
-
-    context.push(
-      route,
-      extra: {
-        'bankName': _selectedBank,
-        'accountNumber': _accountNumberController.text,
-        'isOnboarding': widget.isOnboarding,
-      },
-    );
-  }
+  final List<BankCatalogItem> allBanks = BankCatalog.all;
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(accountViewModelProvider);
-    final bankNames = state.bankNames;
+    final colors = AppColors.of(context);
+    final List<BankCatalogItem> displayBanks = isExpanded
+        ? allBanks
+        : allBanks.take(9).toList();
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: MoreAppBar(
-        title: '계좌 추가',
-        showBack: true,
-        skipText: widget.isOnboarding ? '건너뛰기' : null,
-        onSkip: widget.isOnboarding
-            ? () => context.go(AppRoutes.onboardingGoal)
-            : null,
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(24.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Linked accounts list
-            if (state.accounts.isNotEmpty) ...[
-              ...state.accounts.map((account) {
-                return Padding(
-                  padding: EdgeInsets.only(bottom: 12.h),
-                  child: Container(
-                    padding: EdgeInsets.all(16.w),
-                    decoration: BoxDecoration(
-                      color: AppColors.gray50,
-                      borderRadius: BorderRadius.circular(12.r),
+      backgroundColor: colors.bgPrimary,
+      appBar: const MoreAppBar(title: '', showBack: true),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              physics: const ClampingScrollPhysics(),
+              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '은행 선택',
+                    style: AppTextStyles.headingLg.copyWith(
+                      color: colors.textPrimary,
+                      fontSize: 22.sp,
+                      fontWeight: FontWeight.bold,
                     ),
-                    child: Row(
-                      children: [
-                        BankIcon(bankName: account.bankName, size: 36.w),
-                        SizedBox(width: 12.w),
-                        Expanded(
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    '은행을 선택하세요.',
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: colors.textTertiary,
+                      fontSize: 13.sp,
+                    ),
+                  ),
+                  SizedBox(height: 20.h),
+
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 8.w,
+                      mainAxisSpacing: 8.h,
+                      childAspectRatio: 0.95,
+                    ),
+                    itemCount: displayBanks.length,
+                    itemBuilder: (context, index) {
+                      final bank = displayBanks[index];
+                      final isSelected = selectedBank == bank.name;
+                      return GestureDetector(
+                        onTap: _isAccountVerified
+                            ? null
+                            : () {
+                                setState(() {
+                                  if (selectedBank != bank.name) {
+                                    _accountController.clear();
+                                    _isAccountVerified = false;
+                                  }
+                                  selectedBank = bank.name;
+                                });
+                                WidgetsBinding.instance.addPostFrameCallback((
+                                  _,
+                                ) {
+                                  _accountFocusNode.requestFocus();
+                                  _scrollController.animateTo(
+                                    _scrollController.position.maxScrollExtent,
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeOut,
+                                  );
+                                });
+                              },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: colors.bgSurface,
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppColors.orange500
+                                  : Colors.transparent,
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: colors.cardShadow,
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(
-                                account.bankName,
-                                style: AppTextStyles.bodyMd.copyWith(
-                                  color: AppColors.gray900,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14.sp,
+                              ClipOval(
+                                child: Container(
+                                  width: 50.w,
+                                  height: 50.w,
+                                  color: colors.bgSurface,
+                                  child: Center(
+                                    child: BankIcon(
+                                      bankName: bank.name,
+                                      size: 28.w,
+                                    ),
+                                  ),
                                 ),
                               ),
-                              SizedBox(height: 2.h),
-                              Text(
-                                account.accountNumber,
-                                style: AppTextStyles.bodySm.copyWith(
-                                  color: AppColors.gray500,
-                                  fontSize: 12.sp,
+                              SizedBox(height: 8.h),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  bank.name,
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: colors.textPrimary,
+                                    fontSize: 11.sp,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.w500,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ],
+                      );
+                    },
+                  ),
+
+                  SizedBox(height: 12.h),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => setState(() => isExpanded = !isExpanded),
+                    child: Center(
+                      child: Icon(
+                        isExpanded
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                        color: colors.dimText,
+                        size: 24.w,
+                      ),
                     ),
                   ),
-                );
-              }),
-              SizedBox(height: 8.h),
-            ],
+                  SizedBox(height: 20.h),
 
-            // Add new account card
-            GestureDetector(
-              onTap: () {
-                // Show bank selection
-              },
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(vertical: 20.h),
-                decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.borderDefault),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add_circle_outline, size: 24.w, color: AppColors.orange500),
-                    SizedBox(width: 8.w),
-                    Text(
-                      '새로운 계좌 연결하기',
-                      style: AppTextStyles.bodyMd.copyWith(
-                        color: AppColors.orange500,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15.sp,
-                      ),
+                  Text(
+                    '계좌번호',
+                    style: AppTextStyles.bodyMd.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15.sp,
                     ),
-                  ],
-                ),
-              ),
-            ),
-            SizedBox(height: 24.h),
-
-            // Bank selection
-            Text(
-              '은행 선택',
-              style: AppTextStyles.headingMd.copyWith(
-                color: AppColors.gray900,
-                fontSize: 18.sp,
-              ),
-            ),
-            SizedBox(height: 20.h),
-            if (state.isLoading)
-              const Center(child: CircularProgressIndicator())
-            else if (state.errorMessage != null)
-              Text(
-                '은행 목록을 불러오지 못했습니다.\n${state.errorMessage!}',
-                style: AppTextStyles.bodySm.copyWith(color: AppColors.red500),
-              )
-            else
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  crossAxisSpacing: 12.w,
-                  mainAxisSpacing: 12.h,
-                  childAspectRatio: 1.0,
-                ),
-                itemCount: bankNames.length,
-                itemBuilder: (context, index) {
-                  final bankName = bankNames[index];
-                  final isSelected = _selectedBank == bankName;
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedBank = bankName;
-                      });
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.orange500.withValues(alpha: 0.1)
-                            : AppColors.gray50,
+                  ),
+                  SizedBox(height: 12.h),
+                  TextField(
+                    controller: _accountController,
+                    focusNode: _accountFocusNode,
+                    enabled: selectedBank != null && !_isAccountVerified,
+                    keyboardType: TextInputType.number,
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      color: colors.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: selectedBank == null
+                          ? '은행을 먼저 선택해주세요.'
+                          : '계좌번호를 입력해주세요.',
+                      hintStyle: AppTextStyles.bodySm.copyWith(
+                        color: colors.textTertiary,
+                        fontSize: 13.sp,
+                      ),
+                      filled: true,
+                      fillColor: colors.bgSurface,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16.w,
+                        vertical: 12.h,
+                      ),
+                      border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.orange500
-                              : Colors.transparent,
-                          width: 2,
+                        borderSide: BorderSide(color: colors.borderDefault),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                        borderSide: BorderSide(color: colors.borderDefault),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                        borderSide: const BorderSide(
+                          color: AppColors.orange500,
+                          width: 1.2,
                         ),
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          BankIcon(bankName: bankName, size: 32.w),
-                          SizedBox(height: 6.h),
-                          Text(
-                            bankName,
-                            style: AppTextStyles.caption.copyWith(
-                              color: isSelected
-                                  ? AppColors.orange500
-                                  : AppColors.gray700,
-                              fontWeight: isSelected
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
-                              fontSize: 11.sp,
-                            ),
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                      disabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                        borderSide: BorderSide(color: colors.borderDefault),
+                      ),
+                      suffixIcon: Padding(
+                        padding: EdgeInsets.only(right: 8.w),
+                        child: TextButton(
+                          onPressed:
+                              selectedBank != null &&
+                                  _accountController.text.isNotEmpty &&
+                                  !_isVerifying &&
+                                  !_isAccountVerified
+                              ? () async {
+                                  setState(() => _isVerifying = true);
+                                  try {
+                                    final confirmed = await ref
+                                        .read(accountRepositoryProvider)
+                                        .confirmAccount(
+                                          _accountController.text,
+                                        );
+                                    if (mounted) {
+                                      setState(() {
+                                        _isAccountVerified = confirmed;
+                                        _isVerifying = false;
+                                      });
+                                      if (!confirmed) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('계좌 실소유 확인에 실패했습니다.'),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      setState(() => _isVerifying = false);
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('계좌 확인 중 오류가 발생했습니다.'),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                  FocusScope.of(context).unfocus();
+                                }
+                              : null,
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.symmetric(horizontal: 12.w),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
-                        ],
+                          child: Text(
+                            _isVerifying
+                                ? '확인중...'
+                                : (_isAccountVerified ? '확인완료' : '확인하기'),
+                            style: AppTextStyles.bodySm.copyWith(
+                              color: _isAccountVerified
+                                  ? AppColors.green500
+                                  : (_accountController.text.isNotEmpty
+                                        ? AppColors.orange500
+                                        : colors.textTertiary),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13.sp,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  SizedBox(height: 20.h),
+                ],
+              ),
+            ),
+          ),
+          MoreBottomButton(
+            text: _isRequesting ? '요청 중...' : '다음',
+            onPressed: () async {
+              if (selectedBank == null ||
+                  _accountController.text.isEmpty ||
+                  _isRequesting) {
+                return;
+              }
+
+              setState(() => _isRequesting = true);
+              try {
+                await ref
+                    .read(accountRepositoryProvider)
+                    .requestVerification(_accountController.text);
+
+                if (!mounted) return;
+
+                final route = widget.isOnboarding
+                    ? AppRoutes.onboardingAccountVerify
+                    : AppRoutes.accountVerify;
+                context.push(
+                  route,
+                  extra: {
+                    'bankName': selectedBank,
+                    'accountNumber': _accountController.text,
+                    'isOnboarding': widget.isOnboarding,
+                  },
+                );
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('1원 인증 요청에 실패했습니다.')),
                   );
-                },
-              ),
-            if (_selectedBank != null) ...[
-              SizedBox(height: 32.h),
-              MoreTextField(
-                label: '계좌번호',
-                hint: '계좌번호를 입력해주세요',
-                controller: _accountNumberController,
-                keyboardType: TextInputType.number,
-                onChanged: (_) => setState(() {}),
-              ),
-            ],
-          ],
-        ),
-      ),
-      bottomNavigationBar: MoreBottomButton(
-        text: '다음',
-        onPressed: _onNext,
-        enabled: _isFormValid,
+                }
+              } finally {
+                if (mounted) setState(() => _isRequesting = false);
+              }
+            },
+            enabled:
+                selectedBank != null &&
+                _accountController.text.isNotEmpty &&
+                _isAccountVerified &&
+                !_isRequesting,
+          ),
+        ],
       ),
     );
   }

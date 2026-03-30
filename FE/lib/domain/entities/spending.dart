@@ -1,18 +1,18 @@
-import 'package:flutter/material.dart';
-
 class SpendingCategory {
   final String name;
   final int amount;
   final int budget;
-  final Color color;
-  final IconData icon;
+  final int colorValue;
+  final String iconKey;
+  final double? ratio;
 
   const SpendingCategory({
     required this.name,
     required this.amount,
     required this.budget,
-    required this.color,
-    required this.icon,
+    required this.colorValue,
+    required this.iconKey,
+    this.ratio,
   });
 
   double get usageRate => budget > 0 ? (amount / budget).clamp(0.0, 1.0) : 0.0;
@@ -21,15 +21,17 @@ class SpendingCategory {
     String? name,
     int? amount,
     int? budget,
-    Color? color,
-    IconData? icon,
+    int? colorValue,
+    String? iconKey,
+    double? ratio,
   }) {
     return SpendingCategory(
       name: name ?? this.name,
       amount: amount ?? this.amount,
       budget: budget ?? this.budget,
-      color: color ?? this.color,
-      icon: icon ?? this.icon,
+      colorValue: colorValue ?? this.colorValue,
+      iconKey: iconKey ?? this.iconKey,
+      ratio: ratio ?? this.ratio,
     );
   }
 }
@@ -53,6 +55,49 @@ class WeeklySpending {
 class DailySpending {
   final DateTime date;
   final int amount;
+  final String? label;
 
-  const DailySpending({required this.date, required this.amount});
+  const DailySpending({required this.date, required this.amount, this.label});
+}
+
+class WeeklyAnalysisResult {
+  final List<SpendingCategory> categories;
+  final int expenseAmount;
+
+  const WeeklyAnalysisResult({
+    this.categories = const [],
+    this.expenseAmount = 0,
+  });
+}
+
+class MonthlyAnalysisResult {
+  final List<SpendingCategory> categories;
+  final int expenseAmount;
+
+  const MonthlyAnalysisResult({
+    this.categories = const [],
+    this.expenseAmount = 0,
+  });
+}
+
+class SpendingPatternResult {
+  final int totalIncome;
+  final int totalExpense;
+  final int fixedAmount;
+  final int variableAmount;
+  final int freeAmount;
+  final int savingsAmount;
+  final List<SpendingCategory> categories;
+  final String topCategoryName;
+
+  const SpendingPatternResult({
+    this.totalIncome = 0,
+    this.totalExpense = 0,
+    this.fixedAmount = 0,
+    this.variableAmount = 0,
+    this.freeAmount = 0,
+    this.savingsAmount = 0,
+    this.categories = const [],
+    this.topCategoryName = '',
+  });
 }

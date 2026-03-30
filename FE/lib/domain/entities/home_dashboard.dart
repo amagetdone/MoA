@@ -7,7 +7,12 @@ class HomeDashboard {
   final int totalAsset;
   final int weeklyBudget;
   final int weeklySpent;
+  final int weeklyRemaining;
+  final int daysRemaining;
+  final int dailyAvailable;
   final int weeklySaved;
+  final int savingTargetAmount;
+  final int savingProgressRate;
 
   const HomeDashboard({
     this.accounts = const [],
@@ -15,6 +20,11 @@ class HomeDashboard {
     this.totalAsset = 0,
     this.weeklyBudget = 0,
     this.weeklySpent = 0,
+    this.weeklyRemaining = 0,
+    this.daysRemaining = 0,
+    this.dailyAvailable = 0,
     this.weeklySaved = 0,
+    this.savingTargetAmount = 0,
+    this.savingProgressRate = 0,
   });
 }

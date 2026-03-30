@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:more_app/data/models/app_snapshot.dart';
+import 'package:more_app/data/models/app_snapshot_dto.dart';
 import 'package:more_app/domain/entities/account.dart';
 import 'package:more_app/domain/entities/goal.dart';
 import 'package:more_app/domain/entities/spending.dart';
@@ -10,10 +10,12 @@ import 'package:more_app/domain/entities/transaction.dart';
 import 'package:more_app/domain/entities/user.dart';
 
 abstract class AppLocalDataSource {
+  Future<AppSnapshotDto> getCachedSnapshot();
+  Future<void> saveCachedSnapshot(AppSnapshotDto snapshot);
   Future<List<String>> getBankNames();
   Future<User> getUser();
-  Future<MenuPreferencesSnapshot> getMenuPreferences();
-  Future<MenuPreferencesSnapshot> updateMenuPreferences({
+  Future<MenuPreferencesSnapshotDto> getMenuPreferences();
+  Future<MenuPreferencesSnapshotDto> updateMenuPreferences({
     bool? notificationEnabled,
     bool? biometricEnabled,
   });
@@ -28,10 +30,14 @@ abstract class AppLocalDataSource {
   Future<List<DailySpending>> getGoalSavingsHistory(String goalId);
   Future<Goal> createGoal(Goal goal);
   Future<Goal> updateGoal(Goal goal);
+  Future<void> removeGoal(String id);
   Future<List<Goal>> saveGoalPriority(List<Goal> goals);
+  Future<List<Goal>> replaceGoals(List<Goal> goals);
   Future<Uint8List?> getGoalSketchVideo(String goalId);
-  Future<SpendingSnapshot> getSpendingSnapshot();
-  Future<SpendingSnapshot> updateSpendingSnapshot(SpendingSnapshot snapshot);
+  Future<SpendingSnapshotDto> getSpendingSnapshotDto();
+  Future<SpendingSnapshotDto> updateSpendingSnapshotDto(
+    SpendingSnapshotDto snapshot,
+  );
 }
 
 class AppLocalDataSourceImpl implements AppLocalDataSource {
@@ -51,7 +57,7 @@ class AppLocalDataSourceImpl implements AppLocalDataSource {
   static final Map<String, Uint8List> _memorySketchVideos = {};
 
   final AssetBundle _assetBundle;
-  AppSnapshot? _snapshotCache;
+  AppSnapshotDto? _snapshotCache;
 
   Future<void> _ensureStorageReady() async {
     if (_storageAttempted) {
@@ -72,7 +78,7 @@ class AppLocalDataSourceImpl implements AppLocalDataSource {
     }
   }
 
-  Future<AppSnapshot> _loadSnapshot() async {
+  Future<AppSnapshotDto> _loadSnapshot() async {
     if (_snapshotCache != null) {
       return _snapshotCache!;
     }
@@ -84,12 +90,12 @@ class AppLocalDataSourceImpl implements AppLocalDataSource {
         : _memorySnapshotJson;
 
     if (storedJson != null) {
-      _snapshotCache = AppSnapshot.fromJson(
+      _snapshotCache = AppSnapshotDto.fromJson(
         jsonDecode(storedJson) as Map<String, dynamic>,
       );
     } else {
       final seedJson = await _assetBundle.loadString(_seedAssetPath);
-      _snapshotCache = AppSnapshot.fromJson(
+      _snapshotCache = AppSnapshotDto.fromJson(
         jsonDecode(seedJson) as Map<String, dynamic>,
       );
       await _persistSnapshot(_snapshotCache!);
@@ -99,7 +105,7 @@ class AppLocalDataSourceImpl implements AppLocalDataSource {
     return _snapshotCache!;
   }
 
-  Future<void> _persistSnapshot(AppSnapshot snapshot) async {
+  Future<void> _persistSnapshot(AppSnapshotDto snapshot) async {
     _snapshotCache = snapshot;
     final jsonString = jsonEncode(snapshot.toJson());
 
@@ -111,7 +117,14 @@ class AppLocalDataSourceImpl implements AppLocalDataSource {
     }
   }
 
-  Future<void> _seedGoalSketchVideos(AppSnapshot snapshot) async {
+  @override
+  Future<AppSnapshotDto> getCachedSnapshot() => _loadSnapshot();
+
+  @override
+  Future<void> saveCachedSnapshot(AppSnapshotDto snapshot) =>
+      _persistSnapshot(snapshot);
+
+  Future<void> _seedGoalSketchVideos(AppSnapshotDto snapshot) async {
     for (final goal in snapshot.goals) {
       final assetPath = goal.sketchVideoAssetPath;
       if (assetPath == null || assetPath.isEmpty) {
@@ -172,13 +185,13 @@ class AppLocalDataSourceImpl implements AppLocalDataSource {
   }
 
   @override
-  Future<MenuPreferencesSnapshot> getMenuPreferences() async {
+  Future<MenuPreferencesSnapshotDto> getMenuPreferences() async {
     final snapshot = await _loadSnapshot();
     return snapshot.menuPreferences;
   }
 
   @override
-  Future<MenuPreferencesSnapshot> updateMenuPreferences({
+  Future<MenuPreferencesSnapshotDto> updateMenuPreferences({
     bool? notificationEnabled,
     bool? biometricEnabled,
   }) async {
@@ -310,6 +323,29 @@ class AppLocalDataSourceImpl implements AppLocalDataSource {
   }
 
   @override
+  Future<void> removeGoal(String id) async {
+    final snapshot = await _loadSnapshot();
+    final updatedGoals = snapshot.goals.where((item) => item.id != id).toList();
+    final updatedHistory = Map<String, List<DailySpending>>.from(
+      snapshot.goalSavingsHistoryByGoalId,
+    )..remove(id);
+
+    await _persistSnapshot(
+      snapshot.copyWith(
+        goals: updatedGoals,
+        goalSavingsHistoryByGoalId: updatedHistory,
+      ),
+    );
+
+    await _ensureStorageReady();
+    if (_storageReady) {
+      await _goalSketchVideoBox?.delete(id);
+    } else {
+      _memorySketchVideos.remove(id);
+    }
+  }
+
+  @override
   Future<List<Goal>> saveGoalPriority(List<Goal> goals) async {
     final snapshot = await _loadSnapshot();
     final prioritizedGoals = <String, Goal>{};
@@ -326,6 +362,15 @@ class AppLocalDataSourceImpl implements AppLocalDataSource {
 
     await _persistSnapshot(snapshot.copyWith(goals: updatedGoals));
     return updatedGoals;
+  }
+
+  @override
+  Future<List<Goal>> replaceGoals(List<Goal> goals) async {
+    final snapshot = await _loadSnapshot();
+    final orderedGoals = List<Goal>.from(goals)
+      ..sort((a, b) => a.priority.compareTo(b.priority));
+    await _persistSnapshot(snapshot.copyWith(goals: orderedGoals));
+    return orderedGoals;
   }
 
   @override
@@ -359,14 +404,14 @@ class AppLocalDataSourceImpl implements AppLocalDataSource {
   }
 
   @override
-  Future<SpendingSnapshot> getSpendingSnapshot() async {
+  Future<SpendingSnapshotDto> getSpendingSnapshotDto() async {
     final snapshot = await _loadSnapshot();
     return snapshot.spending;
   }
 
   @override
-  Future<SpendingSnapshot> updateSpendingSnapshot(
-    SpendingSnapshot snapshotData,
+  Future<SpendingSnapshotDto> updateSpendingSnapshotDto(
+    SpendingSnapshotDto snapshotData,
   ) async {
     final snapshot = await _loadSnapshot();
     await _persistSnapshot(snapshot.copyWith(spending: snapshotData));

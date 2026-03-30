@@ -4,155 +4,282 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
+import 'package:more_app/core/utils/currency_formatter.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
-import 'package:more_app/presentation/viewmodels/spending_viewmodel.dart';
+import 'package:more_app/presentation/viewmodels/onboarding_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
+import 'package:more_app/presentation/widgets/common/more_card.dart';
 
 class OnboardingPlanPage extends ConsumerWidget {
   const OnboardingPlanPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(spendingViewModelProvider);
+    final colors = AppColors.of(context);
+    final plan = ref.watch(onboardingViewModelProvider).planResult;
+
+    if (plan == null) {
+      return Scaffold(
+        backgroundColor: colors.bgPrimary,
+        appBar: MoreAppBar(title: '', showBack: true),
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.w),
+            child: MoreCard(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.insert_chart_outlined_rounded,
+                    size: 44.w,
+                    color: AppColors.orange500,
+                  ),
+                  SizedBox(height: 16.h),
+                  Text(
+                    '목표 계획을 아직 불러오지 못했어요.',
+                    style: AppTextStyles.bodyLg.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    '목표를 다시 만들면 계획표를 바로 보여드릴게요.',
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: colors.textTertiary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        bottomNavigationBar: MoreBottomButton(
+          text: '목표 다시 만들기',
+          progress: 7 / 7,
+          onPressed: () => context.go(AppRoutes.onboardingGoal),
+        ),
+      );
+    }
+
+    final planTitle = plan.planTitle;
+    final weeklySavings = plan.weeklySavingsAmount;
+    final weeksToGoal = plan.weeksToGoal;
+    final budget = plan.weeklyBudget;
+    final totalIncome = budget.totalIncomeAmount;
+    final savingAmount = budget.savingAmount;
+    final fixedTotal = budget.fixedExpense.totalAmount;
+    final fixedItems = budget.fixedExpense.items;
+    final variableTotal = budget.variableExpense.totalAmount;
+    final freeAmount = budget.freeAmount;
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: MoreAppBar(title: '목표 계획 수립', showBack: true),
+      backgroundColor: colors.bgPrimary,
+      appBar: MoreAppBar(title: '', showBack: true),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(24.w),
+        padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (state.isLoading)
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: 48.h),
-                child: const Center(child: CircularProgressIndicator()),
-              )
-            else if (state.errorMessage != null)
-              Padding(
-                padding: EdgeInsets.only(bottom: 24.h),
-                child: Text(
-                  '계획 데이터를 불러오지 못했습니다.\n${state.errorMessage!}',
-                  style: AppTextStyles.bodySm.copyWith(color: AppColors.red500),
-                ),
-              ),
-
             Text(
-              '소비패턴 결과를 반영하여\n유럽여행 목표 계획을 수립합니다.',
-              style: AppTextStyles.headingMd.copyWith(
-                color: AppColors.gray900,
-                fontSize: 18.sp,
+              '목표 계획 수립',
+              style: AppTextStyles.headingLg.copyWith(
+                color: colors.textPrimary,
+                fontSize: 24.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              '소비패턴 결과를 반영하여\n$planTitle 목표 계획을 수립합니다.',
+              style: AppTextStyles.bodyMd.copyWith(
+                color: colors.gray500,
+                fontSize: 14.sp,
               ),
             ),
             SizedBox(height: 24.h),
 
-            // 주간 미션 card (orange)
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(20.w),
-              decoration: BoxDecoration(
-                color: AppColors.orange500,
-                borderRadius: BorderRadius.circular(16.r),
-              ),
+            // 주간 미션 card
+            MoreCard(
+              color: const Color(0xFFFFF8E1),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     '주간 미션',
                     style: AppTextStyles.bodySm.copyWith(
-                      color: Colors.white.withValues(alpha: 0.8),
+                      color: AppColors.orange500,
+                      fontWeight: FontWeight.w700,
                       fontSize: 13.sp,
                     ),
                   ),
                   SizedBox(height: 8.h),
-                  Text(
-                    '매주 300,000원만 저축하면\n24주 후 유럽여행 갈 수 있어요!',
-                    style: AppTextStyles.headingMd.copyWith(
-                      color: Colors.white,
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w700,
+                  RichText(
+                    text: TextSpan(
+                      style: AppTextStyles.bodyMd.copyWith(
+                        color: colors.gray900,
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      children: [
+                        const TextSpan(text: '매주 '),
+                        TextSpan(
+                          text: CurrencyFormatter.formatKRW(weeklySavings),
+                          style: const TextStyle(color: AppColors.orange500),
+                        ),
+                        TextSpan(
+                          text: '만 저축하면\n$weeksToGoal주 후 $planTitle 이룰 수 있어요 !',
+                        ),
+                      ],
                     ),
+                  ),
+                  SizedBox(height: 12.h),
+                  Divider(height: 1, color: colors.borderDefault),
+                  SizedBox(height: 12.h),
+                  Text(
+                    '여유 자금',
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: colors.gray500,
+                      fontSize: 13.sp,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        CurrencyFormatter.formatKRW(freeAmount),
+                        style: AppTextStyles.headingLg.copyWith(
+                          color: AppColors.orange500,
+                          fontSize: 24.sp,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            SizedBox(height: 24.h),
-
-            // 하루 생활비 한도
-            Text(
-              '하루 생활비 한도',
-              style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.gray500,
-                fontSize: 13.sp,
-              ),
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              '20,000원',
-              style: AppTextStyles.headingXl.copyWith(
-                color: AppColors.gray900,
-                fontSize: 28.sp,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            SizedBox(height: 4.h),
-            Text(
-              '자유소비 140,000원 ÷ 7일',
-              style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.gray500,
-                fontSize: 12.sp,
-              ),
-            ),
-            SizedBox(height: 32.h),
-
-            // 주간 예산 section
-            Text(
-              '주간 예산',
-              style: AppTextStyles.headingMd.copyWith(
-                color: AppColors.gray900,
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
             SizedBox(height: 16.h),
 
-            _BudgetRow(label: '총 예산(수입)', value: '1,500,000원', isHeader: true),
-            SizedBox(height: 12.h),
-            _BudgetRow(label: '→ 저축비', value: '300,000원', color: AppColors.orange500),
-            SizedBox(height: 12.h),
-            _BudgetRow(label: '→ 고정비', value: '700,000원'),
-            // Sub-categories
-            Padding(
-              padding: EdgeInsets.only(left: 24.w),
+            // 주간 예산 card
+            MoreCard(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(height: 8.h),
-                  _BudgetRow(label: '식비', value: '350,000원', isSubItem: true),
-                  SizedBox(height: 6.h),
-                  _BudgetRow(label: '교통비', value: '200,000원', isSubItem: true),
-                  SizedBox(height: 6.h),
-                  _BudgetRow(label: '여가비', value: '150,000원', isSubItem: true),
+                  Text(
+                    '주간 예산',
+                    style: AppTextStyles.headingMd.copyWith(
+                      color: colors.gray900,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
+
+                  _BudgetRow(
+                    label: '총 예산 (수입)',
+                    value: CurrencyFormatter.formatKRW(totalIncome),
+                    isHeader: true,
+                  ),
+                  SizedBox(height: 16.h),
+                  Divider(height: 1, color: colors.gray100),
+                  SizedBox(height: 16.h),
+
+                  _BudgetRow(
+                    label: '→ 저축비',
+                    value: CurrencyFormatter.formatKRW(savingAmount),
+                    color: AppColors.orange500,
+                  ),
+                  const _BudgetSubLabel(text: '목표를 위해 저축하는 금액'),
+                  SizedBox(height: 16.h),
+                  Divider(height: 1, color: colors.gray100),
+                  SizedBox(height: 16.h),
+
+                  _BudgetRow(
+                    label: '→ 고정비',
+                    value: CurrencyFormatter.formatKRW(fixedTotal),
+                  ),
+                  const _BudgetSubLabel(text: '매주 고정으로 나가는 비용'),
+                  if (fixedItems.isNotEmpty) ...[
+                    SizedBox(height: 8.h),
+                    Padding(
+                      padding: EdgeInsets.only(left: 16.w),
+                      child: Column(
+                        children: fixedItems.asMap().entries.map((entry) {
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              bottom: entry.key < fixedItems.length - 1
+                                  ? 6.h
+                                  : 0,
+                            ),
+                            child: _BudgetRow(
+                              label: entry.value.category,
+                              value: CurrencyFormatter.formatKRW(
+                                entry.value.amount,
+                              ),
+                              isSubItem: true,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                  SizedBox(height: 16.h),
+                  Divider(height: 1, color: colors.gray100),
+                  SizedBox(height: 16.h),
+
+                  _BudgetRow(
+                    label: '→ 변동비',
+                    value: CurrencyFormatter.formatKRW(variableTotal),
+                  ),
+                  const _BudgetSubLabel(text: '식비, 여가비 등 생활에 필요한 비용'),
+                  SizedBox(height: 16.h),
+                  Divider(height: 1, color: colors.gray100),
+                  SizedBox(height: 16.h),
+
+                  _BudgetRow(
+                    label: '= 여유 자금',
+                    value: CurrencyFormatter.formatKRW(freeAmount),
+                    isHeader: true,
+                    color: AppColors.orange500,
+                  ),
+                  const _BudgetSubLabel(text: '고정/변동/저축비를 제외한 자유롭게 사용 가능한 금액'),
                 ],
               ),
-            ),
-            SizedBox(height: 12.h),
-            _BudgetRow(label: '→ 변동비', value: '360,000원'),
-            SizedBox(height: 12.h),
-            Divider(height: 1.h, color: AppColors.gray100),
-            SizedBox(height: 12.h),
-            _BudgetRow(
-              label: '= 자유 사용 금액',
-              value: '200,000원',
-              isHeader: true,
-              color: AppColors.orange500,
             ),
           ],
         ),
       ),
       bottomNavigationBar: MoreBottomButton(
         text: '다음',
+        progress: 7 / 7,
         onPressed: () => context.go(AppRoutes.home),
+      ),
+    );
+  }
+}
+
+class _BudgetSubLabel extends StatelessWidget {
+  final String text;
+
+  const _BudgetSubLabel({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    return Padding(
+      padding: EdgeInsets.only(top: 2.h),
+      child: Text(
+        text,
+        style: AppTextStyles.bodySm.copyWith(
+          color: colors.gray500,
+          fontSize: 11.sp,
+        ),
       ),
     );
   }
@@ -175,13 +302,14 @@ class _BudgetRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
           style: AppTextStyles.bodySm.copyWith(
-            color: isSubItem ? AppColors.gray500 : AppColors.gray700,
+            color: isSubItem ? colors.gray500 : colors.gray700,
             fontWeight: isHeader ? FontWeight.w700 : FontWeight.w400,
             fontSize: isSubItem ? 12.sp : 14.sp,
           ),
@@ -189,7 +317,7 @@ class _BudgetRow extends StatelessWidget {
         Text(
           value,
           style: AppTextStyles.bodySm.copyWith(
-            color: color ?? (isSubItem ? AppColors.gray500 : AppColors.gray900),
+            color: color ?? (isSubItem ? colors.gray500 : colors.gray900),
             fontWeight: isHeader ? FontWeight.w700 : FontWeight.w500,
             fontSize: isSubItem ? 12.sp : 14.sp,
           ),

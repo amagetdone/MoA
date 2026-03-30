@@ -2,11 +2,14 @@ package com.ssafy.amagetdone.domain.member.api.dto;
 
 import java.time.LocalDate;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 public final class ProfileCompletionDto {
 
 	private ProfileCompletionDto() {
 	}
 
+	@Schema(name = "ProfileCompletionRequest")
 	public record Request(
 		String nickname,
 		String email,
@@ -15,11 +18,9 @@ public final class ProfileCompletionDto {
 	) {
 	}
 
+	@Schema(name = "ProfileCompletionResponse")
 	public record Response(
-		Integer userId,
-		boolean profileCompleted,
-		String status,
-		String nextAction
+		String status
 	) {
 	}
 }

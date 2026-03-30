@@ -6,6 +6,16 @@ import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/domain/entities/spending.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
 
+double _niceInterval(double maxVal, bool isWeekly) {
+  // 주간: 4칸, 월간 비교: 3칸 기준으로 nice step 계산
+  final raw = maxVal / (isWeekly ? 4.0 : 4.0);
+  const steps = [10000.0, 20000.0, 50000.0, 100000.0, 200000.0, 500000.0, 1000000.0, 2000000.0, 5000000.0];
+  for (final step in steps) {
+    if (raw <= step) return step;
+  }
+  return steps.last;
+}
+
 class SpendingLineChart extends StatelessWidget {
   final List<DailySpending> data;
   final bool isWeekly;
@@ -18,130 +28,158 @@ class SpendingLineChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (data.isEmpty) return const Center(child: Text('데이터가 없습니다'));
+    final colors = AppColors.of(context);
+    if (data.isEmpty) return Center(child: Text('데이터가 없습니다', style: TextStyle(color: colors.textPrimary)));
 
-    final totalSpent = data.fold(0, (sum, item) => sum + item.amount);
-    
     final maxVal = data.map((e) => e.amount).reduce((a, b) => a > b ? a : b);
-    final interval = maxVal > 0 ? (maxVal / 4).roundToDouble() : 50000.0;
+    final minVal = data.map((e) => e.amount).reduce((a, b) => a < b ? a : b);
+    final maxIndex = data.indexWhere((e) => e.amount == maxVal);
+    final minIndex = data.indexWhere((e) => e.amount == minVal);
+
+    final spots = data
+        .asMap()
+        .entries
+        .map((e) => FlSpot(e.key.toDouble(), e.value.amount.toDouble()))
+        .toList();
+
+    final yInterval = _niceInterval(maxVal.toDouble(), isWeekly);
+    final ceilSteps = (maxVal / yInterval).ceil();
+    final isExactMultiple = maxVal.toDouble() % yInterval == 0.0;
+    final maxY = (isExactMultiple ? ceilSteps + 1 : ceilSteps) * yInterval;
+
+    final barData = LineChartBarData(
+      spots: spots,
+      isCurved: true,
+      curveSmoothness: 0.15,
+      color: AppColors.orange500,
+      barWidth: 2.5,
+      isStrokeCapRound: true,
+      dotData: FlDotData(
+        show: true,
+        checkToShowDot: (spot, _) =>
+            spot.x == maxIndex.toDouble() || spot.x == minIndex.toDouble(),
+        getDotPainter: (spot, p, b, i) {
+          final isMax = spot.x == maxIndex.toDouble();
+          return FlDotCirclePainter(
+            radius: isMax ? 5 : 3.5,
+            color: AppColors.orange500,
+            strokeColor: colors.bgSurface,
+            strokeWidth: 2,
+          );
+        },
+      ),
+      belowBarData: BarAreaData(
+        show: true,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            AppColors.orange500.withValues(alpha: 0.2),
+            AppColors.orange500.withValues(alpha: 0),
+          ],
+        ),
+      ),
+    );
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '총 지출',
-          style: AppTextStyles.bodySm.copyWith(
-            color: AppColors.textTertiary,
-            fontSize: 12.sp,
-          ),
-        ),
-        SizedBox(height: 2.h),
-        Text(
-          CurrencyFormatter.formatKRW(totalSpent),
-          style: AppTextStyles.headingMd.copyWith(
-            fontSize: 22.sp,
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        SizedBox(height: 32.h),
-        
         Expanded(
           child: LineChart(
             LineChartData(
-              gridData: FlGridData(
-                show: true,
-                drawVerticalLine: false,
-                horizontalInterval: interval > 0 ? interval : 50000,
-                getDrawingHorizontalLine: (value) => FlLine(
-                  color: AppColors.gray100.withValues(alpha: 0.5),
-                  strokeWidth: 1,
-                ),
-              ),
-              titlesData: const FlTitlesData(show: false),
-              borderData: FlBorderData(show: false),
-              lineBarsData: [
-                LineChartBarData(
-                  spots: data.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.amount.toDouble())).toList(),
-                  isCurved: false,
-                  color: AppColors.gray900,
-                  barWidth: isWeekly ? 2.5 : 2.0,
-                  isStrokeCapRound: true,
-                  dotData: const FlDotData(show: false),
-                  belowBarData: BarAreaData(
-                    show: true,
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        AppColors.gray900.withValues(alpha: 0.08),
-                        Colors.transparent,
-                      ],
-                    ),
+              gridData: const FlGridData(show: false),
+              titlesData: FlTitlesData(
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 28.h,
+                    getTitlesWidget: (value, meta) {
+                      final i = value.toInt();
+                      if (value != i.toDouble() || i < 0 || i >= data.length) {
+                        return const SizedBox.shrink();
+                      }
+                      final date = data[i].date;
+                      final label = isWeekly
+                          ? ['월', '화', '수', '목', '금', '토', '일'][i % 7]
+                          : '${i + 1}주';
+                      return Padding(
+                        padding: EdgeInsets.only(top: 4.h),
+                        child: Text(
+                          label,
+                          style: AppTextStyles.caption.copyWith(
+                            color: i == maxIndex || i == minIndex
+                                ? colors.textSecondary
+                                : colors.textTertiary,
+                            fontWeight: i == maxIndex || i == minIndex
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
+              ),
+              borderData: FlBorderData(show: false),
+              minX: -0.3,
+              maxX: spots.length - 1 + 0.3,
+              minY: 0,
+              maxY: maxY,
+              lineBarsData: [barData],
+              showingTooltipIndicators: [
+                ShowingTooltipIndicators([
+                  LineBarSpot(barData, 0, spots[maxIndex]),
+                ]),
+                ShowingTooltipIndicators([
+                  LineBarSpot(barData, 0, spots[minIndex]),
+                ]),
               ],
               lineTouchData: LineTouchData(
                 enabled: true,
                 handleBuiltInTouches: true,
                 touchTooltipData: LineTouchTooltipData(
-                  getTooltipColor: (spot) => AppColors.gray900.withValues(alpha: 0.9),
+                  getTooltipColor: (spot) => spot.x == maxIndex.toDouble()
+                      ? AppColors.orange500
+                      : colors.textPrimary,
                   tooltipRoundedRadius: 8.r,
-                  tooltipPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                  tooltipPadding: EdgeInsets.symmetric(
+                    horizontal: 10.w,
+                    vertical: 6.h,
+                  ),
                   getTooltipItems: (touchedSpots) {
                     return touchedSpots.map((spot) {
-                      String trendText = "";
-                      if (spot.spotIndex > 0) {
-                        final prevY = data[spot.spotIndex - 1].amount;
-                        if (prevY > 0) {
-                          final diff = ((spot.y - prevY) / prevY * 100).toInt();
-                          trendText = diff >= 0 ? "+$diff%" : "$diff%";
-                        }
-                      }
-
-                      final date = data[spot.spotIndex].date;
-                      final dateLabel = isWeekly ? "" : "${date.month}/${date.day}\n";
-
                       return LineTooltipItem(
-                        '$dateLabel${CurrencyFormatter.formatKRW(spot.y.toInt())}\n',
-                        AppTextStyles.bodySm.copyWith(
+                        CurrencyFormatter.formatKRW(spot.y.toInt()),
+                        AppTextStyles.caption.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
-                        children: [
-                          if (trendText.isNotEmpty)
-                            TextSpan(
-                              text: '이전대비 $trendText',
-                              style: AppTextStyles.caption.copyWith(
-                                color: trendText.startsWith('+') ? AppColors.orange300 : Colors.greenAccent,
-                                fontSize: 10.sp,
-                              ),
-                            ),
-                        ],
                       );
                     }).toList();
                   },
                 ),
-                getTouchedSpotIndicator: (LineChartBarData barData, List<int> spotIndexes) {
-                  return spotIndexes.map((index) {
+                getTouchedSpotIndicator: (barData, spotIndexes) {
+                  return spotIndexes.map((_) {
                     return TouchedSpotIndicatorData(
-                      FlLine(color: AppColors.gray500.withValues(alpha: 0.3), strokeWidth: 1.5, dashArray: [4, 4]),
+                      FlLine(
+                        color: AppColors.orange500.withValues(alpha: 0.4),
+                        strokeWidth: 1.5,
+                      ),
                       FlDotData(
-                        getDotPainter: (spot, percent, barData, index) {
-                          return FlDotCirclePainter(
-                            radius: 5.r,
-                            color: AppColors.orange500,
-                            strokeWidth: 2,
-                            strokeColor: Colors.white,
-                          );
-                        },
+                        getDotPainter: (spot, percent, bar, i) =>
+                            FlDotCirclePainter(
+                          radius: 5.r,
+                          color: AppColors.orange500,
+                          strokeWidth: 2,
+                          strokeColor: colors.bgSurface,
+                        ),
                       ),
                     );
                   }).toList();
                 },
               ),
-              minY: 0,
-              maxY: maxVal > 0 ? (maxVal * 1.3) : 100000,
             ),
           ),
         ),

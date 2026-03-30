@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
@@ -8,27 +9,45 @@ class MoreDateField extends StatelessWidget {
   final String label;
   final DateTime? value;
   final ValueChanged<DateTime> onChanged;
+  final DateTime? firstDate;
+  final DateTime? lastDate;
 
   const MoreDateField({
     super.key,
     required this.label,
     this.value,
     required this.onChanged,
+    this.firstDate,
+    this.lastDate,
   });
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary)),
+        Text(
+          label,
+          style: AppTextStyles.bodySm.copyWith(
+            color: colors.textSecondary,
+          ),
+        ),
         SizedBox(height: 8.h),
         GestureDetector(
           onTap: () => _pickDate(context),
           child: Container(
-            padding: EdgeInsets.symmetric(vertical: 12.h),
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppColors.borderDefault)),
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            decoration: BoxDecoration(
+              color: colors.bgSurface,
+              borderRadius: BorderRadius.circular(16.r),
+              boxShadow: [
+                BoxShadow(
+                  color: colors.cardShadow,
+                  offset: Offset(0, 2.h),
+                  blurRadius: 8.r,
+                ),
+              ],
             ),
             child: Row(
               children: [
@@ -38,11 +57,17 @@ class MoreDateField extends StatelessWidget {
                         ? DateFormat('yyyy.MM.dd').format(value!)
                         : 'YYYY.MM.DD',
                     style: AppTextStyles.bodyMd.copyWith(
-                      color: value != null ? AppColors.textPrimary : AppColors.textTertiary,
+                      color: value != null
+                          ? colors.textPrimary
+                          : colors.textTertiary,
                     ),
                   ),
                 ),
-                Icon(Icons.calendar_today, size: 20.w, color: AppColors.textTertiary),
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 20.w,
+                  color: colors.textTertiary,
+                ),
               ],
             ),
           ),
@@ -52,24 +77,180 @@ class MoreDateField extends StatelessWidget {
   }
 
   Future<void> _pickDate(BuildContext context) async {
-    final picked = await showDatePicker(
+    final now = DateTime.now();
+    final initial = value ?? DateTime(now.year, now.month, now.day);
+
+    const months = [
+      '1월', '2월', '3월', '4월', '5월', '6월',
+      '7월', '8월', '9월', '10월', '11월', '12월',
+    ];
+    final minYear = firstDate?.year ?? 1950;
+    final maxYear = lastDate?.year ?? (now.year + 10);
+    final years = List.generate(maxYear - minYear + 1, (i) => minYear + i);
+
+    int yearIndex = years.indexOf(initial.year);
+    if (yearIndex < 0) yearIndex = years.indexOf(now.year);
+    int monthIndex = initial.month - 1;
+    int dayIndex = initial.day - 1;
+
+    final yearController = FixedExtentScrollController(initialItem: yearIndex);
+    final monthController = FixedExtentScrollController(initialItem: monthIndex);
+    final dayController = FixedExtentScrollController(initialItem: dayIndex);
+
+    int daysInMonth(int year, int month) => DateUtils.getDaysInMonth(year, month);
+
+    final colors = AppColors.of(context);
+    await showModalBottomSheet(
       context: context,
-      initialDate: value ?? DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: AppColors.orange500,
-            ),
-          ),
-          child: child!,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final maxDay = daysInMonth(years[yearIndex], monthIndex + 1);
+            if (dayIndex >= maxDay) {
+              dayIndex = maxDay - 1;
+            }
+            final currentDay = (dayIndex + 1).clamp(1, maxDay);
+            final currentSelected = DateTime(years[yearIndex], monthIndex + 1, currentDay);
+            final isTooEarly = firstDate != null && currentSelected.isBefore(DateTime(firstDate!.year, firstDate!.month, firstDate!.day));
+            final isTooLate = lastDate != null && currentSelected.isAfter(DateTime(lastDate!.year, lastDate!.month, lastDate!.day));
+            final isInvalid = isTooEarly || isTooLate;
+            return Container(
+              height: 360.h,
+              decoration: BoxDecoration(
+                color: colors.bgSurface,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.pop(ctx),
+                          child: Text(
+                            '취소',
+                            style: AppTextStyles.bodyMd.copyWith(
+                              color: colors.textTertiary,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: isInvalid
+                              ? null
+                              : () {
+                                  onChanged(currentSelected);
+                                  Navigator.pop(ctx);
+                                },
+                          child: Text(
+                            '확인',
+                            style: AppTextStyles.bodyMd.copyWith(
+                              color: isInvalid ? colors.gray100 : AppColors.orange500,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(height: 1, color: colors.borderDefault),
+                  if (isInvalid)
+                    Padding(
+                      padding: EdgeInsets.only(top: 8.h),
+                      child: Text(
+                        isTooEarly
+                            ? '${DateFormat('yyyy.MM.dd').format(firstDate!)} 이후 날짜를 선택해주세요.'
+                            : '${DateFormat('yyyy.MM.dd').format(lastDate!)} 이전 날짜를 선택해주세요.',
+                        style: AppTextStyles.bodySm.copyWith(
+                          color: Colors.red,
+                          fontSize: 12.sp,
+                        ),
+                      ),
+                    ),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        // 년
+                        Expanded(
+                          child: CupertinoPicker(
+                            scrollController: yearController,
+                            itemExtent: 44.h,
+                            selectionOverlay: const CupertinoPickerDefaultSelectionOverlay(
+                              background: Colors.transparent,
+                            ),
+                            onSelectedItemChanged: (i) =>
+                                setModalState(() => yearIndex = i),
+                            children: years
+                                .map((y) => Center(
+                                      child: Text(
+                                        '$y',
+                                        style: TextStyle(
+                                          fontSize: 22.sp,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ))
+                                .toList(),
+                          ),
+                        ),
+                        // 월
+                        Expanded(
+                          child: CupertinoPicker(
+                            scrollController: monthController,
+                            itemExtent: 44.h,
+                            selectionOverlay: const CupertinoPickerDefaultSelectionOverlay(
+                              background: Colors.transparent,
+                            ),
+                            onSelectedItemChanged: (i) =>
+                                setModalState(() => monthIndex = i),
+                            children: months
+                                .map((m) => Center(
+                                      child: Text(
+                                        m,
+                                        style: TextStyle(
+                                          fontSize: 22.sp,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ))
+                                .toList(),
+                          ),
+                        ),
+                        // 일
+                        Expanded(
+                          child: CupertinoPicker(
+                            scrollController: dayController,
+                            itemExtent: 44.h,
+                            selectionOverlay: const CupertinoPickerDefaultSelectionOverlay(
+                              background: Colors.transparent,
+                            ),
+                            onSelectedItemChanged: (i) =>
+                                setModalState(() => dayIndex = i),
+                            children: List.generate(
+                              maxDay,
+                              (i) => Center(
+                                child: Text(
+                                  '${i + 1}',
+                                  style: TextStyle(
+                                    fontSize: 22.sp,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
-    if (picked != null) {
-      onChanged(picked);
-    }
   }
 }

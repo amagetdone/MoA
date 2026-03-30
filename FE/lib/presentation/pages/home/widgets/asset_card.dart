@@ -2,86 +2,128 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
-import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
+import 'package:more_app/domain/entities/account.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 
 class AssetCard extends StatelessWidget {
-  final int totalAsset;
-
   const AssetCard({
     super.key,
     required this.totalAsset,
+    required this.accounts,
   });
+
+  final int totalAsset;
+  final List<Account> accounts;
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final hasAccounts = accounts.isNotEmpty;
     return MoreCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '총 자산',
-            style: AppTextStyles.bodyLg.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          SizedBox(height: 12.h),
-          Text(
-            CurrencyFormatter.formatKRW(totalAsset),
-            style: AppTextStyles.headingLg,
-          ),
-          SizedBox(height: 16.h),
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => context.push(AppRoutes.asset),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(vertical: 10.h),
-                    decoration: BoxDecoration(
-                      color: AppColors.orange50,
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '거래내역',
-                        style: AppTextStyles.bodySm.copyWith(
-                          color: AppColors.orange500,
-                          fontWeight: FontWeight.w600,
+      onTap: () => context.push(hasAccounts ? AppRoutes.asset : AppRoutes.accountAdd),
+      padding: EdgeInsets.all(16.w),
+      child: hasAccounts
+          ? Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '총 자산',
+                        style: TextStyle(
+                          color: colors.textTertiary,
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                    ),
+                      SizedBox(height: 2.h),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          CurrencyFormatter.formatKRW(totalAsset),
+                          style: TextStyle(
+                            fontSize: 22.sp,
+                            fontWeight: FontWeight.w800,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: GestureDetector(
+                GestureDetector(
                   onTap: () => context.push(AppRoutes.accountManage),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(vertical: 10.h),
-                    decoration: BoxDecoration(
-                      color: AppColors.orange50,
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '계좌관리',
-                        style: AppTextStyles.bodySm.copyWith(
-                          color: AppColors.orange500,
-                          fontWeight: FontWeight.w600,
+                  child: Row(
+                    children: [
+                      Text(
+                        '계좌 관리',
+                        style: TextStyle(
+                          color: colors.textTertiary,
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
+                      Icon(
+                        Icons.chevron_right,
+                        size: 16.w,
+                        color: colors.textTertiary,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '총 자산',
+                  style: TextStyle(
+                    color: colors.textTertiary,
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(height: 6.h),
+                Text(
+                  CurrencyFormatter.formatKRW(totalAsset),
+                  style: TextStyle(
+                    fontSize: 22.sp,
+                    fontWeight: FontWeight.w800,
+                    color: colors.textPrimary,
+                  ),
+                ),
+                SizedBox(height: 10.h),
+                Text(
+                  '연결된 계좌가 없어요. 계좌를 추가해주세요.',
+                  style: TextStyle(
+                    color: colors.textTertiary,
+                    fontSize: 12.sp,
+                    height: 1.4,
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.orange50,
+                    borderRadius: BorderRadius.circular(999.r),
+                  ),
+                  child: Text(
+                    '계좌 연결하기',
+                    style: TextStyle(
+                      color: AppColors.orange500,
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
+              ],
+            ),
     );
   }
 }

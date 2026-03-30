@@ -1,0 +1,32 @@
+package com.ssafy.amagetdone.domain.member.infra.client;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
+import com.ssafy.amagetdone.domain.member.api.dto.TestSocialAuthDto;
+import com.ssafy.amagetdone.domain.member.model.vo.SocialProvider;
+
+import org.junit.jupiter.api.Test;
+
+class MockSocialAuthClientTest {
+
+	@Test
+	void supportsTestProviderAndReturnsFixedIdentity() {
+		MockSocialAuthClient client = new MockSocialAuthClient();
+
+		assertTrue(client.supports(SocialProvider.TEST));
+		assertEquals(
+			new SocialUserIdentity(SocialProvider.TEST, "test-moa-user-001"),
+			client.fetchIdentity(new SocialAuthDto.Request(null, null))
+		);
+		assertEquals(
+			new SocialUserIdentity(SocialProvider.TEST, "test-moa-user-001"),
+			client.fetchIdentity(new TestSocialAuthDto.Request(null))
+		);
+		assertEquals(
+			new SocialUserIdentity(SocialProvider.TEST, "test-moa-user-005"),
+			client.fetchIdentity(new TestSocialAuthDto.Request(5))
+		);
+	}
+}

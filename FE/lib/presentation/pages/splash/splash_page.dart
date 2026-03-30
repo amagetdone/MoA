@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/navigation/auth_route_resolver.dart';
 import 'package:more_app/presentation/viewmodels/auth_viewmodel.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
@@ -30,8 +31,8 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     if (!mounted) return;
 
     final state = ref.read(authViewModelProvider);
-    if (state is AuthAuthenticated) {
-      context.go(AppRoutes.home);
+    if (state is AuthAutoLoginSuccess) {
+      context.go(resolvePostAuthRoute(state.authResult));
     } else {
       context.go(AppRoutes.login);
     }
@@ -39,13 +40,14 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: colors.bgPrimary,
       body: Center(
         child: Image.asset(
           'assets/images/logo/applogo.png',
-          width: 120.w,
-          height: 120.w,
+          width: 80.w,
+          height: 80.w,
         ),
       ),
     );

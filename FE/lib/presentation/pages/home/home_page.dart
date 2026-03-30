@@ -1,63 +1,396 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
-import 'package:more_app/core/utils/currency_formatter.dart';
+import 'package:more_app/core/utils/tutorial_service.dart';
+import 'package:more_app/domain/entities/account.dart';
+import 'package:more_app/domain/entities/goal.dart';
+import 'package:more_app/domain/entities/spending.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
-import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
-import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
-import 'package:more_app/presentation/widgets/common/more_card.dart';
-import 'package:more_app/presentation/widgets/common/more_empty_state.dart';
-import 'package:more_app/presentation/pages/home/widgets/spending_card.dart';
-import 'package:more_app/presentation/pages/home/widgets/savings_card.dart';
+import 'package:more_app/presentation/pages/chatbot/chatbot_sheet.dart';
 import 'package:more_app/presentation/pages/home/widgets/asset_card.dart';
-import 'package:more_app/presentation/pages/home/widgets/goal_summary_card.dart';
+import 'package:more_app/presentation/pages/home/widgets/goals_section_card.dart';
+import 'package:more_app/presentation/pages/home/widgets/savings_card.dart';
+import 'package:more_app/presentation/pages/home/widgets/spending_card.dart';
+import 'package:more_app/presentation/pages/home/widgets/spending_rose_chart.dart';
+import 'package:more_app/presentation/providers/app_data_providers.dart';
+import 'package:more_app/presentation/providers/showcase_preview_provider.dart';
+import 'package:more_app/presentation/showcase/showcase_mock_data.dart';
+import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
+import 'package:more_app/presentation/widgets/common/more_showcase.dart';
+import 'package:showcaseview/showcaseview.dart';
 
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> {
+  BuildContext? _showcaseContext;
+  final _keyGoals = GlobalKey();
+  final _keySavings = GlobalKey();
+  final _keyChart = GlobalKey();
+  final _keyFab = GlobalKey();
+
+  late final PageController _homeSpendingPageController;
+  int _homeSpendingPageIndex = 0;
+  bool _isHomeSpendingLoading = true;
+  List<_HomeSpendingPeriod> _homeSpendingPeriods = const [];
+  Map<int, List<SpendingCategory>> _homeSpendingCategoryMap = const {};
+
+  DateTime get _currentWeekStart {
+    final now = DateTime.now();
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+    return DateTime(monday.year, monday.month, monday.day);
+  }
+
+  DateTime _weekStartForOffset(int offset) =>
+      _currentWeekStart.subtract(Duration(days: 7 * offset));
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final shown = await TutorialService.isShown(TutorialService.home);
+      if (!shown && mounted) {
+        await TutorialService.markShown(TutorialService.home);
+        if (mounted && _showcaseContext != null) {
+          ref.read(showcasePreviewModeProvider.notifier).state = true;
+          ShowCaseWidget.of(
+            _showcaseContext!,
+          ).startShowCase([_keyGoals, _keySavings, _keyChart, _keyFab]);
+        }
+      }
+    });
+    _homeSpendingPeriods = _buildHomeSpendingPeriods();
+    _homeSpendingPageIndex = _homeSpendingPeriods.length - 1;
+    _homeSpendingPageController = PageController(
+      initialPage: _homeSpendingPageIndex,
+      viewportFraction: 1,
+    );
+    Future.microtask(() {
+      ref
+          .read(pushNotificationSyncServiceProvider)
+          .promptPermissionIfNeededOnLaunch();
+      unawaited(_refreshHomeData());
+    });
+  }
+
+  @override
+  void dispose() {
+    _homeSpendingPageController.dispose();
+    super.dispose();
+  }
+
+  List<_HomeSpendingPeriod> _buildHomeSpendingPeriods() {
+    final currentWeekOfMonth = ((_currentWeekStart.day - 1) ~/ 7) + 1;
+    final periods = <_HomeSpendingPeriod>[];
+
+    periods.add(
+      _HomeSpendingPeriod(
+        offset: currentWeekOfMonth,
+        title: '한 달 전 소비',
+        subtitle: _weekRangeLabel(_weekStartForOffset(currentWeekOfMonth)),
+      ),
+    );
+
+    for (var offset = currentWeekOfMonth - 1; offset >= 0; offset--) {
+      final title = switch (offset) {
+        0 => '이번 주 소비',
+        1 => '지난 주 소비',
+        _ => '$offset주 전 소비',
+      };
+      final start = _weekStartForOffset(offset);
+      periods.add(
+        _HomeSpendingPeriod(
+          offset: offset,
+          title: title,
+          subtitle: _weekRangeLabel(start),
+        ),
+      );
+    }
+
+    return periods;
+  }
+
+  bool _shouldUseShowcaseMock(bool showcasePreviewMode, HomeState state) {
+    if (!showcasePreviewMode) {
+      return false;
+    }
+
+    final hasSpendingData = _homeSpendingCategoryMap.values.any(
+      (categories) => categories.isNotEmpty,
+    );
+
+    return state.isLoading ||
+        state.accounts.isEmpty ||
+        state.activeGoals.isEmpty ||
+        state.savingTargetAmount <= 0 ||
+        !hasSpendingData;
+  }
+
+  Map<int, List<SpendingCategory>> _showcaseCategoryMap() {
+    return {
+      for (final period in _homeSpendingPeriods)
+        period.offset: ShowcaseMockData.homeSpendingCategoriesForOffset(
+          period.offset,
+        ),
+    };
+  }
+
+  Future<void> _refreshHomeData() async {
+    try {
+      await ref.read(spendingRepositoryProvider).syncTransactions(months: 3);
+    } catch (_) {}
+
+    if (!mounted) {
+      return;
+    }
+
+    await ref.read(homeViewModelProvider.notifier).loadData();
+    if (!mounted) {
+      return;
+    }
+
+    await _loadHomeSpending();
+  }
+
+  Future<void> _loadHomeSpending() async {
+    setState(() {
+      _isHomeSpendingLoading = true;
+    });
+
+    final repository = ref.read(spendingRepositoryProvider);
+    final categoryMap = <int, List<SpendingCategory>>{};
+
+    for (final period in _homeSpendingPeriods) {
+      try {
+        final result = await repository.fetchWeeklyAnalysis(
+          _weekStartForOffset(period.offset),
+        );
+        categoryMap[period.offset] = result.categories;
+      } catch (_) {
+        categoryMap[period.offset] = const [];
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _homeSpendingCategoryMap = categoryMap;
+      _isHomeSpendingLoading = false;
+    });
+  }
+
+  void _startShowcase() {
+    if (_showcaseContext == null) {
+      return;
+    }
+    ref.read(showcasePreviewModeProvider.notifier).state = true;
+    ShowCaseWidget.of(
+      _showcaseContext!,
+    ).startShowCase([_keyGoals, _keySavings, _keyChart, _keyFab]);
+  }
+
+  void _stopShowcasePreview() {
+    ref.read(showcasePreviewModeProvider.notifier).state = false;
+  }
+
+  String _weekRangeLabel(DateTime start) {
+    final end = start.add(const Duration(days: 6));
+    return '${start.month}/${start.day} - ${end.month}/${end.day}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final state = ref.watch(homeViewModelProvider);
 
+    _showcaseContext = context;
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
-      appBar: const MoreAppBar(
-        title: 'MORE',
-        showBack: false,
-        showNotification: true,
+      backgroundColor: colors.bgPrimary,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: MoreShowcase(
+        showcaseKey: _keyFab,
+        title: 'AI 코치',
+        description: '소비 패턴을 분석하고 절약 팁을 알려주는\nAI 코치예요.\n궁금한 점이 있으면 언제든지 물어보세요!',
+        tooltipPosition: TooltipPosition.top,
+        targetShapeBorder: const CircleBorder(),
+        targetPadding: EdgeInsets.all(4.w),
+        blurValue: 2.5,
+        overlayOpacity: 0.68,
+        onSkip: _stopShowcasePreview,
+        child: FloatingActionButton(
+          heroTag: 'home_ai_coach_fab',
+          onPressed: () => showChatbotSheet(context),
+          backgroundColor: AppColors.orange500,
+          foregroundColor: Colors.white,
+          elevation: 6,
+          child: const Icon(Icons.smart_toy),
+        ),
       ),
-      body: _buildBody(context, state, ref),
+      body: Column(
+        children: [
+          // Custom header with week bar
+          Builder(
+            builder: (context) {
+              final now = DateTime.now();
+              final monday = now.subtract(Duration(days: now.weekday - 1));
+              final sunday = monday.add(const Duration(days: 6));
+              const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+
+              return Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.orange500, AppColors.orange300],
+                  ),
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(24.r),
+                  ),
+                ),
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 16.h),
+                    child: Column(
+                      children: [
+                        // Title row
+                        Row(
+                          children: [
+                            Text(
+                              '이번 주 현황',
+                              style: AppTextStyles.headingLg.copyWith(
+                                color: const Color(0xFFFFFFFF),
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            ShowcaseHelpButton(
+                              onTap: _startShowcase,
+                              backgroundColor: Colors.white,
+                              textColor: AppColors.orange500,
+                            ),
+                            const Spacer(),
+                            Text(
+                              '${monday.month}/${monday.day} - ${sunday.month}/${sunday.day}',
+                              style: AppTextStyles.caption.copyWith(
+                                color: const Color(
+                                  0xFFFFFFFF,
+                                ).withValues(alpha: 0.7),
+                                fontSize: 11.sp,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 14.h),
+                        // Week day bar
+                        Row(
+                          children: List.generate(7, (i) {
+                            final isToday = i == now.weekday - 1;
+                            final isPast = i < now.weekday - 1;
+                            return Expanded(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 2.w),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      weekdays[i],
+                                      style: TextStyle(
+                                        fontSize: 10.sp,
+                                        fontWeight: isToday
+                                            ? FontWeight.w700
+                                            : FontWeight.w400,
+                                        color: isToday
+                                            ? const Color(0xFFFFFFFF)
+                                            : isPast
+                                            ? const Color(
+                                                0xFFFFFFFF,
+                                              ).withValues(alpha: 0.7)
+                                            : const Color(
+                                                0xFFFFFFFF,
+                                              ).withValues(alpha: 0.35),
+                                      ),
+                                    ),
+                                    SizedBox(height: 4.h),
+                                    Container(
+                                      height: 4.h,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(
+                                          2.r,
+                                        ),
+                                        color: isToday
+                                            ? const Color(0xFFFFFFFF)
+                                            : isPast
+                                            ? const Color(
+                                                0xFFFFFFFF,
+                                              ).withValues(alpha: 0.4)
+                                            : const Color(
+                                                0xFFFFFFFF,
+                                              ).withValues(alpha: 0.15),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          // Body
+          Expanded(child: _buildBody(context, ref, state)),
+        ],
+      ),
     );
   }
 
-  Widget _buildBody(BuildContext context, HomeState state, WidgetRef ref) {
-    if (state.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+  Widget _buildBody(BuildContext context, WidgetRef ref, HomeState state) {
+    final colors = AppColors.of(context);
+    final showcasePreviewMode = ref.watch(showcasePreviewModeProvider);
+    final useShowcaseMock = _shouldUseShowcaseMock(showcasePreviewMode, state);
+    final effectiveState = useShowcaseMock ? ShowcaseMockData.homeState() : state;
+
+    if (state.isLoading && !useShowcaseMock) {
+      return const SizedBox.shrink();
     }
 
-    if (state.errorMessage != null) {
+    if (state.errorMessage != null && !useShowcaseMock) {
       return Center(
         child: Padding(
           padding: EdgeInsets.all(24.w),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('홈 데이터를 불러오지 못했습니다.', style: AppTextStyles.bodyLg),
+              Text(
+                '홈 데이터를 불러오지 못했습니다.',
+                style: AppTextStyles.bodyLg.copyWith(color: colors.textPrimary),
+              ),
               SizedBox(height: 8.h),
               Text(
                 state.errorMessage!,
                 textAlign: TextAlign.center,
                 style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.textTertiary,
+                  color: colors.textTertiary,
                 ),
               ),
               SizedBox(height: 16.h),
               FilledButton(
                 onPressed: () {
                   ref.read(homeViewModelProvider.notifier).loadData();
+                  _loadHomeSpending();
                 },
                 child: const Text('다시 시도'),
               ),
@@ -67,83 +400,307 @@ class HomePage extends ConsumerWidget {
       );
     }
 
-    switch (state.status) {
-      case HomeStatus.noAccount:
-        return _buildNoAccount(context);
-      case HomeStatus.noGoal:
-        return _buildNoGoal(context, state);
-      case HomeStatus.ready:
-        return _buildReady(context, state);
-    }
-  }
-
-  Widget _buildNoAccount(BuildContext context) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(24.w),
-      child: MoreEmptyState(
-        message: '계좌를 연결해주세요\n모아 서비스를 시작하려면\n계좌 연동이 필요해요',
-        buttonText: '계좌 연결하기',
-        onTap: () => context.push(AppRoutes.onboardingAccount),
-      ),
+    return _buildDashboard(
+      context,
+      effectiveState,
+      useShowcaseMock: useShowcaseMock,
+      showGoalEmptyState: effectiveState.activeGoals.isEmpty,
+      showAccountEmptyState: effectiveState.accounts.isEmpty,
     );
   }
 
-  Widget _buildNoGoal(BuildContext context, HomeState state) {
+  Widget _buildDashboard(
+    BuildContext context,
+    HomeState state, {
+    required bool useShowcaseMock,
+    required bool showGoalEmptyState,
+    required bool showAccountEmptyState,
+  }) {
+    final orderedAccounts = _orderedAccounts(state.accounts);
+    final topGoals = _sortedGoals(state.activeGoals).take(3).toList();
+    final effectiveCategoryMap = useShowcaseMock
+        ? _showcaseCategoryMap()
+        : _homeSpendingCategoryMap;
+    final isHomeSpendingLoading = useShowcaseMock
+        ? false
+        : _isHomeSpendingLoading;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final homeSpendingCarouselHeight = screenWidth <= 390 ? 452.h : 424.h;
+
     return SingleChildScrollView(
-      padding: EdgeInsets.all(24.w),
+      padding: EdgeInsets.fromLTRB(20.w, 14.h, 20.w, 24.h),
       child: Column(
         children: [
-          MoreCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '총 자산',
-                  style: AppTextStyles.bodySm.copyWith(
-                    color: AppColors.textTertiary,
+          // 1) 목표
+          MoreShowcase(
+            showcaseKey: _keyGoals,
+            title: '이번 주 목표',
+            description:
+                '현재 진행 중인 저축 목표들을 한눈에 볼 수 있어요.\n목표를 탭하면 상세 내용과 저축 현황을 확인할 수 있어요.',
+            tooltipPosition: TooltipPosition.bottom,
+            targetPadding: EdgeInsets.all(6.w),
+            onSkip: _stopShowcasePreview,
+            child: GoalsSectionCard(
+              goals: topGoals,
+              onViewAll: () => context.go(AppRoutes.goalTab),
+              onAddGoal: showGoalEmptyState
+                  ? () => context.push(AppRoutes.goalCreate)
+                  : null,
+            ),
+          ),
+          SizedBox(height: 10.h),
+
+          // 3) 저축 + 여유자금 (가로)
+          MoreShowcase(
+            showcaseKey: _keySavings,
+            title: '저축·여유자금',
+            description:
+                '이번 주 저축 진행률과 남은 여유 자금을 보여줘요.\n계획대로 잘 지키고 있는지 매일 확인해보세요!',
+            tooltipPosition: TooltipPosition.top,
+            targetPadding: EdgeInsets.all(6.w),
+            onSkip: _stopShowcasePreview,
+            child: IntrinsicHeight(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SavingsCard(
+                      weeklySaved: state.weeklySaved,
+                      savingTargetAmount: state.savingTargetAmount,
+                      savingProgressRate: state.savingProgressRate,
+                    ),
                   ),
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  CurrencyFormatter.formatKRW(state.totalAsset),
-                  style: AppTextStyles.headingLg,
-                ),
-              ],
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: SpendingCard(
+                      totalAmount: state.weeklyBudget,
+                      usedAmount: state.weeklySpent,
+                      remainingAmount: state.weeklyRemaining,
+                      daysRemaining: state.daysRemaining,
+                      dailyAvailable: state.dailyAvailable,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          SizedBox(height: 16.h),
-          MoreEmptyState(
-            message: '첫 번째 저축 목표를 세워보세요',
-            buttonText: '목표 만들기',
-            onTap: () => context.push(AppRoutes.goalCreate),
+          SizedBox(height: 10.h),
+
+          // 이번 주 소비 rose 차트
+          MoreShowcase(
+            showcaseKey: _keyChart,
+            title: '소비 차트',
+            description:
+                '주간 소비 내역을 카테고리별로 시각화해요.\n좌우로 슬라이드하면 이전 주 소비도 확인할 수\n있어요.',
+            tooltipPosition: TooltipPosition.top,
+            targetPadding: EdgeInsets.all(6.w),
+            onSkip: _stopShowcasePreview,
+            child: Builder(
+              builder: (context) {
+                final colors = AppColors.of(context);
+                if (_homeSpendingPeriods.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                return Padding(
+                  padding: EdgeInsets.only(bottom: 8.h),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        height: homeSpendingCarouselHeight,
+                        child: PageView.builder(
+                          controller: _homeSpendingPageController,
+                          itemCount: _homeSpendingPeriods.length,
+                          onPageChanged: (index) {
+                            setState(() {
+                              _homeSpendingPageIndex = index;
+                            });
+                          },
+                          itemBuilder: (context, index) {
+                            final period = _homeSpendingPeriods[index];
+                            final categories =
+                                effectiveCategoryMap[period.offset] ??
+                                const [];
+
+                            if (!isHomeSpendingLoading &&
+                                categories.isNotEmpty) {
+                              return Padding(
+                                padding: EdgeInsets.zero,
+                                child: SpendingRoseChart(
+                                  categories: categories,
+                                  title: period.title,
+                                  subtitle: period.subtitle,
+                                ),
+                              );
+                            }
+
+                            return Padding(
+                              padding: EdgeInsets.zero,
+                              child: Container(
+                                width: double.infinity,
+                                padding: EdgeInsets.all(16.w),
+                                decoration: BoxDecoration(
+                                  color: colors.bgSurface,
+                                  borderRadius: BorderRadius.circular(20.r),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: colors.cardShadow,
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      period.title,
+                                      style: AppTextStyles.bodyMd.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        color: colors.textPrimary,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4.h),
+                                    Text(
+                                      period.subtitle,
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: colors.textTertiary,
+                                        fontSize: 11.sp,
+                                      ),
+                                    ),
+                                    SizedBox(height: 24.h),
+                                    Expanded(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Center(
+                                            child: isHomeSpendingLoading
+                                                ? SizedBox(
+                                                    width: 32.w,
+                                                    height: 32.w,
+                                                    child:
+                                                        const CircularProgressIndicator(
+                                                          strokeWidth: 2.4,
+                                                        ),
+                                                  )
+                                                : Icon(
+                                                    Icons.pie_chart_outline,
+                                                    size: 48.w,
+                                                    color: colors.textTertiary,
+                                                  ),
+                                          ),
+                                          SizedBox(height: 12.h),
+                                          Text(
+                                            showAccountEmptyState
+                                                ? '계좌를 연결하면 소비 분석을 보여드릴게요'
+                                                : '${period.title} 데이터가 아직 없어요',
+                                            style: AppTextStyles.bodySm
+                                                .copyWith(
+                                                  color: colors.textTertiary,
+                                                ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          SizedBox(height: 16.h),
+                                          if (showAccountEmptyState)
+                                            GestureDetector(
+                                              onTap: () => context.push(
+                                                AppRoutes.accountAdd,
+                                              ),
+                                              child: Container(
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: 14.w,
+                                                  vertical: 8.h,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.orange50,
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                        999.r,
+                                                      ),
+                                                ),
+                                                child: Text(
+                                                  '계좌 연결하기',
+                                                  style: AppTextStyles.caption
+                                                      .copyWith(
+                                                        color:
+                                                            AppColors.orange500,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        fontSize: 11.sp,
+                                                      ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      if (_homeSpendingPeriods.length > 1) ...[
+                        SizedBox(height: 8.h),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(_homeSpendingPeriods.length, (
+                            index,
+                          ) {
+                            final isActive = index == _homeSpendingPageIndex;
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              width: isActive ? 16.w : 6.w,
+                              height: 6.w,
+                              margin: EdgeInsets.symmetric(horizontal: 3.w),
+                              decoration: BoxDecoration(
+                                color: isActive
+                                    ? AppColors.orange500
+                                    : colors.borderDefault,
+                                borderRadius: BorderRadius.circular(999.r),
+                              ),
+                            );
+                          }),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
+
+          // 자산 카드
+          AssetCard(totalAsset: state.totalAsset, accounts: orderedAccounts),
         ],
       ),
     );
   }
 
-  Widget _buildReady(BuildContext context, HomeState state) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(24.w),
-      child: Column(
-        children: [
-          SpendingCard(
-            weeklyBudget: state.weeklyBudget,
-            weeklySpent: state.weeklySpent,
-          ),
-          SizedBox(height: 16.h),
-          SavingsCard(weeklySaved: state.weeklySaved),
-          SizedBox(height: 16.h),
-          AssetCard(totalAsset: state.totalAsset),
-          SizedBox(height: 16.h),
-          ...state.activeGoals.map(
-            (goal) => Padding(
-              padding: EdgeInsets.only(bottom: 16.h),
-              child: GoalSummaryCard(goal: goal),
-            ),
-          ),
-        ],
-      ),
-    );
+  List<Account> _orderedAccounts(List<Account> accounts) {
+    final items = List<Account>.from(accounts);
+    items.sort((a, b) {
+      if (a.isPrimary == b.isPrimary) return a.id.compareTo(b.id);
+      return a.isPrimary ? -1 : 1;
+    });
+    return items;
   }
+
+  List<Goal> _sortedGoals(List<Goal> goals) {
+    return List<Goal>.from(goals)
+      ..sort((a, b) => a.priority.compareTo(b.priority));
+  }
+}
+
+class _HomeSpendingPeriod {
+  const _HomeSpendingPeriod({
+    required this.offset,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final int offset;
+  final String title;
+  final String subtitle;
 }

@@ -27,7 +27,7 @@
       "bankName": "카카오뱅크",
       "accountNumber": "3333-01-1234567",
       "accountName": "생활비 통장",
-      "balance": 1250000,
+      "balance": 1100000000,
       "isPrimary": true
     },
     {
@@ -35,7 +35,7 @@
       "bankName": "신한은행",
       "accountNumber": "110-123-456789",
       "accountName": "월급 통장",
-      "balance": 3500000,
+      "balance": 23500000,
       "isPrimary": false
     },
     {
@@ -43,7 +43,15 @@
       "bankName": "토스뱅크",
       "accountNumber": "1000-1234-5678",
       "accountName": "저축 통장",
-      "balance": 5000000,
+      "balance": 8900000,
+      "isPrimary": false
+    },
+    {
+      "id": "acc4",
+      "bankName": "우리은행",
+      "accountNumber": "1002-987-554433",
+      "accountName": "여행 적금",
+      "balance": 4200000,
       "isPrimary": false
     }
   ],
@@ -86,6 +94,71 @@
       "status": "achieved",
       "iconName": "emergency",
       "sketchVideoAssetPath": null
+    },
+    {
+      "id": "goal4",
+      "name": "새 스마트폰",
+      "description": "아이폰 최신 기종 구매",
+      "targetAmount": 1500000,
+      "currentAmount": 1350000,
+      "startDate": "2025-12-01T00:00:00.000",
+      "endDate": "2026-05-31T00:00:00.000",
+      "priority": 4,
+      "status": "inProgress",
+      "iconName": "electronics",
+      "sketchVideoAssetPath": null
+    },
+    {
+      "id": "goal5",
+      "name": "유럽 배낭여행",
+      "description": "여름 방학 유럽 3개국 여행",
+      "targetAmount": 4000000,
+      "currentAmount": 800000,
+      "startDate": "2026-01-01T00:00:00.000",
+      "endDate": "2026-07-31T00:00:00.000",
+      "priority": 5,
+      "status": "inProgress",
+      "iconName": "travel",
+      "sketchVideoAssetPath": null
+    },
+    {
+      "id": "goal6",
+      "name": "헬스장 1년 등록",
+      "description": "PT 포함 연간 헬스장 등록비",
+      "targetAmount": 800000,
+      "currentAmount": 480000,
+      "startDate": "2026-02-01T00:00:00.000",
+      "endDate": "2026-04-30T00:00:00.000",
+      "priority": 6,
+      "status": "inProgress",
+      "iconName": "fitness",
+      "sketchVideoAssetPath": null
+    },
+    {
+      "id": "goal7",
+      "name": "운전면허 취득",
+      "description": "자동차 운전면허 학원비 및 시험비",
+      "targetAmount": 600000,
+      "currentAmount": 90000,
+      "startDate": "2026-03-01T00:00:00.000",
+      "endDate": "2026-06-30T00:00:00.000",
+      "priority": 7,
+      "status": "inProgress",
+      "iconName": "car",
+      "sketchVideoAssetPath": null
+    },
+    {
+      "id": "goal8",
+      "name": "연말 가족 선물",
+      "description": "부모님 생신 및 연말 선물 준비",
+      "targetAmount": 500000,
+      "currentAmount": 420000,
+      "startDate": "2026-01-15T00:00:00.000",
+      "endDate": "2026-12-25T00:00:00.000",
+      "priority": 8,
+      "status": "inProgress",
+      "iconName": "gift",
+      "sketchVideoAssetPath": null
     }
   ],
   "transactions": [
@@ -96,18 +169,18 @@
       "type": "expense",
       "category": "식비",
       "dateTime": "2026-03-10T08:30:00.000",
-      "balanceAfter": 1244500,
+      "balanceAfter": 1099444500,
       "memo": null,
       "accountId": "acc1"
     },
     {
       "id": "tx2",
       "title": "급여",
-      "amount": 3500000,
+      "amount": 4200000,
       "type": "income",
       "category": "급여",
       "dateTime": "2026-03-10T09:00:00.000",
-      "balanceAfter": 4744500,
+      "balanceAfter": 23500000,
       "memo": null,
       "accountId": "acc2"
     },
@@ -118,7 +191,7 @@
       "type": "expense",
       "category": "쇼핑",
       "dateTime": "2026-03-09T14:20:00.000",
-      "balanceAfter": 1218500,
+      "balanceAfter": 1099482000,
       "memo": null,
       "accountId": "acc1"
     },
@@ -129,7 +202,7 @@
       "type": "expense",
       "category": "교통",
       "dateTime": "2026-03-09T07:45:00.000",
-      "balanceAfter": 1250500,
+      "balanceAfter": 1099514000,
       "memo": null,
       "accountId": "acc1"
     },
@@ -140,7 +213,7 @@
       "type": "expense",
       "category": "식비",
       "dateTime": "2026-03-08T22:10:00.000",
-      "balanceAfter": 1300500,
+      "balanceAfter": 1099564000,
       "memo": null,
       "accountId": "acc1"
     },
@@ -151,7 +224,7 @@
       "type": "expense",
       "category": "구독",
       "dateTime": "2026-03-08T00:00:00.000",
-      "balanceAfter": 1303700,
+      "balanceAfter": 1099567200,
       "memo": null,
       "accountId": "acc1"
     },
@@ -162,7 +235,7 @@
       "type": "expense",
       "category": "식비",
       "dateTime": "2026-03-07T19:30:00.000",
-      "balanceAfter": 1320700,
+      "balanceAfter": 1099584200,
       "memo": null,
       "accountId": "acc1"
     },
@@ -173,7 +246,7 @@
       "type": "transfer",
       "category": "저축",
       "dateTime": "2026-03-07T10:00:00.000",
-      "balanceAfter": 1349200,
+      "balanceAfter": 1099612700,
       "memo": null,
       "accountId": "acc1"
     },
@@ -184,7 +257,7 @@
       "type": "expense",
       "category": "쇼핑",
       "dateTime": "2026-03-06T16:00:00.000",
-      "balanceAfter": 1449200,
+      "balanceAfter": 1099712700,
       "memo": null,
       "accountId": "acc1"
     },
@@ -195,9 +268,31 @@
       "type": "expense",
       "category": "교통",
       "dateTime": "2026-03-06T12:00:00.000",
-      "balanceAfter": 1494200,
+      "balanceAfter": 1099757700,
       "memo": null,
       "accountId": "acc1"
+    },
+    {
+      "id": "tx11",
+      "title": "정기예금 이자",
+      "amount": 185000,
+      "type": "income",
+      "category": "이자",
+      "dateTime": "2026-03-05T09:30:00.000",
+      "balanceAfter": 9085000,
+      "memo": null,
+      "accountId": "acc3"
+    },
+    {
+      "id": "tx12",
+      "title": "여행 적금 자동이체",
+      "amount": 300000,
+      "type": "transfer",
+      "category": "저축",
+      "dateTime": "2026-03-04T08:00:00.000",
+      "balanceAfter": 4200000,
+      "memo": "매월 여행 적금",
+      "accountId": "acc4"
     }
   ],
   "spending": {
@@ -309,58 +404,86 @@
   "goalSavingsHistoryByGoalId": {
     "goal1": [
       {
-        "date": "2026-01-07T00:00:00.000",
-        "amount": 50000
+        "date": "2026-01-08T00:00:00.000",
+        "amount": 35000
       },
       {
-        "date": "2026-01-14T00:00:00.000",
-        "amount": 50000
+        "date": "2026-01-15T00:00:00.000",
+        "amount": 18000
       },
       {
-        "date": "2026-01-21T00:00:00.000",
-        "amount": 50000
+        "date": "2026-01-22T00:00:00.000",
+        "amount": 25000
       },
       {
-        "date": "2026-01-28T00:00:00.000",
-        "amount": 50000
+        "date": "2026-01-29T00:00:00.000",
+        "amount": 24000
       },
       {
-        "date": "2026-02-04T00:00:00.000",
-        "amount": 50000
+        "date": "2026-02-05T00:00:00.000",
+        "amount": 37000
       },
       {
-        "date": "2026-02-11T00:00:00.000",
-        "amount": 50000
+        "date": "2026-02-12T00:00:00.000",
+        "amount": 36000
       },
       {
-        "date": "2026-02-18T00:00:00.000",
-        "amount": 50000
+        "date": "2026-02-19T00:00:00.000",
+        "amount": 41000
       },
       {
-        "date": "2026-02-25T00:00:00.000",
-        "amount": 50000
+        "date": "2026-02-26T00:00:00.000",
+        "amount": 20000
       },
       {
-        "date": "2026-03-04T00:00:00.000",
-        "amount": 50000
+        "date": "2026-03-05T00:00:00.000",
+        "amount": 29000
       },
       {
-        "date": "2026-03-10T00:00:00.000",
-        "amount": 50000
+        "date": "2026-03-12T00:00:00.000",
+        "amount": 85000
       }
     ],
     "goal2": [
       {
-        "date": "2026-01-05T00:00:00.000",
-        "amount": 200000
+        "date": "2026-01-08T00:00:00.000",
+        "amount": 36000
+      },
+      {
+        "date": "2026-01-15T00:00:00.000",
+        "amount": 46000
+      },
+      {
+        "date": "2026-01-22T00:00:00.000",
+        "amount": 61000
+      },
+      {
+        "date": "2026-01-29T00:00:00.000",
+        "amount": 36000
       },
       {
         "date": "2026-02-05T00:00:00.000",
-        "amount": 300000
+        "amount": 45000
+      },
+      {
+        "date": "2026-02-12T00:00:00.000",
+        "amount": 68000
+      },
+      {
+        "date": "2026-02-19T00:00:00.000",
+        "amount": 63000
+      },
+      {
+        "date": "2026-02-26T00:00:00.000",
+        "amount": 46000
       },
       {
         "date": "2026-03-05T00:00:00.000",
-        "amount": 700000
+        "amount": 65000
+      },
+      {
+        "date": "2026-03-12T00:00:00.000",
+        "amount": 734000
       }
     ],
     "goal3": [
@@ -375,6 +498,180 @@
       {
         "date": "2025-12-01T00:00:00.000",
         "amount": 300000
+      }
+    ],
+    "goal4": [
+      {
+        "date": "2025-12-08T00:00:00.000",
+        "amount": 77000
+      },
+      {
+        "date": "2025-12-15T00:00:00.000",
+        "amount": 35000
+      },
+      {
+        "date": "2025-12-22T00:00:00.000",
+        "amount": 76000
+      },
+      {
+        "date": "2025-12-29T00:00:00.000",
+        "amount": 71000
+      },
+      {
+        "date": "2026-01-05T00:00:00.000",
+        "amount": 52000
+      },
+      {
+        "date": "2026-01-12T00:00:00.000",
+        "amount": 43000
+      },
+      {
+        "date": "2026-01-19T00:00:00.000",
+        "amount": 84000
+      },
+      {
+        "date": "2026-01-26T00:00:00.000",
+        "amount": 52000
+      },
+      {
+        "date": "2026-02-02T00:00:00.000",
+        "amount": 39000
+      },
+      {
+        "date": "2026-02-09T00:00:00.000",
+        "amount": 40000
+      },
+      {
+        "date": "2026-02-16T00:00:00.000",
+        "amount": 79000
+      },
+      {
+        "date": "2026-02-23T00:00:00.000",
+        "amount": 66000
+      },
+      {
+        "date": "2026-03-02T00:00:00.000",
+        "amount": 77000
+      },
+      {
+        "date": "2026-03-09T00:00:00.000",
+        "amount": 73000
+      },
+      {
+        "date": "2026-03-16T00:00:00.000",
+        "amount": 486000
+      }
+    ],
+    "goal5": [
+      {
+        "date": "2026-01-08T00:00:00.000",
+        "amount": 140000
+      },
+      {
+        "date": "2026-01-15T00:00:00.000",
+        "amount": 190000
+      },
+      {
+        "date": "2026-01-22T00:00:00.000",
+        "amount": 121000
+      },
+      {
+        "date": "2026-01-29T00:00:00.000",
+        "amount": 142000
+      },
+      {
+        "date": "2026-02-05T00:00:00.000",
+        "amount": 174000
+      },
+      {
+        "date": "2026-02-12T00:00:00.000",
+        "amount": 149000
+      },
+      {
+        "date": "2026-02-19T00:00:00.000",
+        "amount": 177000
+      },
+      {
+        "date": "2026-02-26T00:00:00.000",
+        "amount": 144000
+      },
+      {
+        "date": "2026-03-05T00:00:00.000",
+        "amount": 159000
+      },
+      {
+        "date": "2026-03-12T00:00:00.000",
+        "amount": -596000
+      }
+    ],
+    "goal6": [
+      {
+        "date": "2026-02-08T00:00:00.000",
+        "amount": 39000
+      },
+      {
+        "date": "2026-02-15T00:00:00.000",
+        "amount": 50000
+      },
+      {
+        "date": "2026-02-22T00:00:00.000",
+        "amount": 53000
+      },
+      {
+        "date": "2026-03-01T00:00:00.000",
+        "amount": 41000
+      },
+      {
+        "date": "2026-03-08T00:00:00.000",
+        "amount": 50000
+      },
+      {
+        "date": "2026-03-15T00:00:00.000",
+        "amount": 247000
+      }
+    ],
+    "goal7": [
+      {
+        "date": "2026-03-08T00:00:00.000",
+        "amount": 23000
+      },
+      {
+        "date": "2026-03-15T00:00:00.000",
+        "amount": 67000
+      }
+    ],
+    "goal8": [
+      {
+        "date": "2026-01-22T00:00:00.000",
+        "amount": 9000
+      },
+      {
+        "date": "2026-01-29T00:00:00.000",
+        "amount": 12000
+      },
+      {
+        "date": "2026-02-05T00:00:00.000",
+        "amount": 9000
+      },
+      {
+        "date": "2026-02-12T00:00:00.000",
+        "amount": 9000
+      },
+      {
+        "date": "2026-02-19T00:00:00.000",
+        "amount": 8000
+      },
+      {
+        "date": "2026-02-26T00:00:00.000",
+        "amount": 8000
+      },
+      {
+        "date": "2026-03-05T00:00:00.000",
+        "amount": 14000
+      },
+      {
+        "date": "2026-03-12T00:00:00.000",
+        "amount": 351000
       }
     ]
   }

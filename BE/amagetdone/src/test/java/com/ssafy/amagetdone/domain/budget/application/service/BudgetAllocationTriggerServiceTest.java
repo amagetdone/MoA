@@ -1,0 +1,230 @@
+package com.ssafy.amagetdone.domain.budget.application.service;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.inOrder;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.List;
+import java.util.Optional;
+
+import com.ssafy.amagetdone.domain.account.model.entity.Category;
+import com.ssafy.amagetdone.domain.budget.application.usecase.AllocateBudgetUseCase;
+import com.ssafy.amagetdone.domain.budget.application.usecase.RefreshEssentialExpenseMonthFromAnalysisUseCase;
+import com.ssafy.amagetdone.domain.budget.model.entity.BudgetMonth;
+import com.ssafy.amagetdone.domain.budget.model.entity.EssentialExpenseMonth;
+import com.ssafy.amagetdone.domain.budget.model.repository.BudgetMonthRepository;
+import com.ssafy.amagetdone.domain.budget.model.repository.EssentialExpenseMonthRepository;
+import com.ssafy.amagetdone.domain.budget.model.vo.BudgetMonthStatus;
+import com.ssafy.amagetdone.domain.budget.model.vo.ExpenseScope;
+import com.ssafy.amagetdone.domain.member.model.entity.User;
+import com.ssafy.amagetdone.domain.member.model.repository.UserRepository;
+import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
+import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
+@ExtendWith(MockitoExtension.class)
+class BudgetAllocationTriggerServiceTest {
+
+	@Mock
+	private AllocateBudgetUseCase allocateBudgetUseCase;
+
+	@Mock
+	private RefreshEssentialExpenseMonthFromAnalysisUseCase refreshEssentialExpenseMonthFromAnalysisUseCase;
+
+	@Mock
+	private BudgetMonthRepository budgetMonthRepository;
+
+	@Mock
+	private EssentialExpenseMonthRepository essentialExpenseMonthRepository;
+
+	@Mock
+	private PlanRepository planRepository;
+
+	@Mock
+	private UserRepository userRepository;
+
+	@Test
+	void triggersRefreshBeforeRunningAllocationPipeline() {
+		Clock clock = Clock.fixed(Instant.parse("2026-03-19T00:00:00Z"), ZoneId.of("Asia/Seoul"));
+		BudgetAllocationTriggerService service = new BudgetAllocationTriggerService(
+			allocateBudgetUseCase,
+			refreshEssentialExpenseMonthFromAnalysisUseCase,
+			budgetMonthRepository,
+			essentialExpenseMonthRepository,
+			planRepository,
+			userRepository,
+			clock
+		);
+		Integer userId = 1;
+		LocalDate baseMonth = LocalDate.of(2026, 3, 1);
+		User user = user(userId);
+		BudgetMonth budgetMonth = BudgetMonth.builder()
+			.user(user)
+			.baseDate(baseMonth)
+			.status(BudgetMonthStatus.OPEN)
+			.totalIncomeAmount(3_200_000L)
+			.build();
+		EssentialExpenseMonth essential = EssentialExpenseMonth.builder()
+			.id(1)
+			.budgetMonth(budgetMonth)
+			.category(Category.create(10, "주거비"))
+			.expenseScope(ExpenseScope.FIXED.name())
+			.amount(300_000L)
+			.build();
+		Plan activePlan = Plan.create(user, "Travel", "desc", 500_000L, baseMonth, baseMonth.plusMonths(1), 1);
+		activePlan.activate();
+
+		given(userRepository.findByIdForUpdate(userId)).willReturn(Optional.of(user));
+		given(budgetMonthRepository.findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, baseMonth))
+			.willReturn(Optional.of(budgetMonth));
+		given(essentialExpenseMonthRepository.findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(userId))
+			.willReturn(List.of(essential));
+		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE)).willReturn(List.of(activePlan));
+
+		service.trigger(userId);
+
+		InOrder inOrder = inOrder(
+			userRepository,
+			refreshEssentialExpenseMonthFromAnalysisUseCase,
+			budgetMonthRepository,
+			essentialExpenseMonthRepository,
+			planRepository,
+			allocateBudgetUseCase
+		);
+		inOrder.verify(userRepository).findByIdForUpdate(userId);
+		inOrder.verify(refreshEssentialExpenseMonthFromAnalysisUseCase).execute(userId, baseMonth);
+		inOrder.verify(budgetMonthRepository).findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, baseMonth);
+		inOrder.verify(essentialExpenseMonthRepository).findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(userId);
+		inOrder.verify(planRepository).findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE);
+		inOrder.verify(allocateBudgetUseCase).execute(
+			any(User.class),
+			eq(LocalDate.of(2026, 3, 2)),
+			eq(3_200_000L),
+			eq(List.of(essential)),
+			eq(List.of(activePlan)),
+			eq(LocalDate.of(2026, 4, 5))
+			);
+	}
+
+	@Test
+	void triggerHistoricalFallsBackToLatestMonthlyIncomeWhenStartMonthIncomeIsMissing() {
+		Clock clock = Clock.fixed(Instant.parse("2026-03-19T00:00:00Z"), ZoneId.of("Asia/Seoul"));
+		BudgetAllocationTriggerService service = new BudgetAllocationTriggerService(
+			allocateBudgetUseCase,
+			refreshEssentialExpenseMonthFromAnalysisUseCase,
+			budgetMonthRepository,
+			essentialExpenseMonthRepository,
+			planRepository,
+			userRepository,
+			clock
+		);
+		Integer userId = 1;
+		LocalDate historicalStartMonth = LocalDate.of(2025, 12, 1);
+		LocalDate latestBaseMonth = LocalDate.of(2026, 3, 1);
+		User user = user(userId);
+		BudgetMonth latestBudgetMonth = BudgetMonth.builder()
+			.user(user)
+			.baseDate(latestBaseMonth)
+			.status(BudgetMonthStatus.OPEN)
+			.totalIncomeAmount(3_000_000L)
+			.build();
+		Plan activePlan = Plan.create(user, "Travel", "desc", 500_000L, historicalStartMonth, latestBaseMonth.plusMonths(1), 1);
+		activePlan.activate();
+
+		given(userRepository.findByIdForUpdate(userId)).willReturn(Optional.of(user));
+		given(budgetMonthRepository.findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, historicalStartMonth))
+			.willReturn(Optional.empty());
+		given(budgetMonthRepository.findFirstByUser_IdOrderByBaseDateDescIdDesc(userId))
+			.willReturn(Optional.of(latestBudgetMonth));
+		given(essentialExpenseMonthRepository.findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(userId))
+			.willReturn(List.of());
+		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE)).willReturn(List.of(activePlan));
+
+		service.triggerHistorical(userId, historicalStartMonth, latestBaseMonth.withDayOfMonth(latestBaseMonth.lengthOfMonth()));
+
+		InOrder inOrder = inOrder(
+			userRepository,
+			refreshEssentialExpenseMonthFromAnalysisUseCase,
+			budgetMonthRepository,
+			essentialExpenseMonthRepository,
+			planRepository,
+			allocateBudgetUseCase
+		);
+		inOrder.verify(userRepository).findByIdForUpdate(userId);
+		inOrder.verify(refreshEssentialExpenseMonthFromAnalysisUseCase).execute(userId, historicalStartMonth);
+		inOrder.verify(budgetMonthRepository).findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, historicalStartMonth);
+		inOrder.verify(budgetMonthRepository).findFirstByUser_IdOrderByBaseDateDescIdDesc(userId);
+		inOrder.verify(essentialExpenseMonthRepository).findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(userId);
+		inOrder.verify(planRepository).findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE);
+		inOrder.verify(allocateBudgetUseCase).execute(
+			any(User.class),
+			eq(historicalStartMonth),
+			eq(3_000_000L),
+			eq(List.of()),
+			eq(List.of(activePlan)),
+			eq(latestBaseMonth.withDayOfMonth(latestBaseMonth.lengthOfMonth()))
+		);
+	}
+
+	@Test
+	void triggerForPlanExtendsAllocationRangeToPlanEndDate() {
+		Clock clock = Clock.fixed(Instant.parse("2026-03-30T00:00:00Z"), ZoneId.of("Asia/Seoul"));
+		BudgetAllocationTriggerService service = new BudgetAllocationTriggerService(
+			allocateBudgetUseCase,
+			refreshEssentialExpenseMonthFromAnalysisUseCase,
+			budgetMonthRepository,
+			essentialExpenseMonthRepository,
+			planRepository,
+			userRepository,
+			clock
+		);
+		Integer userId = 1;
+		LocalDate baseMonth = LocalDate.of(2026, 3, 1);
+		LocalDate planEndDate = LocalDate.of(2026, 5, 17);
+		User user = user(userId);
+		BudgetMonth budgetMonth = BudgetMonth.builder()
+			.user(user)
+			.baseDate(baseMonth)
+			.status(BudgetMonthStatus.OPEN)
+			.totalIncomeAmount(3_200_000L)
+			.build();
+		Plan activePlan = Plan.create(user, "Travel", "desc", 500_000L, LocalDate.of(2026, 3, 30), planEndDate, 1);
+		activePlan.activate();
+
+		given(userRepository.findByIdForUpdate(userId)).willReturn(Optional.of(user));
+		given(budgetMonthRepository.findFirstByUser_IdAndBaseDateOrderByIdDesc(userId, baseMonth))
+			.willReturn(Optional.of(budgetMonth));
+		given(essentialExpenseMonthRepository.findAllByBudgetMonth_User_IdOrderByBudgetMonth_BaseDateAscIdAsc(userId))
+			.willReturn(List.of());
+		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE)).willReturn(List.of(activePlan));
+
+		service.triggerForPlan(userId, planEndDate);
+
+		inOrder(allocateBudgetUseCase).verify(allocateBudgetUseCase).execute(
+			any(User.class),
+			eq(LocalDate.of(2026, 3, 2)),
+			eq(3_200_000L),
+			eq(List.of()),
+			eq(List.of(activePlan)),
+			eq(planEndDate)
+		);
+	}
+
+	private User user(int id) {
+		User user = User.createPendingSocialUser();
+		ReflectionTestUtils.setField(user, "id", id);
+		return user;
+	}
+}

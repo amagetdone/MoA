@@ -5,11 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/providers/app_data_providers.dart';
 import 'package:more_app/presentation/viewmodels/account_viewmodel.dart';
 import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/bank_icon.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
+import 'package:more_app/presentation/widgets/common/more_card.dart';
 
 class AccountCompletePage extends ConsumerWidget {
   final bool isOnboarding;
@@ -25,94 +27,85 @@ class AccountCompletePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColors.of(context);
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: MoreAppBar(title: '연동완료', showBack: false),
-      body: Center(
-        child: Padding(
-          padding: EdgeInsets.all(24.w),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 96.w,
-                height: 96.w,
-                decoration: const BoxDecoration(
-                  color: AppColors.orange50,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.check_circle,
-                  size: 64.w,
-                  color: AppColors.orange500,
-                ),
+      backgroundColor: colors.bgPrimary,
+      appBar: const MoreAppBar(title: '', showBack: true),
+      body: Padding(
+        padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '연동완료',
+              style: AppTextStyles.headingLg.copyWith(
+                color: colors.textPrimary,
+                fontSize: 24.sp,
+                fontWeight: FontWeight.bold,
               ),
-              SizedBox(height: 32.h),
-              Text(
-                '연동이 완료되었습니다',
-                style: AppTextStyles.headingLg.copyWith(
-                  fontSize: 22.sp,
-                ),
-                textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              '연동이 완료되었습니다.',
+              style: AppTextStyles.bodySm.copyWith(
+                color: colors.textTertiary,
+                fontSize: 14.sp,
               ),
-              SizedBox(height: 24.h),
-              Container(
-                padding: EdgeInsets.all(20.w),
-                decoration: BoxDecoration(
-                  color: AppColors.gray50,
-                  borderRadius: BorderRadius.circular(16.r),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    BankIcon(bankName: bankName, size: 40.w),
-                    SizedBox(width: 16.w),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          bankName,
-                          style: AppTextStyles.bodyLg.copyWith(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16.sp,
-                          ),
+            ),
+            SizedBox(height: 24.h),
+
+            MoreCard(
+              padding: EdgeInsets.all(20.w),
+              child: Row(
+                children: [
+                  BankIcon(bankName: bankName, size: 48.w),
+                  SizedBox(width: 16.w),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        bankName,
+                        style: AppTextStyles.bodyMd.copyWith(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16.sp,
                         ),
-                        SizedBox(height: 4.h),
-                        Text(
-                          accountNumber,
-                          style: AppTextStyles.bodySm.copyWith(
-                            color: AppColors.textTertiary,
-                            fontSize: 13.sp,
-                          ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        accountNumber,
+                        style: AppTextStyles.bodySm.copyWith(
+                          color: colors.textSecondary,
+                          fontSize: 14.sp,
                         ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: MoreBottomButton(
-        text: '다음',
+        text: '완료',
+        progress: isOnboarding ? 4 / 7 : null,
         onPressed: () async {
-          await ref
-              .read(accountViewModelProvider.notifier)
-              .addLinkedAccount(
-                bankName: bankName,
-                accountNumber: accountNumber,
-              );
+          try {
+            await ref
+                .read(spendingRepositoryProvider)
+                .syncTransactions(months: 3);
+          } catch (_) {}
+
+          await ref.read(accountViewModelProvider.notifier).loadData();
           await ref.read(homeViewModelProvider.notifier).loadData();
 
-          if (!context.mounted) {
-            return;
-          }
+          if (!context.mounted) return;
 
           if (isOnboarding) {
-            context.go(AppRoutes.onboardingGoal);
+            context.go(AppRoutes.onboardingAccount);
           } else {
-            context.pop();
+            context.go(AppRoutes.accountManage);
           }
         },
       ),

@@ -1,111 +1,74 @@
-import 'package:flutter/foundation.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
-import 'package:more_app/core/utils/app_env.dart';
 import 'package:more_app/data/datasources/local/auth_local_datasource.dart';
 import 'package:more_app/data/datasources/remote/auth_remote_datasource.dart';
-import 'package:more_app/data/models/user_model.dart';
+import 'package:more_app/data/datasources/remote/social_auth_datasource.dart';
+import 'package:more_app/data/models/social_login_response_dto.dart';
+import 'package:more_app/data/models/user_dto.dart';
+import 'package:more_app/domain/entities/auth_result.dart';
 import 'package:more_app/domain/entities/user.dart' as domain;
 import 'package:more_app/domain/repositories/auth_repository.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
   final AuthLocalDataSource localDataSource;
-  GoogleSignIn? _googleSignIn;
+  final SocialAuthDataSource socialAuthDataSource;
 
   AuthRepositoryImpl({
     required this.remoteDataSource,
     required this.localDataSource,
-    GoogleSignIn? googleSignIn,
-  }) : _googleSignIn = googleSignIn;
+    required this.socialAuthDataSource,
+  });
 
-  static const String _webGoogleClientId =
-      '26025204114-h0lsehum6766elgasajahjtdo79bsrej.apps.googleusercontent.com';
-
-  GoogleSignIn _resolveGoogleSignIn() {
-    return _googleSignIn ??= GoogleSignIn(
-      clientId: kIsWeb ? _webGoogleClientId : null,
-      serverClientId: kIsWeb ? null : AppEnv.optional('GOOGLE_CLIENT_ID'),
-      scopes: ['email', 'openid', 'profile'],
+  AuthResult _toAuthResult(SocialLoginResponseDto response) {
+    return AuthResult(
+      status: response.status,
+      account: response.account,
+      plan: response.plan,
+      nickname: response.nickname,
+      email: response.email,
+      profileImageUrl: response.profileImageUrl,
     );
   }
 
+  Future<AuthResult> _saveTokensAndConvert(SocialLoginResponseDto response) async {
+    await localDataSource.saveAccessToken(response.accessToken);
+    await localDataSource.saveRefreshToken(response.refreshToken);
+    return _toAuthResult(response);
+  }
+
   @override
-  Future<domain.User> loginWithKakao() async {
-    if (!kIsWeb && AppEnv.optional('KAKAO_NATIVE_APP_KEY') == null) {
-      throw Exception('KAKAO_NATIVE_APP_KEY가 설정되지 않았습니다.');
-    }
-
-    // 웹에서는 카카오 계정 로그인, 앱에서는 카카오톡 설치 여부에 따라 분기
-    OAuthToken token;
-    if (kIsWeb) {
-      token = await UserApi.instance.loginWithKakaoAccount();
-    } else if (await isKakaoTalkInstalled()) {
-      token = await UserApi.instance.loginWithKakaoTalk();
-    } else {
-      token = await UserApi.instance.loginWithKakaoAccount();
-    }
-
-    // 소셜 토큰을 백엔드에 전달하여 JWT 발급
+  Future<AuthResult> loginWithKakao() async {
+    final socialToken = await socialAuthDataSource.getKakaoToken();
     final result = await remoteDataSource.loginWithSocialToken(
       provider: 'kakao',
-      socialToken: token.accessToken,
+      accessToken: socialToken,
     );
-
-    // JWT를 로컬에 저장
-    await localDataSource.saveAccessToken(result.accessToken);
-    await localDataSource.saveRefreshToken(result.refreshToken);
-
-    return result.user.toEntity();
+    return _saveTokensAndConvert(result);
   }
 
   @override
-  Future<domain.User> loginWithGoogle() async {
-    if (!kIsWeb && AppEnv.optional('GOOGLE_CLIENT_ID') == null) {
-      throw Exception('GOOGLE_CLIENT_ID가 설정되지 않았습니다.');
-    }
-
-    final googleUser = await _resolveGoogleSignIn().signIn();
-    if (googleUser == null) {
-      throw Exception('구글 로그인이 취소되었습니다.');
-    }
-
-    final googleAuth = await googleUser.authentication;
-    final token = googleAuth.idToken ?? googleAuth.accessToken;
-    if (token == null) {
-      throw Exception('구글 인증 토큰을 가져올 수 없습니다.');
-    }
-
-    // 소셜 토큰을 백엔드에 전달하여 JWT 발급
+  Future<AuthResult> loginWithGoogle() async {
+    final socialToken = await socialAuthDataSource.getGoogleToken();
     final result = await remoteDataSource.loginWithSocialToken(
       provider: 'google',
-      socialToken: token,
+      accessToken: socialToken.accessToken,
+      idToken: socialToken.idToken,
     );
+    return _saveTokensAndConvert(result);
+  }
 
-    await localDataSource.saveAccessToken(result.accessToken);
-    await localDataSource.saveRefreshToken(result.refreshToken);
-
-    return result.user.toEntity();
+  @override
+  Future<void> resetSocialLoginState() async {
+    await socialAuthDataSource.resetPendingLogins();
   }
 
   @override
   Future<void> logout() async {
-    final accessToken = await localDataSource.getAccessToken();
-    if (accessToken != null) {
-      await remoteDataSource.logout(accessToken: accessToken);
+    final refreshTokenValue = await localDataSource.getRefreshToken();
+    if (refreshTokenValue != null) {
+      await remoteDataSource.logout(refreshToken: refreshTokenValue);
     }
-
-    // 소셜 로그아웃
-    try {
-      await UserApi.instance.logout();
-    } catch (_) {}
-    try {
-      final googleSignIn = _googleSignIn;
-      if (googleSignIn != null) {
-        await googleSignIn.signOut();
-      }
-    } catch (_) {}
-
+    await socialAuthDataSource.logoutKakao();
+    await socialAuthDataSource.logoutGoogle();
     await localDataSource.deleteTokens();
   }
 
@@ -126,7 +89,13 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<bool> isLoggedIn() => localDataSource.hasTokens();
 
   @override
-  Future<domain.User?> autoLogin() async {
+  Future<AuthResult> loginWithTest({required int id}) async {
+    final result = await remoteDataSource.loginWithTest(id: id);
+    return _saveTokensAndConvert(result);
+  }
+
+  @override
+  Future<AuthResult?> autoLogin() async {
     final hasTokens = await localDataSource.hasTokens();
     if (!hasTokens) return null;
 
@@ -134,7 +103,6 @@ class AuthRepositoryImpl implements AuthRepository {
       final refreshTokenValue = await localDataSource.getRefreshToken();
       if (refreshTokenValue == null) return null;
 
-      // refresh token으로 새 access token 발급
       final result = await remoteDataSource.refreshToken(
         refreshToken: refreshTokenValue,
       );
@@ -142,12 +110,12 @@ class AuthRepositoryImpl implements AuthRepository {
       await localDataSource.saveAccessToken(result.accessToken);
       await localDataSource.saveRefreshToken(result.refreshToken);
 
-      final user = await remoteDataSource.getCurrentUser(
-        accessToken: result.accessToken,
+      return AuthResult(
+        status: result.status,
+        account: result.account,
+        plan: result.plan,
       );
-      return user.toEntity();
     } catch (_) {
-      // 토큰 갱신 실패 시 로그아웃 처리
       await localDataSource.deleteTokens();
       return null;
     }

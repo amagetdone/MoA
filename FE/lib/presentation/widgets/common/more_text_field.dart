@@ -12,9 +12,12 @@ class MoreTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final List<TextInputFormatter>? inputFormatters;
   final String? suffix;
+  final Widget? suffixIcon;
   final ValueChanged<String>? onChanged;
   final VoidCallback? onTap;
   final int maxLines;
+  final String? errorText;
+  final FocusNode? focusNode;
 
   const MoreTextField({
     super.key,
@@ -25,42 +28,81 @@ class MoreTextField extends StatelessWidget {
     this.keyboardType,
     this.inputFormatters,
     this.suffix,
+    this.suffixIcon,
     this.onChanged,
     this.onTap,
     this.maxLines = 1,
+    this.errorText,
+    this.focusNode,
   });
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary)),
+        Text(label, style: AppTextStyles.bodySm.copyWith(color: colors.textSecondary)),
         SizedBox(height: 8.h),
-        TextField(
-          controller: controller,
-          readOnly: readOnly,
-          keyboardType: keyboardType,
-          inputFormatters: inputFormatters,
-          onChanged: onChanged,
-          onTap: onTap,
-          maxLines: maxLines,
-          style: AppTextStyles.bodyMd,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.textTertiary),
-            suffixText: suffix,
-            suffixStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary),
-            filled: false,
-            enabledBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: AppColors.borderDefault),
+        Container(
+          decoration: BoxDecoration(
+            color: colors.bgSurface,
+            borderRadius: BorderRadius.circular(16.r),
+            boxShadow: [
+              BoxShadow(
+                color: colors.cardShadow,
+                offset: Offset(0, 2.h),
+                blurRadius: 8.r,
+              ),
+            ],
+          ),
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            readOnly: readOnly,
+            keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
+            onChanged: onChanged,
+            onTap: onTap,
+            maxLines: maxLines,
+            style: AppTextStyles.bodyMd.copyWith(color: colors.textPrimary),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: AppTextStyles.bodyMd.copyWith(color: colors.textTertiary),
+              suffixText: suffix,
+              suffixStyle: AppTextStyles.bodyMd.copyWith(color: colors.textSecondary),
+              suffixIcon: suffixIcon,
+              filled: true,
+              fillColor: Colors.transparent,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16.r),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16.r),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16.r),
+                borderSide: BorderSide(color: colors.buttonPrimary, width: 2),
+              ),
+              contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
             ),
-            focusedBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: AppColors.buttonPrimary, width: 2),
-            ),
-            contentPadding: EdgeInsets.symmetric(vertical: 12.h),
           ),
         ),
+        if (errorText != null) ...[
+          SizedBox(height: 6.h),
+          Padding(
+            padding: EdgeInsets.only(left: 8.w),
+            child: Text(
+              errorText!,
+              style: AppTextStyles.bodySm.copyWith(
+                color: Colors.red,
+                fontSize: 12.sp,
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

@@ -1,24 +1,44 @@
 package com.ssafy.amagetdone.global.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.ssafy.amagetdone.global.config.SecurityConfig;
+import com.ssafy.amagetdone.domain.member.support.util.JwtAccessTokenReader;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(GlobalHealthCheckController.class)
+@Import(SecurityConfig.class)
 class GlobalHealthCheckControllerTest {
 
 	@Autowired
 	private MockMvc mockMvc;
 
+	@MockitoBean
+	private JwtAccessTokenReader jwtAccessTokenReader;
+
 	@Test
-	void healthEndpointReturnsHelloWorld() throws Exception {
-		mockMvc.perform(get("/health"))
+	void apiHealthEndpointReturnsHelloWorld() throws Exception {
+		assertHealthResponse(apiGet("/health"));
+	}
+
+	private void assertHealthResponse(MockHttpServletRequestBuilder requestBuilder) throws Exception {
+		mockMvc.perform(requestBuilder)
 			.andExpect(status().isOk())
-			.andExpect(content().string("Hello World!"));
+			.andExpect(jsonPath("$.status").value("ok"))
+			.andExpect(jsonPath("$.message").value("헬스 체크에 성공했습니다."))
+			.andExpect(jsonPath("$.data").value("Hello World!"));
+	}
+
+	private MockHttpServletRequestBuilder apiGet(String path) {
+		return get("/api" + path).contextPath("/api");
 	}
 }

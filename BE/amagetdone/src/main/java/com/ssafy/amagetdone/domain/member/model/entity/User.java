@@ -4,19 +4,34 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.ssafy.amagetdone.domain.member.model.vo.UserStatus;
 import com.ssafy.amagetdone.global.entity.BaseEntity;
 
 import org.hibernate.annotations.ColumnDefault;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@SuperBuilder
 @Entity
 @Table(name = "users")
 public class User extends BaseEntity {
@@ -38,12 +53,14 @@ public class User extends BaseEntity {
 	@Column(name = "has_fixed_income")
 	private Boolean hasFixedIncome;
 
+	@Builder.Default
 	@ColumnDefault("'ACTIVE'")
+	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false, length = 20)
-	private String status = "ACTIVE";
+	private UserStatus status = UserStatus.ACTIVE;
 
-	@Column(name = "user_api_key", nullable = false, length = 30)
-	private String userApiKey;
+	@Column(name = "user_key", length = 60)
+	private String userKey;
 
 	@Column(name = "profile_url")
 	private String profileUrl;
@@ -54,25 +71,60 @@ public class User extends BaseEntity {
 	@OneToOne(mappedBy = "user")
 	private Setting setting;
 
+	@Builder.Default
 	@OneToMany(mappedBy = "user")
 	private List<Agreement> agreements = new ArrayList<>();
 
-	protected User() {
-	}
-
-	public static User createPendingSocialUser(String userApiKey) {
+	public static User createPendingSocialUser() {
 		User user = new User();
-		user.userApiKey = userApiKey;
-		user.status = "PROFILE_PENDING";
+		user.status = UserStatus.TEMP;
 		return user;
 	}
 
-	public void completeProfile(String nickname, String email, LocalDate birthDate, Boolean hasFixedIncome) {
+	public void markProfileEntered(String nickname, String email, LocalDate birthDate, Boolean hasFixedIncome) {
 		this.nickname = nickname;
 		this.email = email;
 		this.birthDate = birthDate;
 		this.hasFixedIncome = hasFixedIncome;
-		this.status = isProfileCompleted() ? "ACTIVE" : "PROFILE_PENDING";
+	}
+
+	public void activate() {
+		this.status = UserStatus.ACTIVE;
+	}
+
+	public void updateUserKey(String userKey) {
+		this.userKey = userKey;
+	}
+
+	public void applyTestSocialProfile(String nickname, String email) {
+		this.nickname = nickname;
+		this.email = email;
+	}
+
+	public void applySocialProfileIfAbsent(String nickname, String email, String profileUrl) {
+		if (hasText(nickname) && !hasText(this.nickname)) {
+			this.nickname = nickname;
+		}
+		if (hasText(email) && !hasText(this.email)) {
+			this.email = email;
+		}
+		if (hasText(profileUrl) && !hasText(this.profileUrl)) {
+			this.profileUrl = profileUrl;
+		}
+	}
+
+	public void updateProfileUrl(String profileUrl) {
+		this.profileUrl = profileUrl;
+	}
+
+	public void resetToPending() {
+		this.email = null;
+		this.nickname = null;
+		this.birthDate = null;
+		this.hasFixedIncome = null;
+		this.userKey = null;
+		this.profileUrl = null;
+		this.status = UserStatus.TEMP;
 	}
 
 	public boolean isProfileCompleted() {
@@ -80,18 +132,6 @@ public class User extends BaseEntity {
 			&& hasText(email)
 			&& birthDate != null
 			&& hasFixedIncome != null;
-	}
-
-	public Integer getId() {
-		return id;
-	}
-
-	public String getStatus() {
-		return status;
-	}
-
-	public String getUserApiKey() {
-		return userApiKey;
 	}
 
 	void linkSocialAccount(SocialAccount socialAccount) {

@@ -1,24 +1,315 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
+import 'package:more_app/core/utils/web_window_focus_listener.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/navigation/auth_route_resolver.dart';
+import 'package:more_app/presentation/providers/app_data_providers.dart';
 import 'package:more_app/presentation/viewmodels/auth_viewmodel.dart';
 
-class LoginPage extends ConsumerWidget {
-  const LoginPage({super.key});
+class LoginPage extends ConsumerStatefulWidget {
+  const LoginPage({super.key, this.reason});
+
+  final String? reason;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends ConsumerState<LoginPage>
+    with WidgetsBindingObserver {
+  static const _webLoginRecoveryTimeout = Duration(seconds: 3);
+  static const _hiddenTestLoginTapThreshold = 5;
+  static const _hiddenTestLoginTapWindow = Duration(seconds: 2);
+
+  Timer? _interruptedLoginTimer;
+  Timer? _hiddenTestLoginResetTimer;
+  bool _backgroundedDuringLogin = false;
+  WebWindowFocusListener? _webWindowFocusListener;
+  bool _sessionExpiredDialogShown = false;
+  int _hiddenLogoTapCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _maybeShowSessionExpiredDialog();
+
+    Future.microtask(() {
+      ref
+          .read(pushNotificationSyncServiceProvider)
+          .promptPermissionIfNeededOnLaunch();
+    });
+
+    if (kIsWeb) {
+      _webWindowFocusListener = WebWindowFocusListener(
+        onFocus: _handleWindowFocus,
+        onBlur: _handleWindowBlur,
+      )..attach();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant LoginPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.reason != widget.reason) {
+      _maybeShowSessionExpiredDialog();
+    }
+  }
+
+  @override
+  void dispose() {
+    _interruptedLoginTimer?.cancel();
+    _hiddenTestLoginResetTimer?.cancel();
+    _webWindowFocusListener?.detach();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  Future<void> _showTestLoginDialog() async {
+    final id = await showDialog<int>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('테스트 계정 선택'),
+        children: List.generate(5, (i) {
+          final num = i + 1;
+          return SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, num),
+            child: Text('계정 $num'),
+          );
+        }),
+      ),
+    );
+    if (id != null && mounted) {
+      ref.read(authViewModelProvider.notifier).loginWithTest(id: id);
+    }
+  }
+
+  void _onLogoTapped(bool isLoading) {
+    if (isLoading) {
+      return;
+    }
+
+    _hiddenTestLoginResetTimer?.cancel();
+    _hiddenLogoTapCount += 1;
+
+    if (_hiddenLogoTapCount >= _hiddenTestLoginTapThreshold) {
+      _hiddenLogoTapCount = 0;
+      unawaited(_showTestLoginDialog());
+      return;
+    }
+
+    _hiddenTestLoginResetTimer = Timer(_hiddenTestLoginTapWindow, () {
+      _hiddenLogoTapCount = 0;
+    });
+  }
+
+  void _maybeShowSessionExpiredDialog() {
+    if (widget.reason != AppRoutes.sessionExpiredReason ||
+        _sessionExpiredDialogShown) {
+      return;
+    }
+
+    _sessionExpiredDialogShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) {
+        return;
+      }
+
+      final colors = AppColors.of(context);
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        builder: (dialogContext) {
+          return AlertDialog(
+            insetPadding: EdgeInsets.symmetric(horizontal: 28.w),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            titlePadding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 8.h),
+            contentPadding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 20.h),
+            actionsPadding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 20.h),
+            title: Row(
+              children: [
+                Container(
+                  width: 40.w,
+                  height: 40.w,
+                  decoration: BoxDecoration(
+                    color: AppColors.red500.withValues(alpha: 0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.warning_amber_rounded,
+                    color: AppColors.red500,
+                    size: 22.w,
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Text(
+                    '세션이 종료되었어요',
+                    style: AppTextStyles.headingMd.copyWith(
+                      color: colors.textPrimary,
+                      fontSize: 18.sp,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              '다른 기기에서 로그인되어 현재 세션이 종료되었습니다.\n보안을 위해 다시 로그인해주세요.',
+              style: AppTextStyles.bodyMd.copyWith(
+                color: colors.textSecondary,
+                height: 1.5,
+              ),
+            ),
+            actions: [
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.orange500,
+                    foregroundColor: colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 14.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14.r),
+                    ),
+                  ),
+                  child: const Text('확인'),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (!mounted || widget.reason != AppRoutes.sessionExpiredReason) {
+        return;
+      }
+
+      context.replace(AppRoutes.login);
+    });
+  }
+
+  void _scheduleInterruptedLoginReset() {
+    _interruptedLoginTimer?.cancel();
+    // Web social login returns focus to the page before the provider token and
+    // backend login finish. A short timeout can incorrectly discard a successful
+    // login, so keep this recovery window deliberately loose.
+    _interruptedLoginTimer = Timer(_webLoginRecoveryTimeout, () {
+      if (!mounted) {
+        return;
+      }
+
+      if (ref.read(authViewModelProvider) is AuthLoading) {
+        ref.read(authViewModelProvider.notifier).resetInterruptedLogin();
+      }
+
+      _backgroundedDuringLogin = false;
+    });
+  }
+
+  void _handleWindowBlur() {
+    if (!mounted) {
+      return;
+    }
+
+    if (ref.read(authViewModelProvider) is AuthLoading) {
+      _backgroundedDuringLogin = true;
+      _interruptedLoginTimer?.cancel();
+    }
+  }
+
+  void _handleWindowFocus() {
+    if (!mounted || !_backgroundedDuringLogin) {
+      return;
+    }
+
+    _scheduleInterruptedLoginReset();
+  }
+
+  Map<String, String>? _buildOnboardingProfileInitialData(AuthState next) {
+    if (next is! AuthAuthenticated) {
+      return null;
+    }
+
+    final result = next.authResult;
+    if (result.status != 'TEMP') {
+      return null;
+    }
+
+    final data = <String, String>{};
+    if (result.nickname != null && result.nickname!.isNotEmpty) {
+      data['nickname'] = result.nickname!;
+    }
+    if (result.email != null && result.email!.isNotEmpty) {
+      data['email'] = result.email!;
+    }
+    if (result.profileImageUrl != null && result.profileImageUrl!.isNotEmpty) {
+      data['profileImageUrl'] = result.profileImageUrl!;
+    }
+    return data.isEmpty ? null : data;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!kIsWeb) {
+      return;
+    }
+
+    final authState = ref.read(authViewModelProvider);
+    final isLoading = authState is AuthLoading;
+
+    if (!isLoading) {
+      _backgroundedDuringLogin = false;
+      _interruptedLoginTimer?.cancel();
+      return;
+    }
+
+    switch (state) {
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+        _backgroundedDuringLogin = true;
+        _interruptedLoginTimer?.cancel();
+        break;
+      case AppLifecycleState.resumed:
+        if (!_backgroundedDuringLogin) {
+          return;
+        }
+
+        _scheduleInterruptedLoginReset();
+        break;
+      case AppLifecycleState.detached:
+        break;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     ref.listen<AuthState>(authViewModelProvider, (prev, next) {
+      if (next is! AuthLoading) {
+        _interruptedLoginTimer?.cancel();
+        _backgroundedDuringLogin = false;
+      }
+
       if (next is AuthAuthenticated) {
-        context.go(AppRoutes.onboarding);
-      } else if (next is AuthError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.message)),
-        );
+        final route = resolvePostAuthRoute(next.authResult, isTest: next.isTest);
+        final initialData = _buildOnboardingProfileInitialData(next);
+        if (route == AppRoutes.onboardingProfile && initialData != null) {
+          context.go(route, extra: initialData);
+          return;
+        }
+        context.go(route);
       }
     });
 
@@ -26,65 +317,56 @@ class LoginPage extends ConsumerWidget {
     final isLoading = authState is AuthLoading;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colors.bgSurface,
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 24.w),
           child: Column(
             children: [
               const Spacer(flex: 3),
-
-              // 로고
-              Image.asset(
-                'assets/images/logo/applogo.png',
-                width: 100.w,
-                height: 100.w,
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _onLogoTapped(isLoading),
+                child: Image.asset(
+                  'assets/images/logo/applogo.png',
+                  width: 80.w,
+                  height: 80.w,
+                ),
               ),
               SizedBox(height: 16.h),
-
-              // 앱 이름
               Text(
                 '모아',
                 style: AppTextStyles.headingXl.copyWith(
+                  color: colors.textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-
               const Spacer(flex: 4),
-
-              // 카카오 로그인 버튼
               _SocialLoginButton(
-                onPressed:
-                    isLoading
-                        ? null
-                        : () =>
-                            ref
-                                .read(authViewModelProvider.notifier)
-                                .loginWithKakao(),
+                onPressed: isLoading
+                    ? null
+                    : () => ref
+                          .read(authViewModelProvider.notifier)
+                          .loginWithKakao(),
                 backgroundColor: const Color(0xFFFEE500),
-                textColor: AppColors.textPrimary,
+                textColor: colors.textPrimary,
                 text: '카카오로 시작하기',
                 iconPath: 'assets/images/logo/kakaologo.png',
               ),
               SizedBox(height: 12.h),
-
-              // 구글 로그인 버튼
               _SocialLoginButton(
-                onPressed:
-                    isLoading
-                        ? null
-                        : () =>
-                            ref
-                                .read(authViewModelProvider.notifier)
-                                .loginWithGoogle(),
-                backgroundColor: Colors.white,
-                textColor: AppColors.textPrimary,
+                onPressed: isLoading
+                    ? null
+                    : () => ref
+                          .read(authViewModelProvider.notifier)
+                          .loginWithGoogle(),
+                backgroundColor: colors.bgSurface,
+                textColor: colors.textPrimary,
                 text: '구글로 시작하기',
                 iconPath: 'assets/images/logo/googlelogo.png',
-                borderColor: AppColors.borderDefault,
+                borderColor: colors.borderDefault,
               ),
-
-              SizedBox(height: 40.h),
+              Spacer(flex: 3),
             ],
           ),
         ),
@@ -119,9 +401,7 @@ class _SocialLoginButton extends StatelessWidget {
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
           backgroundColor: backgroundColor,
-          side: BorderSide(
-            color: borderColor ?? backgroundColor,
-          ),
+          side: BorderSide(color: borderColor ?? backgroundColor),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.r),
           ),

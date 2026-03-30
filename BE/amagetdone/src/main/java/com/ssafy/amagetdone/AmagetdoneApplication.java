@@ -2,14 +2,18 @@ package com.ssafy.amagetdone;
 
 import java.nio.file.Path;
 
-import com.ssafy.amagetdone.config.EnvLoader;
+import com.ssafy.amagetdone.global.config.EnvLoader;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @ConfigurationPropertiesScan
+@EnableAsync
+@EnableScheduling
 public class AmagetdoneApplication {
 
 	public static void main(String[] args) {
@@ -18,5 +22,3 @@ public class AmagetdoneApplication {
 	}
 
 }
-
-//test
