@@ -1,0 +1,116 @@
+package com.ssafy.amagetdone.domain.plan.infra.client;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+@ConfigurationProperties(prefix = "pyan")
+public class PyanProperties {
+
+	private String baseUrl;
+	private String apiKey;
+	private String generatePath = "/api/generate";
+	private String demoGeneratePath = "/api/demo/generate";
+	private String penMode = "none";
+	private boolean outputAutocrop = true;
+	private long pollInitialDelayMillis = 3000;
+	private long pollMaxDelayMillis = 30000;
+	private long pollTimeoutMillis = 120000;
+	private int generateMaxAttempts = 2;
+	private long readyMissingCompressedInitialDelayMillis = 2000;
+	private int readyMissingCompressedMaxAttempts = 3;
+
+	public String getBaseUrl() {
+		return baseUrl;
+	}
+
+	public void setBaseUrl(String baseUrl) {
+		this.baseUrl = baseUrl;
+	}
+
+	public String getApiKey() {
+		return apiKey;
+	}
+
+	public void setApiKey(String apiKey) {
+		this.apiKey = apiKey;
+	}
+
+	public String getGeneratePath() {
+		return generatePath;
+	}
+
+	public void setGeneratePath(String generatePath) {
+		this.generatePath = generatePath;
+	}
+
+	public String getDemoGeneratePath() {
+		return demoGeneratePath;
+	}
+
+	public void setDemoGeneratePath(String demoGeneratePath) {
+		this.demoGeneratePath = demoGeneratePath;
+	}
+
+	public String getPenMode() {
+		return penMode;
+	}
+
+	public void setPenMode(String penMode) {
+		this.penMode = penMode;
+	}
+
+	public boolean isOutputAutocrop() {
+		return outputAutocrop;
+	}
+
+	public void setOutputAutocrop(boolean outputAutocrop) {
+		this.outputAutocrop = outputAutocrop;
+	}
+
+	public long getPollInitialDelayMillis() {
+		return pollInitialDelayMillis;
+	}
+
+	public void setPollInitialDelayMillis(long pollInitialDelayMillis) {
+		this.pollInitialDelayMillis = pollInitialDelayMillis;
+	}
+
+	public long getPollMaxDelayMillis() {
+		return pollMaxDelayMillis;
+	}
+
+	public void setPollMaxDelayMillis(long pollMaxDelayMillis) {
+		this.pollMaxDelayMillis = pollMaxDelayMillis;
+	}
+
+	public long getPollTimeoutMillis() {
+		return pollTimeoutMillis;
+	}
+
+	public void setPollTimeoutMillis(long pollTimeoutMillis) {
+		this.pollTimeoutMillis = pollTimeoutMillis;
+	}
+
+	public int getGenerateMaxAttempts() {
+		return generateMaxAttempts;
+	}
+
+	public void setGenerateMaxAttempts(int generateMaxAttempts) {
+		this.generateMaxAttempts = generateMaxAttempts;
+	}
+
+	public long getReadyMissingCompressedInitialDelayMillis() {
+		return readyMissingCompressedInitialDelayMillis;
+	}
+
+	public void setReadyMissingCompressedInitialDelayMillis(long readyMissingCompressedInitialDelayMillis) {
+		this.readyMissingCompressedInitialDelayMillis = readyMissingCompressedInitialDelayMillis;
+	}
+
+	public int getReadyMissingCompressedMaxAttempts() {
+		return readyMissingCompressedMaxAttempts;
+	}
+
+	public void setReadyMissingCompressedMaxAttempts(int readyMissingCompressedMaxAttempts) {
+		this.readyMissingCompressedMaxAttempts = readyMissingCompressedMaxAttempts;
+	}
+}

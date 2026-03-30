@@ -1,9 +1,12 @@
 package com.ssafy.amagetdone.domain.plan.model.entity;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 import com.ssafy.amagetdone.domain.member.model.entity.User;
+import com.ssafy.amagetdone.domain.plan.model.vo.PlanAiPipelineStatus;
 import com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus;
+import com.ssafy.amagetdone.domain.plan.model.vo.PyanTaskStatus;
 import com.ssafy.amagetdone.global.entity.BaseEntity;
 
 import org.hibernate.annotations.ColumnDefault;
@@ -13,16 +16,33 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@SuperBuilder
 @Entity
 @Table(name = "plan")
 public class Plan extends BaseEntity {
 
 	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "id", nullable = false)
 	private Integer id;
 
@@ -41,6 +61,7 @@ public class Plan extends BaseEntity {
 
 	@ColumnDefault("0")
 	@Column(name = "saved_amount", nullable = false)
+	@Builder.Default
 	private Long savedAmount = 0L;
 
 	@Column(name = "start_date", nullable = false)
@@ -52,21 +73,186 @@ public class Plan extends BaseEntity {
 	@Column(name = "priority", nullable = false)
 	private Integer priority;
 
-	@ColumnDefault("'ACTIVE'")
+	@Builder.Default
+	@ColumnDefault("'WAITING'")
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
-	private PlanStatus status = PlanStatus.ACTIVE;
+	private PlanStatus status = PlanStatus.WAITING;
 
+	@Builder.Default
 	@ColumnDefault("TRUE")
 	@Column(name = "auto_allocate_enabled", nullable = false)
 	private boolean autoAllocateEnabled = true;
 
-	@Column(name = "plan_url", length = 255)
+	@Column(name = "plan_img_url", length = 255)
 	private String planUrl;
+
+	@Column(name = "plan_video_url", length = 255)
+	private String videoUrl;
+
+	@Column(name = "pyan_request_key", length = 120)
+	private String pyanRequestKey;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "pyan_status", length = 30)
+	private PyanTaskStatus pyanStatus;
+
+	@Column(name = "pyan_status_url", length = 255)
+	private String pyanStatusUrl;
+
+	@Column(name = "pyan_last_error", length = 255)
+	private String pyanLastError;
+
+	@ColumnDefault("'PENDING'")
+	@Builder.Default
+	@Enumerated(EnumType.STRING)
+	@Column(name = "ai_pipeline_status", nullable = false, length = 30)
+	private PlanAiPipelineStatus aiPipelineStatus = PlanAiPipelineStatus.PENDING;
+
+	@ColumnDefault("0")
+	@Builder.Default
+	@Column(name = "ai_retry_count", nullable = false)
+	private Integer aiRetryCount = 0;
 
 	@Column(name = "end_date", nullable = false)
 	private LocalDate endDate;
 
-	protected Plan() {
+	@Column(name = "original_end_date")
+	private LocalDate originalEndDate;
+
+	@Version
+	@ColumnDefault("0")
+	@Column(name = "version", nullable = false)
+	private Long version;
+
+
+	public static Plan create(
+		User user,
+		String title,
+		String description,
+		Long targetAmount,
+		LocalDate startDate,
+		LocalDate endDate,
+		Integer priority
+	) {
+		Plan plan = new Plan();
+		plan.user = user;
+		plan.title = title;
+		plan.description = description;
+		plan.targetAmount = targetAmount;
+		plan.startDate = startDate;
+		plan.endDate = endDate;
+		plan.originalEndDate = endDate;
+		plan.priority = priority;
+		plan.targetWeeks = calculateTargetWeeks(startDate, endDate);
+		return plan;
+	}
+
+	@PrePersist
+	void initializeOriginalEndDate() {
+		if (this.originalEndDate == null) {
+			this.originalEndDate = this.endDate;
+		}
+	}
+
+	private static int calculateTargetWeeks(LocalDate startDate, LocalDate endDate) {
+		if (startDate == null || endDate == null || endDate.isBefore(startDate)) {
+			return 0;
+		}
+		long durationDays = ChronoUnit.DAYS.between(startDate, endDate) + 1L;
+		return (int)((durationDays + 6L) / 7L);
+	}
+
+	public void updatePlanUrl(String planUrl) {
+		this.planUrl = planUrl;
+	}
+
+	public void updateVideoUrl(String videoUrl) {
+		this.videoUrl = videoUrl;
+	}
+
+	public void shiftPriority(int delta) {
+		this.priority += delta;
+	}
+
+	public void updatePriority(int priority) {
+		this.priority = priority;
+	}
+
+	public void activate() {
+		this.status = PlanStatus.ACTIVE;
+	}
+
+	public void updateMetadata(String title, String description) {
+		this.title = title;
+		this.description = description;
+	}
+
+	public void cancelAndDelete() {
+		this.status = PlanStatus.CANCELLED;
+		this.setDeleted(true);
+	}
+
+	public void resetAiPipelineForRegeneration() {
+		this.planUrl = null;
+		this.videoUrl = null;
+		this.pyanRequestKey = null;
+		this.pyanStatus = null;
+		this.pyanStatusUrl = null;
+		this.pyanLastError = null;
+		this.aiPipelineStatus = PlanAiPipelineStatus.PENDING;
+		this.aiRetryCount = (this.aiRetryCount == null ? 0 : this.aiRetryCount) + 1;
+	}
+
+	public void extendEndDate(int additionalWeeks) {
+		if (additionalWeeks <= 0) {
+			return;
+		}
+		if (this.originalEndDate == null) {
+			this.originalEndDate = this.endDate;
+		}
+		this.endDate = this.endDate.plusWeeks(additionalWeeks);
+		this.targetWeeks = calculateTargetWeeks(this.startDate, this.endDate);
+	}
+
+	public void markAiProcessing() {
+		this.aiPipelineStatus = PlanAiPipelineStatus.PROCESSING;
+		this.pyanLastError = null;
+	}
+
+	public void assignPyanRequestKey(String requestKey) {
+		if (this.pyanRequestKey == null || this.pyanRequestKey.isBlank()) {
+			this.pyanRequestKey = requestKey;
+		}
+	}
+
+	public void registerPyanTask(
+		PyanTaskStatus status,
+		String statusUrl
+	) {
+		this.pyanStatus = status;
+		this.pyanStatusUrl = statusUrl;
+		this.pyanLastError = null;
+	}
+
+	public void syncPyanTask(PyanTaskStatus status, String lastError) {
+		this.pyanStatus = status;
+		this.pyanLastError = lastError;
+	}
+
+	public void markAiSucceeded(String videoUrl) {
+		this.aiPipelineStatus = PlanAiPipelineStatus.SUCCEEDED;
+		this.videoUrl = videoUrl;
+		this.pyanLastError = null;
+	}
+
+	public void markAiFailed(String lastError) {
+		this.aiPipelineStatus = PlanAiPipelineStatus.FAILED;
+		this.pyanLastError = lastError;
+		this.aiRetryCount++;
+	}
+
+	public boolean isAiProcessing() {
+		return this.aiPipelineStatus == PlanAiPipelineStatus.PROCESSING;
 	}
 }

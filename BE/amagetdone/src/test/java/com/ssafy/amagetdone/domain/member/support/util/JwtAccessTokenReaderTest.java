@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
 
-import com.ssafy.amagetdone.config.JwtProperties;
+import com.ssafy.amagetdone.global.config.JwtProperties;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
 import com.ssafy.amagetdone.domain.member.model.repository.RefreshTokenStore;

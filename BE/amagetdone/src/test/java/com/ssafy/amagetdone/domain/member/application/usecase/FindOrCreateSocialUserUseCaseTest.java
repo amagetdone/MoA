@@ -16,6 +16,7 @@ import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.repository.SocialAccountRepository;
 import com.ssafy.amagetdone.domain.member.model.repository.UserRepository;
 import com.ssafy.amagetdone.domain.member.model.vo.SocialProvider;
+import com.ssafy.amagetdone.domain.member.support.config.TestSocialUserProperties;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,14 +34,18 @@ class FindOrCreateSocialUserUseCaseTest {
 
 	@Test
 	void createDoesNotGenerateSyntheticFinancialUserKey() {
-		FindOrCreateSocialUserUseCase useCase = new FindOrCreateSocialUserUseCase(socialAccountRepository, userRepository);
+		FindOrCreateSocialUserUseCase useCase = new FindOrCreateSocialUserUseCase(
+			socialAccountRepository,
+			userRepository,
+			new TestSocialUserProperties()
+		);
 		SocialUserIdentity identity = new SocialUserIdentity(SocialProvider.KAKAO, "provider-uid");
 		User savedUser = User.createPendingSocialUser();
 		SocialAccount savedSocialAccount = SocialAccount.create(savedUser, SocialProvider.KAKAO, "provider-uid");
 
 		given(socialAccountRepository.findByProviderAndProviderUid(SocialProvider.KAKAO, "provider-uid"))
 			.willReturn(Optional.empty());
-		given(userRepository.save(any(User.class))).willReturn(savedUser);
+		given(userRepository.save(any(User.class))).willAnswer(invocation -> invocation.getArgument(0));
 		given(socialAccountRepository.save(any(SocialAccount.class))).willReturn(savedSocialAccount);
 
 		FindOrCreateSocialUserUseCase.Result result = useCase.execute(identity);

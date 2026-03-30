@@ -2,13 +2,16 @@ package com.ssafy.amagetdone.domain.member.application.service;
 
 import java.util.List;
 
-import com.ssafy.amagetdone.domain.asset.model.repository.AccountRepository;
+import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
+import com.ssafy.amagetdone.domain.member.api.dto.TestSocialAuthDto;
+import com.ssafy.amagetdone.domain.member.application.usecase.EnsureFinMemberLinkedUseCase;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
 import com.ssafy.amagetdone.domain.member.application.usecase.FindOrCreateSocialUserUseCase;
 import com.ssafy.amagetdone.domain.member.application.usecase.IssueMemberTokensUseCase;
 import com.ssafy.amagetdone.domain.member.application.usecase.ResetTestSocialUserUseCase;
+import com.ssafy.amagetdone.domain.member.infra.client.MockSocialAuthClient;
 import com.ssafy.amagetdone.domain.member.infra.client.SocialAuthClient;
 import com.ssafy.amagetdone.domain.member.infra.client.SocialUserIdentity;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
@@ -17,55 +20,48 @@ import com.ssafy.amagetdone.domain.plan.model.repository.PlanRepository;
 import com.ssafy.amagetdone.domain.member.support.log.MemberLogHelper;
 import com.ssafy.amagetdone.domain.member.support.util.MemberTokenPair;
 
+import lombok.RequiredArgsConstructor;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
+@Transactional
 public class MemberAuthService {
 
 	private static final Logger log = LoggerFactory.getLogger(MemberAuthService.class);
 
 	private final List<SocialAuthClient> socialAuthClients;
+	private final MockSocialAuthClient mockSocialAuthClient;
 	private final FindOrCreateSocialUserUseCase findOrCreateSocialUserUseCase;
 	private final IssueMemberTokensUseCase issueMemberTokensUseCase;
 	private final ResetTestSocialUserUseCase resetTestSocialUserUseCase;
+	private final EnsureFinMemberLinkedUseCase ensureFinMemberLinkedUseCase;
 	private final AccountRepository accountRepository;
 	private final PlanRepository planRepository;
-
-	public MemberAuthService(
-		List<SocialAuthClient> socialAuthClients,
-		FindOrCreateSocialUserUseCase findOrCreateSocialUserUseCase,
-		IssueMemberTokensUseCase issueMemberTokensUseCase,
-		ResetTestSocialUserUseCase resetTestSocialUserUseCase,
-		AccountRepository accountRepository,
-		PlanRepository planRepository
-	) {
-		this.socialAuthClients = socialAuthClients;
-		this.findOrCreateSocialUserUseCase = findOrCreateSocialUserUseCase;
-		this.issueMemberTokensUseCase = issueMemberTokensUseCase;
-		this.resetTestSocialUserUseCase = resetTestSocialUserUseCase;
-		this.accountRepository = accountRepository;
-		this.planRepository = planRepository;
-	}
 
 	public SocialAuthDto.Response authenticate(SocialProvider provider, SocialAuthDto.Request request) {
 		return authenticateInternal(provider, request);
 	}
 
-	public SocialAuthDto.Response authenticateTest() {
-		return authenticateInternal(SocialProvider.TEST, new SocialAuthDto.Request(null, null));
+	public SocialAuthDto.Response authenticateTest(TestSocialAuthDto.Request request) {
+		SocialUserIdentity identity = mockSocialAuthClient.fetchIdentity(request);
+		return authenticateInternal(SocialProvider.TEST, identity);
 	}
 
-	public void resetTestUser() {
+	public void resetTestUser(Integer userId) {
 		String requestId = MemberLogHelper.requestId();
 		try {
-			resetTestSocialUserUseCase.execute();
-			log.info("event=TEST_SOCIAL_RESET_SUCCESS requestId={}", requestId);
+			resetTestSocialUserUseCase.execute(userId);
+			log.info("event=TEST_SOCIAL_RESET_SUCCESS requestId={} localUserId={}", requestId, userId);
 		} catch (RuntimeException exception) {
 			log.warn(
-				"event=TEST_SOCIAL_RESET_FAILURE requestId={} errorType={}",
+				"event=TEST_SOCIAL_RESET_FAILURE requestId={} localUserId={} errorType={}",
 				requestId,
+				userId,
 				exception.getClass().getSimpleName()
 			);
 			throw exception;
@@ -83,6 +79,40 @@ public class MemberAuthService {
 
 			SocialUserIdentity identity = client.fetchIdentity(request);
 			socialAuthSucceeded = true;
+			return authenticateInternal(provider, identity, requestId, true);
+		} catch (RuntimeException exception) {
+			if (!socialAuthSucceeded) {
+				log.warn(
+					"event=SOCIAL_AUTH_FAILURE requestId={} provider={} errorType={}",
+					requestId,
+					provider.name(),
+					exception.getClass().getSimpleName()
+				);
+			}
+			log.warn(
+				"event=MEMBER_LOGIN_FAILURE requestId={} provider={} errorType={}",
+				requestId,
+				provider.name(),
+				exception.getClass().getSimpleName()
+			);
+			throw exception;
+		}
+	}
+
+	private SocialAuthDto.Response authenticateInternal(SocialProvider provider, SocialUserIdentity identity) {
+		String requestId = MemberLogHelper.requestId();
+		return authenticateInternal(provider, identity, requestId, false);
+	}
+
+	private SocialAuthDto.Response authenticateInternal(
+		SocialProvider provider,
+		SocialUserIdentity identity,
+		String requestId,
+		boolean socialAuthAlreadySucceeded
+	) {
+		boolean socialAuthSucceeded = socialAuthAlreadySucceeded;
+		try {
+			socialAuthSucceeded = true;
 			log.info(
 				"event=SOCIAL_AUTH_SUCCESS requestId={} provider={} providerUid={}",
 				requestId,
@@ -92,9 +122,10 @@ public class MemberAuthService {
 
 			FindOrCreateSocialUserUseCase.Result result = findOrCreateSocialUserUseCase.execute(identity);
 			User user = result.user();
+			linkTestFinancialMemberIfNeeded(provider, user);
 			MemberTokenPair tokenPair = issueMemberTokensUseCase.execute(user, provider);
-			boolean hasAccount = accountRepository.existsByUserId(user.getId());
-			boolean hasPlan = planRepository.existsByUserId(user.getId());
+			boolean hasAccount = accountRepository.existsLinkedAccountByUserId(user.getId());
+			boolean hasPlan = planRepository.existsByUserIdAndDeletedFalse(user.getId());
 
 			log.info(
 				"event=MEMBER_LOGIN_SUCCESS requestId={} provider={} localUserId={} isNewUser={} userStatus={} account={} plan={}",
@@ -112,7 +143,10 @@ public class MemberAuthService {
 				hasAccount,
 				hasPlan,
 				tokenPair.accessToken(),
-				tokenPair.refreshToken()
+				tokenPair.refreshToken(),
+				user.getNickname(),
+				user.getEmail(),
+				user.getProfileUrl()
 			);
 		} catch (RuntimeException exception) {
 			if (!socialAuthSucceeded) {
@@ -131,5 +165,13 @@ public class MemberAuthService {
 			);
 			throw exception;
 		}
+	}
+
+	private void linkTestFinancialMemberIfNeeded(SocialProvider provider, User user) {
+		if (provider != SocialProvider.TEST) {
+			return;
+		}
+		String userKey = ensureFinMemberLinkedUseCase.execute(user.getId(), user.getEmail());
+		user.updateUserKey(userKey);
 	}
 }

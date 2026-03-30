@@ -1,6 +1,6 @@
 package com.ssafy.amagetdone.domain.member.infra.client;
 
-import com.ssafy.amagetdone.config.SsafyFinApiProperties;
+import com.ssafy.amagetdone.global.config.SsafyFinApiProperties;
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
 import com.ssafy.amagetdone.domain.member.infra.client.dto.SsafyCreateMemberRequest;

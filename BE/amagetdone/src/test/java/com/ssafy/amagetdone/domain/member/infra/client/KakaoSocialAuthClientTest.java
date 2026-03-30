@@ -9,7 +9,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-import com.ssafy.amagetdone.config.SocialAuthProperties;
+import com.ssafy.amagetdone.global.config.SocialAuthProperties;
 import com.ssafy.amagetdone.domain.member.api.dto.SocialAuthDto;
 import com.ssafy.amagetdone.domain.member.model.vo.SocialProvider;
 
@@ -32,7 +32,16 @@ class KakaoSocialAuthClientTest {
 			.andExpect(header(AUTHORIZATION, "Bearer kakao-token"))
 			.andRespond(withSuccess("""
 				{
-				  "id": 987654321
+				  "id": 987654321,
+				  "kakao_account": {
+				    "email": "moa@example.com",
+				    "isEmailValid": true,
+				    "isEmailVerified": true,
+				    "profile": {
+				      "nickname": "모아",
+				      "profile_image_url": "https://k.kakaocdn.net/profile.png"
+				    }
+				  }
 				}
 				""", APPLICATION_JSON));
 
@@ -40,5 +49,8 @@ class KakaoSocialAuthClientTest {
 
 		assertEquals(SocialProvider.KAKAO, identity.provider());
 		assertEquals("987654321", identity.providerUid());
+		assertEquals("모아", identity.nickname());
+		assertEquals("moa@example.com", identity.email());
+		assertEquals("https://k.kakaocdn.net/profile.png", identity.profileImageUrl());
 	}
 }

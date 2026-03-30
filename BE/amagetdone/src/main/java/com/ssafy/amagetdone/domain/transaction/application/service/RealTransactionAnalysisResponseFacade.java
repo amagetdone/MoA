@@ -1,0 +1,104 @@
+package com.ssafy.amagetdone.domain.transaction.application.service;
+
+import java.time.YearMonth;
+
+import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyExpenseGraphDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.MonthlyTransactionAnalysisDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.TransactionAnalysisDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyExpenseGraphDto;
+import com.ssafy.amagetdone.domain.transaction.api.dto.WeeklyTransactionAnalysisDto;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyExpenseGraphUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyExecutionAnalysisResultUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyExpenseUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.GetMonthlyTransactionAnalysisUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.GetOnboardingAnalysisResultUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.GetWeeklyExpenseGraphUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.GetWeeklyTransactionAnalysisUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.RunTransactionAnalysisUseCase;
+import com.ssafy.amagetdone.domain.transaction.application.usecase.TransactionAnalysisResponseFacade;
+
+import lombok.RequiredArgsConstructor;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+@ConditionalOnProperty(
+	name = "transaction.analysis-response-mode",
+	havingValue = "real",
+	matchIfMissing = true
+)
+public class RealTransactionAnalysisResponseFacade implements TransactionAnalysisResponseFacade {
+
+	private final GetMonthlyExpenseUseCase getMonthlyExpenseUseCase;
+	private final GetWeeklyExpenseGraphUseCase getWeeklyExpenseGraphUseCase;
+	private final GetMonthlyExpenseGraphUseCase getMonthlyExpenseGraphUseCase;
+	private final RunTransactionAnalysisUseCase runTransactionAnalysisUseCase;
+	private final GetOnboardingAnalysisResultUseCase getOnboardingAnalysisResultUseCase;
+	private final GetMonthlyExecutionAnalysisResultUseCase getMonthlyExecutionAnalysisResultUseCase;
+	private final GetWeeklyTransactionAnalysisUseCase getWeeklyTransactionAnalysisUseCase;
+	private final GetMonthlyTransactionAnalysisUseCase getMonthlyTransactionAnalysisUseCase;
+
+	@Override
+	public TransactionAnalysisDto.OnboardingResult analyzeTransactions(Integer userId, Integer months) {
+		runTransactionAnalysisUseCase.execute(userId, months);
+		return getOnboardingAnalysisResultUseCase.execute(userId);
+	}
+
+	@Override
+	public TransactionAnalysisDto.OnboardingResult analyzeMonthlyTransactions(Integer userId, YearMonth month) {
+		return getMonthlyExecutionAnalysisResultUseCase.execute(
+			userId,
+			runTransactionAnalysisUseCase.execute(userId, month),
+			month
+		);
+	}
+
+	@Override
+	public TransactionAnalysisDto.OnboardingResult getOnboardingAnalysis(Integer userId) {
+		return getOnboardingAnalysisResultUseCase.execute(userId);
+	}
+
+	@Override
+	public MonthlyExpenseDto.Response getMonthlyExpense(Integer userId, YearMonth month) {
+		return getMonthlyExpenseUseCase.execute(userId, month);
+	}
+
+	@Override
+	public WeeklyExpenseGraphDto.Response getWeeklyExpenseGraph(Integer userId, String yearWeek) {
+		return getWeeklyExpenseGraphUseCase.execute(userId, yearWeek);
+	}
+
+	@Override
+	public MonthlyExpenseGraphDto.Response getMonthlyExpenseGraph(Integer userId, String yearMonth) {
+		return getMonthlyExpenseGraphUseCase.execute(userId, yearMonth);
+	}
+
+	@Override
+	public WeeklyTransactionAnalysisDto.Response getWeeklyAnalysis(Integer userId, String yearWeek) {
+		WeeklyTransactionAnalysisDto.Response response = getWeeklyTransactionAnalysisUseCase.execute(userId, yearWeek);
+		if (shouldRefreshWeeklyAnalysis(response)) {
+			runTransactionAnalysisUseCase.execute(userId, resolveYearMonth(yearWeek));
+			return getWeeklyTransactionAnalysisUseCase.execute(userId, yearWeek);
+		}
+		return response;
+	}
+
+	@Override
+	public MonthlyTransactionAnalysisDto.Response getMonthlyAnalysis(Integer userId, String yearMonth) {
+		return getMonthlyTransactionAnalysisUseCase.execute(userId, yearMonth);
+	}
+
+	private boolean shouldRefreshWeeklyAnalysis(WeeklyTransactionAnalysisDto.Response response) {
+		return response != null
+			&& response.lastAnalyzedAt() == null
+			&& response.expenseAmount() != null
+			&& response.expenseAmount() > 0L;
+	}
+
+	private YearMonth resolveYearMonth(String yearWeek) {
+		return YearMonth.parse(yearWeek.substring(0, 7));
+	}
+}
