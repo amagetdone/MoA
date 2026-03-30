@@ -169,7 +169,7 @@ class AuthControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(content().encoding("UTF-8"))
 			.andExpect(jsonPath("$.status").value("ok"))
-			.andExpect(jsonPath("$.message").value("\uAE08\uC735 \uC790\uC0B0 \uB3D9\uAE30\uD654\uC5D0 \uC131\uACF5\uD588\uC2B5\uB2C8\uB2E4."))
+			.andExpect(jsonPath("$.message").value("\uD14C\uC2A4\uD2B8 \uAE08\uC735 \uC790\uC0B0 \uB3D9\uAE30\uD654\uC5D0 \uC131\uACF5\uD588\uC2B5\uB2C8\uB2E4."))
 			.andExpect(jsonPath("$.data.success").value(true));
 
 		verify(jwtAccessTokenReader).readUserId("Bearer access-token");
