@@ -1,5 +1,6 @@
 package com.ssafy.amagetdone.domain.member.model.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import com.ssafy.amagetdone.domain.member.model.entity.User;
@@ -14,6 +15,8 @@ import org.springframework.data.repository.query.Param;
 public interface UserRepository extends JpaRepository<User, Integer> {
 
 	Optional<User> findByUserKey(String userKey);
+
+	List<User> findAllByUserKey(String userKey);
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select u from User u where u.id = :userId")
