@@ -5,11 +5,15 @@
 
 # Local machine settings
 android/local.properties
+android/key.properties
+android/app/*.jks
+android/app/*.jks.bak
 
 # Claude
 .claude/
 AGENTS.md
 CLAUDE.md
+
 ref/
 
 # Local debug artifacts
@@ -51,6 +55,9 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+
+# DevTools
+devtools_options.yaml
 
 # Symbolication related
 app.*.symbols

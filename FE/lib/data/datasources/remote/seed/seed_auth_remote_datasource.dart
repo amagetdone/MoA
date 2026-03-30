@@ -13,7 +13,8 @@ class SeedAuthRemoteDataSource implements AuthRemoteDataSource {
   @override
   Future<SocialLoginResponseDto> loginWithSocialToken({
     required String provider,
-    required String socialToken,
+    String? accessToken,
+    String? idToken,
   }) async {
     await Future.delayed(const Duration(milliseconds: 500));
 
@@ -34,6 +35,9 @@ class SeedAuthRemoteDataSource implements AuthRemoteDataSource {
     return TokenRefreshResponseDto(
       accessToken: 'seed_access_token_${DateTime.now().millisecondsSinceEpoch}',
       refreshToken: 'seed_refresh_token_${DateTime.now().millisecondsSinceEpoch}',
+      status: 'ACTIVE',
+      account: true,
+      plan: true,
     );
   }
 
@@ -51,5 +55,17 @@ class SeedAuthRemoteDataSource implements AuthRemoteDataSource {
   @override
   Future<void> logout({required String refreshToken}) async {
     await Future.delayed(const Duration(milliseconds: 150));
+  }
+
+  @override
+  Future<SocialLoginResponseDto> loginWithTest({required int id}) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    return SocialLoginResponseDto(
+      status: 'ACTIVE',
+      account: true,
+      plan: true,
+      accessToken: 'test_access_token_${DateTime.now().millisecondsSinceEpoch}',
+      refreshToken: 'test_refresh_token_${DateTime.now().millisecondsSinceEpoch}',
+    );
   }
 }

@@ -5,6 +5,9 @@ class SocialLoginResponseDto {
   final bool plan;
   final String accessToken;
   final String refreshToken;
+  final String? nickname;
+  final String? email;
+  final String? profileImageUrl;
 
   SocialLoginResponseDto({
     required this.status,
@@ -12,6 +15,9 @@ class SocialLoginResponseDto {
     required this.plan,
     required this.accessToken,
     required this.refreshToken,
+    this.nickname,
+    this.email,
+    this.profileImageUrl,
   });
 
   factory SocialLoginResponseDto.fromJson(Map<String, dynamic> json) {
@@ -21,6 +27,16 @@ class SocialLoginResponseDto {
       plan: json['plan'] as bool? ?? false,
       accessToken: json['accessToken'] as String? ?? '',
       refreshToken: json['refreshToken'] as String? ?? '',
+      nickname: (json['nickname'] as String?)?.trim().isNotEmpty == true
+          ? (json['nickname'] as String).trim()
+          : null,
+      email: (json['email'] as String?)?.trim().isNotEmpty == true
+          ? (json['email'] as String).trim()
+          : null,
+      profileImageUrl:
+          (json['profileImageUrl'] as String?)?.trim().isNotEmpty == true
+          ? (json['profileImageUrl'] as String).trim()
+          : null,
     );
   }
 }

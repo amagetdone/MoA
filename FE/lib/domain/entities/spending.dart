@@ -4,6 +4,7 @@ class SpendingCategory {
   final int budget;
   final int colorValue;
   final String iconKey;
+  final double? ratio;
 
   const SpendingCategory({
     required this.name,
@@ -11,6 +12,7 @@ class SpendingCategory {
     required this.budget,
     required this.colorValue,
     required this.iconKey,
+    this.ratio,
   });
 
   double get usageRate => budget > 0 ? (amount / budget).clamp(0.0, 1.0) : 0.0;
@@ -21,6 +23,7 @@ class SpendingCategory {
     int? budget,
     int? colorValue,
     String? iconKey,
+    double? ratio,
   }) {
     return SpendingCategory(
       name: name ?? this.name,
@@ -28,6 +31,7 @@ class SpendingCategory {
       budget: budget ?? this.budget,
       colorValue: colorValue ?? this.colorValue,
       iconKey: iconKey ?? this.iconKey,
+      ratio: ratio ?? this.ratio,
     );
   }
 }
@@ -51,6 +55,49 @@ class WeeklySpending {
 class DailySpending {
   final DateTime date;
   final int amount;
+  final String? label;
 
-  const DailySpending({required this.date, required this.amount});
+  const DailySpending({required this.date, required this.amount, this.label});
+}
+
+class WeeklyAnalysisResult {
+  final List<SpendingCategory> categories;
+  final int expenseAmount;
+
+  const WeeklyAnalysisResult({
+    this.categories = const [],
+    this.expenseAmount = 0,
+  });
+}
+
+class MonthlyAnalysisResult {
+  final List<SpendingCategory> categories;
+  final int expenseAmount;
+
+  const MonthlyAnalysisResult({
+    this.categories = const [],
+    this.expenseAmount = 0,
+  });
+}
+
+class SpendingPatternResult {
+  final int totalIncome;
+  final int totalExpense;
+  final int fixedAmount;
+  final int variableAmount;
+  final int freeAmount;
+  final int savingsAmount;
+  final List<SpendingCategory> categories;
+  final String topCategoryName;
+
+  const SpendingPatternResult({
+    this.totalIncome = 0,
+    this.totalExpense = 0,
+    this.fixedAmount = 0,
+    this.variableAmount = 0,
+    this.freeAmount = 0,
+    this.savingsAmount = 0,
+    this.categories = const [],
+    this.topCategoryName = '',
+  });
 }

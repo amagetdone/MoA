@@ -1,105 +1,83 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/core/utils/currency_formatter.dart';
-import 'package:more_app/presentation/widgets/common/more_card.dart';
-import 'package:more_app/presentation/widgets/common/more_progress_bar.dart';
+import 'package:more_app/presentation/pages/home/widgets/spending_card.dart';
 
 class SavingsCard extends StatelessWidget {
   const SavingsCard({
     super.key,
     required this.weeklySaved,
-    this.weeklyTarget = 200000,
+    required this.savingTargetAmount,
+    required this.savingProgressRate,
   });
 
   final int weeklySaved;
-  final int weeklyTarget;
+  final int savingTargetAmount;
+  final int savingProgressRate;
 
   @override
   Widget build(BuildContext context) {
-    final effectiveTarget = math.max(weeklyTarget, weeklySaved);
-    final remaining = math.max(effectiveTarget - weeklySaved, 0);
-    final progressRatio = effectiveTarget > 0
-        ? weeklySaved / effectiveTarget
+    final colors = AppColors.of(context);
+    final isEmpty = savingTargetAmount <= 0;
+    final fillRatio = savingTargetAmount > 0
+        ? (weeklySaved / savingTargetAmount).clamp(0.0, 1.0)
         : 0.0;
+    final todayTarget = DateTime.now().weekday / 7;
+    // 저축: 구분선보다 높거나 같으면 초록, 낮으면 빨간
+    final isOnTrack = fillRatio >= todayTarget;
+    final amountColor = isOnTrack ? const Color(0xFF53A65A) : AppColors.red500;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isCompact = constraints.maxWidth < 340;
-
-        return MoreCard(
-          padding: EdgeInsets.fromLTRB(22.w, 22.h, 22.w, 18.h),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return GaugeCard(
+      fillRatio: fillRatio,
+      fillColor: const Color(0xFF69BD5F).withValues(alpha: 0.15),
+      fillFromTop: false,
+      todayLineColor: amountColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 46.w,
-                    height: 46.w,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFD7EEDD),
-                      borderRadius: BorderRadius.circular(16.r),
-                    ),
-                    child: Icon(
-                      Icons.savings_outlined,
-                      color: AppColors.textPrimary,
-                      size: 24.w,
-                    ),
-                  ),
-                  SizedBox(width: 14.w),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            CurrencyFormatter.formatKRW(weeklySaved),
-                            style: AppTextStyles.headingLg.copyWith(
-                              color: const Color(0xFF53A65A),
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: isCompact ? 4.h : 2.h),
-                        Text(
-                          '이번 주 저축액',
-                          style: AppTextStyles.headingMd.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 18.h),
-              MoreProgressBar(
-                progress: progressRatio,
-                color: const Color(0xFF69BD5F),
-                backgroundColor: AppColors.gray100.withValues(alpha: 0.9),
-                height: 14.h,
-              ),
-              SizedBox(height: 12.h),
+              Icon(Icons.savings_outlined, size: 14.w, color: amountColor),
+              SizedBox(width: 4.w),
               Text(
-                remaining > 0
-                    ? '목표까지 ${CurrencyFormatter.formatKRW(remaining)} 남음'
-                    : '이번 주 저축 목표를 달성했어요',
-                style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.textTertiary,
-                  fontWeight: FontWeight.w500,
+                '저축',
+                style: AppTextStyles.caption.copyWith(
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11.sp,
                 ),
               ),
             ],
           ),
-        );
-      },
+          SizedBox(height: 10.h),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              CurrencyFormatter.formatKRW(weeklySaved),
+              style: AppTextStyles.headingMd.copyWith(
+                color: amountColor,
+                fontWeight: FontWeight.w800,
+                fontSize: 17.sp,
+              ),
+            ),
+          ),
+          SizedBox(height: 6.h),
+          Text(
+            isEmpty
+                ? '저축 목표를 추가해주세요'
+                : '/ ${CurrencyFormatter.formatKRW(savingTargetAmount)}',
+            style: TextStyle(
+              color: isEmpty ? AppColors.orange500 : colors.textTertiary,
+              fontSize: 10.sp,
+              fontWeight: isEmpty ? FontWeight.w700 : FontWeight.w400,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

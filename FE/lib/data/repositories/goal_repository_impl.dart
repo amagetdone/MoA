@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:more_app/core/utils/goal_video_cache.dart';
 import 'package:more_app/data/datasources/local/app_local_datasource.dart';
 import 'package:more_app/data/datasources/remote/goal_remote_datasource.dart';
 import 'package:more_app/domain/entities/goal.dart';
@@ -19,7 +20,16 @@ class GoalRepositoryImpl implements GoalRepository {
   @override
   Future<List<Goal>> fetchGoals() async {
     try {
-      return await _remoteDataSource.fetchGoals();
+      final goals = await _remoteDataSource.fetchGoals();
+      final existingGoals = await _localDataSource.getGoals();
+      final existingGoalById = {
+        for (final goal in existingGoals) goal.id: goal,
+      };
+      final mergedGoals = goals
+          .map((goal) => _mergeGoal(existingGoalById[goal.id], goal))
+          .toList();
+      await _localDataSource.replaceGoals(mergedGoals);
+      return mergedGoals;
     } catch (_) {
       return _localDataSource.getGoals();
     }
@@ -28,9 +38,62 @@ class GoalRepositoryImpl implements GoalRepository {
   @override
   Future<Goal?> findGoalById(String id) async {
     try {
-      return await _remoteDataSource.findGoalById(id);
+      final goal = await _remoteDataSource.findGoalById(id);
+      if (goal != null) {
+        final existing = await _localDataSource.getGoalById(id);
+        final mergedGoal = _mergeGoal(existing, goal);
+        await _upsertGoal(mergedGoal);
+        return mergedGoal;
+      }
+      return goal;
     } catch (_) {
       return _localDataSource.getGoalById(id);
+    }
+  }
+
+  @override
+  Future<void> deleteGoal(String id) async {
+    try {
+      await _remoteDataSource.deleteGoal(id);
+    } finally {
+      await GoalVideoCache.evict(id);
+      await _localDataSource.removeGoal(id);
+    }
+  }
+
+  @override
+  Future<GoalWeeklyPlanPage> fetchGoalWeeklyPlans(
+    String id, {
+    int page = 0,
+    int size = 100,
+  }) async {
+    try {
+      return await _remoteDataSource.fetchGoalWeeklyPlans(
+        id,
+        page: page,
+        size: size,
+      );
+    } catch (_) {
+      final goal = await _localDataSource.getGoalById(id);
+      final weeklyPlans = goal?.weeklyPlans ?? const <GoalWeeklyPlan>[];
+      final start = page * size;
+      final end = (start + size).clamp(0, weeklyPlans.length);
+      final sliced = start >= weeklyPlans.length
+          ? const <GoalWeeklyPlan>[]
+          : weeklyPlans.sublist(start, end);
+      final totalPages = weeklyPlans.isEmpty
+          ? 0
+          : ((weeklyPlans.length - 1) ~/ size) + 1;
+
+      return GoalWeeklyPlanPage(
+        goalId: id,
+        weeklyPlans: sliced,
+        page: page,
+        size: size,
+        totalElements: weeklyPlans.length,
+        totalPages: totalPages,
+        hasNext: page + 1 < totalPages,
+      );
     }
   }
 
@@ -52,7 +115,9 @@ class GoalRepositoryImpl implements GoalRepository {
   @override
   Future<Goal> createGoal(Goal goal) async {
     try {
-      return await _remoteDataSource.createGoal(goal);
+      final createdGoal = await _remoteDataSource.createGoal(goal);
+      await _upsertGoal(createdGoal);
+      return createdGoal;
     } catch (_) {
       return _localDataSource.createGoal(goal);
     }
@@ -61,18 +126,53 @@ class GoalRepositoryImpl implements GoalRepository {
   @override
   Future<Goal> updateGoal(Goal goal) async {
     try {
-      return await _remoteDataSource.updateGoal(goal);
+      await GoalVideoCache.evict(goal.id);
+      final updatedGoal = await _remoteDataSource.updateGoal(goal);
+      await _localDataSource.updateGoal(updatedGoal);
+      return updatedGoal;
     } catch (_) {
-      return _localDataSource.updateGoal(goal);
+      rethrow;
     }
   }
 
   @override
   Future<List<Goal>> saveGoalPriority(List<Goal> goals) async {
     try {
-      return await _remoteDataSource.saveGoalPriority(goals);
+      final reorderedGoals = await _remoteDataSource.saveGoalPriority(goals);
+      await _localDataSource.replaceGoals(reorderedGoals);
+      return reorderedGoals;
     } catch (_) {
       return _localDataSource.saveGoalPriority(goals);
     }
+  }
+
+  Future<void> _upsertGoal(Goal goal) async {
+    final existing = await _localDataSource.getGoalById(goal.id);
+    if (existing == null) {
+      await _localDataSource.createGoal(goal);
+      return;
+    }
+
+    await _localDataSource.updateGoal(goal);
+  }
+
+  Goal _mergeGoal(Goal? existing, Goal incoming) {
+    if (existing == null) {
+      return incoming;
+    }
+
+    var merged = incoming.copyWith(
+      iconName: incoming.iconName ?? existing.iconName,
+      sketchVideoAssetPath:
+          incoming.sketchVideoAssetPath ?? existing.sketchVideoAssetPath,
+      apiStatus: incoming.apiStatus ?? existing.apiStatus,
+      aiPipelineStatus: incoming.aiPipelineStatus ?? existing.aiPipelineStatus,
+    );
+
+    if (merged.isAiPending || merged.isAiFailed) {
+      merged = merged.copyWith(clearSketchVideoAssetPath: true);
+    }
+
+    return merged;
   }
 }

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:more_app/core/auth/logout_intent_tracker.dart';
 import 'package:more_app/core/constants/app_constants.dart';
 
 class AuthInterceptor extends Interceptor {
@@ -14,9 +15,13 @@ class AuthInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    final token = await _storage.read(key: 'access_token');
-    if (token != null) {
-      options.headers['Authorization'] = 'Bearer $token';
+    final path = options.path;
+    final isAuthRequest = path.contains('auth/social') || path.contains('auth/refresh');
+    if (!isAuthRequest) {
+      final token = await _storage.read(key: 'access_token');
+      if (token != null) {
+        options.headers['Authorization'] = 'Bearer $token';
+      }
     }
     handler.next(options);
   }
@@ -97,6 +102,9 @@ class AuthInterceptor extends Interceptor {
   Future<void> _forceLogout() async {
     await _storage.delete(key: 'access_token');
     await _storage.delete(key: 'refresh_token');
+    if (LogoutIntentTracker.isUserInitiatedLogoutInProgress) {
+      return;
+    }
     onForceLogout?.call();
   }
 }

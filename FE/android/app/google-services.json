@@ -1,0 +1,92 @@
+{
+  "project_info": {
+    "project_number": "433365528425",
+    "project_id": "mooa-6b3f7",
+    "storage_bucket": "mooa-6b3f7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:433365528425:android:d527d159fd1c947af4d7f8",
+        "android_client_info": {
+          "package_name": "com.more.alarm_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "433365528425-ap94hk8bg3v2hk0tkfvknq8m4qau412t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBmE5bmJhzVMfThSaUDY8z8wLv6uYb0Jiw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "433365528425-66ou7f2h4a9qdj6ncp697co1nkmuscdl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:433365528425:android:af3477c7caf2fd86f4d7f8",
+        "android_client_info": {
+          "package_name": "com.more.more_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "433365528425-4djm2gdkfnsg6tej87bernd58tj01jno.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.more.more_app",
+            "certificate_hash": "f07b46456be5f83fbea9de5ce72b89c193974a6a"
+          }
+        },
+        {
+          "client_id": "433365528425-e6slvfj9qh34oe4lkrcg905cdt5f9c51.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.more.more_app",
+            "certificate_hash": "9ba8a535fe8fa030c407fbe69c96a3550efc34a2"
+          }
+        },
+        {
+          "client_id": "433365528425-dsghe8geh981s271im8e2ad81ttts4hi.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.more.more_app",
+            "certificate_hash": "8614fa9c56ceb84d39218a5e7fbf348009947bc3"
+          }
+        },
+        {
+          "client_id": "433365528425-ap94hk8bg3v2hk0tkfvknq8m4qau412t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBmE5bmJhzVMfThSaUDY8z8wLv6uYb0Jiw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "433365528425-66ou7f2h4a9qdj6ncp697co1nkmuscdl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

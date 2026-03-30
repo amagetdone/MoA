@@ -4,7 +4,17 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
 import 'package:more_app/domain/entities/spending.dart';
-import 'package:more_app/presentation/widgets/common/more_card.dart';
+import 'package:more_app/core/utils/currency_formatter.dart';
+
+double _niceInterval(double maxVal, bool isWeekly) {
+  // 주간: 4칸, 월간 비교: 3칸 기준으로 nice step 계산
+  final raw = maxVal / (isWeekly ? 4.0 : 4.0);
+  const steps = [10000.0, 20000.0, 50000.0, 100000.0, 200000.0, 500000.0, 1000000.0, 2000000.0, 5000000.0];
+  for (final step in steps) {
+    if (raw <= step) return step;
+  }
+  return steps.last;
+}
 
 class SpendingLineChart extends StatelessWidget {
   final List<DailySpending> data;
@@ -18,225 +28,162 @@ class SpendingLineChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MoreCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                '지출 그래프',
-                style: AppTextStyles.headingMd.copyWith(fontSize: 16.sp),
-              ),
-              SizedBox(width: 8.w),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
-                decoration: BoxDecoration(
-                  color: AppColors.red500.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10.r),
-                ),
-                child: Text(
-                  '10% 증가',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.red500,
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 4.h),
-          Text(
-            '총 지출',
-            style: AppTextStyles.bodySm.copyWith(
-              color: AppColors.textTertiary,
-              fontSize: 12.sp,
-            ),
-          ),
-          SizedBox(height: 16.h),
-          SizedBox(
-            height: 200.h,
-            child: data.isEmpty
-                ? Center(
-                    child: Text(
-                      '데이터가 없습니다',
-                      style: AppTextStyles.bodyMd.copyWith(
-                        color: AppColors.textTertiary,
-                        fontSize: 14.sp,
-                      ),
-                    ),
-                  )
-                : LineChart(
-                    _buildChartData(),
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
+    final colors = AppColors.of(context);
+    if (data.isEmpty) return Center(child: Text('데이터가 없습니다', style: TextStyle(color: colors.textPrimary)));
 
-  LineChartData _buildChartData() {
-    final spots = <FlSpot>[];
-    for (int i = 0; i < data.length; i++) {
-      spots.add(FlSpot(i.toDouble(), data[i].amount.toDouble()));
-    }
+    final maxVal = data.map((e) => e.amount).reduce((a, b) => a > b ? a : b);
+    final minVal = data.map((e) => e.amount).reduce((a, b) => a < b ? a : b);
+    final maxIndex = data.indexWhere((e) => e.amount == maxVal);
+    final minIndex = data.indexWhere((e) => e.amount == minVal);
 
-    double maxY = 0;
-    for (final spending in data) {
-      if (spending.amount > maxY) {
-        maxY = spending.amount.toDouble();
-      }
-    }
-    if (maxY == 0) maxY = 100000;
-    maxY = maxY * 1.2;
+    final spots = data
+        .asMap()
+        .entries
+        .map((e) => FlSpot(e.key.toDouble(), e.value.amount.toDouble()))
+        .toList();
 
-    return LineChartData(
-      gridData: FlGridData(
+    final yInterval = _niceInterval(maxVal.toDouble(), isWeekly);
+    final ceilSteps = (maxVal / yInterval).ceil();
+    final isExactMultiple = maxVal.toDouble() % yInterval == 0.0;
+    final maxY = (isExactMultiple ? ceilSteps + 1 : ceilSteps) * yInterval;
+
+    final barData = LineChartBarData(
+      spots: spots,
+      isCurved: true,
+      curveSmoothness: 0.15,
+      color: AppColors.orange500,
+      barWidth: 2.5,
+      isStrokeCapRound: true,
+      dotData: FlDotData(
         show: true,
-        drawVerticalLine: false,
-        horizontalInterval: maxY / 4,
-        getDrawingHorizontalLine: (value) {
-          return FlLine(
-            color: AppColors.borderDefault,
-            strokeWidth: 1,
+        checkToShowDot: (spot, _) =>
+            spot.x == maxIndex.toDouble() || spot.x == minIndex.toDouble(),
+        getDotPainter: (spot, p, b, i) {
+          final isMax = spot.x == maxIndex.toDouble();
+          return FlDotCirclePainter(
+            radius: isMax ? 5 : 3.5,
+            color: AppColors.orange500,
+            strokeColor: colors.bgSurface,
+            strokeWidth: 2,
           );
         },
       ),
-      titlesData: FlTitlesData(
-        topTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
-        ),
-        rightTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
-        ),
-        leftTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            reservedSize: 50.w,
-            getTitlesWidget: (value, meta) {
-              if (value == meta.max || value == meta.min) {
-                return const SizedBox.shrink();
-              }
-              final display = (value / 10000).toStringAsFixed(0);
-              return Padding(
-                padding: EdgeInsets.only(right: 4.w),
-                child: Text(
-                  '${display}만',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textTertiary,
-                    fontSize: 10.sp,
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        bottomTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            reservedSize: 28.h,
-            interval: 1,
-            getTitlesWidget: (value, meta) {
-              final index = value.toInt();
-              if (index < 0 || index >= data.length) {
-                return const SizedBox.shrink();
-              }
-
-              final showLabel = data.length <= 7 ||
-                  index % (data.length ~/ 5).clamp(1, data.length) == 0 ||
-                  index == data.length - 1;
-
-              if (!showLabel) {
-                return const SizedBox.shrink();
-              }
-
-              final date = data[index].date;
-              final label = isWeekly
-                  ? '${date.month}/${date.day}'
-                  : '${date.day}일';
-
-              return Padding(
-                padding: EdgeInsets.only(top: 8.h),
-                child: Text(
-                  label,
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textTertiary,
-                    fontSize: 10.sp,
-                  ),
-                ),
-              );
-            },
-          ),
+      belowBarData: BarAreaData(
+        show: true,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            AppColors.orange500.withValues(alpha: 0.2),
+            AppColors.orange500.withValues(alpha: 0),
+          ],
         ),
       ),
-      borderData: FlBorderData(show: false),
-      minX: 0,
-      maxX: (data.length - 1).toDouble().clamp(0, double.infinity),
-      minY: 0,
-      maxY: maxY,
-      lineBarsData: [
-        LineChartBarData(
-          spots: spots,
-          isCurved: true,
-          curveSmoothness: 0.3,
-          color: AppColors.orange500,
-          barWidth: 2.5,
-          isStrokeCapRound: true,
-          dotData: FlDotData(
-            show: data.length <= 7,
-            getDotPainter: (spot, percent, barData, index) {
-              return FlDotCirclePainter(
-                radius: 3.r,
-                color: Colors.white,
-                strokeWidth: 2,
-                strokeColor: AppColors.orange500,
-              );
-            },
-          ),
-          belowBarData: BarAreaData(
-            show: true,
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                AppColors.orange500.withValues(alpha: 0.3),
-                AppColors.orange500.withValues(alpha: 0.0),
+    );
+
+    return Column(
+      children: [
+        Expanded(
+          child: LineChart(
+            LineChartData(
+              gridData: const FlGridData(show: false),
+              titlesData: FlTitlesData(
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 28.h,
+                    getTitlesWidget: (value, meta) {
+                      final i = value.toInt();
+                      if (value != i.toDouble() || i < 0 || i >= data.length) {
+                        return const SizedBox.shrink();
+                      }
+                      final date = data[i].date;
+                      final label = isWeekly
+                          ? ['월', '화', '수', '목', '금', '토', '일'][i % 7]
+                          : '${i + 1}주';
+                      return Padding(
+                        padding: EdgeInsets.only(top: 4.h),
+                        child: Text(
+                          label,
+                          style: AppTextStyles.caption.copyWith(
+                            color: i == maxIndex || i == minIndex
+                                ? colors.textSecondary
+                                : colors.textTertiary,
+                            fontWeight: i == maxIndex || i == minIndex
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              borderData: FlBorderData(show: false),
+              minX: -0.3,
+              maxX: spots.length - 1 + 0.3,
+              minY: 0,
+              maxY: maxY,
+              lineBarsData: [barData],
+              showingTooltipIndicators: [
+                ShowingTooltipIndicators([
+                  LineBarSpot(barData, 0, spots[maxIndex]),
+                ]),
+                ShowingTooltipIndicators([
+                  LineBarSpot(barData, 0, spots[minIndex]),
+                ]),
               ],
+              lineTouchData: LineTouchData(
+                enabled: true,
+                handleBuiltInTouches: true,
+                touchTooltipData: LineTouchTooltipData(
+                  getTooltipColor: (spot) => spot.x == maxIndex.toDouble()
+                      ? AppColors.orange500
+                      : colors.textPrimary,
+                  tooltipRoundedRadius: 8.r,
+                  tooltipPadding: EdgeInsets.symmetric(
+                    horizontal: 10.w,
+                    vertical: 6.h,
+                  ),
+                  getTooltipItems: (touchedSpots) {
+                    return touchedSpots.map((spot) {
+                      return LineTooltipItem(
+                        CurrencyFormatter.formatKRW(spot.y.toInt()),
+                        AppTextStyles.caption.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    }).toList();
+                  },
+                ),
+                getTouchedSpotIndicator: (barData, spotIndexes) {
+                  return spotIndexes.map((_) {
+                    return TouchedSpotIndicatorData(
+                      FlLine(
+                        color: AppColors.orange500.withValues(alpha: 0.4),
+                        strokeWidth: 1.5,
+                      ),
+                      FlDotData(
+                        getDotPainter: (spot, percent, bar, i) =>
+                            FlDotCirclePainter(
+                          radius: 5.r,
+                          color: AppColors.orange500,
+                          strokeWidth: 2,
+                          strokeColor: colors.bgSurface,
+                        ),
+                      ),
+                    );
+                  }).toList();
+                },
+              ),
             ),
           ),
         ),
       ],
-      lineTouchData: LineTouchData(
-        touchTooltipData: LineTouchTooltipData(
-          getTooltipItems: (touchedSpots) {
-            return touchedSpots.map((spot) {
-              final amount = spot.y.toInt();
-              final formatted = _formatAmount(amount);
-              return LineTooltipItem(
-                formatted,
-                AppTextStyles.caption.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 11.sp,
-                ),
-              );
-            }).toList();
-          },
-        ),
-      ),
     );
-  }
-
-  String _formatAmount(int amount) {
-    if (amount >= 10000) {
-      final man = amount ~/ 10000;
-      final remainder = amount % 10000;
-      if (remainder == 0) {
-        return '${man}만원';
-      }
-      return '${man}만${remainder}원';
-    }
-    return '${amount}원';
   }
 }

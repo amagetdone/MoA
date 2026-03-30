@@ -1,0 +1,288 @@
+import 'dart:convert';
+
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:more_app/domain/entities/app_notification_item.dart';
+import 'package:more_app/presentation/navigation/app_router.dart';
+
+class NotificationInboxPersistence {
+  static const _boxName = 'more_notification_inbox_box';
+  static const _storagePath = 'more_app';
+  static const _maxItems = 100;
+  static const _ownerUserIdKey = '__owner_user_id__';
+
+  static bool _initialized = false;
+  static Box<String>? _box;
+
+  static Future<void> ensureReady() async {
+    if (_initialized && _box != null && _box!.isOpen) {
+      return;
+    }
+
+    await Hive.initFlutter(_storagePath);
+    _box = await Hive.openBox<String>(_boxName);
+    _initialized = true;
+  }
+
+  static Future<List<AppNotificationItem>> getNotifications() async {
+    await ensureReady();
+    final box = _box!;
+    final items =
+        box
+            .toMap()
+            .entries
+            .where((entry) => !_isMetadataKey(entry.key.toString()))
+            .map(
+              (entry) => AppNotificationItem.fromJson(
+                jsonDecode(entry.value) as Map<String, dynamic>,
+              ),
+            )
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return items;
+  }
+
+  static Future<void> saveNotification(AppNotificationItem item) async {
+    await ensureReady();
+    final box = _box!;
+    await box.put(item.id, jsonEncode(item.toJson()));
+
+    final items = await getNotifications();
+    if (items.length > _maxItems) {
+      for (final overflow in items.skip(_maxItems)) {
+        await box.delete(overflow.id);
+      }
+    }
+  }
+
+  static Future<void> syncOwner(String? ownerUserId) async {
+    await ensureReady();
+    final box = _box!;
+    final normalizedOwner = ownerUserId?.trim() ?? '';
+    final currentOwner = box.get(_ownerUserIdKey) ?? '';
+
+    if (currentOwner == normalizedOwner) {
+      return;
+    }
+
+    await clearNotifications();
+
+    if (normalizedOwner.isEmpty) {
+      await box.delete(_ownerUserIdKey);
+      return;
+    }
+
+    await box.put(_ownerUserIdKey, normalizedOwner);
+  }
+
+  static Future<void> saveRemoteMessage(
+    RemoteMessage message, {
+    bool markAsRead = false,
+  }) async {
+    final item = mapRemoteMessageToInboxItem(message, markAsRead: markAsRead);
+    if (item == null) {
+      return;
+    }
+    await saveNotification(item);
+  }
+
+  static Future<void> savePayloadEnvelope(
+    Map<String, dynamic> envelope, {
+    bool markAsRead = false,
+  }) async {
+    final item = mapPayloadEnvelopeToInboxItem(
+      envelope,
+      markAsRead: markAsRead,
+    );
+    if (item == null) {
+      return;
+    }
+    await saveNotification(item);
+  }
+
+  static Future<void> markAsRead(String id) async {
+    await ensureReady();
+    final box = _box!;
+    final value = box.get(id);
+    if (value == null) {
+      return;
+    }
+
+    final item = AppNotificationItem.fromJson(
+      jsonDecode(value) as Map<String, dynamic>,
+    );
+    await box.put(id, jsonEncode(item.copyWith(isRead: true).toJson()));
+  }
+
+  static Future<void> markAllAsRead() async {
+    final items = await getNotifications();
+    for (final item in items) {
+      if (!item.isRead) {
+        await markAsRead(item.id);
+      }
+    }
+  }
+
+  static Future<void> deleteNotification(String id) async {
+    await ensureReady();
+    await _box!.delete(id);
+  }
+
+  static Future<void> clearNotifications() async {
+    await ensureReady();
+    final keysToDelete = _box!.keys
+        .whereType<String>()
+        .where((key) => !_isMetadataKey(key))
+        .toList();
+    if (keysToDelete.isEmpty) {
+      return;
+    }
+    await _box!.deleteAll(keysToDelete);
+  }
+
+  static String? resolveRouteForItem(AppNotificationItem item) {
+    return _resolveRoute(
+      item.payload,
+      title: item.title,
+      body: item.body,
+      fallbackRoute: item.route,
+    );
+  }
+
+  static AppNotificationItem? mapRemoteMessageToInboxItem(
+    RemoteMessage message, {
+    bool markAsRead = false,
+  }) {
+    final title =
+        message.notification?.title ?? message.data['title']?.toString() ?? '';
+    final body =
+        message.notification?.body ?? message.data['body']?.toString() ?? '';
+
+    if (title.isEmpty && body.isEmpty) {
+      return null;
+    }
+
+    final createdAt = message.sentTime ?? DateTime.now();
+    final id =
+        message.messageId ??
+        '${createdAt.microsecondsSinceEpoch}-${title.hashCode}-${body.hashCode}';
+
+    final payload = message.data.map(
+      (key, value) => MapEntry(key, value.toString()),
+    );
+
+    return AppNotificationItem(
+      id: id,
+      title: title,
+      body: body,
+      createdAt: createdAt,
+      type: payload['type'] ?? 'general',
+      route: _resolveRoute(payload, title: title, body: body),
+      payload: payload,
+      isRead: markAsRead,
+    );
+  }
+
+  static AppNotificationItem? mapPayloadEnvelopeToInboxItem(
+    Map<String, dynamic> envelope, {
+    bool markAsRead = false,
+  }) {
+    final title = envelope['title']?.toString() ?? '';
+    final body = envelope['body']?.toString() ?? '';
+
+    if (title.isEmpty && body.isEmpty) {
+      return null;
+    }
+
+    final payload = (envelope['data'] as Map<dynamic, dynamic>? ?? const {})
+        .map((key, value) => MapEntry(key.toString(), value?.toString() ?? ''));
+
+    final sentTimeRaw = envelope['sentTime']?.toString();
+    final createdAt = DateTime.tryParse(sentTimeRaw ?? '') ?? DateTime.now();
+    final id =
+        envelope['messageId']?.toString() ??
+        '${createdAt.microsecondsSinceEpoch}-${title.hashCode}-${body.hashCode}';
+
+    return AppNotificationItem(
+      id: id,
+      title: title,
+      body: body,
+      createdAt: createdAt,
+      type: payload['type'] ?? 'general',
+      route: _resolveRoute(payload, title: title, body: body),
+      payload: payload,
+      isRead: markAsRead,
+    );
+  }
+
+  static String? _resolveRoute(
+    Map<String, String> payload, {
+    String title = '',
+    String body = '',
+    String? fallbackRoute,
+  }) {
+    final type = payload['type']?.trim().toUpperCase() ?? '';
+    final accountNo = _resolveAccountNo(payload);
+    if (_isAccountTransactionAlert(type: type, title: title, body: body)) {
+      return AppRoutes.assetLocation(accountNo: accountNo);
+    }
+
+    final explicitRoute = payload['route'];
+    if (explicitRoute != null && explicitRoute.isNotEmpty) {
+      return explicitRoute;
+    }
+
+    if (fallbackRoute != null && fallbackRoute.isNotEmpty) {
+      return fallbackRoute;
+    }
+
+    final planId = payload['planId'];
+
+    if (type == 'PLAN_AI_COMPLETED' && planId != null && planId.isNotEmpty) {
+      final status = payload['aiPipelineStatus']?.toUpperCase();
+      if (status == 'SUCCEEDED') {
+        return AppRoutes.goalPreviewLocation(planId);
+      }
+      return AppRoutes.goalDetailLocation(planId);
+    }
+
+    return null;
+  }
+
+  static String? _resolveAccountNo(Map<String, String> payload) {
+    for (final key in const [
+      'accountNo',
+      'accountNumber',
+      'sourceId',
+      'accountId',
+    ]) {
+      final value = payload[key]?.trim();
+      if (value != null && value.isNotEmpty) {
+        return value;
+      }
+    }
+
+    return null;
+  }
+
+  static bool _isAccountTransactionAlert({
+    required String type,
+    required String title,
+    required String body,
+  }) {
+    const alertTypeKeywords = ['PAYMENT', 'DEPOSIT', 'WITHDRAW', 'TRANSACTION'];
+    if (alertTypeKeywords.any(type.contains)) {
+      return true;
+    }
+
+    final compactText = '$title$body'.replaceAll(' ', '');
+    return compactText.contains('결제알림') ||
+        compactText.contains('입금알림') ||
+        compactText.contains('출금알림') ||
+        compactText.contains('입출금');
+  }
+
+  static bool _isMetadataKey(String key) {
+    return key == _ownerUserIdKey;
+  }
+}

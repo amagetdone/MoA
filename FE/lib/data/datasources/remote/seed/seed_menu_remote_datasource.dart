@@ -1,7 +1,6 @@
 import 'package:more_app/data/datasources/remote/menu_remote_datasource.dart';
 import 'package:more_app/data/datasources/remote/seed/seed_data_store.dart';
 import 'package:more_app/data/models/app_snapshot_dto.dart';
-import 'package:more_app/domain/entities/goal.dart';
 import 'package:more_app/domain/entities/menu_summary.dart';
 
 class SeedMenuRemoteDataSource implements MenuRemoteDataSource {
@@ -34,10 +33,10 @@ class SeedMenuRemoteDataSource implements MenuRemoteDataSource {
 
   MenuSummary _toMenuSummary(AppSnapshotDto snapshot) {
     final activeGoalCount = snapshot.goals
-        .where((goal) => goal.status == GoalStatus.inProgress)
+        .where((goal) => goal.isEffectivelyInProgress)
         .length;
     final achievedGoalCount = snapshot.goals
-        .where((goal) => goal.status == GoalStatus.achieved)
+        .where((goal) => goal.isEffectivelyAchieved)
         .length;
     final totalSaved = snapshot.goals.fold(0, (sum, goal) {
       return sum + goal.currentAmount;

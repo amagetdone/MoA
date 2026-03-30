@@ -75,6 +75,31 @@ class SeedAccountRemoteDataSource implements AccountRemoteDataSource {
   }
 
   @override
+  Future<bool> confirmAccount(String accountNo) async {
+    await Future.delayed(const Duration(milliseconds: 220));
+    return true;
+  }
+
+  @override
+  Future<Map<String, dynamic>> requestVerification(String accountNo) async {
+    await Future.delayed(const Duration(milliseconds: 220));
+    return {
+      'verificationId': 1,
+      'accountNo': accountNo,
+      'authText': 'SEEDTEST',
+      'transactionUniqueNo': 1,
+      'requestedAt': DateTime.now().toIso8601String(),
+      'status': 'REQUESTED',
+    };
+  }
+
+  @override
+  Future<bool> checkVerification({required String accountNo, required String authCode}) async {
+    await Future.delayed(const Duration(milliseconds: 220));
+    return true;
+  }
+
+  @override
   Future<Transaction?> findTransactionById(String id) async {
     await Future.delayed(const Duration(milliseconds: 220));
     final snapshot = await _dataStore.ensureSessionSnapshot();
@@ -84,5 +109,18 @@ class SeedAccountRemoteDataSource implements AccountRemoteDataSource {
       }
     }
     return null;
+  }
+
+  @override
+  Future<List<Transaction>> fetchTransactions({
+    String? fromDate,
+    String? toDate,
+    String? analysisInclusion,
+    int page = 0,
+    int size = 50,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 220));
+    final snapshot = await _dataStore.ensureSessionSnapshot();
+    return snapshot.transactions;
   }
 }

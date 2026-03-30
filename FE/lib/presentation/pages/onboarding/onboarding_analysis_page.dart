@@ -1,168 +1,210 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
+import 'package:more_app/core/utils/currency_formatter.dart';
+import 'package:more_app/domain/entities/spending.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/pages/home/widgets/spending_rose_chart.dart';
+import 'package:more_app/presentation/pages/spending/widgets/category_list.dart';
+import 'package:more_app/presentation/viewmodels/onboarding_viewmodel.dart';
 import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
 import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
 import 'package:more_app/presentation/widgets/common/more_card.dart';
 
-class OnboardingAnalysisPage extends StatelessWidget {
+class OnboardingAnalysisPage extends ConsumerWidget {
   const OnboardingAnalysisPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColors.of(context);
+    final analysis = ref.watch(onboardingViewModelProvider).analysisResult;
+
+    final averageIncome = analysis?.averageIncome ?? 0;
+    final averageExpense = analysis?.averageExpense ?? 0;
+    final freeAmount = analysis?.remainingAmount ?? 0;
+    final categories = analysis?.categoryExpenses ?? const <CategoryExpense>[];
+    final categoryItems = categories
+        .map(
+          (category) => SpendingCategory(
+            name: category.categoryName,
+            amount: category.amount,
+            budget: averageExpense,
+            colorValue: AppColors.orange500.toARGB32(),
+            iconKey: 'more_horiz',
+            ratio: averageExpense > 0
+                ? (category.amount / averageExpense) * 100
+                : 0,
+          ),
+        )
+        .toList();
+
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: AppColors.bgPrimary,
-        appBar: MoreAppBar(
-          title: '분석 결과',
+        backgroundColor: colors.bgPrimary,
+        appBar: const MoreAppBar(
+          title: '',
           showBack: false,
+          showNotification: false,
         ),
         body: SingleChildScrollView(
-          padding: EdgeInsets.all(24.w),
+          padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 24.h),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '3개월 간 소비패턴을 분석했어요.',
-                style: AppTextStyles.bodyMd.copyWith(
-                  color: AppColors.gray500,
-                  fontSize: 14.sp,
+                '소비 패턴 분석',
+                style: AppTextStyles.headingMd.copyWith(
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.bold,
+                  color: colors.textPrimary,
                 ),
               ),
-              SizedBox(height: 20.h),
-
-              // Stats card
+              SizedBox(height: 4.h),
+              Text(
+                analysis?.summaryText ?? '지난 3개월 소비패턴을 분석한 내용이에요.',
+                style: AppTextStyles.bodySm.copyWith(
+                  color: colors.textTertiary,
+                  fontSize: 12.sp,
+                ),
+              ),
+              SizedBox(height: 24.h),
               MoreCard(
+                padding: EdgeInsets.all(24.w),
                 child: Column(
                   children: [
-                    _StatRow(label: '평균 수입', value: '3,000,000원'),
-                    SizedBox(height: 8.h),
-                    _StatRow(
-                      label: '평균 지출',
-                      value: '1,900,000원',
-                      valueColor: AppColors.orange500,
+                    _SummaryRow(
+                      label: '평균 수입',
+                      value: averageIncome,
+                      color: colors.textPrimary,
                     ),
-                    Divider(height: 24.h),
-                    _StatRow(
-                      label: '남은 금액',
-                      value: '1,100,000원',
-                      isBold: true,
-                      valueColor: const Color(0xFF4CAF50),
+                    SizedBox(height: 16.h),
+                    _SummaryRow(
+                      label: '평균 지출',
+                      value: averageExpense,
+                      color: AppColors.orange500,
                     ),
                   ],
                 ),
               ),
-              SizedBox(height: 16.h),
-
-              // Donut chart card
+              SizedBox(height: 20.h),
               MoreCard(
-                child: Column(
+                padding: EdgeInsets.all(24.w),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Donut chart
-                    Center(
-                      child: SizedBox(
-                        width: 200.w,
-                        height: 200.w,
-                        child: CustomPaint(
-                          painter: _DonutChartPainter(),
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  '1,900,000원',
-                                  style: AppTextStyles.headingMd.copyWith(
-                                    color: AppColors.gray900,
-                                    fontSize: 16.sp,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                SizedBox(height: 2.h),
-                                Text(
-                                  '평균 지출',
-                                  style: AppTextStyles.bodySm.copyWith(
-                                    color: AppColors.gray500,
-                                    fontSize: 12.sp,
-                                  ),
-                                ),
-                              ],
+                    Container(
+                      width: 44.w,
+                      height: 44.w,
+                      decoration: BoxDecoration(
+                        color: colors.statusSuccess.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(14.r),
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.account_balance_wallet_rounded,
+                        color: const Color(0xFF53A65A),
+                        size: 22.w,
+                      ),
+                    ),
+                    SizedBox(width: 14.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '여유 자금',
+                            style: AppTextStyles.bodyMd.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16.sp,
+                              color: colors.textPrimary,
                             ),
                           ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
-
-                    // Legend
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _LegendDot(
-                            color: AppColors.orange500, label: '고정비 65%'),
-                        SizedBox(width: 24.w),
-                        _LegendDot(
-                            color: const Color(0xFF4CAF50), label: '변동비 35%'),
-                      ],
-                    ),
-                    SizedBox(height: 16.h),
-
-                    // Yellow banner
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 16.w, vertical: 12.h),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF8E1),
-                        borderRadius: BorderRadius.circular(8.r),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.lightbulb_outline,
-                              size: 20.w, color: const Color(0xFFFFA000)),
-                          SizedBox(width: 8.w),
-                          Expanded(
-                            child: Text(
-                              '식비 절약이 필요해보여요.',
-                              style: AppTextStyles.bodySm.copyWith(
-                                color: const Color(0xFFF57C00),
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13.sp,
-                              ),
+                          SizedBox(height: 4.h),
+                          Text(
+                            '최근 3개월 평균 수입에서 평균 지출을 제외한 금액이에요.',
+                            style: AppTextStyles.caption.copyWith(
+                              color: colors.textTertiary,
+                              fontSize: 12.sp,
+                            ),
+                          ),
+                          SizedBox(height: 12.h),
+                          Text(
+                            CurrencyFormatter.formatKRW(freeAmount),
+                            style: AppTextStyles.headingMd.copyWith(
+                              color: const Color(0xFF53A65A),
+                              fontWeight: FontWeight.w800,
+                              fontSize: 20.sp,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    SizedBox(height: 20.h),
-
-                    // Category header
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        '카테고리별 지출',
+                  ],
+                ),
+              ),
+              SizedBox(height: 20.h),
+              if (categoryItems.isNotEmpty)
+                SpendingRoseChart(
+                  categories: categoryItems,
+                  title: '카테고리별 지출 분석',
+                  subtitle: '최근 3개월 평균 지출 기준',
+                ),
+              if (categoryItems.isEmpty)
+                MoreCard(
+                  padding: EdgeInsets.all(24.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '카테고리별 지출 분석',
                         style: AppTextStyles.bodyMd.copyWith(
-                          color: AppColors.gray900,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14.sp,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16.sp,
+                          color: colors.textPrimary,
                         ),
                       ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        '분석할 카테고리 지출 데이터가 아직 없어요.',
+                        style: AppTextStyles.caption.copyWith(
+                          color: colors.textTertiary,
+                          fontSize: 12.sp,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              SizedBox(height: 20.h),
+              MoreCard(
+                padding: EdgeInsets.all(24.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '카테고리별 지출',
+                      style: AppTextStyles.bodyMd.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16.sp,
+                        color: colors.textPrimary,
+                      ),
                     ),
-                    SizedBox(height: 12.h),
-
-                    // Category bars
-                    _CategoryBar(
-                        name: '식비', amount: '750,000원', ratio: 0.75),
-                    SizedBox(height: 12.h),
-                    _CategoryBar(
-                        name: '여가비', amount: '550,000원', ratio: 0.55),
-                    SizedBox(height: 12.h),
-                    _CategoryBar(
-                        name: '교통비', amount: '150,000원', ratio: 0.15),
+                    SizedBox(height: 4.h),
+                    Text(
+                      '최근 3개월 평균 지출 대비 카테고리별 금액이에요.',
+                      style: AppTextStyles.caption.copyWith(
+                        color: colors.textTertiary,
+                        fontSize: 12.sp,
+                      ),
+                    ),
+                    SizedBox(height: 24.h),
+                    CategoryList(
+                      categories: categoryItems,
+                      totalAmount: averageExpense,
+                    ),
                   ],
                 ),
               ),
@@ -171,169 +213,47 @@ class OnboardingAnalysisPage extends StatelessWidget {
         ),
         bottomNavigationBar: MoreBottomButton(
           text: '다음',
-          progress: 5 / 6,
-          onPressed: () {
-            context.push(AppRoutes.onboardingPlan);
-          },
+          progress: 5 / 7,
+          onPressed: () => context.go(AppRoutes.onboardingGoal),
         ),
       ),
     );
   }
 }
 
-class _StatRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool isBold;
-  final Color? valueColor;
-
-  const _StatRow({
+class _SummaryRow extends StatelessWidget {
+  const _SummaryRow({
     required this.label,
     required this.value,
-    this.isBold = false,
-    this.valueColor,
+    required this.color,
   });
+
+  final String label;
+  final int value;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: AppTextStyles.bodySm.copyWith(
-            color: AppColors.gray500,
-            fontWeight: isBold ? FontWeight.w600 : FontWeight.w400,
-            fontSize: 13.sp,
+          style: AppTextStyles.bodyMd.copyWith(
+            color: colors.textSecondary,
+            fontSize: 15.sp,
           ),
         ),
         Text(
-          value,
-          style:
-              (isBold ? AppTextStyles.bodyLg : AppTextStyles.bodySm).copyWith(
-            color: valueColor ?? AppColors.gray900,
-            fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
-            fontSize: isBold ? 16.sp : 13.sp,
+          CurrencyFormatter.formatKRW(value),
+          style: AppTextStyles.bodyLg.copyWith(
+            color: color,
+            fontWeight: FontWeight.bold,
+            fontSize: 17.sp,
           ),
         ),
       ],
     );
   }
-}
-
-class _LegendDot extends StatelessWidget {
-  final Color color;
-  final String label;
-
-  const _LegendDot({required this.color, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10.w,
-          height: 10.w,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        SizedBox(width: 6.w),
-        Text(
-          label,
-          style: AppTextStyles.bodySm.copyWith(
-            color: AppColors.gray700,
-            fontSize: 13.sp,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CategoryBar extends StatelessWidget {
-  final String name;
-  final String amount;
-  final double ratio;
-
-  const _CategoryBar({
-    required this.name,
-    required this.amount,
-    required this.ratio,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              name,
-              style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.gray700,
-                fontSize: 13.sp,
-              ),
-            ),
-            Text(
-              amount,
-              style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.gray900,
-                fontWeight: FontWeight.w600,
-                fontSize: 13.sp,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 6.h),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4.r),
-          child: SizedBox(
-            height: 8.h,
-            child: LinearProgressIndicator(
-              value: ratio,
-              backgroundColor: AppColors.gray100,
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(AppColors.orange500),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DonutChartPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
-    const strokeWidth = 28.0;
-    final rect =
-        Rect.fromCircle(center: center, radius: radius - strokeWidth / 2);
-
-    final fixedPaint = Paint()
-      ..color = AppColors.orange500
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.butt;
-
-    final variablePaint = Paint()
-      ..color = const Color(0xFF4CAF50)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.butt;
-
-    const startAngle = -math.pi / 2;
-    const fixedSweep = 2 * math.pi * 0.65;
-    const variableSweep = 2 * math.pi * 0.35;
-
-    canvas.drawArc(rect, startAngle, fixedSweep, false, fixedPaint);
-    canvas.drawArc(
-        rect, startAngle + fixedSweep, variableSweep, false, variablePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

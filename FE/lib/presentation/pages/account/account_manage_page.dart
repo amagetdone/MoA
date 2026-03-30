@@ -4,215 +4,243 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:more_app/core/theme/app_colors.dart';
 import 'package:more_app/core/theme/app_text_styles.dart';
-import 'package:more_app/core/utils/currency_formatter.dart';
-import 'package:more_app/domain/entities/account.dart';
-import 'package:more_app/presentation/viewmodels/account_viewmodel.dart';
-import 'package:more_app/presentation/widgets/common/bank_icon.dart';
-import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
-import 'package:more_app/presentation/widgets/common/more_card.dart';
 import 'package:more_app/presentation/navigation/app_router.dart';
+import 'package:more_app/presentation/providers/app_data_providers.dart';
+import 'package:more_app/presentation/widgets/common/more_app_bar.dart';
+import 'package:more_app/presentation/widgets/common/more_bottom_button.dart';
+import 'package:more_app/presentation/viewmodels/account_viewmodel.dart';
+import 'package:more_app/presentation/viewmodels/home_viewmodel.dart';
+import 'package:more_app/presentation/widgets/common/bank_icon.dart';
+import 'package:more_app/presentation/widgets/common/more_card.dart';
 
-class AccountManagePage extends ConsumerWidget {
-  const AccountManagePage({super.key});
+class AccountManagePage extends ConsumerStatefulWidget {
+  final bool isOnboarding;
+
+  const AccountManagePage({super.key, this.isOnboarding = false});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(accountViewModelProvider);
-
-    if (state.isLoading) {
-      return Scaffold(
-        backgroundColor: AppColors.bgPrimary,
-        appBar: MoreAppBar(title: '계좌 관리'),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (state.errorMessage != null) {
-      return Scaffold(
-        backgroundColor: AppColors.bgPrimary,
-        appBar: MoreAppBar(title: '계좌 관리'),
-        body: Center(
-          child: Text(
-            '계좌 목록을 불러오지 못했습니다.\n${state.errorMessage!}',
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
-      appBar: MoreAppBar(title: '계좌 관리'),
-      body: ListView(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-        children: [
-          // Account list
-          ...state.accounts.map((account) {
-            return Padding(
-              padding: EdgeInsets.only(bottom: 12.h),
-              child: _AccountCard(
-                account: account,
-                onDelete: () => _showDeleteDialog(context, ref, account),
-              ),
-            );
-          }),
-
-          SizedBox(height: 8.h),
-
-          // Add account button
-          GestureDetector(
-            onTap: () => context.push(AppRoutes.accountAdd),
-            child: Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(vertical: 20.h),
-              decoration: BoxDecoration(
-                border: Border.all(color: AppColors.borderDefault),
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.add_circle_outline, size: 24.w, color: AppColors.orange500),
-                  SizedBox(width: 8.w),
-                  Text(
-                    '새로운 계좌 연결하기',
-                    style: AppTextStyles.bodyMd.copyWith(
-                      color: AppColors.orange500,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15.sp,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SizedBox(height: 24.h),
-        ],
-      ),
-    );
-  }
-
-  void _showDeleteDialog(BuildContext context, WidgetRef ref, Account account) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(
-          '계좌 삭제',
-          style: AppTextStyles.headingMd.copyWith(color: AppColors.textPrimary),
-        ),
-        content: Text(
-          '${account.bankName} ${account.accountNumber}\n계좌를 삭제하시겠습니까?',
-          style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(
-              '취소',
-              style: AppTextStyles.bodyMd.copyWith(
-                color: AppColors.textTertiary,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              ref
-                  .read(accountViewModelProvider.notifier)
-                  .removeAccount(account.id);
-            },
-            child: Text(
-              '삭제',
-              style: AppTextStyles.bodyMd.copyWith(color: AppColors.red500),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  ConsumerState<AccountManagePage> createState() => _AccountManagePageState();
 }
 
-class _AccountCard extends StatelessWidget {
-  final Account account;
-  final VoidCallback onDelete;
-
-  const _AccountCard({required this.account, required this.onDelete});
+class _AccountManagePageState extends ConsumerState<AccountManagePage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(accountViewModelProvider.notifier).loadData();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MoreCard(
-      child: Row(
-        children: [
-          BankIcon(bankName: account.bankName, size: 40.w),
-          SizedBox(width: 14.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      account.bankName,
-                      style: AppTextStyles.bodyMd.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14.sp,
-                      ),
-                    ),
-                    if (account.isPrimary) ...[
-                      SizedBox(width: 6.w),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 6.w,
-                          vertical: 2.h,
+    final colors = AppColors.of(context);
+    final accountState = ref.watch(accountViewModelProvider);
+    final accounts = accountState.accounts;
+
+    return Scaffold(
+      backgroundColor: colors.bgPrimary,
+      appBar: MoreAppBar(
+        title: '',
+        showBack: true,
+        onBack: widget.isOnboarding
+            ? () => context.go(AppRoutes.onboarding)
+            : () => context.pop(),
+        skipText: widget.isOnboarding ? '건너뛰기' : null,
+        onSkip: widget.isOnboarding ? () => context.go(AppRoutes.home) : null,
+        showNotification: false,
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 20.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.isOnboarding ? '계좌 추가' : '계좌 관리',
+              style: AppTextStyles.headingMd.copyWith(color: colors.textPrimary, fontSize: 20.sp, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              accounts.isEmpty
+                  ? '연결된 계좌가 없어요.'
+                  : '총 ${accounts.length}개의 계좌가 연결되었어요.',
+              style: AppTextStyles.caption.copyWith(color: colors.textTertiary, fontSize: 12.sp),
+            ),
+            SizedBox(height: 20.h),
+
+            if (accounts.isNotEmpty) ...[
+              Text('연결된 계좌', style: AppTextStyles.bodyMd.copyWith(color: colors.textSecondary, fontWeight: FontWeight.bold)),
+              SizedBox(height: 12.h),
+              ...accounts.map((account) => Padding(
+                padding: EdgeInsets.only(bottom: 12.h),
+                child: Opacity(
+                  opacity: account.verified ? 1.0 : 0.45,
+                  child: MoreCard(
+                    padding: EdgeInsets.all(20.w),
+                    child: Row(
+                      children: [
+                        Opacity(
+                          opacity: account.verified ? 1.0 : 0.65,
+                          child: BankIcon(bankName: account.bankName, size: 48.w),
                         ),
-                        decoration: BoxDecoration(
-                          color: AppColors.orange50,
-                          borderRadius: BorderRadius.circular(4.r),
-                        ),
-                        child: Text(
-                          '주계좌',
-                          style: AppTextStyles.caption.copyWith(
-                            color: AppColors.orange500,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 10.sp,
+                        SizedBox(width: 16.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(account.bankName, style: AppTextStyles.bodyMd.copyWith(color: colors.textPrimary, fontWeight: FontWeight.bold)),
+                                  if (!account.verified) ...[
+                                    SizedBox(width: 8.w),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                                      decoration: BoxDecoration(
+                                        color: colors.gray100,
+                                        borderRadius: BorderRadius.circular(4.r),
+                                      ),
+                                      child: Text(
+                                        '연결 해제됨',
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: colors.textSecondary,
+                                          fontSize: 11.sp,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              SizedBox(height: 4.h),
+                              Text(account.accountNumber, style: AppTextStyles.bodySm.copyWith(color: colors.textSecondary)),
+                            ],
                           ),
                         ),
+                        if (account.verified)
+                          GestureDetector(
+                            onTap: () {
+                              showDialog(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('계좌 연결 해제'),
+                                  content: Text('${account.bankName} 계좌 연결을 해제하시겠습니까?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(ctx).pop(),
+                                      child: const Text('취소'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () async {
+                                        Navigator.of(ctx).pop();
+                                        await ref.read(accountViewModelProvider.notifier).removeAccount(account.id);
+                                        ref.read(homeViewModelProvider.notifier).loadData();
+                                      },
+                                      child: Text('해제', style: TextStyle(color: AppColors.red500)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: Icon(Icons.delete_outline, color: colors.textTertiary, size: 24.w),
+                          )
+                        else
+                          Opacity(
+                            opacity: 1.0,
+                            child: GestureDetector(
+                              onTap: () async {
+                                try {
+                                  await ref
+                                      .read(accountRepositoryProvider)
+                                      .requestVerification(account.accountNumber);
+                                  if (!context.mounted) return;
+                                  context.push(
+                                    AppRoutes.accountVerify,
+                                    extra: {
+                                      'bankName': account.bankName,
+                                      'accountNumber': account.accountNumber,
+                                      'isOnboarding': false,
+                                    },
+                                  );
+                                } catch (e) {
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('인증 요청 중 오류가 발생했습니다.')),
+                                  );
+                                }
+                              },
+                              child: Container(
+                                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                                decoration: BoxDecoration(
+                                  color: AppColors.orange500,
+                                  borderRadius: BorderRadius.circular(8.r),
+                                ),
+                                child: Text(
+                                  '다시 연결',
+                                  style: AppTextStyles.bodySm.copyWith(
+                                    color: colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12.sp,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              )),
+            ],
+
+            // 새로운 계좌 연결하기 카드
+            GestureDetector(
+              onTap: () {
+                final route = widget.isOnboarding
+                    ? AppRoutes.onboardingAccountSelect
+                    : AppRoutes.accountAdd;
+                context.push(route);
+              },
+              child: MoreCard(
+                padding: EdgeInsets.symmetric(vertical: 40.h),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 56.w,
+                        height: 56.w,
+                        decoration: BoxDecoration(
+                          color: AppColors.orange500,
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: Icon(Icons.add, color: colors.white, size: 36.w),
+                      ),
+                      SizedBox(height: 16.h),
+                      Text('새로운 계좌 연결하기', style: AppTextStyles.bodyMd.copyWith(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16.sp)),
+                      SizedBox(height: 6.h),
+                      Text(
+                        '계좌를 추가하고 자산을 관리하세요 !',
+                        style: AppTextStyles.caption.copyWith(color: colors.textTertiary, fontSize: 13.sp),
                       ),
                     ],
-                  ],
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  account.accountNumber,
-                  style: AppTextStyles.bodySm.copyWith(
-                    color: AppColors.textTertiary,
-                    fontSize: 12.sp,
                   ),
                 ),
-                SizedBox(height: 4.h),
-                Text(
-                  CurrencyFormatter.formatKRW(account.balance),
-                  style: AppTextStyles.bodyMd.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14.sp,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-          IconButton(
-            onPressed: onDelete,
-            icon: Icon(
-              Icons.delete_outline,
-              color: AppColors.textTertiary,
-              size: 22.w,
-            ),
-            splashRadius: 20.r,
-          ),
-        ],
+          ],
+        ),
       ),
+      bottomNavigationBar: widget.isOnboarding
+          ? MoreBottomButton(
+              text: '다음',
+              progress: 4 / 7,
+              onPressed: () {
+                final hasAccounts = ref.read(accountViewModelProvider).accounts.isNotEmpty;
+                if (hasAccounts) {
+                  context.go(AppRoutes.onboardingLoading);
+                } else {
+                  context.go(AppRoutes.home);
+                }
+              },
+            )
+          : null,
     );
   }
 }

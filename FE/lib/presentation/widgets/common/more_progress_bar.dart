@@ -17,10 +17,12 @@ class MoreProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Container(
+      width: double.infinity,
       height: height,
       decoration: BoxDecoration(
-        color: backgroundColor ?? AppColors.gray100,
+        color: backgroundColor ?? colors.borderDefault,
         borderRadius: BorderRadius.circular(height / 2),
       ),
       child: FractionallySizedBox(
