@@ -98,7 +98,6 @@ class SyncBudgetStateOnReadUseCaseTest {
 	@Test
 	void triggersAllocationWhenCurrentWeekIsMissing() {
 		Integer userId = 1;
-		LocalDate today = LocalDate.of(2026, 3, 22);
 
 		given(budgetWeekRepository.findFirstByUserIdAndWeekStartDateLessThanEqualAndWeekEndDateGreaterThanEqualOrderByIdDesc(
 			eq(userId),
@@ -106,6 +105,7 @@ class SyncBudgetStateOnReadUseCaseTest {
 			any()
 		))
 			.willReturn(Optional.empty());
+		given(planRepository.findAllByUser_IdAndStatusAndDeletedFalse(userId, PlanStatus.ACTIVE)).willReturn(List.of());
 		given(syncLatestTransactionsUseCase.execute(userId, 3, false))
 			.willReturn(new TransactionSyncService.SyncResult(0, 0));
 
@@ -138,7 +138,7 @@ class SyncBudgetStateOnReadUseCaseTest {
 
 		useCase.execute(userId);
 
-		verify(triggerBudgetAllocationUseCase).execute(userId);
+		verify(triggerBudgetAllocationUseCase).executeIncludingPlanEnd(userId, activePlan.getEndDate());
 		verify(applyDailyGoalSavingAccrualUseCase).backfill(userId, null);
 		verify(syncLatestTransactionsUseCase).execute(userId, 3, false);
 		verify(runTransactionAnalysisUseCase, never()).execute(any(), anyInt());
@@ -209,7 +209,7 @@ class SyncBudgetStateOnReadUseCaseTest {
 		inOrder.verify(syncLatestTransactionsUseCase).execute(userId, 3, false);
 		inOrder.verify(runTransactionAnalysisUseCase).execute(userId, 3);
 		inOrder.verify(runTransactionAnalysisUseCase).execute(userId, java.time.YearMonth.of(2026, 3));
-		inOrder.verify(triggerBudgetAllocationUseCase).execute(userId);
+		inOrder.verify(triggerBudgetAllocationUseCase).executeIncludingPlanEnd(userId, activePlan.getEndDate());
 		inOrder.verify(applyDailyGoalSavingAccrualUseCase).backfill(userId, null);
 		inOrder.verify(budgetActualSpentRefreshService).refresh(userId, today);
 		inOrder.verify(budgetRolloverResyncService).resync(userId);

@@ -39,9 +39,17 @@ public class BudgetAllocationTriggerService {
 	public void trigger(Integer userId) {
 		LocalDate baseMonth = LocalDate.now(clock).withDayOfMonth(1);
 		LocalDate serviceStartDate = baseMonth.with(TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY));
-		LocalDate allocationEndDate = baseMonth.withDayOfMonth(baseMonth.lengthOfMonth())
-			.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-			.plusDays(6L);
+		LocalDate allocationEndDate = resolveCurrentMonthAllocationEnd(baseMonth);
+		triggerHistorical(userId, serviceStartDate, allocationEndDate);
+	}
+
+	public void triggerForPlan(Integer userId, LocalDate planEndDate) {
+		LocalDate baseMonth = LocalDate.now(clock).withDayOfMonth(1);
+		LocalDate serviceStartDate = baseMonth.with(TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY));
+		LocalDate allocationEndDate = resolveCurrentMonthAllocationEnd(baseMonth);
+		if (planEndDate != null && planEndDate.isAfter(allocationEndDate)) {
+			allocationEndDate = planEndDate;
+		}
 		triggerHistorical(userId, serviceStartDate, allocationEndDate);
 	}
 
@@ -81,6 +89,12 @@ public class BudgetAllocationTriggerService {
 			.or(() -> budgetMonthRepository.findFirstByUser_IdOrderByBaseDateDescIdDesc(userId))
 			.map(BudgetMonth::getTotalIncomeAmount)
 			.orElse(0L);
+	}
+
+	private LocalDate resolveCurrentMonthAllocationEnd(LocalDate baseMonth) {
+		return baseMonth.withDayOfMonth(baseMonth.lengthOfMonth())
+			.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+			.plusDays(6L);
 	}
 
 	private User userReference(Integer userId) {

@@ -120,7 +120,7 @@ public class SyncUserAssetsUseCase {
 			syncLinkedCardsUseCase.execute(userId, userKey, account.getAccountNo());
 		} catch (RuntimeException exception) {
 			log.warn(
-				"Test user asset sync skipped linked card sync. userId={}, accountNo={}, reason={}",
+				"Asset sync skipped linked card sync. userId={}, accountNo={}, reason={}",
 				userId,
 				account.getAccountNo(),
 				exception.getClass().getSimpleName()

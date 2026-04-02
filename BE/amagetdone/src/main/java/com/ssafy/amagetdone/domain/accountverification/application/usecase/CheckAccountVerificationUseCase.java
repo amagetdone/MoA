@@ -2,12 +2,18 @@
 package com.ssafy.amagetdone.domain.accountverification.application.usecase;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
+import com.ssafy.amagetdone.domain.account.api.dto.AccountAdminDto;
+import com.ssafy.amagetdone.domain.account.application.usecase.InitializeAccountTransactionOverridesUseCase;
+import com.ssafy.amagetdone.domain.account.application.usecase.InitializeCardTransactionOverridesUseCase;
 import com.ssafy.amagetdone.domain.account.application.usecase.SyncLinkedCardsUseCase;
 import com.ssafy.amagetdone.domain.account.infra.client.SsafyDemandDepositAccountApiClient;
 import com.ssafy.amagetdone.domain.account.infra.client.dto.DemandDepositAccountDto;
 import com.ssafy.amagetdone.domain.account.model.entity.Account;
+import com.ssafy.amagetdone.domain.account.model.entity.Card;
 import com.ssafy.amagetdone.domain.account.model.repository.AccountRepository;
+import com.ssafy.amagetdone.domain.account.model.repository.CardRepository;
 import com.ssafy.amagetdone.domain.accountverification.api.dto.AccountVerificationDto;
 import com.ssafy.amagetdone.domain.accountverification.exception.AccountVerificationErrorCode;
 import com.ssafy.amagetdone.domain.accountverification.exception.AccountVerificationException;
@@ -17,6 +23,8 @@ import com.ssafy.amagetdone.domain.accountverification.model.entity.AccountVerif
 import com.ssafy.amagetdone.domain.accountverification.model.repository.AccountVerificationRepository;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,24 +32,35 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class CheckAccountVerificationUseCase {
 
+	private static final Logger log = LoggerFactory.getLogger(CheckAccountVerificationUseCase.class);
+
 	private final AccountVerificationRepository accountVerificationRepository;
 	private final AccountRepository accountRepository;
 	private final SsafyAccountVerificationApiClient ssafyAccountVerificationApiClient;
 	private final SsafyDemandDepositAccountApiClient ssafyDemandDepositAccountApiClient;
 	private final SyncLinkedCardsUseCase syncLinkedCardsUseCase;
+	private final InitializeAccountTransactionOverridesUseCase initializeAccountTransactionOverridesUseCase;
+	private final InitializeCardTransactionOverridesUseCase initializeCardTransactionOverridesUseCase;
+	private final CardRepository cardRepository;
 
 	public CheckAccountVerificationUseCase(
 		AccountVerificationRepository accountVerificationRepository,
 		AccountRepository accountRepository,
 		SsafyAccountVerificationApiClient ssafyAccountVerificationApiClient,
 		SsafyDemandDepositAccountApiClient ssafyDemandDepositAccountApiClient,
-		SyncLinkedCardsUseCase syncLinkedCardsUseCase
+		SyncLinkedCardsUseCase syncLinkedCardsUseCase,
+		InitializeAccountTransactionOverridesUseCase initializeAccountTransactionOverridesUseCase,
+		InitializeCardTransactionOverridesUseCase initializeCardTransactionOverridesUseCase,
+		CardRepository cardRepository
 	) {
 		this.accountVerificationRepository = accountVerificationRepository;
 		this.accountRepository = accountRepository;
 		this.ssafyAccountVerificationApiClient = ssafyAccountVerificationApiClient;
 		this.ssafyDemandDepositAccountApiClient = ssafyDemandDepositAccountApiClient;
 		this.syncLinkedCardsUseCase = syncLinkedCardsUseCase;
+		this.initializeAccountTransactionOverridesUseCase = initializeAccountTransactionOverridesUseCase;
+		this.initializeCardTransactionOverridesUseCase = initializeCardTransactionOverridesUseCase;
+		this.cardRepository = cardRepository;
 	}
 
 	@Transactional
@@ -69,6 +88,7 @@ public class CheckAccountVerificationUseCase {
 
 			Account account = registerVerifiedAccount(user, verification.getAccountNo());
 			syncLinkedCardsUseCase.execute(user.getId(), user.getUserKey(), account.getAccountNo());
+			initializeDemoTransactionData(account);
 
 			return new AccountVerificationDto.CheckVerificationResponse(
 				verification.getId(),
@@ -82,6 +102,25 @@ public class CheckAccountVerificationUseCase {
 			verification.markFailed(exception.getErrorCode().message());
 			accountVerificationRepository.save(verification);
 			throw exception;
+		}
+	}
+
+	private void initializeDemoTransactionData(Account account) {
+		try {
+			initializeAccountTransactionOverridesUseCase.execute(
+				new AccountAdminDto.AccountTransactionInitRequest(account.getAccountNo())
+			);
+			List<Card> cards = cardRepository.findAllByWithdrawalAccount_User_Id(account.getUser().getId())
+				.stream()
+				.filter(card -> account.getAccountNo().equals(card.getWithdrawalAccount().getAccountNo()))
+				.toList();
+			for (Card card : cards) {
+				initializeCardTransactionOverridesUseCase.execute(
+					new AccountAdminDto.CardTransactionInitRequest(card.getCardNo())
+				);
+			}
+		} catch (RuntimeException e) {
+			log.warn("Demo transaction data init skipped. accountNo={}, reason={}", account.getAccountNo(), e.getMessage());
 		}
 	}
 

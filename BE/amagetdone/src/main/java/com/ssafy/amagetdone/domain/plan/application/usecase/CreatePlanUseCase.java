@@ -3,6 +3,7 @@ package com.ssafy.amagetdone.domain.plan.application.usecase;
 import java.time.Clock;
 import java.time.LocalDate;
 
+import com.ssafy.amagetdone.domain.budget.application.service.WeeklyGoalSavingAccrualService;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.repository.UserRepository;
 import com.ssafy.amagetdone.domain.budget.application.usecase.TriggerBudgetAllocationUseCase;
@@ -29,6 +30,7 @@ public class CreatePlanUseCase {
 	private final PlanRepository planRepository;
 	private final PlanPriorityService planPriorityService;
 	private final TriggerBudgetAllocationUseCase triggerBudgetAllocationUseCase;
+	private final WeeklyGoalSavingAccrualService weeklyGoalSavingAccrualService;
 	private final PlanCreationCurrentWeekAllocationPreservationService currentWeekAllocationPreservationService;
 	private final PlanCreationBudgetSummaryService planCreationBudgetSummaryService;
 	private final ApplicationEventPublisher applicationEventPublisher;
@@ -39,6 +41,7 @@ public class CreatePlanUseCase {
 		PlanRepository planRepository,
 		PlanPriorityService planPriorityService,
 		TriggerBudgetAllocationUseCase triggerBudgetAllocationUseCase,
+		WeeklyGoalSavingAccrualService weeklyGoalSavingAccrualService,
 		PlanCreationCurrentWeekAllocationPreservationService currentWeekAllocationPreservationService,
 		PlanCreationBudgetSummaryService planCreationBudgetSummaryService,
 		ApplicationEventPublisher applicationEventPublisher,
@@ -48,6 +51,7 @@ public class CreatePlanUseCase {
 		this.planRepository = planRepository;
 		this.planPriorityService = planPriorityService;
 		this.triggerBudgetAllocationUseCase = triggerBudgetAllocationUseCase;
+		this.weeklyGoalSavingAccrualService = weeklyGoalSavingAccrualService;
 		this.currentWeekAllocationPreservationService = currentWeekAllocationPreservationService;
 		this.planCreationBudgetSummaryService = planCreationBudgetSummaryService;
 		this.applicationEventPublisher = applicationEventPublisher;
@@ -76,13 +80,18 @@ public class CreatePlanUseCase {
 		var preservedCurrentWeekAllocations = savedPlan.getStatus() == PlanStatus.ACTIVE
 			? currentWeekAllocationPreservationService.snapshotOtherPlanAllocations(userId, savedPlan.getId())
 			: java.util.List.<PlanCreationCurrentWeekAllocationPreservationService.PreservedAllocation>of();
-		triggerBudgetAllocationUseCase.execute(userId);
+		if (savedPlan.getStatus() == PlanStatus.ACTIVE) {
+			triggerBudgetAllocationUseCase.executeIncludingPlanEnd(userId, savedPlan.getEndDate());
+		} else {
+			triggerBudgetAllocationUseCase.execute(userId);
+		}
 		if (savedPlan.getStatus() == PlanStatus.ACTIVE) {
 			currentWeekAllocationPreservationService.restoreOtherPlanAllocations(
 				userId,
 				savedPlan.getId(),
 				preservedCurrentWeekAllocations
 			);
+			weeklyGoalSavingAccrualService.applyImmediateAccrual(userId, savedPlan.getId());
 		}
 		PlanCreateResponse response = planCreationBudgetSummaryService.build(savedPlan);
 

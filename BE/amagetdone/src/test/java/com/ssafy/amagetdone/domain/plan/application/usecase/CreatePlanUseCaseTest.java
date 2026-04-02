@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.time.Clock;
@@ -14,6 +13,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Optional;
 
+import com.ssafy.amagetdone.domain.budget.application.service.WeeklyGoalSavingAccrualService;
 import com.ssafy.amagetdone.domain.member.model.entity.User;
 import com.ssafy.amagetdone.domain.member.model.repository.UserRepository;
 import com.ssafy.amagetdone.domain.budget.application.usecase.TriggerBudgetAllocationUseCase;
@@ -54,6 +54,9 @@ class CreatePlanUseCaseTest {
 	private TriggerBudgetAllocationUseCase triggerBudgetAllocationUseCase;
 
 	@Mock
+	private WeeklyGoalSavingAccrualService weeklyGoalSavingAccrualService;
+
+	@Mock
 	private PlanCreationCurrentWeekAllocationPreservationService currentWeekAllocationPreservationService;
 
 	@Mock
@@ -74,6 +77,7 @@ class CreatePlanUseCaseTest {
 			planRepository,
 			planPriorityService,
 			triggerBudgetAllocationUseCase,
+			weeklyGoalSavingAccrualService,
 			currentWeekAllocationPreservationService,
 			planCreationBudgetSummaryService,
 			applicationEventPublisher,
@@ -151,9 +155,10 @@ class CreatePlanUseCaseTest {
 		ArgumentCaptor<Plan> planCaptor = ArgumentCaptor.forClass(Plan.class);
 		verify(planRepository).save(planCaptor.capture());
 		assertEquals(com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus.ACTIVE, planCaptor.getValue().getStatus());
-		verify(triggerBudgetAllocationUseCase).execute(1);
+		verify(triggerBudgetAllocationUseCase).executeIncludingPlanEnd(1, today.plusWeeks(2));
 		verify(currentWeekAllocationPreservationService).snapshotOtherPlanAllocations(1, 11);
 		verify(currentWeekAllocationPreservationService).restoreOtherPlanAllocations(1, 11, java.util.List.of());
+		verify(weeklyGoalSavingAccrualService).applyImmediateAccrual(1, 11);
 		verify(applicationEventPublisher).publishEvent(new PlanCreatedEvent(11, 1));
 	}
 
@@ -170,6 +175,8 @@ class CreatePlanUseCaseTest {
 			ReflectionTestUtils.setField(plan, "id", 12);
 			return plan;
 		});
+		given(currentWeekAllocationPreservationService.snapshotOtherPlanAllocations(1, 12))
+			.willReturn(java.util.List.of());
 		given(planCreationBudgetSummaryService.build(any(Plan.class)))
 			.willReturn(summaryResponse(12, "KST plan", 100_000L, 2, "ACTIVE"));
 
@@ -185,7 +192,10 @@ class CreatePlanUseCaseTest {
 		assertEquals("ACTIVE", response.status());
 		assertEquals(12, response.planId());
 		assertEquals(100_000L, response.weeklyMission().weeklySavingsAmount());
-		verify(triggerBudgetAllocationUseCase).execute(1);
+		verify(triggerBudgetAllocationUseCase).executeIncludingPlanEnd(1, LocalDate.of(2026, 4, 1));
+		verify(currentWeekAllocationPreservationService).snapshotOtherPlanAllocations(1, 12);
+		verify(currentWeekAllocationPreservationService).restoreOtherPlanAllocations(1, 12, java.util.List.of());
+		verify(weeklyGoalSavingAccrualService).applyImmediateAccrual(1, 12);
 	}
 
 	@Test
@@ -218,6 +228,7 @@ class CreatePlanUseCaseTest {
 		verify(triggerBudgetAllocationUseCase).execute(1);
 		verify(currentWeekAllocationPreservationService, never()).snapshotOtherPlanAllocations(any(), any());
 		verify(currentWeekAllocationPreservationService, never()).restoreOtherPlanAllocations(any(), any(), any());
+		verify(weeklyGoalSavingAccrualService, never()).applyImmediateAccrual(any(), any());
 	}
 
 	private PlanCreateResponse summaryResponse(

@@ -14,6 +14,7 @@ import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetAdjustmentRepository;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetWeekRepository;
 import com.ssafy.amagetdone.domain.budget.model.vo.BudgetAdjustmentType;
+import com.ssafy.amagetdone.domain.budget.application.usecase.TriggerBudgetAllocationUseCase;
 import com.ssafy.amagetdone.domain.plan.application.service.PlanPriorityService;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
 import com.ssafy.amagetdone.domain.plan.model.entity.PlanWeekAllocation;
@@ -37,6 +38,7 @@ public class WeeklyGoalSavingAccrualService {
 	private final BudgetAdjustmentRepository budgetAdjustmentRepository;
 	private final PlanRepository planRepository;
 	private final PlanPriorityService planPriorityService;
+	private final TriggerBudgetAllocationUseCase triggerBudgetAllocationUseCase;
 	private final Clock clock;
 
 	public void applyWeeklyAccrual(Integer userId) {
@@ -116,6 +118,8 @@ public class WeeklyGoalSavingAccrualService {
 		long remaining = pool;
 		Map<Integer, Long> currentSavedAmounts = new LinkedHashMap<>();
 		List<Integer> completedPriorities = new ArrayList<>();
+		Map<Integer, Plan> plansToPersist = new LinkedHashMap<>();
+		LocalDate latestExtendedEndDate = null;
 
 		for (PlanWeekAllocation allocation : allocations) {
 			Plan plan = allocation.getPlan();
@@ -142,24 +146,34 @@ public class WeeklyGoalSavingAccrualService {
 
 			if (accrual < desired) {
 				long shortfall = desired - accrual;
-				extendPlanForShortfall(plan, shortfall);
+				LocalDate extendedEndDate = extendPlanForShortfall(plan, shortfall);
+				if (extendedEndDate != null) {
+					plansToPersist.put(plan.getId(), plan);
+					latestExtendedEndDate = latestExtendedEndDate == null || extendedEndDate.isAfter(latestExtendedEndDate)
+						? extendedEndDate
+						: latestExtendedEndDate;
+				}
 			}
 
 			if (savedAmount >= zero(plan.getTargetAmount())) {
 				completedPriorities.add(plan.getPriority());
 				plan.setStatus(PlanStatus.COMPLETED);
+				plansToPersist.put(plan.getId(), plan);
 			}
 		}
 
 		planWeekAllocationRepository.saveAll(allocations);
-		List<Plan> updatedPlans = allocations.stream()
-			.map(PlanWeekAllocation::getPlan)
-			.filter(Objects::nonNull)
-			.filter(plan -> plan.getStatus() == PlanStatus.COMPLETED)
-			.distinct()
-			.toList();
+		List<Plan> updatedPlans = new ArrayList<>(plansToPersist.values());
 		if (!updatedPlans.isEmpty()) {
 			planRepository.saveAll(updatedPlans);
+		}
+		if (latestExtendedEndDate != null) {
+			triggerBudgetAllocationUseCase.executeIncludingPlanEnd(budgetWeek.getUser().getId(), latestExtendedEndDate);
+		}
+		List<Plan> completedPlans = updatedPlans.stream()
+			.filter(plan -> plan.getStatus() == PlanStatus.COMPLETED)
+			.toList();
+		if (!completedPlans.isEmpty()) {
 			completedPriorities.stream()
 				.filter(Objects::nonNull)
 				.sorted(Comparator.reverseOrder())
@@ -170,24 +184,29 @@ public class WeeklyGoalSavingAccrualService {
 		}
 	}
 
-	private void extendPlanForShortfall(Plan plan, long shortfallAmount) {
+	private LocalDate extendPlanForShortfall(Plan plan, long shortfallAmount) {
 		if (shortfallAmount <= 0L) {
-			return;
+			return null;
 		}
 
 		int targetWeeks = plan.getTargetWeeks() == null || plan.getTargetWeeks() <= 0 ? 1 : plan.getTargetWeeks();
 		long targetAmount = zero(plan.getTargetAmount());
 		if (targetAmount <= 0L) {
-			return;
+			return null;
 		}
 
 		long weeklyRate = targetAmount / targetWeeks;
 		if (weeklyRate <= 0L) {
-			return;
+			return null;
 		}
 
 		int additionalWeeks = (int) Math.ceil((double) shortfallAmount / weeklyRate);
+		LocalDate previousEndDate = plan.getEndDate();
 		plan.extendEndDate(additionalWeeks);
+		if (previousEndDate != null && Objects.equals(previousEndDate, plan.getEndDate())) {
+			return null;
+		}
+		return plan.getEndDate();
 	}
 
 	private long zero(Long amount) {

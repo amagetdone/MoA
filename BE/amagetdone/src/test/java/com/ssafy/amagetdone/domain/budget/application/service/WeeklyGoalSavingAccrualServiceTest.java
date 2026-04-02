@@ -13,6 +13,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
+import com.ssafy.amagetdone.domain.budget.application.usecase.TriggerBudgetAllocationUseCase;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetAdjustment;
 import com.ssafy.amagetdone.domain.budget.model.entity.BudgetWeek;
 import com.ssafy.amagetdone.domain.budget.model.repository.BudgetAdjustmentRepository;
@@ -50,6 +51,9 @@ class WeeklyGoalSavingAccrualServiceTest {
 	@Mock
 	private PlanPriorityService planPriorityService;
 
+	@Mock
+	private TriggerBudgetAllocationUseCase triggerBudgetAllocationUseCase;
+
 	private final Clock clock = Clock.fixed(Instant.parse("2026-03-24T00:00:00Z"), ZoneId.of("Asia/Seoul"));
 
 	private WeeklyGoalSavingAccrualService weeklyGoalSavingAccrualService;
@@ -62,6 +66,7 @@ class WeeklyGoalSavingAccrualServiceTest {
 			budgetAdjustmentRepository,
 			planRepository,
 			planPriorityService,
+			triggerBudgetAllocationUseCase,
 			clock
 		);
 	}
@@ -135,6 +140,8 @@ class WeeklyGoalSavingAccrualServiceTest {
 
 		assertEquals(LocalDate.of(2026, 5, 31), activePlan.getOriginalEndDate());
 		assertEquals(LocalDate.of(2026, 6, 7), activePlan.getEndDate());
+		verify(planRepository).saveAll(List.of(activePlan));
+		verify(triggerBudgetAllocationUseCase).executeIncludingPlanEnd(1, LocalDate.of(2026, 6, 7));
 	}
 
 	private User user(int userId) {

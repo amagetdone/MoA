@@ -1,5 +1,7 @@
 package com.ssafy.amagetdone.domain.member.application.usecase;
 
+import java.util.List;
+
 import com.ssafy.amagetdone.domain.member.exception.MemberErrorCode;
 import com.ssafy.amagetdone.domain.member.exception.MemberException;
 import com.ssafy.amagetdone.domain.member.infra.client.SsafyFinMemberClient;
@@ -38,11 +40,13 @@ public class EnsureFinMemberLinkedUseCase {
 	}
 
 	private void validateOwnership(Integer currentUserId, String userKey) {
-		User owner = userRepository.findByUserKey(userKey).orElse(null);
-		if (owner == null) {
+		List<User> owners = userRepository.findAllByUserKey(userKey);
+		if (owners.isEmpty()) {
 			return;
 		}
-		if (owner.getId().equals(currentUserId)) {
+		boolean currentUserOwnsKey = owners.stream()
+			.anyMatch(owner -> owner.getId().equals(currentUserId));
+		if (currentUserOwnsKey) {
 			return;
 		}
 		throw new MemberException(MemberErrorCode.FINANCIAL_MEMBER_ALREADY_LINKED);
