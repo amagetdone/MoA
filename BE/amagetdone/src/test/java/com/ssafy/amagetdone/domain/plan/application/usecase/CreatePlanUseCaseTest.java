@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.time.Clock;
@@ -19,6 +20,7 @@ import com.ssafy.amagetdone.domain.budget.application.usecase.TriggerBudgetAlloc
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanCreateRequest;
 import com.ssafy.amagetdone.domain.plan.api.dto.PlanCreateResponse;
 import com.ssafy.amagetdone.domain.plan.application.event.PlanCreatedEvent;
+import com.ssafy.amagetdone.domain.plan.application.service.PlanCreationCurrentWeekAllocationPreservationService;
 import com.ssafy.amagetdone.domain.plan.application.service.PlanCreationBudgetSummaryService;
 import com.ssafy.amagetdone.domain.plan.application.service.PlanPriorityService;
 import com.ssafy.amagetdone.domain.plan.model.entity.Plan;
@@ -52,7 +54,7 @@ class CreatePlanUseCaseTest {
 	private TriggerBudgetAllocationUseCase triggerBudgetAllocationUseCase;
 
 	@Mock
-	private com.ssafy.amagetdone.domain.budget.application.service.WeeklyGoalSavingAccrualService weeklyGoalSavingAccrualService;
+	private PlanCreationCurrentWeekAllocationPreservationService currentWeekAllocationPreservationService;
 
 	@Mock
 	private PlanCreationBudgetSummaryService planCreationBudgetSummaryService;
@@ -72,7 +74,7 @@ class CreatePlanUseCaseTest {
 			planRepository,
 			planPriorityService,
 			triggerBudgetAllocationUseCase,
-			weeklyGoalSavingAccrualService,
+			currentWeekAllocationPreservationService,
 			planCreationBudgetSummaryService,
 			applicationEventPublisher,
 			clock
@@ -129,6 +131,8 @@ class CreatePlanUseCaseTest {
 			ReflectionTestUtils.setField(plan, "id", 11);
 			return plan;
 		});
+		given(currentWeekAllocationPreservationService.snapshotOtherPlanAllocations(1, 11))
+			.willReturn(java.util.List.of());
 		given(planCreationBudgetSummaryService.build(any(Plan.class)))
 			.willReturn(summaryResponse(11, "Immediate plan", 100_000L, 3, "ACTIVE"));
 
@@ -148,6 +152,8 @@ class CreatePlanUseCaseTest {
 		verify(planRepository).save(planCaptor.capture());
 		assertEquals(com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus.ACTIVE, planCaptor.getValue().getStatus());
 		verify(triggerBudgetAllocationUseCase).execute(1);
+		verify(currentWeekAllocationPreservationService).snapshotOtherPlanAllocations(1, 11);
+		verify(currentWeekAllocationPreservationService).restoreOtherPlanAllocations(1, 11, java.util.List.of());
 		verify(applicationEventPublisher).publishEvent(new PlanCreatedEvent(11, 1));
 	}
 
@@ -210,6 +216,8 @@ class CreatePlanUseCaseTest {
 		verify(planRepository).save(planCaptor.capture());
 		assertEquals(com.ssafy.amagetdone.domain.plan.model.vo.PlanStatus.WAITING, planCaptor.getValue().getStatus());
 		verify(triggerBudgetAllocationUseCase).execute(1);
+		verify(currentWeekAllocationPreservationService, never()).snapshotOtherPlanAllocations(any(), any());
+		verify(currentWeekAllocationPreservationService, never()).restoreOtherPlanAllocations(any(), any(), any());
 	}
 
 	private PlanCreateResponse summaryResponse(
